@@ -240,6 +240,8 @@ function tekenPodium(etage, kamer) {
     zonderDak: true,
     // Een trap in de hal alleen als er een etage boven deze is (besluit 119).
     etages: [{ naam: toon.naam, erBoven: alle.slice(0, alle.indexOf(toon)).some(binnenEtage), kamers: binnen.map((r) => ({ ...huismodel.kamerModel(r, state), gekozen: r.id === kamer.id })) }],
+    // De etages eronder en erboven, vaag (25 oktober 2026): een verdieping staat dan niet op het gras. De kelder blijft zoals hij was.
+    lagen: toon.id === 'kelder' ? null : { onder: alle.slice(alle.indexOf(toon) + 1).filter((e) => e.id !== 'kelder' && binnenEtage(e)).length, boven: alle.slice(0, alle.indexOf(toon)).filter(binnenEtage).length },
     ...Object.fromEntries(Object.entries(buitenDelen).filter(([, v]) => v)),
   };
   // Met de oprit en de tuin erbij is het beeld breder: dan minder inzoomen, en wat naar links.

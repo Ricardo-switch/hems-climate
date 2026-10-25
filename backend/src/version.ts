@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.67.0';
+export const VERSIE = '0.67.1';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,28 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.67.1',
+    datum: '2026-10-25',
+    beter: [
+      'Een verdieping staat in de kamer op hoogte, met de verdieping eronder en erboven vaag erbij',
+    ],
+    opgelost: [
+      'Thuis loopt weer vlot op een oudere tablet aan de wand: wat beweegt in het huis, kost het beeld eronder geen schilderwerk meer',
+      'In de grafiek Vandaag loopt een blokje van de airco niet meer door de naam',
+      'Bij Aanpassen op de wand staan de knoppen van een smalle kaart weer heel in beeld, ook bij Sluipverbruik',
+    ],
+    en: {
+      beter: [
+        'A floor sits at its height in the room view, with the floors below and above faintly shown',
+      ],
+      opgelost: [
+        'Home runs smoothly again on an older tablet on the wall: what moves in the house no longer repaints the picture underneath',
+        'In the Today chart an air conditioning block no longer runs through its name',
+        'When customising the wall, the buttons of a narrow card are fully visible again, Standby use included',
+      ],
+    },
+  },
   {
     versie: '0.67.0',
     datum: '2026-10-25',

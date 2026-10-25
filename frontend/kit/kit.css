@@ -528,6 +528,16 @@ a.knop:not(.knop-licht) {
 .sc-huis {
   overflow: visible;
 }
+/* Wat beweegt, in een eigen laag boven het huis (huis.teken): het huis eronder hoeft dan niet elk beeldje opnieuw. */
+.sc-beweegt {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  will-change: transform;
+}
 
 /* Een kamer om op te tikken (huis.teken met `tik`): pas zichtbaar onder de vinger of met de toetsen. */
 .sc-tik {

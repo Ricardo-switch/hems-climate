@@ -786,6 +786,8 @@
   function na() {
     // Niet terugzetten terwijl er geschoven wordt.
     if (document.querySelector('[data-kaart].sleept')) return;
+    // Een kaart die opnieuw gevuld werd (zoals Sluipverbruik als zijn nachten binnenkomen) verloor zijn knoppen.
+    if (bewerk) zetKnoppen();
     orden('tel');
     orden('wand');
     wandRuimte();
