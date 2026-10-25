@@ -1,5 +1,19 @@
 # Wat is er nieuw · What is new
 
+## 0.72.1
+
+*25 oktober 2026*
+
+**Opgelost**
+
+- Bij Inrichten › Je schermen blijft de kleine wand met het huis binnen zijn kader, ook met veel kaarten
+
+*English*
+
+**Fixed**
+
+- In Setup › Your screens the small wall with the house stays inside its frame, also with many cards
+
 ## 0.72.0
 
 *25 oktober 2026*

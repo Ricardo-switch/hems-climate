@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.72.0';
+export const VERSIE = '0.72.1';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,18 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.72.1',
+    datum: '2026-10-25',
+    opgelost: [
+      'Bij Inrichten › Je schermen blijft de kleine wand met het huis binnen zijn kader, ook met veel kaarten',
+    ],
+    en: {
+      opgelost: [
+        'In Setup › Your screens the small wall with the house stays inside its frame, also with many cards',
+      ],
+    },
+  },
   {
     versie: '0.72.0',
     datum: '2026-10-25',
