@@ -68,8 +68,14 @@ export interface Weergave {
   readonly groteLetters: boolean;
   /** Geen lopende stromen en geen ademende bol. */
   readonly minderBeweging: boolean;
+  /** Het seizoen in het huis: herfstbladeren, kale bomen in de winter (25 oktober 2026). */
+  readonly seizoen: boolean;
+  /** Het weer rond het huis: regen en sneeuw. */
+  readonly weer: boolean;
+  /** Feestdagen: een pompoen met Halloween, lichtjes met Kerst, vuurwerk met Oud en Nieuw, eieren met Pasen. */
+  readonly feestdagen: boolean;
 }
-export const STANDAARD_WEERGAVE: Weergave = { eenvoudig: false, groteLetters: false, minderBeweging: false };
+export const STANDAARD_WEERGAVE: Weergave = { eenvoudig: false, groteLetters: false, minderBeweging: false, seizoen: true, weer: true, feestdagen: true };
 
 /** Na hoeveel minuten zonder iemand aan het scherm de wand overdag rust; 0 is nooit. */
 export const RUST_MINUTEN = [0, 2, 5, 15] as const;

@@ -352,7 +352,10 @@ verwijzing bestaat.
   Verbruik met de daluren op Thuis, zonder meter schat de app wat je zelf
   gebruikte ([196]). Inrichten zegt per klimaatapparaat wat het kan, met een
   tip per merk, een voorstel als het bereik niet klopt en een vraag als Home
-  Assistant iets niet weet ([197]).
+  Assistant iets niet weet ([197]). De wand zegt alleen "wordt verwarmd" als
+  het apparaat echt stookt, en "geen zon meer" als de zon onder is; de zon komt
+  op aan de kant van het oosten, de deurbel geeft meteen live beeld, en bij
+  Weergave kunnen seizoen, weer en feestdagen in het huis aan of uit ([198]).
 - **Meldingen** staan achter de bel in het menu, met Onderhoud en na een update
   wat er nieuw is ([136]). Wanneer een batterij of filter een melding geeft,
   kies je bij Functies › Meldingen; standaard onder de 10% ([149]).
@@ -652,4 +655,5 @@ verwijzing bestaat.
 [195]: DECISIONS.md#195-wat-beweegt-in-een-eigen-laag-het-huis-weer-licht-genoeg-voor-een-tablet-aan-de-wand
 [196]: DECISIONS.md#196-een-huis-zonder-slimme-meter-of-zonder-panelen
 [197]: DECISIONS.md#197-wat-elk-apparaat-kan-de-klimaatstap-per-merk-in-inrichten
+[198]: DECISIONS.md#198-wat-de-wand-zegt-de-zon-op-zijn-plek-de-deurbel-meteen-en-feestdagen-in-het-huis
 <!-- links:einde -->

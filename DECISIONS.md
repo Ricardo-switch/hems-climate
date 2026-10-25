@@ -199,6 +199,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [193. Kamers en indeling als groep, en één lijstje voor wat er rond het huis is](#193-kamers-en-indeling-als-groep-en-één-lijstje-voor-wat-er-rond-het-huis-is)
 - [195. Wat beweegt in een eigen laag: het huis weer licht genoeg voor een tablet aan de wand](#195-wat-beweegt-in-een-eigen-laag-het-huis-weer-licht-genoeg-voor-een-tablet-aan-de-wand)
 - [196. Een huis zonder slimme meter of zonder panelen](#196-een-huis-zonder-slimme-meter-of-zonder-panelen)
+- [198. Wat de wand zegt, de zon op zijn plek, de deurbel meteen, en feestdagen in het huis](#198-wat-de-wand-zegt-de-zon-op-zijn-plek-de-deurbel-meteen-en-feestdagen-in-het-huis)
 
 **Veiligheid**
 
@@ -9072,6 +9073,63 @@ Nest zeggen wel wat ze doen.
 volgt de configuratie); een wattage per airco zonder meter kiezen (eerst 0,8 kW
 zoals de regeling rekent); meer merken met een eigen tip (wat Home Assistant
 zegt, staat er al).
+
+---
+
+## 198. Wat de wand zegt, de zon op zijn plek, de deurbel meteen, en feestdagen in het huis
+
+*Onderwerp: weergave · Status: geldig*
+
+Op 25 oktober 2026, na een dag met de tablet aan de wand. De bewoner zag:
+- "De woonkamer wordt verwarmd" terwijl het oude systeem niets deed;
+- "Het huis wacht op zon" terwijl de zon die dag niet meer kwam;
+- een tuinhuis dat niet aan te tikken was;
+- een zon die precies andersom liep;
+- een droger met "Start op zon" die hij zelf had gestart;
+- een deurbel die bij aanbellen niet liet zien wie er stond.
+
+En hij vroeg om het seizoen en het weer in het huis aan of uit te zetten, en om
+feestdagen.
+
+*Besluit:*
+
+- **Verwarmt alleen als hij stookt.** Een kamer "wordt verwarmd" (besluit 188)
+  als het echte apparaat in die stand staat én, als het dat zegt
+  (`hvac_action`), ook echt stookt of koelt. Een Nest op "verwarmen naar 20°"
+  die stil staat: dan "zou verwarmen". De dienst bewaart wat een apparaat zegt
+  dat het doet apart (`observedAction`); het logboek blijft zoals het was.
+- **Wacht op zon, met de zon erbij.** De dienst rekent uit de ligging waar de
+  zon staat: op, nog niet op, of vandaag niet meer genoeg ('s middags lager dan
+  10°). Dan "Nog geen zon" of "Vandaag geen zon meer", en per kamer "Op zon
+  zodra hij op is" of "Morgen weer op zon". De zin zegt koelen of verwarmen
+  naar wat de kamer wil; eerst stond er altijd koelen.
+- **Tuin en tuinhuis aan te tikken**: het vak van de tuin is zo groot als het
+  gras op het eiland, dat van het tuinhuis ligt op het huisje zelf (eerst op
+  een vaste plek ernaast).
+- **De zon aan de kant van het oosten.** In de tekening ligt rechts de richting
+  van het kompas min 90°; daar komt de zon op als daar het oosten ligt
+  (`zon.opRechts`, anders het kompas). De schaduw valt van de zon af; eerst viel
+  hij naar de zon toe.
+- **De droger**: draait hij, dan "Zelf gestart" in plaats van "Start op zon";
+  Smart Climate start nog niets zelf.
+- **De deurbel meteen live**: het vloeiende beeld start tegelijk met het
+  plaatje, met voorrang (aanbellen telt niet mee in de grens van vier live
+  beelden), opnieuw als het wegvalt of het scherm net aangaat; tot dan na
+  anderhalve tel elke seconde een vers plaatje (eerst na vijf).
+- **Bij Weergave, onder "In het huis"**: Seizoenen, Het weer en Feestdagen,
+  standaard aan, per account. Uit is een gewone groene dag zonder regen.
+- **Feestdagen**, stil getekend, alleen bij het hele huis: een pompoen bij de
+  deur met Halloween (24 oktober tot 1 november, 's avonds met een kaarsje),
+  lichtjes langs de gevel met Kerst (6 december tot 6 januari), vuurwerk met
+  Oud en Nieuw (31 december vanaf 18:00), eieren in het gras met Pasen (Goede
+  Vrijdag tot tweede paasdag).
+- **Versie 0.70.0.**
+
+*Wat afviel:*
+- Rekenen met de verwachting voor de rest van de dag (een bewolkte middag). Eerst
+  de stand van de zon zelf.
+- Feestdagen per land, zoals Koningsdag. Eerst wat overal gevierd wordt.
+- Bewegende lichtjes; die kosten een oude tablet schilderwerk (besluit 195).
 
 ---
 

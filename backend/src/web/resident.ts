@@ -136,7 +136,14 @@ const HEAD = {
     numbers: (temp: string, goal: string | null) => `Het is er ${temp}°${goal != null ? `, het doel is ${goal}°` : ''}.`,
     ownSun: ' Dat kan op eigen zon.',
     waitSun: 'Het huis wacht op zon',
-    waitSunWhy: (rooms: string, many: boolean) => `${cap(rooms)} ${many ? 'willen' : 'wil'} koelen zodra er genoeg zon over is.`,
+    // Koelen of verwarmen naar wat de kamers willen; eerst stond er altijd koelen (25 oktober 2026).
+    waitSunWhy: (rooms: string, many: boolean, doen: string) => `${cap(rooms)} ${many ? 'willen' : 'wil'} ${doen} zodra er genoeg zon over is.`,
+    // De zon is nog niet op, of komt vandaag niet meer genoeg (25 oktober 2026).
+    waitSunNog: 'Nog geen zon',
+    waitSunNogWhy: (rooms: string, many: boolean, doen: string) => `${cap(rooms)} ${many ? 'willen' : 'wil'} op zon ${doen} zodra de zon op is.`,
+    waitSunWeg: 'Vandaag geen zon meer',
+    waitSunWegWhy: (rooms: string, many: boolean, doen: string) => `${cap(rooms)} ${many ? 'kunnen' : 'kan'} morgen weer op zon ${doen}.`,
+    doen: { heat: 'verwarmen', cool: 'koelen', beide: 'verwarmen of koelen' },
     waitOther: 'Er wacht iets',
     nothing: 'Er draait niets',
     // Een droger of wasmachine draait, en het klimaat is rustig (besluit 166).
@@ -179,7 +186,12 @@ const HEAD = {
     numbers: (temp: string, goal: string | null) => `It is ${temp}° there${goal != null ? `, the target is ${goal}°` : ''}.`,
     ownSun: ' That can run on your own solar.',
     waitSun: 'The house is waiting for sun',
-    waitSunWhy: (rooms: string) => `${cap(rooms)} will cool as soon as there is enough solar to spare.`,
+    waitSunWhy: (rooms: string, _many: boolean, doen: string) => `${cap(rooms)} will ${doen} as soon as there is enough solar to spare.`,
+    waitSunNog: 'No sun yet',
+    waitSunNogWhy: (rooms: string, _many: boolean, doen: string) => `${cap(rooms)} will ${doen} on solar once the sun is up.`,
+    waitSunWeg: 'No more sun today',
+    waitSunWegWhy: (rooms: string, _many: boolean, doen: string) => `${cap(rooms)} can ${doen} on solar again tomorrow.`,
+    doen: { heat: 'heat', cool: 'cool', beide: 'heat or cool' },
     waitOther: 'Something is waiting',
     nothing: 'Nothing is running',
     running: (names: string, many: boolean) => `${cap(names)} ${many ? 'are' : 'is'} running`,
@@ -252,9 +264,17 @@ export function residentHeadline(config: SiteConfig, snap: DecisionView, rooms: 
     return { boven, titel, zin: [getallen ?? line(active), line(waiting)].filter((x) => x !== '').join(' ') };
   }
   if (waiting.length > 0) {
-    const onSun = waiting.every(({ r }) => r.kort === SHORT[lang].waitSun);
+    const s = SHORT[lang];
+    const onSun = waiting.every(({ r }) => r.kort === s.waitSun || r.kort === s.waitSunOp || r.kort === s.waitSunMorgen);
     if (!onSun) return { boven, titel: w.waitOther, zin: line(waiting) };
-    return { boven, titel: w.waitSun, zin: w.waitSunWhy(joinRooms(waiting.map(({ name }) => mid(name)), lang), waiting.length > 1) };
+    // Wat de kamers willen: verwarmen, koelen, of allebei.
+    const vraag = new Set(waiting.map(({ r }) => e.perZone.find((z) => z.zoneId === r.zoneId)?.demand).filter((x) => x === 'heat' || x === 'cool'));
+    const doen = vraag.size === 1 ? w.doen[[...vraag][0] as 'heat' | 'cool'] : vraag.size === 2 ? w.doen.beide : w.doen.cool;
+    const kamersZin = joinRooms(waiting.map(({ name }) => mid(name)), lang);
+    const veel = waiting.length > 1;
+    if (snap.zonNu === 'weg') return { boven, titel: w.waitSunWeg, zin: w.waitSunWegWhy(kamersZin, veel, doen) };
+    if (snap.zonNu === 'nog') return { boven, titel: w.waitSunNog, zin: w.waitSunNogWhy(kamersZin, veel, doen) };
+    return { boven, titel: w.waitSun, zin: w.waitSunWhy(kamersZin, veel, doen) };
   }
   const solar = e.solarProductionW;
   const zonder = config.zones.length === 0;

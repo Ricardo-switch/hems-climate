@@ -476,6 +476,13 @@
   'eigen.wg.lettersZin': 'All text one size larger',
   'eigen.wg.beweging': 'Less motion',
   'eigen.wg.bewegingZin': 'No moving flows and no breathing sphere',
+  'eigen.wg.huis': 'In the house',
+  'eigen.wg.seizoen': 'Seasons',
+  'eigen.wg.seizoenZin': 'Autumn leaves, bare trees in winter, flowers in summer.',
+  'eigen.wg.weer': 'The weather',
+  'eigen.wg.weerZin': 'Rain and snow around the house, as it is outside.',
+  'eigen.wg.feest': 'Holidays',
+  'eigen.wg.feestZin': 'A pumpkin at Halloween, lights at Christmas, fireworks at New Year, eggs at Easter.',
 
   // A room (kamer.js)
   'kamer.huis': 'House',
@@ -692,6 +699,7 @@
   'apparaten.zou': 'Smart Climate would have started it at {klok}, with sun to spare.',
   'apparaten.klaarRond': '{kop}, done around {klok}',
   'apparaten.startOpZon': 'Starts on sun',
+  'apparaten.zelfGestart': 'Started by you',
   'apparaten.warmteOpZon': 'Stores sun as heat',
   'apparaten.klaarOm': 'Ready at',
   'apparaten.klaarOmVan': 'Ready at for {naam}',

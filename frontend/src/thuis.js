@@ -95,7 +95,7 @@ function huisModel() {
     seizoen: maand === 12 || maand <= 2 ? 'winter' : maand >= 10 ? 'herfst' : 'zomer',
     weer: nuWeer === 'regen' || nuWeer === 'onweer' ? 'regen' : nuWeer === 'sneeuw' ? 'sneeuw' : undefined,
     wolken,
-    zon: zon?.dag ? { stand: zon.dag.fractie, hoogte: zon.dag.hoogteDeel, aandeel: Math.min(1, (zonKw * 1000) / Math.max(helder, 1500)), ...opDak } : { aandeel: 0, ...opDak },
+    zon: zon?.dag ? { stand: zon.dag.fractie, hoogte: zon.dag.hoogteDeel, aandeel: Math.min(1, (zonKw * 1000) / Math.max(helder, 1500)), opRechts: huismodel.zonOpRechts(aansluiting?.ligging, aansluiting?.antwoorden?.panelen) ?? undefined, ...opDak } : { aandeel: 0, ...opDak },
     // Het huis zelf, zoals elke pagina het tekent (besluit 191), met de panelen op een ander dak (besluit 187).
     // Geen kompas op Thuis (24 oktober 2026): dat hoort bij Zonnepanelen.
     ...huismodel.huisDelen(tek, elders),

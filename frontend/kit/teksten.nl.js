@@ -481,6 +481,13 @@
   'eigen.wg.lettersZin': 'Alle tekst een maat groter',
   'eigen.wg.beweging': 'Minder beweging',
   'eigen.wg.bewegingZin': 'Geen lopende stromen en geen ademende bol',
+  'eigen.wg.huis': 'In het huis',
+  'eigen.wg.seizoen': 'Seizoenen',
+  'eigen.wg.seizoenZin': 'Herfstbladeren, kale bomen in de winter, bloemen in de zomer.',
+  'eigen.wg.weer': 'Het weer',
+  'eigen.wg.weerZin': 'Regen en sneeuw rond het huis, zoals het buiten is.',
+  'eigen.wg.feest': 'Feestdagen',
+  'eigen.wg.feestZin': 'Een pompoen met Halloween, lichtjes met Kerst, vuurwerk met Oud en Nieuw, eieren met Pasen.',
 
   // Een kamer (kamer.js)
   'kamer.huis': 'Huis',
@@ -697,6 +704,7 @@
   'apparaten.zou': 'Smart Climate zou hem om {klok} gestart hebben, met zon over.',
   'apparaten.klaarRond': '{kop}, klaar rond {klok}',
   'apparaten.startOpZon': 'Start op zon',
+  'apparaten.zelfGestart': 'Zelf gestart',
   'apparaten.warmteOpZon': 'Bewaart zon als warmte',
   'apparaten.klaarOm': 'Klaar om',
   'apparaten.klaarOmVan': 'Klaar om bij {naam}',

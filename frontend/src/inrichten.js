@@ -203,7 +203,7 @@ function model(stap) {
     beschrijving: t('inr.beschrijving'),
     tijd: stap === 'ha' || stap === 'klaar' ? 'nacht' : app.tijdVanDeDag(d.zon),
     wolken: 0.3,
-    zon: { stand: d.zon?.dag?.fractie ?? 0.4, hoogte: d.zon?.dag?.hoogteDeel ?? 0.6, aandeel: metZon ? 0.6 : 0.2, ...opDak },
+    zon: { stand: d.zon?.dag?.fractie ?? 0.4, hoogte: d.zon?.dag?.hoogteDeel ?? 0.6, aandeel: metZon ? 0.6 : 0.2, opRechts: huismodel.zonOpRechts(d.aans?.ligging, a.panelen) ?? undefined, ...opDak },
     // Het huis zelf, zoals elke pagina het tekent (besluit 191); buiten pas vanaf de stap Buiten.
     ...huismodel.huisDelen(tek, elders),
     ...(buiten ? {} : { oprit: null, tuin: null, terras: null, balkon: null, voortuin: null, garage: null }),

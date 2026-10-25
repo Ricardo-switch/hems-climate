@@ -33,6 +33,22 @@ export interface DecisionView {
   readonly rejected: readonly RejectedIntent[];
   /** Wat de apparaten werkelijk deden, als `cool@22`, op actuator-id. */
   readonly observed: Readonly<Record<string, string>>;
+  /** Wat een apparaat zegt dat het nu doet (`hvac_action`), als het dat zegt. */
+  readonly observedAction?: Readonly<Record<string, string>>;
+  /**
+   * Waar de zon staat (25 oktober 2026): op, nog niet op, of vandaag niet meer
+   * genoeg ('s middags lager dan 10°). Zonder ligging weg: dan zoals het was.
+   */
+  readonly zonNu?: ZonNu;
+}
+
+export type ZonNu = 'op' | 'nog' | 'weg';
+/** Waar de zon nu staat, uit de hoogte en de richting: voor de middag nog, erna weg als hij laag is. */
+export function zonNuVan(elevationDeg: number, azimuthDeg: number): ZonNu {
+  const middag = azimuthDeg > 180;
+  if (middag && elevationDeg < 10) return 'weg';
+  if (!middag && elevationDeg < 3) return 'nog';
+  return 'op';
 }
 
 export const LANGS = ['nl', 'en'] as const;
@@ -1204,6 +1220,9 @@ export const SHORT = {
     parked: 'Staat klaar om verder te gaan',
     noMeasurement: 'Geen meting',
     waitSun: 'Wacht op meer zon',
+    // De zon is nog niet op, of komt vandaag niet meer (25 oktober 2026).
+    waitSunOp: 'Op zon zodra hij op is',
+    waitSunMorgen: 'Morgen weer op zon',
     wait: (why: string) => `Wacht: ${why}`,
     ok: 'Op temperatuur',
     idle: 'Niets te doen',
@@ -1249,6 +1268,8 @@ export const SHORT = {
     parked: 'Parked, ready to resume',
     noMeasurement: 'No measurement',
     waitSun: 'Waiting for more sun',
+    waitSunOp: 'On solar once the sun is up',
+    waitSunMorgen: 'On solar again tomorrow',
     wait: (why: string) => `Waiting: ${why}`,
     ok: 'At temperature',
     idle: 'Nothing to do',
@@ -1332,15 +1353,19 @@ function shortStatusOf(
   const running = mine.find((i) => i.action === 'cool' || i.action === 'heat');
   if (running && (running.action === 'cool' || running.action === 'heat')) {
     const onSun = running.strategyId === 'pv-surplus';
-    // Doet het apparaat het al echt (de oude regeling), dan geen "zou" (besluit 188).
-    const klopt = (snap.observed[running.actuatorId] ?? '').split('@')[0] === running.action;
+    // Doet het apparaat het al echt (de oude regeling), dan geen "zou" (besluit 188). Zegt het
+    // apparaat wat het doet, dan moet het ook echt stoken of koelen: een Nest op "verwarmen
+    // naar 20°" die stil staat, verwarmt niet (25 oktober 2026, de wand zei het wel).
+    const doet = snap.observedAction?.[running.actuatorId];
+    const klopt = (snap.observed[running.actuatorId] ?? '').split('@')[0] === running.action && (doet == null || doet === (running.action === 'heat' ? 'heating' : 'cooling'));
     return { soort: running.action, kort: `${(shadow && !klopt ? w.wouldRun : w.run)[running.action]}${onSun ? w.onSun : ''}`, actuatorId: running.actuatorId, klopt };
   }
   if (mine.some((i) => i.action === 'standby')) return { soort: 'wait', kort: w.parked, actuatorId: null };
   const wanting = pz != null && pz.demand !== 'none';
   const blocked = snap.rejected.find((r) => r.intent.zoneId === zone.id);
   if (blocked && wanting) {
-    const kort = blocked.blockedBy === 'insufficient_power_budget' ? w.waitSun : w.wait(w.block[blocked.blockedBy]);
+    const zon = snap.zonNu === 'weg' ? w.waitSunMorgen : snap.zonNu === 'nog' ? w.waitSunOp : w.waitSun;
+    const kort = blocked.blockedBy === 'insufficient_power_budget' ? zon : w.wait(w.block[blocked.blockedBy]);
     return { soort: 'wait', kort, actuatorId: null };
   }
   if (pz == null || pz.temperatureC == null) return { soort: 'bad', kort: w.noMeasurement, actuatorId: null };

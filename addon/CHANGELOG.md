@@ -1,5 +1,43 @@
 # Wat is er nieuw · What is new
 
+## 0.70.0
+
+*25 oktober 2026*
+
+**Nieuw**
+
+- Bij Weergave: seizoenen, het weer en feestdagen in het huis aan of uit, met een pompoen met Halloween, lichtjes met Kerst, vuurwerk met Oud en Nieuw en eieren met Pasen
+
+**Beter**
+
+- Bij aanbellen staat het live beeld van de deurbel er meteen, ook als er al schermen meekijken of het scherm net aangaat
+- Is de zon onder of komt hij vandaag niet meer, dan zegt het huis dat, in plaats van dat het op zon wacht
+
+**Opgelost**
+
+- Een kamer heet alleen nog verwarmd als het apparaat echt stookt, niet als het alleen op verwarmen staat
+- De zon komt in het huis op aan de kant van het oosten, en de schaduw valt van de zon af
+- De tuin en het tuinhuis zijn in het huis aan te tikken
+- Een droger die je zelf startte, heet zo, en niet Start op zon
+
+*English*
+
+**New**
+
+- In Display: seasons, the weather and holidays in the house on or off, with a pumpkin at Halloween, lights at Christmas, fireworks at New Year and eggs at Easter
+
+**Improved**
+
+- When someone rings, the live doorbell picture is there right away, also when other screens are watching or the screen has just turned on
+- When the sun is down or will not come back today, the house says so instead of waiting for sun
+
+**Fixed**
+
+- A room is only called heated when the device really heats, not when it is just set to heat
+- The sun rises in the house on the east side, and the shadow falls away from the sun
+- The garden and the shed can be tapped in the house
+- A dryer you started yourself says so, not Start on sun
+
 ## 0.69.0
 
 *25 oktober 2026*

@@ -17,6 +17,9 @@ const IK = {
   weergave: '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h5"/>',
   letters: '<path d="M4 19 9 5l5 14M5.8 14h6.4M15 19l3-8 3 8M15.8 17h4.4"/>',
   beweging: '<path d="M3 12h4l3-7 4 14 3-7h4"/>',
+  seizoen: '<path d="M12 21c-4-3-7-6.5-7-10.5A7 7 0 0 1 12 4a7 7 0 0 1 7 6.5c0 4-3 7.5-7 10.5z"/><path d="M12 8v13"/>',
+  weer: '<path d="M7 17a4 4 0 1 1 .8-7.9A5 5 0 0 1 17.6 10 3.5 3.5 0 0 1 17 17z"/><path d="M9 20l-1 2M13 20l-1 2"/>',
+  feest: '<path d="M12 3l1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8z"/><path d="M18 15l.8 1.7 1.7.8-1.7.8L18 20l-.8-1.7-1.7-.8 1.7-.8z"/>',
   kaarten: '<rect x="4" y="4" width="16" height="7" rx="2"/><rect x="4" y="13" width="16" height="7" rx="2"/>',
   favorieten: '<path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/>',
   wand: '<rect x="3" y="5" width="18" height="12" rx="2"/><path d="M9 21h6"/>',
@@ -95,6 +98,9 @@ function teken() {
       ${link('thuis.html#weergave', 'weergave', t('jij.weergave'), t(w.eenvoudig ? 'jij.eenvoudig' : 'jij.uitgebreid'))}
       ${schakel('groteLetters', 'letters', t('jij.letters'), t('jij.lettersZin'), w.groteLetters)}
       ${schakel('minderBeweging', 'beweging', t('jij.beweging'), t('jij.bewegingZin'), w.minderBeweging)}
+      ${schakel('seizoen', 'seizoen', t('eigen.wg.seizoen'), t('eigen.wg.seizoenZin'), w.seizoen !== false)}
+      ${schakel('weer', 'weer', t('eigen.wg.weer'), t('eigen.wg.weerZin'), w.weer !== false)}
+      ${schakel('feestdagen', 'feest', t('eigen.wg.feest'), t('eigen.wg.feestZin'), w.feestdagen !== false)}
     </section>`;
   if (!wie) {
     const zin = t(mij?.soort === 'scherm' ? 'jij.scherm' : 'jij.geenProfiel');

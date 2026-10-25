@@ -403,6 +403,17 @@
   }
 
   /**
+   * Komt de zon in de tekening rechts op (25 oktober 2026)? Rechts ligt de
+   * richting van het kompas min 90°; het oosten aan die kant. Zonder ligging
+   * null: dan links, zoals het was.
+   */
+  function zonOpRechts(lig, p) {
+    const k = kompasVan(lig, p);
+    if (!k) return null;
+    return Math.cos(((180 - k.voorgevelDeg) * Math.PI) / 180) > 0;
+  }
+
+  /**
    * Wie de begroeting noemt (besluit 147): op je telefoon jij; op een scherm
    * zoals de wand wie er thuis is, op volgorde. Zonder bewoners niemand.
    */
@@ -469,5 +480,5 @@
   const BUITEN_ZONES = soorten('buitenZone', ['gazon', 'border', 'terras', 'tuinhuis', 'moestuin', 'vijver', 'pad', 'speelplek', 'oprit', 'carport']);
   global.huismodel = { KAMER_SOORTEN, ZONE_SOORTEN, BUITEN_SOORTEN, BUITEN_ZONES, buitenUitNaam, buitenZoneUitNaam, thermostaten, cvThermostaat, isKetelKoppeling, ACTIEF,
 
- BUITEN, GANG, kleurVanLicht, zoneNaam, metLidwoord, metHoofdletter, etagesNaast, BRON_NAAM, ELEKTRISCH, bronNaam, opsomming, isElektrischSlim, inKamers, standVan, kortVan, kamerModel, isBuiten, soortBuiten, buiten, rondNu, rondom, OP_OPRIT, rondMet, tekening, huisDelen, panelenOpDak, kompasVan, groetNamen, groetWie };
+ BUITEN, GANG, kleurVanLicht, zoneNaam, metLidwoord, metHoofdletter, etagesNaast, BRON_NAAM, ELEKTRISCH, bronNaam, opsomming, isElektrischSlim, inKamers, standVan, kortVan, kamerModel, isBuiten, soortBuiten, buiten, rondNu, rondom, OP_OPRIT, rondMet, tekening, huisDelen, panelenOpDak, kompasVan, zonOpRechts, groetNamen, groetWie };
 })(window);

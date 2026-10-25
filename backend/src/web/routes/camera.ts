@@ -56,7 +56,9 @@ export async function cameraRoute(d: Diensten, req: IncomingMessage, res: Server
     return;
   }
   const live = url.searchParams.get('live') === '1';
-  if (live && d.liveStreams >= 4) {
+  // Aanbellen gaat voor (25 oktober 2026): een telefoon met een camera open mag de deurbel niet blokkeren.
+  const bel = url.searchParams.get('bel') === '1';
+  if (live && d.liveStreams >= (bel ? 8 : 4)) {
     sendJson(res, 429, { fout: 'er kijken al vier schermen mee; probeer het zo nog eens' });
     return;
   }

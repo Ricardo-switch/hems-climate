@@ -61,6 +61,12 @@ export interface LiveSnapshot {
   readonly rejected: readonly RejectedIntent[];
   /** Wat de apparaten op dat moment werkelijk deden, op actuator-id. */
   readonly observed: Readonly<Record<string, string>>;
+  /**
+   * Wat een apparaat zegt dat het nu doet (`hvac_action`: heating, cooling,
+   * idle), als het dat zegt (25 oktober 2026). Een Nest op "verwarmen naar 20°"
+   * die stil staat, stookt niet. Los van `observed`, dat het logboek zo bewaart.
+   */
+  readonly observedAction?: Readonly<Record<string, string>>;
   /** De uitleg van het oude systeem, zolang de migratie loopt. */
   readonly legacy: string | null;
 }
@@ -529,6 +535,16 @@ export class ShadowRunner {
    * heeft die tool later geen verbinding met Home Assistant nodig, geen token,
    * en geen last van de bewaartermijn van de recorder.
    */
+  /** Wat elk apparaat zegt dat het nu doet, als het dat zegt (`hvac_action`). */
+  #observedAction(): Record<string, string> {
+    const out: Record<string, string> = {};
+    for (const actuator of this.#config.actuators) {
+      const a = this.#store.attr(actuator.ref.id, 'hvac_action');
+      if (typeof a === 'string' && a !== '') out[actuator.id] = a;
+    }
+    return out;
+  }
+
   #observation(): Record<string, string> {
     const out: Record<string, string> = {};
     for (const actuator of this.#config.actuators) {
@@ -598,6 +614,7 @@ export class ShadowRunner {
       accepted: decision.accepted,
       rejected: decision.rejected,
       observed,
+      observedAction: this.#observedAction(),
       legacy,
     };
     // Een kapotte luisteraar mag de opname niet meeslepen. De schaduwmodus

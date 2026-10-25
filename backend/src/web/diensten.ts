@@ -17,6 +17,8 @@ import type { Lang } from './assistant.js';
 import type { Punt } from './kaart.js';
 import { bedienbaar, type Bedienbaar } from './opdracht.js';
 import { residentView, type ResidentView } from './resident.js';
+import { zonNuVan } from './assistant.js';
+import { sunPosition } from '../core/sun.js';
 import { weatherReport, type WeatherReport } from './weather.js';
 import { kindOfCode } from './open-meteo.js';
 import { SESSION_COOKIE, cookieValue, ingressVisitor, type Access, type Visitor } from './auth.js';
@@ -134,7 +136,11 @@ export class Diensten {
   withResident(snapshot: LiveSnapshot, taal: Lang = 'nl'): LiveSnapshot & { bewoner?: ResidentView } {
     const config = this.config();
     if (config == null) return snapshot;
-    return { ...snapshot, bewoner: residentView(config, snapshot, taal) };
+    // Waar de zon staat (25 oktober 2026): "wacht op zon" zegt het niet als hij onder is.
+    const loc = this.options.location?.() ?? null;
+    const zon = loc ? sunPosition(Date.now(), loc.latDeg, loc.lonDeg) : null;
+    const metZon = zon ? { ...snapshot, zonNu: zonNuVan(zon.elevationDeg, zon.azimuthDeg) } : snapshot;
+    return { ...snapshot, bewoner: residentView(config, metZon, taal) };
   }
 
   /** De configuratie zoals hij nu is (besluit 130). */

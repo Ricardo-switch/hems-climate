@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.69.0';
+export const VERSIE = '0.70.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,38 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.70.0',
+    datum: '2026-10-25',
+    nieuw: [
+      'Bij Weergave: seizoenen, het weer en feestdagen in het huis aan of uit, met een pompoen met Halloween, lichtjes met Kerst, vuurwerk met Oud en Nieuw en eieren met Pasen',
+    ],
+    beter: [
+      'Bij aanbellen staat het live beeld van de deurbel er meteen, ook als er al schermen meekijken of het scherm net aangaat',
+      'Is de zon onder of komt hij vandaag niet meer, dan zegt het huis dat, in plaats van dat het op zon wacht',
+    ],
+    opgelost: [
+      'Een kamer heet alleen nog verwarmd als het apparaat echt stookt, niet als het alleen op verwarmen staat',
+      'De zon komt in het huis op aan de kant van het oosten, en de schaduw valt van de zon af',
+      'De tuin en het tuinhuis zijn in het huis aan te tikken',
+      'Een droger die je zelf startte, heet zo, en niet Start op zon',
+    ],
+    en: {
+      nieuw: [
+        'In Display: seasons, the weather and holidays in the house on or off, with a pumpkin at Halloween, lights at Christmas, fireworks at New Year and eggs at Easter',
+      ],
+      beter: [
+        'When someone rings, the live doorbell picture is there right away, also when other screens are watching or the screen has just turned on',
+        'When the sun is down or will not come back today, the house says so instead of waiting for sun',
+      ],
+      opgelost: [
+        'A room is only called heated when the device really heats, not when it is just set to heat',
+        'The sun rises in the house on the east side, and the shadow falls away from the sun',
+        'The garden and the shed can be tapped in the house',
+        'A dryer you started yourself says so, not Start on sun',
+      ],
+    },
+  },
   {
     versie: '0.69.0',
     datum: '2026-10-25',
