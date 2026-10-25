@@ -1,5 +1,29 @@
 # Wat is er nieuw · What is new
 
+## 0.72.0
+
+*25 oktober 2026*
+
+**Nieuw**
+
+- De film is een trailer: een camera vliegt over je huis, door de etages en naar het dak, de apparaten en de assistent komen voorbij, en hij eindigt met Naar je huis of Nog een keer
+- Inrichten begint met een groot welkom: je huis bouwt zich op uit Home Assistant, met wat er gevonden is als labels eraan
+
+**Opgelost**
+
+- Gewoner Nederlands bij verwarmen: een kamer wordt verwarmd, de zolder wordt warm
+
+*English*
+
+**New**
+
+- The film is a trailer: a camera flies over your house, through the floors and to the roof, the devices and the assistant pass by, and it ends with To your house or Play again
+- Setup starts with a big welcome: your house builds itself up from Home Assistant, with what was found as labels on it
+
+**Fixed**
+
+- Clearer wording when a room is being heated
+
 ## 0.71.0
 
 *25 oktober 2026*

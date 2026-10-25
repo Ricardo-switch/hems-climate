@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.71.0';
+export const VERSIE = '0.72.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,26 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.72.0',
+    datum: '2026-10-25',
+    nieuw: [
+      'De film is een trailer: een camera vliegt over je huis, door de etages en naar het dak, de apparaten en de assistent komen voorbij, en hij eindigt met Naar je huis of Nog een keer',
+      'Inrichten begint met een groot welkom: je huis bouwt zich op uit Home Assistant, met wat er gevonden is als labels eraan',
+    ],
+    opgelost: [
+      'Gewoner Nederlands bij verwarmen: een kamer wordt verwarmd, de zolder wordt warm',
+    ],
+    en: {
+      nieuw: [
+        'The film is a trailer: a camera flies over your house, through the floors and to the roof, the devices and the assistant pass by, and it ends with To your house or Play again',
+        'Setup starts with a big welcome: your house builds itself up from Home Assistant, with what was found as labels on it',
+      ],
+      opgelost: [
+        'Clearer wording when a room is being heated',
+      ],
+    },
+  },
   {
     versie: '0.71.0',
     datum: '2026-10-25',

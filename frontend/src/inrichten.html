@@ -300,6 +300,78 @@
   .getal input::placeholder { color: var(--gedempt); }
 
   /*
+   * Groot welkom (besluit 200, schetsen Wand- en Tel-Inrichten-Welkom): over het
+   * hele scherm, nog zonder de stappen. Op de wand rechts het huis met de
+   * labels eraan en links het welkom; op de telefoon alles onder elkaar.
+   */
+  [data-welkom] { display: none; }
+  body.inr-groot #wand > .bovenbalk, body.inr-groot #wand > .veldje, body.inr-groot #tel > .inhoud { display: none; }
+  body.inr-groot [data-welkom] { display: block; }
+  #wand { position: relative; }
+  #wand .welkom-groot { position: absolute; inset: 0; overflow: hidden; }
+  .welkom-groot .wk-merk { display: flex; align-items: center; gap: 12px; font-family: var(--kop); font-weight: 600; font-size: 19px; }
+  .welkom-groot .wk-merk i { width: 34px; height: 34px; border-radius: 10px; background: conic-gradient(from 200deg, #ff7a4d, #f7b548, #6ee7b7, #6fd3ff, #8f86ff, #ff7a4d); display: block; }
+  .welkom-groot .wk-hallo { font-size: 17px; font-weight: 700; color: var(--mint-t); letter-spacing: 0.02em; }
+  /* Licht: het verloop is te zacht op een lichte lucht, dan één donkere kleur. */
+  .sc-licht .welkom-groot .wk-kop em { background: none; color: var(--gloed-t); }
+  .welkom-groot .wk-kop { margin: -8px 0 0; font-family: var(--kop); font-size: 92px; font-weight: 700; line-height: 0.95; letter-spacing: -0.035em; }
+  .welkom-groot .wk-kop em { font-style: normal; background: linear-gradient(90deg, #f7b548, #ff7a4d 50%, #8f86ff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .welkom-groot .wk-zin { margin: 0; max-width: 34ch; font-size: 19px; line-height: 1.5; color: var(--zacht); }
+  .welkom-groot .wk-zin b { color: var(--tekst); font-weight: 600; }
+  .welkom-groot .wk-beloof { list-style: none; padding: 0; margin: 2px 0 0; display: grid; gap: 12px; }
+  .welkom-groot .wk-beloof li { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 14px; align-items: center; }
+  .welkom-groot .wk-beloof .wk-ik { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: rgb(var(--wit) / 0.07); }
+  .welkom-groot .wk-beloof .wk-ik svg { width: 22px; height: 22px; }
+  .welkom-groot .wk-beloof b { display: block; font-size: 16px; }
+  .welkom-groot .wk-beloof span { font-size: 14px; color: var(--zacht); }
+  .welkom-groot .wk-begin { height: 60px; padding: 0 30px; font-size: 18px; border-radius: 18px; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 10px 40px rgba(111, 211, 255, 0.35); }
+  .welkom-groot .wk-begin svg { width: 20px; height: 20px; }
+  .welkom-groot .wk-terug { font-size: 15px; font-weight: 600; color: var(--zacht); text-decoration: underline; text-underline-offset: 4px; text-decoration-color: rgb(var(--wit) / 0.25); }
+  #wand .wk-podium { position: absolute; left: 30%; right: 0; top: 20px; bottom: 0; }
+  #wand .wk-podium > svg { position: absolute; inset: 0; }
+  #wand .wk-lijn { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  #wand .wk-labels { position: absolute; inset: 0; pointer-events: none; }
+  #wand .wk-label { position: absolute; display: flex; align-items: center; gap: 10px; padding: 9px 16px 9px 10px; border-radius: 999px; white-space: nowrap; transform: translate(-50%, -50%); pointer-events: auto; color: var(--tekst); font: inherit; animation: wk-label 0.6s cubic-bezier(0.2, 0.9, 0.25, 1.3) both; }
+  #wand button.wk-label { cursor: pointer; }
+  .welkom-groot .wk-label .wk-ik, .welkom-groot .wk-getal .wk-ik { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: rgb(var(--wit) / 0.08); }
+  .welkom-groot .wk-label .wk-ik svg, .welkom-groot .wk-getal .wk-ik svg { width: 17px; height: 17px; }
+  .welkom-groot .wk-label b { font-family: var(--kop); font-size: 22px; font-weight: 700; }
+  .welkom-groot .wk-label > span:last-child { font-size: 14px; color: var(--zacht); font-weight: 600; }
+  @keyframes wk-label { from { opacity: 0; transform: translate(-50%, -30%) scale(0.85); } to { opacity: 1; transform: translate(-50%, -50%); } }
+  #wand .wk-links { position: absolute; left: 56px; top: 40px; bottom: 40px; width: 470px; display: flex; flex-direction: column; }
+  #wand .wk-midden { margin: auto 0; display: flex; flex-direction: column; gap: 22px; }
+  #wand .wk-doen { display: flex; align-items: center; gap: 22px; margin-top: 8px; }
+  #wand .wk-voet { font-size: 13px; color: var(--gedempt); }
+  #wand .wk-zoekt { position: absolute; right: 48px; bottom: 34px; display: flex; align-items: center; gap: 10px; padding: 10px 16px; font-size: 13.5px; font-weight: 700; color: var(--mint-t); }
+  #wand .wk-zoekt i { width: 8px; height: 8px; border-radius: 50%; background: var(--mint); animation: wk-puls 1.6s infinite; }
+  #wand .wk-zoekt.klaar i { animation: none; }
+  @keyframes wk-puls { 0% { box-shadow: 0 0 0 0 rgba(110, 231, 183, 0.6); } 70% { box-shadow: 0 0 0 9px rgba(110, 231, 183, 0); } 100% { box-shadow: 0 0 0 0 rgba(110, 231, 183, 0); } }
+  #tel .welkom-groot { position: relative; min-height: 100dvh; display: flex; flex-direction: column; }
+  #tel .wk-merk { position: absolute; left: 22px; top: 20px; z-index: 1; font-size: 16px; gap: 10px; }
+  #tel .wk-merk i { width: 28px; height: 28px; border-radius: 9px; }
+  #tel .wk-podium { height: 300px; flex: none; margin: 18px -10px 0; }
+  #tel .wk-getallen { display: flex; gap: 8px; overflow-x: auto; padding: 0 22px 2px; scrollbar-width: none; flex: none; touch-action: pan-x; }
+  #tel .wk-getal { flex: none; display: flex; align-items: center; gap: 7px; padding: 6px 13px 6px 6px; border-radius: 999px; font: inherit; font-size: 13px; color: var(--zacht); font-weight: 600; }
+  #tel .wk-getal b { font-family: var(--kop); font-size: 18px; color: var(--tekst); }
+  #tel .wk-lezen { font-size: 13.5px; color: var(--zacht); }
+  #tel .wk-tekst { padding: 18px 22px 0; display: flex; flex-direction: column; gap: 12px; }
+  #tel .wk-hallo { font-size: 14px; }
+  #tel .wk-kop { margin: -4px 0 0; font-size: 54px; }
+  #tel .wk-zin { font-size: 15.5px; line-height: 1.45; }
+  #tel .wk-beloof { gap: 9px; }
+  #tel .wk-beloof li { grid-template-columns: 32px minmax(0, 1fr); gap: 12px; }
+  #tel .wk-beloof .wk-ik { width: 32px; height: 32px; border-radius: 10px; }
+  #tel .wk-beloof .wk-ik svg { width: 18px; height: 18px; }
+  #tel .wk-beloof b { font-size: 14.5px; }
+  #tel .wk-beloof span { font-size: 13px; }
+  #tel .wk-doen { margin-top: auto; padding: 14px 22px 26px; display: flex; flex-direction: column; gap: 12px; }
+  #tel .wk-begin { height: 56px; justify-content: center; }
+  #tel .wk-onder { display: flex; justify-content: space-between; gap: 12px; font-size: 12.5px; color: var(--gedempt); }
+  #tel .wk-onder .wk-terug { font-size: 12.5px; }
+  @media (prefers-reduced-motion: reduce) { .welkom-groot .wk-label, #wand .wk-zoekt i { animation: none; } }
+  html.sc-stil .welkom-groot .wk-label, html.sc-stil #wand .wk-zoekt i { animation: none; }
+
+  /*
    * De telefoon (schets Tel-Inrichten-3): bovenin het hoofdstuk en hoe ver je
    * bent, het huis klein, dan de vraag; Terug, Later en Volgende vast onderaan.
    */
@@ -338,6 +410,7 @@
       <div class="podium" data-podium="wand"></div>
       <section class="glas kaart" data-kaart aria-live="polite"></section>
     </div>
+    <section class="welkom-groot" data-welkom></section>
   </div>
   <div id="tel" class="tel">
     <div class="inhoud">
@@ -346,6 +419,7 @@
       <div class="podium" data-podium="tel" aria-hidden="true"></div>
       <section class="kaart" data-kaart aria-live="polite"></section>
     </div>
+    <section class="welkom-groot" data-welkom></section>
   </div>
   <script src="kit/teksten.nl.js"></script>
   <script src="kit/teksten.en.js"></script>

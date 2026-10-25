@@ -1,11 +1,12 @@
 /*
- * De film (besluit 144 en 146): een dag in je huis, in zo'n 45 seconden. Hij
- * begint in het donker; de zon komt op en je huis verschijnt. Dan zes beelden
- * door de dag heen, elk met een groot getal uit je eigen huis, en bij
- * zonsondergang gaan de lampen aan en sluit hij af. Geen video om te laden:
- * de app tekent het, en de muziek speelt de browser zelf. Pauzeren, het
- * geluid uit en overslaan kan altijd. Wie minder beweging wil, krijgt
- * rustige beelden.
+ * De film (besluit 144 en 146), als trailer (besluit 200): je huis in acht
+ * shots op de maat, zo'n veertig seconden. Een camera vliegt over het
+ * getekende huis: het eiland op, de etages in, naar het dak; de kaarten uit
+ * de app schuiven in beeld, de assistent praat, het getal van de maand valt op
+ * de drop, en het slot is een eigen kaart met Naar je huis of Nog een keer.
+ * Geen video om te laden: de app tekent het, en de muziek speelt de browser
+ * zelf. Pauzeren, het geluid uit en overslaan kan altijd. Wie minder beweging
+ * wil, krijgt dezelfde shots zonder vliegen.
  *
  * Gebruik: film.speel({ opEinde }) na een tik (het geluid mag pas na een tik).
  */
@@ -368,9 +369,40 @@
 
   /* ------------------------------------------------------------ de beelden */
 
-  const binnenVan = (huis) => (huis?.etages ?? []).filter((e) => e.id !== 'buiten').flatMap((e) => (e.ruimtes ?? []).filter((r) => !global.huismodel.isBuiten(e, r)));
+  const hm = () => global.huismodel;
+  const binnenIn = (e) => (e.ruimtes ?? []).filter((r) => !hm().isBuiten(e, r));
+  const binnenEtages = (huis) => (huis?.etages ?? []).filter((e) => e.id !== 'buiten' && e.id !== 'kelder' && binnenIn(e).length > 0);
+  const binnenVan = (huis) => (huis?.etages ?? []).filter((e) => e.id !== 'buiten').flatMap(binnenIn);
   const klimaatIn = (r) => (r.apparaten ?? []).filter((a) => a.soort === 'klimaat');
-  const naamIn = (r) => (r ? global.huismodel.metLidwoord(r.naam) : null);
+  const naamIn = (r) => (r ? hm().metLidwoord(r.naam) : null);
+
+  /** De etage voor het beeld van de etages: liefst een in het midden, met de meeste kamers. */
+  function etageVan(huis) {
+    const alle = binnenEtages(huis);
+    if (!alle.length) return null;
+    const midden = alle.filter((e, i) => i > 0 && i < alle.length - 1);
+    const etage = [...(midden.length ? midden : alle)].sort((a, b) => binnenIn(b).length - binnenIn(a).length)[0];
+    const i = alle.indexOf(etage);
+    return { etage, boven: i, onder: alle.length - 1 - i };
+  }
+
+  /** De kaarten uit de app voor het beeld van de apparaten: wat nu iets doet eerst, hooguit drie. */
+  function kaartenVan(d) {
+    const b = d.state?.bewoner ?? {};
+    const kaarten = [];
+    for (const r of binnenVan(d.huis)) {
+      for (const a of klimaatIn(r)) {
+        const code = a.klimaat?.actieCode ?? '';
+        const doet = /^(koelt|verwarmt|verwarmt-voor|droogt|ventileert)$/.test(code);
+        const zin = doet ? a.klimaat.actie : a.stand;
+        if (!zin) continue;
+        kaarten.push({ naam: a.naam, zin: hm().metHoofdletter(zin), ring: r.temperatuurC == null ? '' : `${nl(r.temperatuurC)}°`, deel: doet ? 1 : 0, kleur: code === 'koelt' ? '#6FD3FF' : '#FF7A4D', toon: doet ? (code === 'koelt' ? 'ijs-t' : 'gloed-t') : 'zacht', actief: doet, zon: a.klimaat?.rol === 'zon' });
+      }
+    }
+    for (const u of b.uitstelbaar ?? []) if (u.kop) kaarten.push({ naam: u.naam, zin: u.kop, ring: '', deel: u.stand === 'running' ? 0.62 : 0, kleur: '#F7B548', toon: 'zon-t', actief: u.stand === 'running' || u.stand === 'would_start', zon: true });
+    for (const w of b.warmtebuffers ?? []) if (w.kop) kaarten.push({ naam: w.naam, zin: w.kop, ring: w.temperatuurC == null ? '' : `${nl(w.temperatuurC, 0)}°`, deel: w.temperatuurC == null ? 0 : Math.max(0, Math.min(1, (w.temperatuurC - 20) / Math.max(1, w.zonC - 20))), kleur: '#FF7A4D', toon: 'gloed-t', actief: !!w.stookt || w.stand === 'would_heat', zon: w.bron === 'zon' });
+    return kaarten.sort((x, y) => Number(y.actief) - Number(x.actief) || Number(y.zon) - Number(x.zon)).slice(0, 3);
+  }
 
   /** Wat het huis zelf vertelt: de echte cijfers, of null als ze er niet zijn. */
   function cijfers(d) {
@@ -378,148 +410,194 @@
     const apparaten = (d.huis?.etages ?? []).flatMap((e) => e.ruimtes ?? []).reduce((t, r) => t + (r.apparaten?.length ?? 0), 0);
     const zonKamer = kamers.find((r) => klimaatIn(r).some((a) => a.klimaat?.rol === 'zon')) ?? kamers.find((r) => klimaatIn(r).some((a) => a.klimaat?.kanKoelen)) ?? null;
     const warmKamer = kamers.find((r) => r.soort === 'badkamer' && r.temperatuurC != null) ?? kamers.find((r) => r.zoneId && r.temperatuurC != null) ?? null;
-    const piek = (r) => Math.max(0, ...(r?.kwartieren ?? []).map((q) => q.zonW ?? 0)) / 1000;
     return {
       kamers: kamers.length,
       apparaten,
       zonKamer,
       warmKamer,
+      etage: etageVan(d.huis),
+      bovenste: binnenEtages(d.huis)[0] ?? null,
+      kaarten: kaartenVan(d),
+      overKw: Math.max(0, (d.state?.explanation?.budget?.surplusW ?? 0) / 1000),
       gisterenKwh: d.gisteren?.zonWh > 0 ? d.gisteren.zonWh / 1000 : null,
-      piekKw: piek(d.vandaag) > 0.05 ? piek(d.vandaag) : piek(d.gisteren) > 0.05 ? piek(d.gisteren) : null,
       morgenKwh: d.weer?.dagen?.[0]?.verwachtKwh ?? null,
       eigenPct: d.opbrengst?.stroom?.eigenZonPct ?? null,
     };
   }
 
-  /**
-   * De film als reeks: de intro, zes beelden door de dag, en het slot, elk een
-   * aantal maten. Een beeld zonder zijn cijfer valt weg; zo staat er nooit een
-   * getal dat niet uit het huis komt. Het beeld van je dak valt op de drop.
+  /*
+   * De film als trailer (25 oktober 2026): acht shots op de maat, elk met een
+   * camera die van een begin naar een eind beweegt. Een camera is [vergroting,
+   * [px, py], [qx, qy]]: het punt p van de tekening (als deel van het scherm)
+   * komt op plek q van het scherm. Een shot zonder zijn cijfer valt weg; zo
+   * staat er nooit een getal dat niet uit het huis komt. Het getal van de maand
+   * valt op de drop.
    */
   function beelden(d) {
     const c = cijfers(d);
-    const zomer = (() => {
-      const m = new Date().getMonth() + 1;
-      return m >= 4 && m <= 9;
-    })();
-    const zonNaam = naamIn(c.zonKamer);
-    const warmNaam = naamIn(c.warmKamer);
+    const kamer = naamIn(c.warmKamer);
+    const morgen = c.morgenKwh != null ? tk('film.ass.morgen', { kwh: nl(c.morgenKwh) }) : '';
+    const assistent = c.warmKamer
+      ? { vraag: tk('film.ass.vraagWarm', { kamer }), zegt: `${hm().metHoofdletter(tk('film.ass.warm', { kamer, temp: `${nl(c.warmKamer.temperatuurC)}°` }))}${morgen ? ` ${morgen}` : ''}` }
+      : morgen ? { vraag: tk('film.ass.vraagZon'), zegt: morgen } : null;
     const lijst = [
-      { soort: 'intro', maten: 4, tijd: 'ochtend', titel: tk('film.intro.titel'), groot: 'Smart Climate', kleur: 'var(--tekst)', kop: tk('film.intro.kop'), klein: tk('film.intro.klein'), zoom: 0.94 },
-      c.gisterenKwh != null && { maten: 2, tijd: 'ochtend', titel: tk('film.gisteren.titel'), groot: `${nl(c.gisterenKwh)} kWh`, kleur: 'var(--zon)', kop: tk('film.gisteren.kop'), klein: tk('film.gisteren.klein'), zoom: 0.96 },
-      { maten: 2, tijd: 'ochtend', titel: tk('film.huis.titel'), groot: String(c.kamers), kleur: 'var(--tekst)', kop: tk('film.huis.kop', { n: c.kamers, apparaten: c.apparaten }), klein: tk('film.huis.klein'), temp: true, zoom: 1 },
-      c.warmKamer && { maten: 2, tijd: 'dag', titel: tk('film.kamer.titel'), groot: `${nl(c.warmKamer.temperatuurC)}°`, kleur: 'var(--gloed)', kop: tk('film.kamer.kop', { kamer: warmNaam }), klein: tk('film.kamer.klein'), warmKamer: true, zoom: 1.06 },
-      c.piekKw != null && { maten: 2, drop: true, tijd: 'dag', titel: tk('film.zon.titel'), groot: `${nl(c.piekKw)} kW`, kleur: 'var(--zon)', kop: zonNaam ? tk(zomer ? 'film.zon.koelt' : 'film.zon.warmt', { kamer: zonNaam }) : tk('film.zon.apparaten'), klein: tk('film.zon.klein'), zonKamer: true, zoom: 1.08 },
-      { maten: 2, tijd: 'dag', titel: tk('film.vraag.titel'), groot: tk('film.vraag.groot'), kleur: 'var(--ijs)', kop: tk('film.vraag.kop'), klein: tk('film.vraag.klein'), zoom: 0.98 },
-      c.morgenKwh != null && { maten: 2, tijd: 'avond', titel: tk('film.morgen.titel'), groot: `${nl(c.morgenKwh)} kWh`, kleur: 'var(--violet)', kop: tk('film.morgen.kop'), klein: tk('film.morgen.klein'), zoom: 1 },
-      c.eigenPct != null
-        ? { soort: 'slot', maten: 5, tijd: 'avond', titel: tk('inr.klaar'), groot: `${c.eigenPct}%`, kleur: 'var(--mint)', kop: tk('film.slot.eigen'), klein: tk('film.slot.klein'), eind: true, zoom: 1 }
-        : { soort: 'slot', maten: 5, tijd: 'avond', titel: tk('inr.klaar'), groot: tk('film.slot.welkom'), kleur: 'var(--mint)', kop: tk('film.slot.staat'), klein: tk('film.slot.klein'), eind: true, zoom: 1 },
+      { soort: 'opkomst', tijd: 'nacht', cam: [[0.42, [0.5, 0.525], [0.5, 0.75]], [0.7, [0.5, 0.525], [0.5, 0.55]]] },
+      { soort: 'huis', tijd: 'ochtend', temp: true, tekst: { kicker: tk('film.huis.kicker'), groot: String(c.kamers), zin: tk('film.huis.zin', { n: c.kamers, apparaten: c.apparaten }) }, cam: [[0.75, [0.5, 0.525], [0.594, 0.575]], [0.95, [0.5, 0.513], [0.688, 0.588]]] },
+      c.etage && { soort: 'etage', tijd: 'ochtend', temp: true, tekst: { kicker: tk('film.etage.kicker'), groot: tk('film.etage.groot'), zin: tk('film.etage.zin') }, cam: [[0.8, [0.5, 0.5], [0.727, 0.588]], [0.95, [0.5, 0.488], [0.75, 0.588]]] },
+      c.gisterenKwh != null && { soort: 'dak', tijd: 'dag', temp: true, anker: 'dak', tekst: { kicker: tk('film.dak.kicker'), groot: `${nl(c.gisterenKwh)} kWh`, kleur: 'var(--zon)', zin: tk('film.dak.zin') }, cam: [[1.3, [0.5, 0.375], [0.75, 0.588]], [1.7, [0.508, 0.363], [0.773, 0.588]]] },
+      c.kaarten.length > 0 && { soort: 'apparaten', tijd: 'dag', temp: true, anker: 'zonKamer', cam: [[1.6, [0.516, 0.4], [0.367, 0.588]], [1.9, [0.523, 0.413], [0.352, 0.6]]] },
+      assistent && { soort: 'assistent', tijd: 'avond', temp: true, assistent, cam: [[1.2, [0.5, 0.5], [0.789, 0.575]], [1.05, [0.5, 0.513], [0.781, 0.588]]] },
+      c.eigenPct != null && { soort: 'drop', tijd: 'avond', temp: true, drop: true, tekst: { kicker: tk('film.drop.kicker'), groot: `${c.eigenPct}%`, kleur: 'var(--mint)', zin: tk('film.drop.zin') }, cam: [[1.1, [0.5, 0.525], [0.703, 0.575]], [0.9, [0.5, 0.525], [0.688, 0.588]]] },
+      { soort: 'slot', tijd: 'nacht', maten: 4, cam: [[0.92, [0.5, 0.525], [0.5, 0.65]], [0.5, [0.5, 0.525], [0.5, 0.8]]] },
     ].filter(Boolean);
-    // Geen beeld van je dak: de drop op het vierde beeld, of het laatste voor het slot.
-    if (!lijst.some((b) => b.drop)) lijst[Math.min(4, lijst.length - 2)].drop = true;
+    // Geen getal van de maand: de drop op je dak, of op het shot voor het slot.
+    if (!lijst.some((b) => b.drop)) (lijst.find((b) => b.soort === 'dak') ?? lijst.at(-2)).drop = true;
     let maat = 0;
     for (const b of lijst) {
+      b.maten ??= 2;
       b.vanaf = maat;
       maat += b.maten;
     }
     return lijst;
   }
 
-  /** Het huis bij een beeld, uit dezelfde opbouw als Thuis (huismodel.tekening). */
-  function model(d, b) {
-    const c = cijfers(d);
-    const stand = new Date().getMonth() + 1 >= 4 && new Date().getMonth() + 1 <= 9 ? 'koelt' : 'warmt';
-    const t = global.huismodel.tekening(d.huis, {
-      zon: d.zon,
-      kamer: (r) => {
-        const k = global.huismodel.kamerModel(r, null);
-        if (!b.temp) k.temp = null;
-        k.stand = null;
-        k.zin = null;
-        // 's Avonds gaan de lampen aan.
-        for (const a of k.apparaten) if ('aan' in a) a.aan = b.tijd === 'avond' && a.soort === 'lamp';
-        if (b.zonKamer && c.zonKamer?.id === r.id) {
-          k.stand = stand;
-          for (const a of k.apparaten) if (a.soort === 'airco') Object.assign(a, { aan: true, stand });
-        }
-        if (b.warmKamer && c.warmKamer?.id === r.id) k.temp = `${nl(r.temperatuurC)}°`;
-        if (b.eind && (r.zoneId || r.meedoenMet)) k.stand = 'goed';
-        return k;
-      },
-    });
-    const zon = b.soort === 'intro'
-      ? { stand: 0.06, hoogte: 0.12, aandeel: 0.05, panelen: t.panelen }
-      : b.tijd === 'dag' ? { stand: 0.55, hoogte: 0.9, aandeel: b.zonKamer ? 0.9 : 0.6, panelen: t.panelen }
-        : b.tijd === 'ochtend' ? { stand: 0.2, hoogte: 0.35, aandeel: 0.25, panelen: t.panelen }
-          : { stand: 0.94, hoogte: 0.08, aandeel: 0, panelen: t.panelen };
+  /** Het huis bij een shot, uit dezelfde opbouw als Thuis (huismodel.tekening). */
+  function model(d, c, b) {
+    const m = new Date().getMonth() + 1;
+    const stand = m >= 4 && m <= 9 ? 'koelt' : 'warmt';
+    const avond = b.tijd === 'avond' || b.soort === 'slot';
+    const kamer = (r) => {
+      const k = hm().kamerModel(r, null);
+      if (!b.temp) k.temp = null;
+      k.stand = null;
+      k.zin = null;
+      // 's Avonds gaan de lampen aan.
+      for (const a of k.apparaten) if ('aan' in a) a.aan = avond && a.soort === 'lamp';
+      if (b.soort === 'apparaten' && c.zonKamer?.id === r.id) {
+        k.stand = stand;
+        for (const a of k.apparaten) if (a.soort === 'airco') Object.assign(a, { aan: true, stand });
+      }
+      return k;
+    };
+    const tek = hm().tekening(d.huis, { zon: d.zon, kamer });
+    const ant = d.aansluiting?.antwoorden ?? {};
+    const [zs, zh, za] = { nacht: [0.02, 0, 0], ochtend: [0.2, 0.35, 0.25], dag: [0.55, 0.9, b.soort === 'apparaten' ? 0.9 : 0.7], avond: [0.94, 0.08, 0.05] }[b.tijd];
+    const zon = { stand: zs, hoogte: zh, aandeel: za, opRechts: hm().zonOpRechts(d.aansluiting?.ligging, ant.panelen) ?? undefined, ...hm().panelenOpDak(ant.panelen, tek.piekW) };
+    const basis = { beschrijving: tk('film.beschrijving', { titel: b.tekst?.kicker ?? tk('film.label') }), tijd: b.tijd, wolken: 0.15, zon, labels: [] };
+    if (b.soort === 'etage') {
+      // Zoals Kamer: de etage op hoogte, de etages eronder en erboven vaag.
+      const { etage, boven, onder } = c.etage;
+      return { ...basis, zonderDak: true, etages: [{ naam: etage.naam, erBoven: boven > 0, kamers: binnenIn(etage).map(kamer) }], lagen: { onder, boven } };
+    }
+    const naarZon = b.soort === 'apparaten' && c.zonKamer ? `kamer:${c.zonKamer.naam}` : 'huis';
     return {
-      beschrijving: tk('film.beschrijving', { titel: b.titel }),
-      tijd: b.tijd,
-      wolken: 0.1,
-      zon,
+      ...basis,
       // Het huis zelf, zoals elke pagina het tekent (besluit 191).
-      ...global.huismodel.huisDelen(t),
-      buitenunit: t.buitenunit ? { ...t.buitenunit, aan: !!b.zonKamer } : null,
+      ...hm().huisDelen(tek, ant.elders ?? {}),
+      buitenunit: tek.buitenunit ? { ...tek.buitenunit, aan: b.soort === 'apparaten' && !!c.zonKamer } : null,
       net: true,
-      stromen: b.zonKamer && c.zonKamer ? [{ van: 'zon', naar: `kamer:${c.zonKamer.naam}`, sterkte: 0.85 }] : b.eind ? [{ van: 'zon', naar: 'huis', sterkte: 0.5 }] : [],
-      labels: [],
+      stromen: b.soort === 'dak' || b.soort === 'apparaten' ? [{ van: 'zon', naar: naarZon, sterkte: 0.8 }] : b.soort === 'drop' ? [{ van: 'net', naar: 'huis', sterkte: 0.5 }] : [],
     };
   }
 
   /* ------------------------------------------------------------ afspelen */
 
+  const VERLOOP = 'linear-gradient(90deg, rgba(5, 10, 20, 0.72) 0%, rgba(5, 10, 20, 0.35) 38%, rgba(5, 10, 20, 0) 60%)';
   const STIJL = `
-    .film { position: fixed; inset: 0; z-index: 90; display: grid; grid-template-rows: minmax(0, 1fr) auto; color: var(--tekst); background: #050a14; overflow: hidden; }
-    .film-lucht { position: absolute; inset: 0; opacity: 0; transition: opacity 2.4s ease; pointer-events: none; }
+    .film { position: fixed; inset: 0; z-index: 90; color: var(--tekst); background: #050a14; overflow: hidden; }
+    .film-lucht { position: absolute; inset: 0; opacity: 0; transition: opacity 1.6s ease; pointer-events: none; }
     .film-lucht.aan { opacity: 1; }
     .film-lucht.nacht { background: radial-gradient(120% 90% at 50% 10%, #101a33 0%, #070d18 70%); }
     .film-lucht.ochtend { background: radial-gradient(120% 90% at 20% 95%, #6a4a42 0%, #2a2f4f 50%, #0b1424 100%); }
     .film-lucht.dag { background: radial-gradient(120% 90% at 30% 15%, #2b4775 0%, #142545 55%, #0b1424 100%); }
     .film-lucht.avond { background: radial-gradient(120% 90% at 75% 92%, #7a3a3a 0%, #2e2246 50%, #0b1424 100%); }
-    .film-beeld { position: relative; display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); align-items: center; gap: 24px; padding: 24px 48px 8px; min-height: 0; }
-    .film-woord { position: relative; min-width: 0; }
-    .film-woord .titel { font-size: 15px; font-weight: 700; color: var(--gedempt); letter-spacing: 0.02em; }
-    .film-woord .groot { font-family: var(--kop); font-weight: 800; font-size: clamp(64px, 9vw, 128px); line-height: 0.92; letter-spacing: -0.04em; margin-top: 8px; transform-origin: left center; }
-    .film-woord .groot.merkwoord { display: flex; align-items: center; gap: 0.28em; font-size: clamp(44px, 6vw, 84px); letter-spacing: -0.03em; }
-    .film-woord .groot.merkwoord i { width: 0.9em; height: 0.9em; border-radius: 0.24em; background: conic-gradient(from 200deg, #ff7a4d, #f7b548, #6ee7b7, #6fd3ff, #8f86ff, #ff7a4d); flex-shrink: 0; }
-    .film-woord h2 { margin: 16px 0 0; font-family: var(--kop); font-weight: 600; font-size: clamp(24px, 2.6vw, 36px); line-height: 1.15; max-width: 22ch; }
-    .film-woord p { margin: 12px 0 0; font-size: clamp(15px, 1.3vw, 18px); color: var(--zacht); max-width: 40ch; }
-    .film-woord .in { animation: film-in 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
-    .film-woord .uit { animation: film-uit 0.5s ease both; }
+    .film-cam { position: absolute; left: 0; top: 0; width: 100%; height: 100%; transform-origin: 0 0; }
+    .film-cam [data-film-huis] { position: relative; width: 100%; height: 100%; }
+    .film-cam [data-film-huis] > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .film-waas { position: absolute; inset: 0; background: ${VERLOOP}; pointer-events: none; opacity: 0; transition: opacity 0.8s; }
+    .film-waas.aan { opacity: 1; }
+    .film-woord { position: absolute; left: 6vw; top: 50%; transform: translateY(-50%); max-width: min(470px, 40vw); }
+    .film-woord .kicker { font-size: 15px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--zacht); }
+    .film-woord .groot { margin-top: 8px; font-family: var(--kop); font-weight: 800; font-size: clamp(72px, 10.3vw, 150px); line-height: 0.9; letter-spacing: -0.045em; }
+    .film-woord .zin { margin: 16px 0 0; font-family: var(--kop); font-weight: 600; font-size: clamp(22px, 2.5vw, 36px); line-height: 1.12; letter-spacing: -0.01em; }
+    .film-woord > *, .film-ui .film-kop > * { animation: film-in 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+    .film-woord .groot, .film-ui .film-kop .groot { animation-delay: 0.08s; }
+    .film-woord .zin { animation-delay: 0.2s; }
+    .film-woord .groot.puls { animation: film-in 0.6s 0.08s cubic-bezier(0.2, 0.8, 0.2, 1) both, film-puls var(--tel) ease-out 0.7s infinite; transform-origin: left center; }
     @keyframes film-in { from { opacity: 0; transform: translateY(22px); filter: blur(8px); } to { opacity: 1; transform: none; filter: none; } }
-    @keyframes film-uit { to { opacity: 0; transform: translateY(-10px); filter: blur(6px); } }
-    .film-woord .groot.puls { animation: film-in 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both, film-puls var(--tel) ease-out 0.9s infinite; }
     @keyframes film-puls { 0% { transform: scale(1.035); } 100% { transform: scale(1); } }
-    .film-huis { align-self: stretch; min-height: 0; display: grid; place-items: center; }
-    .film-huis.opkomst { animation: film-opkomst var(--duur) cubic-bezier(0.2, 0.7, 0.2, 1) both; }
-    @keyframes film-opkomst { from { opacity: 0; transform: translateY(40px) scale(0.9); filter: brightness(0.2); } to { opacity: 1; transform: none; filter: none; } }
-    .film-huis .sc-huis { width: 100%; height: 100%; }
-    .film-zoom { width: 100%; height: 100%; display: grid; place-items: center; }
+    .film-ui { position: absolute; inset: 0; pointer-events: none; }
+    .film-kaarten { position: absolute; right: 5.5vw; top: 50%; transform: translateY(-50%); width: 300px; display: grid; gap: 14px; }
+    .film-kop .kicker { font-size: 15px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--zacht); }
+    .film-kop .groot { font-family: var(--kop); font-weight: 800; font-size: 46px; letter-spacing: -0.03em; color: var(--zon); margin: 4px 0 8px; }
+    .film-kaart { padding: 16px 18px; border-radius: 22px; background: rgba(14, 24, 40, 0.82); border: 1px solid rgba(255, 255, 255, 0.12); display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: 14px; align-items: center; animation: film-kaart 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+    .film-kaart:nth-of-type(2) { animation-delay: 0.35s; }
+    .film-kaart:nth-of-type(3) { animation-delay: 0.7s; }
+    @keyframes film-kaart { from { opacity: 0; transform: translateX(40px) scale(0.96); } to { opacity: 1; transform: none; } }
+    .film-kaart b { display: block; font-size: 17px; }
+    .film-kaart span { display: block; font-size: 13.5px; margin-top: 2px; }
+    .film-kaart svg { width: 54px; height: 54px; }
+    .film-ass { position: absolute; left: 6vw; top: 50%; transform: translateY(-50%); width: min(560px, 46vw); }
+    .film-ass .vraag { font-size: 18px; color: var(--zacht); font-weight: 600; animation: film-in 0.6s both; }
+    .film-ass .rij { display: flex; align-items: center; gap: 26px; margin-top: 22px; }
+    .film-ass .bol { width: 120px; height: 120px; flex: none; border-radius: 50%; background: radial-gradient(circle at 34% 28%, #ffffff 0%, #bfe3ff 16%, #6fb7ff 40%, #6a5cff 72%, #2a1f6b 100%); box-shadow: 0 0 80px rgba(111, 170, 255, 0.75), 0 0 200px rgba(143, 134, 255, 0.5), inset -18px -24px 40px rgba(20, 10, 70, 0.55); animation: film-praat 0.5s ease-in-out infinite alternate; }
+    @keyframes film-praat { from { transform: scale(1); } to { transform: scale(1.06); } }
+    .film-ass .zegt { margin: 0; font-family: var(--kop); font-weight: 600; font-size: clamp(24px, 3vw, 40px); line-height: 1.12; letter-spacing: -0.01em; }
+    .film-ass .w { color: rgba(255, 255, 255, 0.24); animation: film-woord 0.2s forwards; }
+    @keyframes film-woord { to { color: var(--tekst); } }
+    .film-slot { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; padding-top: 19vh; text-align: center; }
+    .film-slot.aan { display: flex; }
+    .film-slot .merk { display: flex; align-items: center; gap: 22px; animation: film-in 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+    .film-slot .merk i { width: 84px; height: 84px; border-radius: 26px; background: conic-gradient(from 200deg, #ff7a4d, #f7b548, #6ee7b7, #6fd3ff, #8f86ff, #ff7a4d); box-shadow: 0 0 80px rgba(111, 211, 255, 0.35); }
+    .film-slot .merk b { font-family: var(--kop); font-weight: 800; font-size: clamp(52px, 8vw, 104px); letter-spacing: -0.045em; line-height: 1; }
+    .film-slot p { margin: 20px 0 0; font-family: var(--kop); font-weight: 600; font-size: clamp(22px, 2.6vw, 34px); color: var(--zacht); animation: film-in 0.9s 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+    .film-slot .knoppen { margin-top: 34px; display: flex; gap: 12px; animation: film-in 0.9s 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+    .film-slot button { height: 56px; padding: 0 28px; border-radius: 18px; font: inherit; font-weight: 700; font-size: 17px; cursor: pointer; border: 1px solid rgba(255, 255, 255, 0.16); background: rgba(255, 255, 255, 0.08); color: var(--tekst); }
+    .film-slot button[data-film-thuis] { background: var(--tekst); color: var(--inkt); border-color: transparent; }
     .film-flits { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
-    .film-flits.aan { animation: film-flits 0.6s ease-out; }
-    @keyframes film-flits { from { opacity: 0.35; } to { opacity: 0; } }
-    .film-eind { margin-top: 26px; display: flex; align-items: center; gap: 14px; }
-    .film-eind .merkje { display: inline-flex; align-items: center; gap: 10px; font-family: var(--kop); font-size: 22px; font-weight: 700; margin-right: 8px; }
-    .film-eind .merkje i { width: 30px; height: 30px; border-radius: 9px; background: conic-gradient(from 200deg, #ff7a4d, #f7b548, #6ee7b7, #6fd3ff, #8f86ff, #ff7a4d); }
-    .film-eind button { height: 52px; padding: 0 26px; border-radius: 999px; border: 0; background: var(--accent); color: var(--op-accent); font: inherit; font-size: 17px; font-weight: 700; cursor: pointer; }
-    .film-balk { position: relative; display: flex; align-items: center; gap: 12px; padding: 12px 48px 22px; }
+    .film-flits.aan { animation: film-flits 0.4s ease-out; }
+    @keyframes film-flits { from { opacity: 0.3; } to { opacity: 0; } }
+    .film-balk { position: absolute; left: 6vw; right: 6vw; bottom: 24px; display: flex; align-items: center; gap: 12px; }
     .film-balk button { height: 44px; min-width: 44px; padding: 0 16px; border-radius: 999px; border: 0; background: rgba(255, 255, 255, 0.08); color: var(--tekst); font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; display: inline-grid; place-items: center; }
     .film button:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
-    .film-tellen { flex: 1; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.12); overflow: hidden; }
-    .film-tellen b { display: block; height: 100%; width: 0; background: var(--tekst); }
-    html.tel-stand .film-beeld { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); padding: 24px 20px 0; align-content: start; }
-    html.tel-stand .film-balk { padding: 12px 20px 22px; }
-    @media (prefers-reduced-motion: reduce) { .film-woord .in, .film-woord .uit, .film-woord .groot.puls, .film-flits.aan, .film-huis.opkomst { animation: none; } .film-zoom { transition: none !important; } }
+    .film-tellen { flex: 1; display: flex; gap: 6px; }
+    .film-tellen i { flex: 1; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.14); }
+    .film-tellen i.al { background: var(--tekst); }
+    html.tel-stand .film-waas { background: linear-gradient(180deg, rgba(5, 10, 20, 0.78) 0%, rgba(5, 10, 20, 0.4) 42%, rgba(5, 10, 20, 0) 62%); }
+    html.tel-stand .film-woord, html.tel-stand .film-ass { left: 22px; right: 22px; top: 64px; transform: none; max-width: none; width: auto; }
+    html.tel-stand .film-woord .groot { font-size: 76px; }
+    html.tel-stand .film-woord .zin { font-size: 22px; }
+    html.tel-stand .film-ass .bol { width: 72px; height: 72px; }
+    html.tel-stand .film-ass .rij { gap: 18px; }
+    html.tel-stand .film-ass .zegt { font-size: 24px; }
+    html.tel-stand .film-kaarten { left: 22px; right: 22px; top: 56px; width: auto; transform: none; gap: 10px; }
+    html.tel-stand .film-kaart { padding: 12px 14px; }
+    html.tel-stand .film-kop .groot { font-size: 36px; }
+    html.tel-stand .film-slot .merk { gap: 14px; }
+    html.tel-stand .film-slot .merk i { width: 44px; height: 44px; border-radius: 14px; }
+    html.tel-stand .film-slot .merk b { font-size: 40px; }
+    html.tel-stand .film-balk { left: 20px; right: 20px; bottom: 22px; gap: 8px; }
+    html.tel-stand .film-tellen { gap: 3px; }
+    @media (prefers-reduced-motion: reduce) { .film *, .film-flits.aan { animation: none !important; } .film-ass .w { color: var(--tekst); } .film-lucht { transition: none; } }
   `;
 
   async function laad() {
-    const namen = ['huis', 'zon', 'gisteren', 'vandaag', 'weer', 'opbrengst'];
-    const uit = await Promise.allSettled(['api/huis', 'api/zon', 'api/vandaag?dag=gisteren', 'api/vandaag', 'api/weer', 'api/opbrengst?soort=maand'].map((p) => haal(p)));
+    const namen = ['huis', 'zon', 'gisteren', 'weer', 'opbrengst', 'aansluiting', 'state'];
+    const uit = await Promise.allSettled(['api/huis', 'api/zon', 'api/vandaag?dag=gisteren', 'api/weer', 'api/opbrengst?soort=maand', 'api/aansluiting', 'api/state'].map((p) => haal(p)));
     const d = {};
     uit.forEach((r, i) => (d[namen[i]] = r.status === 'fulfilled' ? r.value : null));
     return d;
   }
+
+  /** Een ring zoals op de kaarten van Apparaten. */
+  function ring({ deel, kleur, tekst }) {
+    const o = 2 * Math.PI * 22;
+    const boog = deel > 0 ? `<circle cx="27" cy="27" r="22" fill="none" stroke="${kleur}" stroke-width="5" stroke-linecap="round" stroke-dasharray="${(deel * o).toFixed(1)} ${o.toFixed(1)}" transform="rotate(-90 27 27)"/>` : `<circle cx="27" cy="27" r="22" fill="none" stroke="${kleur}" stroke-opacity="0.5" stroke-width="2" stroke-dasharray="4 6"/>`;
+    return `<svg viewBox="0 0 54 54" aria-hidden="true"><circle cx="27" cy="27" r="22" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="5"/>${boog}${tekst ? `<text x="27" y="31" text-anchor="middle" font-family="Figtree, sans-serif" font-size="12" font-weight="700" fill="#EEF3F7">${esc(tekst)}</text>` : ''}</svg>`;
+  }
+
+  /** Langzaam op gang, langzaam tot stilstand. */
+  const zacht = (f) => (f < 0.5 ? 4 * f * f * f : 1 - (-2 * f + 2) ** 3 / 2);
 
   async function speel({ opEinde } = {}) {
     if (!document.getElementById('film-stijl')) {
@@ -543,7 +621,8 @@
       }
     })();
     klank?.zet(geluidAan);
-    const stil = global.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    // Minder beweging: uit de browser, of bij Weergave (besluit 164).
+    const stil = (global.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false) || document.documentElement.classList.contains('sc-stil');
 
     const el = document.createElement('div');
     el.className = 'film';
@@ -552,61 +631,117 @@
     el.setAttribute('aria-label', tk('film.label'));
     el.style.setProperty('--tel', `${TEL}s`);
     el.innerHTML = `${['nacht', 'ochtend', 'dag', 'avond'].map((x) => `<div class="film-lucht ${x}${x === 'nacht' ? ' aan' : ''}" data-lucht="${x}"></div>`).join('')}
-      <div class="film-beeld"><div class="film-woord" aria-live="polite" data-film-tekst></div><div class="film-huis" data-film-huis><div class="film-zoom" data-film-zoom></div></div><div class="film-flits" data-film-flits></div></div>
-      <div class="film-balk"><button type="button" data-film-pauze aria-label="${esc(tk('film.pauze'))}">❚❚</button><div class="film-tellen" role="progressbar" aria-label="${esc(tk('film.voortgang'))}" aria-valuemin="0" aria-valuemax="100" data-film-tellen><b></b></div><button type="button" data-film-geluid aria-pressed="${geluidAan}">${esc(tk(geluidAan ? 'film.geluidAan' : 'film.geluidUit'))}</button><button type="button" data-film-klaar>${esc(tk('rond.overslaan'))}</button></div>`;
+      <div class="film-cam" data-film-cam><div data-film-huis></div></div>
+      <div class="film-waas" data-film-waas></div>
+      <div class="film-woord" aria-live="polite" data-film-tekst></div>
+      <div class="film-ui" aria-live="polite" data-film-ui></div>
+      <div class="film-slot" data-film-slot><div class="merk"><i aria-hidden="true"></i><b>Smart Climate</b></div><p>${esc(tk('film.slot.zin'))}</p><div class="knoppen"><button type="button" data-film-thuis>${esc(tk('film.slot.thuis'))}</button><button type="button" data-film-opnieuw>${esc(tk('film.slot.opnieuw'))}</button></div></div>
+      <div class="film-flits" data-film-flits></div>
+      <div class="film-balk"><button type="button" data-film-pauze aria-label="${esc(tk('film.pauze'))}">❚❚</button><div class="film-tellen" role="progressbar" aria-label="${esc(tk('film.voortgang'))}" aria-valuemin="0" aria-valuemax="100" data-film-tellen></div><button type="button" data-film-geluid aria-pressed="${geluidAan}">${esc(tk(geluidAan ? 'film.geluidAan' : 'film.geluidUit'))}</button><button type="button" data-film-klaar>${esc(tk('rond.overslaan'))}</button></div>`;
     document.body.append(el);
     el.querySelector('[data-film-klaar]').focus();
 
     const d = await laad();
+    const c = cijfers(d);
     const lijst = beelden(d);
     const totaalMaten = lijst.reduce((s, b) => s + b.maten, 0);
     const totaal = totaalMaten * MAAT_MS;
     const dropMaat = lijst.find((b) => b.drop).vanaf;
     const slotMaat = lijst.at(-1).vanaf;
-    klank?.begin({ intro: lijst[0].maten, drop: dropMaat, slot: slotMaat, eind: totaalMaten });
+    const plan = { intro: Math.min(lijst[0].maten + lijst[1].maten, dropMaat - 1), drop: dropMaat, slot: slotMaat, eind: totaalMaten };
+    klank?.begin(plan);
 
     let gepauzeerd = false;
     let laatste = performance.now();
     let beeldNu = -1;
     let gestopt = false;
     let uitgespeeld = false;
+    let sluiten = null;
     let stap = 0;
+    let cam = null;
 
+    const camEl = el.querySelector('[data-film-cam]');
     const huisEl = el.querySelector('[data-film-huis]');
-    const zoomEl = el.querySelector('[data-film-zoom]');
     const tekstEl = el.querySelector('[data-film-tekst]');
+    const uiEl = el.querySelector('[data-film-ui]');
     const flits = el.querySelector('[data-film-flits]');
-    const balk = el.querySelector('[data-film-tellen] b');
-    const maat = () => (document.documentElement.classList.contains('tel-stand') ? { breedte: Math.min(innerWidth - 20, 420), hoogte: Math.round(innerHeight * 0.42) } : { breedte: Math.round(innerWidth * 0.55), hoogte: Math.round(innerHeight * 0.78) });
+    const tellen = el.querySelector('[data-film-tellen]');
+    tellen.innerHTML = '<i></i>'.repeat(totaalMaten);
+    const telStand = () => document.documentElement.classList.contains('tel-stand');
     const lucht = (tijd) => el.querySelectorAll('[data-lucht]').forEach((x) => x.classList.toggle('aan', x.dataset.lucht === tijd));
 
+    /** Waar een kamer of het dak in de tekening staat, als deel van het scherm. */
+    function anker(b, W, H) {
+      const vak = (ids) => {
+        const r = ids.map((id) => huisEl.querySelector(`.sc-tik[data-kamer="${CSS.escape(String(id))}"]`)?.getBoundingClientRect()).filter(Boolean);
+        if (!r.length) return null;
+        const l = Math.min(...r.map((x) => x.left)), o = Math.min(...r.map((x) => x.top)), re = Math.max(...r.map((x) => x.right)), on = Math.max(...r.map((x) => x.bottom));
+        return { x: (l + re) / 2, y: o, h: on - o };
+      };
+      const v = b.anker === 'dak' ? vak(c.bovenste ? binnenIn(c.bovenste).map((r) => r.id) : []) : b.anker === 'zonKamer' ? vak(c.zonKamer ? [c.zonKamer.id] : c.bovenste ? binnenIn(c.bovenste).map((r) => r.id) : []) : null;
+      if (!v) return null;
+      return [v.x / W, (v.y + v.h * (b.anker === 'dak' ? 0.3 : 0.5)) / H];
+    }
+
+    /** De camera van een shot, met de plek op de telefoon: het huis onder de woorden. */
+    function camVan(b, W, H) {
+      const p = anker(b, W, H);
+      const onder = { apparaten: 0.8, assistent: 0.74 }[b.soort] ?? 0.7;
+      return b.cam.map(([s, pp, q]) => [telStand() ? Math.min(s * 1.6, 2.4) : s, p ?? pp, telStand() && b.soort !== 'opkomst' && b.soort !== 'slot' ? [0.5, onder] : q]);
+    }
+
+    function camera(f) {
+      if (!cam) return;
+      const { W, H, van, naar } = cam;
+      const e = stil ? 1 : zacht(Math.max(0, Math.min(1, f)));
+      const tus = (a, z) => a + (z - a) * e;
+      const s = tus(van[0], naar[0]);
+      const p = [tus(van[1][0], naar[1][0]), tus(van[1][1], naar[1][1])];
+      const q = [tus(van[2][0], naar[2][0]), tus(van[2][1], naar[2][1])];
+      camEl.style.transform = `translate(${(q[0] * W - s * p[0] * W).toFixed(1)}px, ${(q[1] * H - s * p[1] * H).toFixed(1)}px) scale(${s.toFixed(4)})`;
+    }
+
     function woorden(b) {
-      const groot = b.soort === 'intro' ? `<div class="groot merkwoord in" style="color: ${b.kleur}; animation-delay: ${stil ? 0 : MAAT}s"><i aria-hidden="true"></i>${esc(b.groot)}</div>` : `<div class="groot in${b.drop || (beeldNu > lijst.findIndex((x) => x.drop) && !b.eind) ? (stil ? '' : ' puls') : ''}" style="color: ${b.kleur}">${esc(b.groot)}</div>`;
-      const vertraag = (n) => (stil ? 0 : b.soort === 'intro' ? MAAT * n : 0.15 * n);
-      return `<div class="titel in" style="animation-delay: ${vertraag(b.soort === 'intro' ? 1 : 0)}s">${esc(b.titel)}</div>${groot}<h2 class="in" style="animation-delay: ${vertraag(b.soort === 'intro' ? 2 : 1)}s">${esc(b.kop)}</h2><p class="in" style="animation-delay: ${vertraag(b.soort === 'intro' ? 2.5 : 2)}s">${esc(b.klein)}</p>${b.eind ? `<div class="film-eind in" style="animation-delay: ${stil ? 0 : MAAT * 2}s"><span class="merkje"><i aria-hidden="true"></i>Smart Climate</span><button type="button" data-film-begin>${esc(tk('inr.begin'))}</button></div>` : ''}`;
+      if (!b.tekst) return '';
+      const puls = !stil && (b.drop || (beeldNu > lijst.findIndex((x) => x.drop) && b.soort !== 'slot'));
+      return `<div class="kicker">${esc(b.tekst.kicker)}</div><div class="groot${puls ? ' puls' : ''}" style="color: ${b.tekst.kleur ?? 'var(--tekst)'}">${esc(b.tekst.groot)}</div><p class="zin">${esc(b.tekst.zin)}</p>`;
+    }
+
+    function stukken(b) {
+      if (b.soort === 'apparaten') {
+        const kop = c.overKw >= 0.1 ? `<div class="film-kop"><div class="kicker">${esc(tk('film.app.kicker'))}</div><div class="groot">${esc(tk('film.app.over', { kw: nl(c.overKw) }))}</div></div>` : `<div class="film-kop"><div class="kicker">${esc(tk('film.app.kicker'))}</div><div class="groot">${esc(tk('film.app.groot'))}</div></div>`;
+        return `<div class="film-kaarten">${kop}${c.kaarten.map((k) => `<div class="film-kaart">${ring(k)}<div><b>${esc(k.naam)}</b><span class="${k.toon}">${esc(k.zin)}</span></div></div>`).join('')}</div>`;
+      }
+      if (b.soort === 'assistent') {
+        const w = b.assistent.zegt.split(' ');
+        const stapje = Math.min(0.28, (b.maten * MAAT - 1.6) / w.length);
+        return `<div class="film-ass"><div class="vraag">${esc(b.assistent.vraag)}</div><div class="rij"><span class="bol" aria-hidden="true"></span><p class="zegt">${w.map((x, j) => `<span class="w" style="animation-delay: ${(0.9 + j * stapje).toFixed(2)}s">${esc(x)}</span>`).join(' ')}</p></div></div>`;
+      }
+      return '';
     }
 
     function naarBeeld(i) {
       beeldNu = i;
       stap = 0;
       const b = lijst[i];
-      lucht(b.soort === 'intro' ? 'nacht' : b.tijd);
-      global.huis.teken(zoomEl, model(d, b), { ...maat(), marge: 0.04 });
-      // Langzaam inzoomen over het hele beeld.
-      zoomEl.style.transition = 'none';
-      zoomEl.style.transform = `scale(${b.zoom})`;
-      if (!stil) {
-        void zoomEl.offsetWidth;
-        zoomEl.style.transition = `transform ${b.maten * MAAT}s linear`;
-        zoomEl.style.transform = `scale(${b.zoom * 1.06})`;
-      }
-      huisEl.classList.remove('opkomst');
-      if (b.soort === 'intro' && !stil) {
-        void huisEl.offsetWidth;
-        huisEl.style.setProperty('--duur', `${MAAT * 2.2}s`);
-        huisEl.classList.add('opkomst');
-      }
+      const W = innerWidth, H = innerHeight;
+      lucht(b.tijd);
+      // Tekenen zonder camera, de kamers opmeten, en dan de vlakken om op te tikken weg: de film is om te kijken.
+      camEl.style.willChange = 'auto';
+      camEl.style.transform = 'none';
+      // Op de telefoon zonder namen in het huis, zoals op Thuis.
+      const mo = model(d, c, b);
+      if (telStand()) mo.etages = mo.etages.map((e) => ({ ...e, kamers: e.kamers.map((k) => ({ ...k, stil: true })) }));
+      global.huis.teken(huisEl, mo, { breedte: W, hoogte: H, marge: 0.12, tik: true });
+      const [van, naar] = camVan(b, W, H);
+      huisEl.querySelectorAll('.sc-tik').forEach((x) => x.remove());
+      cam = { W, H, van, naar };
+      camera(0);
+      requestAnimationFrame(() => (camEl.style.willChange = 'transform'));
       tekstEl.innerHTML = woorden(b);
+      uiEl.innerHTML = stukken(b);
+      el.querySelector('[data-film-waas]').classList.toggle('aan', !!b.tekst || b.soort === 'assistent' || (b.soort === 'apparaten' && telStand()));
+      el.querySelector('[data-film-slot]').classList.toggle('aan', b.soort === 'slot');
       if (b.drop && !stil) {
         flits.classList.remove('aan');
         void flits.offsetWidth;
@@ -614,25 +749,33 @@
       }
     }
 
-    /** Binnen een beeld: de zon komt op in de intro, en in het slot wordt het nacht. */
+    /** Binnen een shot: in de opkomst komt de ochtend. */
     function binnenBeeld(b, f) {
-      if (b.soort === 'intro' && stap === 0 && f > 0.2) {
+      if (b.soort === 'opkomst' && stap === 0 && f > 0.35) {
         stap = 1;
         lucht('ochtend');
-      }
-      if (b.soort === 'slot' && stap === 0 && f > 0.55) {
-        stap = 1;
-        lucht('nacht');
       }
     }
 
     function stop() {
       if (gestopt) return;
       gestopt = true;
+      clearTimeout(sluiten);
       klank?.stop();
       el.remove();
       removeEventListener('keydown', toets);
+      removeEventListener('resize', opnieuwTekenen);
       opEinde?.();
+    }
+
+    function opnieuw() {
+      clearTimeout(sluiten);
+      t = 0;
+      uitgespeeld = false;
+      beeldNu = -1;
+      klank?.spoel();
+      klank?.begin(plan);
+      pauze(false);
     }
 
     function tik(nu) {
@@ -640,26 +783,32 @@
       if (!gepauzeerd && !uitgespeeld) t += nu - laatste;
       laatste = nu;
       if (t >= totaal && !uitgespeeld) {
-        // Het laatste beeld blijft staan tot je tikt, en sluit na een poos vanzelf.
+        // Het slot blijft staan tot je kiest, en sluit na een poos vanzelf.
         uitgespeeld = true;
         t = totaal;
-        el.querySelector('[data-film-klaar]').textContent = tk('inr.begin');
-        setTimeout(stop, 8000);
+        sluiten = setTimeout(stop, 20_000);
       }
       const m = Math.min(totaalMaten - 0.001, t / MAAT_MS);
       let i = lijst.findIndex((b) => m >= b.vanaf && m < b.vanaf + b.maten);
       if (i < 0) i = lijst.length - 1;
       if (i !== beeldNu) naarBeeld(i);
-      binnenBeeld(lijst[i], (m - lijst[i].vanaf) / lijst[i].maten);
-      balk.style.width = `${(t / totaal) * 100}%`;
-      el.querySelector('[data-film-tellen]').setAttribute('aria-valuenow', String(Math.round((t / totaal) * 100)));
+      const f = (m - lijst[i].vanaf) / lijst[i].maten;
+      binnenBeeld(lijst[i], f);
+      camera(f);
+      const al = Math.floor(m) + 1;
+      tellen.querySelectorAll('i').forEach((x, j) => x.classList.toggle('al', j < al));
+      tellen.setAttribute('aria-valuenow', String(Math.round((t / totaal) * 100)));
       requestAnimationFrame(tik);
+    }
+
+    function opnieuwTekenen() {
+      if (beeldNu >= 0) naarBeeld(beeldNu);
     }
 
     function pauze(p) {
       gepauzeerd = p;
       klank?.pauze(p);
-      el.querySelectorAll('.in, .puls, .opkomst').forEach((x) => (x.style.animationPlayState = p ? 'paused' : ''));
+      el.querySelectorAll('.film-woord *, .film-ui *, .film-slot *').forEach((x) => (x.style.animationPlayState = p ? 'paused' : ''));
       const k = el.querySelector('[data-film-pauze]');
       k.textContent = p ? '▶' : '❚❚';
       k.setAttribute('aria-label', tk(p ? 'film.verder' : 'film.pauze'));
@@ -672,13 +821,12 @@
       }
     }
     addEventListener('keydown', toets);
+    addEventListener('resize', opnieuwTekenen);
     el.addEventListener('click', (e) => {
       const b = e.target.closest('button');
-      if (!b) {
-        if (uitgespeeld) stop();
-        return;
-      }
-      if (b.hasAttribute('data-film-klaar') || b.hasAttribute('data-film-begin')) stop();
+      if (!b) return;
+      if (b.hasAttribute('data-film-klaar') || b.hasAttribute('data-film-thuis')) stop();
+      else if (b.hasAttribute('data-film-opnieuw')) opnieuw();
       else if (b.hasAttribute('data-film-pauze')) pauze(!gepauzeerd);
       else if (b.hasAttribute('data-film-geluid')) {
         geluidAan = !geluidAan;
@@ -703,6 +851,7 @@
         klank?.spoel();
       },
       aantal: lijst.length,
+      soorten: lijst.map((b) => b.soort),
       lengteS: totaal / 1000,
     };
   }

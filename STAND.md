@@ -357,6 +357,8 @@ verwijzing bestaat.
   op aan de kant van het oosten, de deurbel geeft meteen live beeld, en bij
   Weergave kunnen seizoen, weer en feestdagen in het huis aan of uit ([198]).
   De wand neemt de weergave, het thema en de taal over van wie hij volgt ([199]).
+  De film is een trailer van acht shots met een camera over het huis, en
+  Inrichten begint met een groot welkom waarin het huis zich opbouwt ([200]).
 - **Meldingen** staan achter de bel in het menu, met Onderhoud en na een update
   wat er nieuw is ([136]). Wanneer een batterij of filter een melding geeft,
   kies je bij Functies › Meldingen; standaard onder de 10% ([149]).
@@ -658,4 +660,5 @@ verwijzing bestaat.
 [197]: DECISIONS.md#197-wat-elk-apparaat-kan-de-klimaatstap-per-merk-in-inrichten
 [198]: DECISIONS.md#198-wat-de-wand-zegt-de-zon-op-zijn-plek-de-deurbel-meteen-en-feestdagen-in-het-huis
 [199]: DECISIONS.md#199-de-wand-neemt-alle-persoonlijke-instellingen-over-van-wie-hij-volgt
+[200]: DECISIONS.md#200-de-film-als-trailer-en-een-groot-welkom-bij-inrichten
 <!-- links:einde -->
