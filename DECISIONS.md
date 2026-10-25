@@ -200,6 +200,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [195. Wat beweegt in een eigen laag: het huis weer licht genoeg voor een tablet aan de wand](#195-wat-beweegt-in-een-eigen-laag-het-huis-weer-licht-genoeg-voor-een-tablet-aan-de-wand)
 - [196. Een huis zonder slimme meter of zonder panelen](#196-een-huis-zonder-slimme-meter-of-zonder-panelen)
 - [198. Wat de wand zegt, de zon op zijn plek, de deurbel meteen, en feestdagen in het huis](#198-wat-de-wand-zegt-de-zon-op-zijn-plek-de-deurbel-meteen-en-feestdagen-in-het-huis)
+- [199. De wand neemt alle persoonlijke instellingen over van wie hij volgt](#199-de-wand-neemt-alle-persoonlijke-instellingen-over-van-wie-hij-volgt)
 
 **Veiligheid**
 
@@ -9130,6 +9131,37 @@ feestdagen.
   de stand van de zon zelf.
 - Feestdagen per land, zoals Koningsdag. Eerst wat overal gevierd wordt.
 - Bewegende lichtjes; die kosten een oude tablet schilderwerk (besluit 195).
+
+---
+
+## 199. De wand neemt alle persoonlijke instellingen over van wie hij volgt
+
+*Onderwerp: weergave · Status: geldig*
+
+Op 25 oktober 2026, na 0.70.0. Twee dingen die de bewoner zag:
+- **De drie nieuwe schakelaars** (seizoenen, weer, feestdagen) stonden bij Jij los
+  in de lijst. Ze horen bij Weergave, onder een kopje Huis.
+- **De wand volgt van wie hij is** (besluit 181) al wel voor de kaarten, de
+  favorieten en de kleur. Voor de weergave, het thema en de taal nam hij die
+  van zijn eigen schermaccount. Hij moet alles overnemen van wie hij op dat
+  moment volgt.
+
+*Besluit:*
+
+- **Bij Jij** staan seizoenen, weer en feestdagen niet meer los; ze staan bij
+  Weergave, onder **Huis**, met eenvoudig of uitgebreid, grotere letters en
+  minder beweging.
+- **De wand neemt alles over** van wie hij volgt: de dienst geeft bij `wand`
+  ook `persoon` (de weergave, het thema en de taal van diens account), en een
+  scherm aan de wand gebruikt die, naast de kaarten, de favorieten en de kleur.
+  Wisselt wiens comfort geldt, dan wisselt de wand mee (binnen een minuut).
+- **Weergave op de wand** laat zien wat geldt, met "De wand volgt de weergave
+  van Noor": veranderen gaat bij Jij op de telefoon van die bewoner.
+- **Versie 0.71.0.**
+
+*Wat afviel:* de weergave op de wand zelf veranderen voor iemand anders (dat is
+diens keuze, op diens telefoon); grotere letters op de wand (die schuift nooit,
+besluit 164).
 
 ---
 

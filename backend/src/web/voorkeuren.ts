@@ -177,7 +177,13 @@ export interface VoorkeurenView {
    * een account), zoals op zijn telefoon; zonder bewoners die van het huis.
    * `eigen`: wie kijkt is zelf die bewoner, en niet een scherm.
    */
-  readonly wand: { readonly kaarten: readonly KaartId[]; readonly breed: readonly KaartId[]; readonly favorieten: readonly Favoriet[]; readonly magAanpassen: boolean; readonly niemand: Niemand; readonly kleur: Kleur; readonly van: string | null; readonly naam: string | null; readonly eigen: boolean };
+  readonly wand: { readonly kaarten: readonly KaartId[]; readonly breed: readonly KaartId[]; readonly favorieten: readonly Favoriet[]; readonly magAanpassen: boolean; readonly niemand: Niemand; readonly kleur: Kleur; readonly van: string | null; readonly naam: string | null; readonly eigen: boolean;
+    /**
+     * Wat de wand overneemt van wie hij volgt (25 oktober 2026): de weergave, het
+     * thema en de taal van diens account, net als de kaarten en de kleur. Null
+     * zonder bewoners: dan die van het scherm zelf.
+     */
+    readonly persoon: { readonly weergave: Weergave; readonly thema: Thema; readonly taal: TaalKeus } | null };
   /** De kleur van elke bewoner, op zijn id: voor de begroeting en de rondjes. */
   readonly kleuren: Readonly<Record<string, Kleur>>;
   /** Wie kijkt is een scherm, zoals de wand: dat blijft donker, ook met een breed scherm. */
@@ -320,8 +326,10 @@ export function voorkeurenView(b: Bestand, wie: VoorkeurWie): VoorkeurenView {
   const { van, eigen: zelf } = wandVan(wie);
   // Eén indeling per bewoner: op de wand die van zijn telefoon, zonder wat de wand zelf al toont.
   const profiel = van == null ? null : (b.accounts[van] ?? {});
-  const thema = eigen.thema && (THEMAS as readonly string[]).includes(eigen.thema) ? eigen.thema : STANDAARD_THEMA;
-  const taal = eigen.taal && (TAALKEUZES as readonly string[]).includes(eigen.taal) ? eigen.taal : STANDAARD_TAAL;
+  const themaVan = (a: { thema?: string }) => (a.thema && (THEMAS as readonly string[]).includes(a.thema) ? (a.thema as Thema) : STANDAARD_THEMA);
+  const taalVan = (a: { taal?: string }) => (a.taal && (TAALKEUZES as readonly string[]).includes(a.taal) ? (a.taal as TaalKeus) : STANDAARD_TAAL);
+  const thema = themaVan(eigen);
+  const taal = taalVan(eigen);
   return {
     tel: { kaarten: eigen.tel ?? STANDAARD_TEL, favorieten: eigen.favorieten ?? [], weergave: { ...STANDAARD_WEERGAVE, ...eigen.weergave }, thema, kleur: kleurVan(b, wie.userId, wie.profielen), taal, meldingen: { ...STANDAARD_MELDINGEN, ...eigen.meldingen } },
     wand: {
@@ -335,6 +343,7 @@ export function voorkeurenView(b: Bestand, wie: VoorkeurWie): VoorkeurenView {
       van,
       naam: wie.profielen?.volgorde.find((x) => x.account === van)?.naam ?? null,
       eigen: zelf,
+      persoon: profiel ? { weergave: { ...STANDAARD_WEERGAVE, ...profiel.weergave }, thema: themaVan(profiel), taal: taalVan(profiel) } : null,
     },
     kleuren: Object.fromEntries((wie.profielen?.volgorde ?? []).map((x) => [x.id, kleurVan(b, x.account, wie.profielen)])),
     scherm: wie.scherm === true,

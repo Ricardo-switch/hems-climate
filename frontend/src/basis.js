@@ -1076,10 +1076,27 @@
   } catch {
     // Niets onthouden.
   }
+  /*
+   * Wat geldt op dit scherm (25 oktober 2026): op een scherm aan de wand de
+   * weergave, het thema, de kleur en de taal van wie de wand volgt, net als zijn
+   * kaarten; anders die van jou. `volgt` is dan diens naam.
+   */
+  function persoonlijk(v) {
+    const p = v?.scherm && v.wand?.persoon ? v.wand.persoon : null;
+    return {
+      weergave: p?.weergave ?? v?.tel?.weergave ?? null,
+      thema: p?.thema ?? v?.tel?.thema,
+      taal: p?.taal ?? v?.tel?.taal,
+      kleur: p ? v.wand.kleur : v?.tel?.kleur,
+      scherm: v?.scherm === true && !p,
+      volgt: p ? (v.wand.naam ?? '') : null,
+    };
+  }
   async function weergaveLaden() {
     try {
       const v = await haal('api/voorkeuren');
-      if (v?.tel?.weergave) zetWeergave(v.tel.weergave);
+      const w = persoonlijk(v).weergave;
+      if (w) zetWeergave(w);
       zetThema(v);
     } catch {
       // Zonder logmap: zoals het was.
@@ -1095,9 +1112,11 @@
   let kleurenNu = {};
   function zetThema(v) {
     if (!v?.tel) return;
-    global.scThema?.({ thema: v.tel.thema, kleur: v.tel.kleur, wandKleur: v.wand?.kleur, scherm: v.scherm === true });
-    // De taal bij Jij (besluit 185); een scherm volgt zijn account.
-    global.taal.zetKeuze(v.tel.taal, { scherm: v.scherm === true });
+    // Op een scherm dat iemand volgt, diens thema, kleur en taal (25 oktober 2026).
+    const p = persoonlijk(v);
+    global.scThema?.({ thema: p.thema, kleur: p.kleur, wandKleur: v.wand?.kleur, scherm: p.scherm });
+    // De taal bij Jij (besluit 185); een scherm zonder bewoners volgt zijn account.
+    global.taal.zetKeuze(p.taal, { scherm: p.scherm });
     const nieuw = v.kleuren ?? {};
     if (JSON.stringify(nieuw) === JSON.stringify(kleurenNu)) return;
     kleurenNu = nieuw;
@@ -1583,5 +1602,5 @@
     return lw ? `${lw} ${naam.charAt(0).toLowerCase()}${naam.slice(1)}` : naam;
   }
 
-  global.app = { huisSoort, $$, metLidwoord, nl, zet, esc, bijnaOp, klokVan, wanneer, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting, gebundeld, zicht, aanbellen, offline, online, inHA, volledigGekozen, zetVolledig, naarHA, zetWeergave, weergave: () => weergaveNu, zetThema, kleurVan, tekstKleur, houToegang, updateKlaar, bijwerkVenster, bijVerandering, kanInstalleren, geinstalleerd, installeer, naarHAScherm };
+  global.app = { huisSoort, persoonlijk, $$, metLidwoord, nl, zet, esc, bijnaOp, klokVan, wanneer, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting, gebundeld, zicht, aanbellen, offline, online, inHA, volledigGekozen, zetVolledig, naarHA, zetWeergave, weergave: () => weergaveNu, zetThema, kleurVan, tekstKleur, houToegang, updateKlaar, bijwerkVenster, bijVerandering, kanInstalleren, geinstalleerd, installeer, naarHAScherm };
 })(window);

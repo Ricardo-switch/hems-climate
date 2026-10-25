@@ -1,5 +1,21 @@
 # Wat is er nieuw · What is new
 
+## 0.71.0
+
+*25 oktober 2026*
+
+**Beter**
+
+- De wand neemt de weergave, het thema en de taal over van wie hij volgt, net als de kaarten en de kleur
+- Seizoenen, het weer en feestdagen staan bij Weergave, onder Huis
+
+*English*
+
+**Improved**
+
+- The wall takes the display, theme and language of the person it follows, like the cards and the colour
+- Seasons, the weather and holidays are in Display, under House
+
 ## 0.70.0
 
 *25 oktober 2026*
