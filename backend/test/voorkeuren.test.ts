@@ -90,7 +90,7 @@ describe('VoorkeurenStore', () => {
     await store.load();
     const v = store.view(noor);
     expect(v.tel).toEqual({ kaarten: STANDAARD_TEL, favorieten: [], weergave: STANDAARD_WEERGAVE, thema: 'donker', kleur: 'lucht', taal: 'auto', meldingen: STANDAARD_MELDINGEN });
-    expect(v.wand).toEqual({ kaarten: STANDAARD_WAND, breed: STANDAARD_BREED, favorieten: [], magAanpassen: false, niemand: STANDAARD_NIEMAND, kleur: 'lucht', van: null, naam: null, eigen: false });
+    expect(v.wand).toEqual({ kaarten: STANDAARD_WAND, breed: STANDAARD_BREED, favorieten: [], magAanpassen: false, niemand: STANDAARD_NIEMAND, kleur: 'lucht', van: null, naam: null, eigen: false, persoon: null });
   });
 
   it('bewaart welke kaarten op de wand breed staan, bij wiens indeling het is (besluit 187)', async () => {
@@ -180,6 +180,18 @@ describe('VoorkeurenStore', () => {
       expect((await store.save({ plek: 'tel', kleur: 'oranje' }, noor)).ok).toBe(false);
       expect((await store.save({ plek: 'tel', thema: 'roze' }, noor)).ok).toBe(false);
       expect((await store.save({ plek: 'wand', kleur: 'framboos' }, ricardo)).ok).toBe(false);
+    });
+
+    it('geeft de wand de weergave, het thema en de taal van wie hij volgt (25 oktober 2026)', async () => {
+      const store = new VoorkeurenStore(dir);
+      await store.load();
+      expect((await store.save({ plek: 'tel', thema: 'licht', taal: 'en', weergave: { eenvoudig: true, feestdagen: false } }, metProfiel(noor, null))).ok).toBe(true);
+      // Het scherm aan de wand, terwijl het comfort van Noor geldt.
+      const p = store.view(metProfiel(wand, 'u-noor', true)).wand.persoon;
+      expect(p).toMatchObject({ thema: 'licht', taal: 'en', weergave: { eenvoudig: true, feestdagen: false, seizoen: true } });
+      // Geldt Ricardo, dan die van Ricardo; zonder bewoners niets.
+      expect(store.view(metProfiel(wand, 'u-ricardo', true)).wand.persoon).toMatchObject({ thema: 'donker', taal: 'auto', weergave: { eenvoudig: false } });
+      expect(store.view({ ...wand, scherm: true }).wand.persoon).toBeNull();
     });
 
     it('bewaart de taal per account: automatisch, of zelf gekozen (besluit 185)', async () => {

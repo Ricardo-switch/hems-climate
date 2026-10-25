@@ -356,6 +356,7 @@ verwijzing bestaat.
   het apparaat echt stookt, en "geen zon meer" als de zon onder is; de zon komt
   op aan de kant van het oosten, de deurbel geeft meteen live beeld, en bij
   Weergave kunnen seizoen, weer en feestdagen in het huis aan of uit ([198]).
+  De wand neemt de weergave, het thema en de taal over van wie hij volgt ([199]).
 - **Meldingen** staan achter de bel in het menu, met Onderhoud en na een update
   wat er nieuw is ([136]). Wanneer een batterij of filter een melding geeft,
   kies je bij Functies › Meldingen; standaard onder de 10% ([149]).
@@ -656,4 +657,5 @@ verwijzing bestaat.
 [196]: DECISIONS.md#196-een-huis-zonder-slimme-meter-of-zonder-panelen
 [197]: DECISIONS.md#197-wat-elk-apparaat-kan-de-klimaatstap-per-merk-in-inrichten
 [198]: DECISIONS.md#198-wat-de-wand-zegt-de-zon-op-zijn-plek-de-deurbel-meteen-en-feestdagen-in-het-huis
+[199]: DECISIONS.md#199-de-wand-neemt-alle-persoonlijke-instellingen-over-van-wie-hij-volgt
 <!-- links:einde -->

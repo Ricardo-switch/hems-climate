@@ -72,8 +72,9 @@
     try {
       v = await haal('api/voorkeuren');
       kan = true;
-      // De weergave (besluit 164) bij je account: ook hier bijhouden.
-      if (v?.tel?.weergave) global.app.zetWeergave(v.tel.weergave);
+      // De weergave (besluit 164) bij je account; op een scherm die van wie de wand volgt.
+      const w = global.app.persoonlijk(v).weergave;
+      if (w) global.app.zetWeergave(w);
       // Het thema en de kleur (besluit 181): op de wand wisselt de kleur mee met wiens comfort geldt.
       global.app.zetThema(v);
     } catch {
@@ -90,7 +91,7 @@
       const res = await deur('api/voorkeuren', { plek, ...wat });
       if (res?.ok) v = await res.json();
       else if (res) await laad();
-      if (wat.weergave) global.app.zetWeergave(v.tel.weergave);
+      if (wat.weergave) global.app.zetWeergave(global.app.persoonlijk(v).weergave ?? v.tel.weergave);
     } catch {
       // De volgende keer.
     }
@@ -653,13 +654,15 @@
    * uitgebreid, grotere letters en minder beweging. Voor jou, op elk scherm.
    */
   function tekenWeergave(el) {
-    const w = v.tel.weergave ?? STANDAARD.tel.weergave;
+    // Op een scherm dat iemand volgt: diens weergave, alleen om te zien (25 oktober 2026).
+    const volgt = global.app.persoonlijk(v).volgt;
+    const w = (volgt != null ? global.app.persoonlijk(v).weergave : null) ?? v.tel.weergave ?? STANDAARD.tel.weergave;
     const keuze = (eenvoudig, naam, zin, tel) => `<button type="button" role="radio" aria-checked="${w.eenvoudig === eenvoudig}" data-wg-eenvoudig="${eenvoudig}"><span class="mini-tel" aria-hidden="true">${tel}</span><b>${naam}</b><p>${zin}</p></button>`;
     const schakel = (id, naam, zin) => `<button type="button" class="schakel" role="switch" aria-checked="${w[id] !== false && (w[id] === true || ['seizoen', 'weer', 'feestdagen'].includes(id))}" data-wg-schakel="${id}"><div><b>${naam}</b><span>${zin}</span></div><span class="knopje" aria-hidden="true"></span></button>`;
     const t = global.t;
     el.setAttribute('aria-label', t('thuis.weergave'));
     el.innerHTML = `<div class="bladkop"><h2 class="kop-2">${esc(t('thuis.weergave'))}</h2><button type="button" class="knop knop-licht" data-blad-dicht>${esc(t('algemeen.klaar'))}</button></div>
-      <p class="mini" style="margin: 0">${esc(t('eigen.wg.voorJou'))}${global.app.telStand() ? '' : ` ${esc(t('eigen.wg.wand'))}`}</p>
+      <p class="mini" style="margin: 0">${volgt != null ? esc(t('eigen.wg.volgt', { naam: volgt })) : `${esc(t('eigen.wg.voorJou'))}${global.app.telStand() ? '' : ` ${esc(t('eigen.wg.wand'))}`}`}</p>
       <div class="twee" role="radiogroup" aria-label="${esc(t('eigen.wg.keuze'))}">
         ${keuze(true, esc(t('eigen.wg.eenvoudig')), esc(t('eigen.wg.eenvoudigZin')), '<i style="width: 70%; height: 10px; background: rgb(var(--wit) / 0.45)"></i><i style="width: 92%; height: 8px"></i><i style="width: 60%; height: 8px"></i>')}
         ${keuze(false, esc(t('eigen.wg.uitgebreid')), esc(t('eigen.wg.uitgebreidZin')), '<i style="width: 60%; height: 7px; background: rgb(var(--wit) / 0.45)"></i><i style="width: 90%"></i><i style="width: 80%"></i><i style="width: 45%; background: rgba(247,181,72,0.55)"></i><i style="width: 70%"></i>')}
@@ -687,6 +690,8 @@
     if (t.closest('[data-aanpassen]')) return begin(plekNu());
     if (t.closest('[data-weergave]')) return openBlad('weergave', 'tel');
     const wg = t.closest('[data-wg-eenvoudig], [data-wg-schakel]');
+    // Op een scherm dat iemand volgt verander je het op je eigen telefoon.
+    if (wg && blad?.soort === 'weergave' && global.app.persoonlijk(v).volgt != null) return;
     if (wg && blad?.soort === 'weergave') {
       const nu = v.tel.weergave ?? STANDAARD.tel.weergave;
       const wat = wg.dataset.wgSchakel ? { [wg.dataset.wgSchakel]: !nu[wg.dataset.wgSchakel] } : { eenvoudig: wg.dataset.wgEenvoudig === 'true' };
