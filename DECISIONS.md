@@ -8959,7 +8959,10 @@ maakten bijna geen verschil.
   de baan eronder (een blokje vroeg op de dag liep door de naam); op de wand
   staan bij Aanpassen de knoppen van een smalle kaart in de kaart (ze vielen half
   weg), en een kaart die opnieuw gevuld wordt, houdt zijn knoppen.
-- **Versie 0.67.1.**
+- **Versie 0.67.1.** In 0.67.2 opgelost: het vak van de tekening gaat de laag
+  dragen (`position: relative`), en daarmee telde op de telefoon een `top: 96px`
+  uit de regel voor de wand mee; het huis zakte onder de stroombalk. Zo'n vak
+  krijgt nu ook `inset: auto`.
 
 *Wat afviel:* een lichte stand die zware delen uitzet (de oorzaak bleek één
 ding, en dat is nu weg); de stroom stilzetten op een oudere tablet.
