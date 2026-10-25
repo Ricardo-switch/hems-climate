@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.73.0';
+export const VERSIE = '0.73.1';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,18 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.73.1',
+    datum: '2026-10-25',
+    nieuw: [
+      'Bij de bel een melding als een apparaat uit Home Assistant verdwijnt, net als bij een nieuw apparaat; wat je zelf verbergt telt niet, en komt het terug, dan gaat de melding weg',
+    ],
+    en: {
+      nieuw: [
+        'The bell now also tells you when a device disappears from Home Assistant, just like a new device; what you hide yourself does not count, and if it comes back the notification goes away',
+      ],
+    },
+  },
   {
     versie: '0.73.0',
     datum: '2026-10-25',

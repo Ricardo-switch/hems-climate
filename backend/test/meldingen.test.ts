@@ -26,6 +26,46 @@ const leeg = (o: Partial<MeldingenBron> = {}): MeldingenBron => ({ nu: T0, zonde
 const droger = (sinds: number | null) => ({ id: 'switch.droger', naam: 'De droger', kamer: 'Zolder', kamerId: 'zolder', onbereikbaarSindsMs: sinds });
 
 describe('meldingen (besluit 136)', () => {
+  it('meldt een apparaat dat uit Home Assistant verdween, na tien minuten, en niet wat je zelf verborg', async () => {
+    const { s, dir } = await store();
+    const lamp = { id: 'light.hal', naam: 'Lamp hal', kamer: 'Hal', kamerId: 'hal', onbereikbaarSindsMs: null };
+    const tv = { id: 'media_player.tv', naam: 'Tv', kamer: 'Woonkamer', kamerId: 'woonkamer', onbereikbaarSindsMs: null };
+    const vol = (nu: number, o: Partial<MeldingenBron> = {}) => leeg({ nu, volgen: [droger(null), lamp, tv], ...o });
+    s.bij(vol(T0));
+    // De droger is weg; de lamp verborg je zelf bij Indeling.
+    s.bij(vol(T0 + 60_000, { volgen: [tv], verborgen: ['light.hal'] }));
+    expect(s.lijst(T0 + 60_000).actief).toEqual([]);
+    s.bij(vol(T0 + 12 * 60_000, { volgen: [tv], verborgen: ['light.hal'] }));
+    const nu = s.lijst(T0 + 12 * 60_000).actief;
+    expect(nu.map((m) => [m.soort, m.titel])).toEqual([['weg', 'Weg uit Home Assistant: De droger']]);
+    expect(nu[0]?.tekst).toContain('Het stond in de zolder.');
+    expect(nu[0]?.actie?.href).toBe('indeling.html');
+    expect(s.lijst(T0 + 12 * 60_000, 'en').actief[0]?.titel).toBe('Gone from Home Assistant: De droger');
+    // Onthouden na een herstart; komt hij terug, dan gaat de melding stil weg, niet naar Eerder.
+    await s.bewaar();
+    const t = new MeldingenStore({ logDir: dir });
+    await t.load();
+    expect(t.lijst(T0 + 13 * 60_000).actief.length).toBe(1);
+    t.bij(vol(T0 + 20 * 60_000, { verborgen: ['light.hal'] }));
+    expect(t.lijst(T0 + 20 * 60_000)).toEqual({ actief: [], eerder: [] });
+  });
+
+  it('meldt niets als bijna alles tegelijk weg is: dan is het huis even niet te lezen', async () => {
+    const { s } = await store();
+    const veel = Array.from({ length: 6 }, (_, i) => ({ id: `light.l${i}`, naam: `Lamp ${i}`, kamer: 'Hal', kamerId: 'hal', onbereikbaarSindsMs: null }));
+    s.bij(leeg({ nu: T0, volgen: veel }));
+    s.bij(leeg({ nu: T0 + 60_000, volgen: veel.slice(0, 1) }));
+    s.bij(leeg({ nu: T0 + 20 * 60_000, volgen: veel.slice(0, 1) }));
+    expect(s.lijst(T0 + 20 * 60_000).actief).toEqual([]);
+    // Een apparaat zonder kamer dat weer verdwijnt, telt ook.
+    s.bij(leeg({ nu: T0 + 21 * 60_000, volgen: veel, zonderRuimte: [{ id: 'switch.stekker', naam: 'Stekker' }] }));
+    s.bij(leeg({ nu: T0 + 22 * 60_000, volgen: veel }));
+    s.bij(leeg({ nu: T0 + 33 * 60_000, volgen: veel }));
+    const nu = s.lijst(T0 + 33 * 60_000).actief;
+    expect(nu.map((m) => m.titel)).toEqual(['Weg uit Home Assistant: Stekker']);
+    expect(nu[0]?.tekst.startsWith('Haalde je het zelf weg')).toBe(true);
+  });
+
   it('meldt een apparaat dat een uur niet reageert, en zet het naar Eerder als het terug is', async () => {
     const { s } = await store();
     s.bij(leeg({ volgen: [droger(T0 - 30 * 60_000)] }));
