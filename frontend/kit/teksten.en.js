@@ -2936,6 +2936,8 @@
   'inr.as.s.toevoegen': 'Add Smart Climate',
   'inr.as.nog': 'about {n} seconds left',
   'inr.as.knop': 'Turn on the assistant',
+  'inr.as.bijKlaar': 'Turns on by itself at Done, while the film plays.',
+  'inr.as.wacht': 'Then the tour begins.',
   'inr.as.opnieuw': 'Try again',
   'inr.as.fout': 'That did not work: {fout}.',
   'inr.as.aan': 'The assistant is on',

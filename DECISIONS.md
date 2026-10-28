@@ -9281,18 +9281,22 @@ dat een tablet aan de muur het beste een eigen account krijgt.
 
 *Besluit:*
 
-- **De assistent met één knop.** Bij Inrichten › Klaarzetten (blok "Praat met
-  je huis") en bij Instellingen › Toegang staat "Zet de assistent aan". Na die
-  tik van de beheerder zet de add-on de integratie neer (besluit 184),
-  herstart Home Assistant als hij die versie nog niet geladen heeft, en voegt
-  de integratie zelf toe met het adres en de sleutel van de add-on. Je ziet
-  de drie stappen met een vinkje, bij het herstarten "nog zo'n … tellen".
-  Lukt het niet, dan staat er waarom, met Probeer opnieuw.
+- **De assistent gaat aan bij Klaar, terwijl de film speelt.** De add-on zet
+  de integratie neer (besluit 184), herstart Home Assistant als hij die versie
+  nog niet geladen heeft, en voegt de integratie zelf toe met het adres en de
+  sleutel van de add-on. Bij Inrichten is daar geen eigen knop voor: het
+  begint als je bij Klaar op Speel af tikt, zodra de film zijn cijfers heeft
+  (daarna speelt hij zonder verbinding). Na de film wacht de rondleiding met
+  de drie stappen in beeld tot Home Assistant terug is; Overslaan doet
+  hetzelfde zonder film. Klaarzetten zegt alleen dat het bij Klaar gebeurt.
+  Bij Instellingen › Toegang staat de knop "Zet de assistent aan". Lukt het
+  niet, dan staat er waarom, met Probeer opnieuw.
 - **Dit verruimt de schrijfgrens, maar smal.** Naast licht, scènes en
   schermen mag de add-on nu twee dingen: Home Assistant herstarten
   (`homeassistant/restart`) en de eigen integratie toevoegen
   (`config/config_entries/flow`, alleen `smart_climate`). Allebei alleen na
-  de tik, alleen in de add-on (via de Supervisor), en niet via HaClient. Geen
+  een tik van de beheerder (Speel af of Overslaan bij Klaar, of de knop bij
+  Toegang), alleen in de add-on (via de Supervisor), en niet via HaClient. Geen
   andere integraties, geen add-ons installeren.
 - **De stand blijft in de dienst** (`api/integratie` geeft `aanzetten` mee),
   zodat een pagina die tijdens het herstarten opnieuw laadt, ziet waar het is.

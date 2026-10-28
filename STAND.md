@@ -67,8 +67,9 @@ verwijzing bestaat.
   wordt een ingreep met een eindtijd ([75]). Assist van Home Assistant vraagt
   hem via de integratie Smart Climate, zonder YAML: via HACS of met een knop
   in de app, en de add-on meldt zich vanzelf aan; de zinnen en de kamers komen
-  uit de add-on ([91], [184]). In de add-on doet één knop "Zet de assistent
-  aan" alles: neerzetten, Home Assistant herstarten en toevoegen ([202]).
+  uit de add-on ([91], [184]). In de add-on gaat hij vanzelf aan bij Klaar in
+  Inrichten, terwijl de film speelt (of met één knop bij Toegang):
+  neerzetten, Home Assistant herstarten en toevoegen ([202]).
 - **Zonwering is klimaat;** licht regelt Smart Climate niet, maar de app heeft
   een knop voor lampen ([92], [97]).
 - **Op termijn:** een kastje met een verborgen Home Assistant en een dunne agent

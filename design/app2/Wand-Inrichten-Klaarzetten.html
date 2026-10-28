@@ -12,7 +12,9 @@
    * was voor wie geen Home Assistant-kenner is:
    *
    * - De assistent: de integratie neerzetten, Home Assistant herstarten en de
-   *   integratie toevoegen, met één knop (#assistent, #bezig).
+   *   integratie toevoegen (#assistent, #bezig). Op 28 oktober 2026 zonder
+   *   eigen knop: dat gebeurt bij Klaar, terwijl de film speelt, en de
+   *   rondleiding wacht tot Home Assistant terug is.
    * - De stem: standaard die van het apparaat zelf, zonder installatie; voor
    *   gevorderden helemaal in huis met Whisper, Piper en het wekwoord (#stem).
    * - De wand: een eigen account in Home Assistant voor de tablet, met waarom
@@ -142,14 +144,13 @@
 
   const STANDEN = {
     assistent: {
-      stap: [7, 0], waar: '8. Klaar · Staat alles klaar?', kop: 'Staat alles klaar?', lead: 'Wat Smart Climate in Home Assistant gebruikt. Wat Smart Climate zelf kan klaarzetten, doet het met één knop.',
-      inhoud: `<div class="blok uitgelicht"><div class="kop"><span class="bol"></span><div><b>Praat met je huis</b><span>Vraag Home Assistant of de wand wat je huis doet, en waarom. Smart Climate zet het voor je klaar.</span></div></div>
-          <ul class="stappen"><li><span class="s">1</span><span>De koppeling in Home Assistant zetten</span><small></small></li><li><span class="s">2</span><span>Home Assistant herstart, zo'n minuut</span><small></small></li><li><span class="s">3</span><span>Smart Climate toevoegen</span><small></small></li></ul>
-          <span class="knop licht">Zet de assistent aan</span></div>
+      stap: [7, 0], waar: '8. Klaar · Staat alles klaar?', kop: 'Staat alles klaar?', lead: 'Wat Smart Climate in Home Assistant gebruikt. Wat Smart Climate zelf kan klaarzetten, doet het bij Klaar.',
+      inhoud: `<div class="blok uitgelicht"><div class="kop"><span class="bol"></span><div><b>Praat met je huis</b><span>Gaat vanzelf aan bij Klaar, terwijl de film speelt.</span></div></div>
+          <ul class="stappen"><li><span class="s">1</span><span>De koppeling in Home Assistant zetten</span><small></small></li><li><span class="s">2</span><span>Home Assistant herstart, zo'n minuut</span><small></small></li><li><span class="s">3</span><span>Smart Climate toevoegen</span><small></small></li></ul></div>
         ${klaarlijst(REST)}`,
     },
     bezig: {
-      stap: [7, 0], waar: '8. Klaar · Staat alles klaar?', kop: 'Staat alles klaar?', lead: 'Wat Smart Climate in Home Assistant gebruikt. Wat Smart Climate zelf kan klaarzetten, doet het met één knop.',
+      stap: [7, 0], waar: '8. Klaar · Staat alles klaar?', kop: 'Staat alles klaar?', lead: 'Wat Smart Climate in Home Assistant gebruikt. Wat Smart Climate zelf kan klaarzetten, doet het bij Klaar.',
       inhoud: `<div class="blok uitgelicht"><div class="kop"><span class="bol"></span><div><b>Praat met je huis</b><span>Even geduld: Home Assistant herstart. De app blijft open en gaat vanzelf verder.</span></div></div>
           <ul class="stappen"><li><span class="s klaar">✓</span><span><b>De koppeling staat in Home Assistant</b></span><small>14:02</small></li><li><span class="s bezig"></span><span><b>Home Assistant herstart</b></span><small>nog zo'n 40 tellen</small></li><li><span class="s">3</span><span>Smart Climate toevoegen</span><small></small></li></ul></div>
         ${klaarlijst(REST)}`,

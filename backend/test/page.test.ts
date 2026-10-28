@@ -1778,6 +1778,63 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await context.close();
   }, 40_000);
 
+  /*
+   * De assistent gaat aan bij Klaar (besluit 202): geen knop bij Klaarzetten,
+   * Home Assistant herstart terwijl de film speelt, en de rondleiding wacht tot
+   * hij terug is. De add-on is hier nagebootst met een route.
+   */
+  it('zet de assistent aan terwijl de film speelt, en wacht dan op Home Assistant (besluit 202)', async () => {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    const shot = async (naam: string) => {
+      if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', `-${naam}.png`) });
+    };
+    const rust = { bezig: false, stap: null as string | null, klaar: [] as string[], fout: null, herstartMs: null as number | null };
+    let stand = { kan: true, staat: 'nee', versie: null as string | null, nieuw: VERSIE, geladen: null as string | null, toegevoegd: null as boolean | null, aanzetten: rust };
+    let aangezet = 0;
+    let vragenNa = 0;
+    await context.route(`${baseUrl}/api/integratie`, async (route) => {
+      if (route.request().method() === 'POST') {
+        aangezet += 1;
+        stand = { ...stand, staat: 'add-on', versie: VERSIE, aanzetten: { bezig: true, stap: 'herstarten', klaar: ['neerzetten'], fout: null, herstartMs: Date.now() } };
+      } else if (stand.aanzetten.bezig && ++vragenNa >= 2) {
+        // Na twee keer vragen is Home Assistant terug en is Smart Climate toegevoegd.
+        stand = { ...stand, geladen: VERSIE, toegevoegd: true, aanzetten: { ...rust, klaar: ['neerzetten', 'herstarten', 'toevoegen'] } };
+      }
+      await route.fulfill({ status: route.request().method() === 'POST' ? 202 : 200, contentType: 'application/json', body: JSON.stringify(stand) });
+    });
+    try {
+      // Klaarzetten: geen knop, wel wat er gaat gebeuren.
+      await p.goto(`${baseUrl}/inrichten.html#ha`);
+      const kaart = p.locator('#wand [data-kaart]');
+      await kaart.locator('.asblok', { hasText: 'Gaat vanzelf aan bij Klaar' }).waitFor({ timeout: 10_000 });
+      expect(await kaart.locator('[data-assistent-aan]').count()).toBe(0);
+      await shot('klaarzetten');
+      // Klaar: Speel af zet hem aan zodra de film zijn cijfers heeft.
+      await kaart.locator('[data-volgende]').click();
+      await kaart.locator('h1', { hasText: 'Je huis staat erin' }).waitFor();
+      await kaart.locator('button', { hasText: 'Speel af' }).click();
+      const film = p.locator('.film');
+      await film.locator('[data-film-huis] svg.sc-huis').waitFor({ timeout: 10_000 });
+      await expect.poll(() => aangezet).toBe(1);
+      // Na de film (hier overgeslagen) wacht de rondleiding met de voortgang in beeld.
+      await film.locator('[data-film-klaar]').click();
+      const wacht = p.locator('.aswacht');
+      await wacht.locator('p', { hasText: 'Daarna begint de rondleiding.' }).waitFor();
+      expect(await wacht.textContent()).toContain('Home Assistant herstart');
+      await shot('wacht');
+      await p.waitForURL(/thuis\.html#rondleiding$/, { timeout: 15_000 });
+      expect(aangezet).toBe(1);
+      expect(fouten).toEqual([]);
+    } finally {
+      await context.close();
+    }
+  }, 40_000);
+
   it('toont het sluipverbruik onder Opbrengst (besluit 192)', async () => {
     const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
     await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);

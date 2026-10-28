@@ -1474,9 +1474,39 @@ function assistentBlok() {
     const nu = a.bezig && a.stap === s;
     return `<li><span class="nr${klaar ? ' klaar' : nu ? ' bezig' : ''}">${klaar ? '✓' : nu ? '' : n + 1}</span><span>${esc(t(`inr.as.s.${s}`))}</span><small>${nu && nog != null ? esc(t('inr.as.nog', { n: nog })) : ''}</small></li>`;
   }).join('');
-  const zin = a.bezig ? t(a.stap === 'herstarten' ? 'inr.as.bezigZin' : 'inr.as.even') : a.fout ? t('inr.as.fout', { fout: a.fout }) : t('inr.as.zin');
-  const knop = a.bezig ? '' : `<button type="button" class="knop knop-licht" data-assistent-aan>${esc(t(a.fout ? 'inr.as.opnieuw' : 'inr.as.knop'))}</button>`;
+  // Zonder fout gaat hij vanzelf aan bij Klaar, terwijl de film speelt; alleen na een fout een knop.
+  const zin = a.bezig ? t(a.stap === 'herstarten' ? 'inr.as.bezigZin' : 'inr.as.even') : a.fout ? t('inr.as.fout', { fout: a.fout }) : t('inr.as.bijKlaar');
+  const knop = a.bezig || !a.fout ? '' : `<button type="button" class="knop knop-licht" data-assistent-aan>${esc(t('inr.as.opnieuw'))}</button>`;
   return `<div class="asblok" aria-live="polite"><div class="askop"><span class="bol" aria-hidden="true"></span><div><b>${esc(t('inr.as.kop'))}</b><span${a.fout && !a.bezig ? ' class="fout"' : ''}>${esc(zin)}</span></div></div><ol class="accstappen asstappen">${stappen}</ol>${knop}</div>`;
+}
+/** Of de assistent nog aan moet (besluit 202): in de add-on, niet via HACS, nog niet toegevoegd en niet al bezig. */
+function assistentNogAan() {
+  const i = d.integ;
+  return !!(i?.aanzetten && !i.aanzetten.bezig && i.staat !== 'anders' && i.toegevoegd !== true);
+}
+async function zetAssistentAan() {
+  const res = await deur('api/integratie', { aanzetten: true }).catch(() => null);
+  if (res?.ok) d.integ = await res.json().catch(() => d.integ);
+}
+/*
+ * Naar de rondleiding op Thuis. Herstart Home Assistant nog (besluit 202), dan
+ * eerst wachten met de voortgang in beeld: Thuis openen kan pas als hij terug
+ * is. Na zeven minuten gaat hij toch; de dienst geeft het eerder op.
+ */
+async function naarRondleiding() {
+  const tot = Date.now() + 7 * 60_000;
+  let wacht = null;
+  while (d.integ?.aanzetten?.bezig && Date.now() < tot) {
+    if (!wacht) {
+      wacht = document.createElement('div');
+      wacht.className = 'aswacht';
+      document.body.append(wacht);
+    }
+    wacht.innerHTML = `<div>${assistentBlok()}<p>${esc(t('inr.as.wacht'))}</p></div>`;
+    await new Promise((klaar) => setTimeout(klaar, 3000));
+    d.integ = await haal('api/integratie').catch(() => d.integ);
+  }
+  location.href = 'thuis.html#rondleiding';
 }
 function haStap() {
   const punten = d.klaar?.punten ?? [];
@@ -1529,15 +1559,17 @@ function klaarStap() {
     ? regel({ tag: 'a', attrs: `href="#${open[0]?.[0] ?? (vragen.length ? 'apparaat' : 'ha')}"`, ik: 'huis', titel: t('inr.nogTeDoen'), zin: lijstje([...open.map(([, naam]) => naam.toLowerCase()), ...vragen, ...mist.map((p) => p.titel.toLowerCase())]), rechts: String(n), toon: 'zon' })
     : regel({ ik: 'zon', titel: t('inr.allesNagelopen'), zin: t('inr.allesNagelopenZin'), rechts: '✓', toon: 'mint' });
   const kan = regel({ tag: 'a', attrs: 'href="huis-kan.html"', ik: 'meter', titel: t('inr.kanTitel'), zin: t('inr.kanZin'), rechts: '›' });
+  // Laadde de pagina opnieuw terwijl Home Assistant herstart, of ging het mis (besluit 202): hier de stand.
+  const as = d.integ?.aanzetten?.bezig || d.integ?.aanzetten?.fout ? assistentBlok() : '';
   return {
     waar: t('inr.klaar'),
     kop: t('inr.klaarKop'),
     groot: true,
     uitleg: t('inr.klaarZin'),
-    inhoud: `<div class="lijst">${nogTeDoen}${kan}</div>
+    inhoud: `${as}<div class="lijst">${nogTeDoen}${kan}</div>
       <button type="button" class="filmkaart" data-film aria-label="${esc(t('inr.filmLabel'))}"><span class="speel" aria-hidden="true"></span><span>${esc(t('inr.film'))}</span></button>
       ${tip(t('inr.daarna'))}`,
-    voet: [`<a class="zachtknop" href="#${vorige('klaar')}">${esc(t('panelen.terug'))}</a>`, `<span class="rechts"><a class="zachtknop" href="thuis.html#rondleiding">${esc(t('rond.overslaan'))}</a><button type="button" class="knop knop-licht" data-film>${esc(t('inr.speelAf'))}</button></span>`],
+    voet: [`<a class="zachtknop" href="#${vorige('klaar')}">${esc(t('panelen.terug'))}</a>`, `<span class="rechts"><a class="zachtknop" href="thuis.html#rondleiding" data-naar-rond>${esc(t('rond.overslaan'))}</a><button type="button" class="knop knop-licht" data-film>${esc(t('inr.speelAf'))}</button></span>`],
   };
 }
 
@@ -1753,8 +1785,24 @@ document.addEventListener('click', async (e) => {
   const el = e.target.closest('button, a');
   if (!el) return;
   if (el.hasAttribute('data-film')) {
-    // Het filmpje (besluit 139), en daarna de rondleiding op Thuis.
-    void film.speel({ opEinde: () => (location.href = 'thuis.html#rondleiding') });
+    // Het filmpje (besluit 139), en daarna de rondleiding op Thuis. Moet de assistent nog aan
+    // (besluit 202), dan herstart Home Assistant terwijl de film speelt; de film heeft zijn cijfers dan al.
+    let aan = null;
+    const nogAan = assistentNogAan();
+    void film.speel({
+      opGeladen: nogAan ? () => (aan = zetAssistentAan()) : undefined,
+      opEinde: async () => {
+        await aan;
+        await naarRondleiding();
+      },
+    });
+    return;
+  }
+  // Overslaan: ook dan gaat de assistent eerst aan, met de voortgang in beeld.
+  if (el.hasAttribute('data-naar-rond') && assistentNogAan()) {
+    e.preventDefault();
+    await zetAssistentAan();
+    await naarRondleiding();
     return;
   }
   if (el.hasAttribute('data-terug')) {
@@ -1862,8 +1910,7 @@ document.addEventListener('click', async (e) => {
   // De assistent met één knop (besluit 202).
   if (el.hasAttribute('data-assistent-aan')) {
     el.disabled = true;
-    const res = await deur('api/integratie', { aanzetten: true }).catch(() => null);
-    if (res?.ok) d.integ = await res.json().catch(() => d.integ);
+    await zetAssistentAan();
     teken();
     return;
   }

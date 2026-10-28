@@ -6,7 +6,7 @@
 
 **Nieuw**
 
-- De assistent met één knop: Zet de assistent aan, bij Inrichten en bij Toegang, zet de koppeling neer, herstart Home Assistant en voegt Smart Climate toe
+- De assistent gaat vanzelf aan bij Inrichten › Klaar, terwijl de film speelt: de koppeling erin, Home Assistant herstart, Smart Climate toegevoegd; daarna begint de rondleiding. Bij Toegang met één knop
 - Inrichten heeft een stap Een eigen account voor de wand: waarom, en hoe je het maakt
 
 **Beter**
@@ -17,7 +17,7 @@
 
 **New**
 
-- The assistant with one button: Turn on the assistant, in Set up and in Access, installs the integration, restarts Home Assistant and adds Smart Climate
+- The assistant turns on by itself at Set up › Done, while the film plays: the integration goes in, Home Assistant restarts, Smart Climate is added; then the tour begins. In Access with one button
 - Set up has a step Its own account for the wall: why, and how to make it
 
 **Improved**

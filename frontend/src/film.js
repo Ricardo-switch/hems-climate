@@ -8,7 +8,9 @@
  * zelf. Pauzeren, het geluid uit en overslaan kan altijd. Wie minder beweging
  * wil, krijgt dezelfde shots zonder vliegen.
  *
- * Gebruik: film.speel({ opEinde }) na een tik (het geluid mag pas na een tik).
+ * Gebruik: film.speel({ opEinde, opGeladen }) na een tik (het geluid mag pas na
+ * een tik). opGeladen komt als de cijfers binnen zijn: daarna heeft de film de
+ * verbinding niet meer nodig (besluit 202).
  */
 (function (global) {
   'use strict';
@@ -599,7 +601,7 @@
   /** Langzaam op gang, langzaam tot stilstand. */
   const zacht = (f) => (f < 0.5 ? 4 * f * f * f : 1 - (-2 * f + 2) ** 3 / 2);
 
-  async function speel({ opEinde } = {}) {
+  async function speel({ opEinde, opGeladen } = {}) {
     if (!document.getElementById('film-stijl')) {
       const s = document.createElement('style');
       s.id = 'film-stijl';
@@ -642,6 +644,7 @@
     el.querySelector('[data-film-klaar]').focus();
 
     const d = await laad();
+    opGeladen?.();
     const c = cijfers(d);
     const lijst = beelden(d);
     const totaalMaten = lijst.reduce((s, b) => s + b.maten, 0);

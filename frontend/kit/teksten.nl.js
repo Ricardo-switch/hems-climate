@@ -2941,6 +2941,8 @@
   'inr.as.s.toevoegen': 'Smart Climate toevoegen',
   'inr.as.nog': 'nog zo’n {n} tellen',
   'inr.as.knop': 'Zet de assistent aan',
+  'inr.as.bijKlaar': 'Gaat vanzelf aan bij Klaar, terwijl de film speelt.',
+  'inr.as.wacht': 'Daarna begint de rondleiding.',
   'inr.as.opnieuw': 'Probeer opnieuw',
   'inr.as.fout': 'Dat lukte niet: {fout}.',
   'inr.as.aan': 'De assistent staat aan',
