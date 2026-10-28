@@ -435,20 +435,22 @@ function rondBlad(d) {
   const rijen = huismodel.rondom().map(([w, naam, soort, icoon]) => {
     const opOprit = huismodel.OP_OPRIT.has(w);
     const aan = !!rond[w] && (!opOprit || !!rond.oprit);
+    // Aanvinken is genoeg (28 oktober 2026): het deel komt op zijn vaste plek. Hoort er een ruimte
+    // uit Home Assistant bij, dan staat daar een knopje naar zijn lampen en zones.
     const gekoppeld = soort ? kamers.find((k) => buitenNu(k).soort === soort) : null;
-    const koppel = aan && soort && kamers.length
-      ? `<select class="veld" data-bkoppel="${soort}" aria-label="${esc(t('inr.ruimteBij', { naam }))}">${gekoppeld ? '' : `<option value="">${esc(t('indeling.deel.geenRuimte'))}</option>`}${kamers.map((k) => `<option value="${esc(k.id)}" ${k.id === gekoppeld?.id ? 'selected' : ''}>${esc(k.naam)}</option>`).join('')}</select>`
-      : '';
+    const koppel = aan && gekoppeld ? `<button type="button" class="chip" data-kamer="${esc(gekoppeld.id)}">${esc(t('indeling.deel.lampenEnZones', { naam: gekoppeld.naam }))} ›</button>` : '';
     // In de tuin: het tuinhuis met plat dak, of het schuurtje met puntdak (24 oktober 2026).
     const huisje = w === 'tuinhuis' && aan ? `<button type="button" class="chip" data-schuur="0" aria-pressed="${!rond.schuur}">${esc(t('inr.tuinhuis'))}</button><button type="button" class="chip" data-schuur="1" aria-pressed="${!!rond.schuur}">${esc(t('inr.schuurtje'))}</button>` : '';
     const zin = w === 'jacuzzi' ? (jacuzzi ? jacuzzi.naam : t('inr.nietInHA')) : '';
     return `<div class="rondrij${opOprit || w === 'tuinhuis' ? ' in' : ''}"><i>${S_BUITEN(IK_BUITEN[w === 'tuinhuis' && rond.schuur ? 'schuur' : icoon])}</i><div><b>${esc(naam)}</b>${zin ? `<span class="zin">${esc(zin)}</span>` : ''}</div><button type="button" class="schakel" role="switch" aria-checked="${aan}" aria-label="${esc(naam)}" data-rond="${w}" ${opOprit && !rond.oprit ? 'disabled' : ''}></button>${huisje || koppel ? `<div class="onder">${huisje}${koppel}</div>` : ''}</div>`;
   });
+  // Een ruimte buiten die bij geen deel hoort: die tekent het huis nergens, dus hier om hem te openen.
+  const los = kamers.filter((k) => !huismodel.rondom().some(([w, , s]) => s && rond[w] && buitenNu(k).soort === s));
   return `
     <div class="bladkop"><h2 class="kop-2">${esc(t('inr.buitenKop'))}</h2></div>
+    <p class="klein" style="margin: 0">${esc(t('inr.buitenZin'))}</p>
     <div>${rijen.join('')}</div>
-    <div><span class="label">${esc(t('indeling.deel.ruimtesBuiten'))}</span>${kamers.length ? `<div class="chips">${kamers.map((k) => `<button type="button" class="chip" data-kamer="${esc(k.id)}">${esc(k.naam)}</button>`).join('')}</div>` : `<p class="klein" style="margin: 0">${esc(t('indeling.geenKamers'))}</p>`}</div>
-    <div><label class="label" for="nieuwekamer-buiten">${esc(t('indeling.deel.nieuweRuimte'))}</label><div style="display: flex; gap: 8px"><input class="veld" id="nieuwekamer-buiten" data-nieuwe-kamer placeholder="${esc(t('indeling.deel.bijvoorbeeldGarage'))}" maxlength="40"><button type="button" class="knop" data-kamer-toevoegen>${esc(t('indeling.toevoegen'))}</button></div></div>`;
+    ${los.length ? `<div><span class="label">${esc(t('indeling.deel.ookBuiten'))}</span><div class="chips">${los.map((k) => `<button type="button" class="chip" data-kamer="${esc(k.id)}">${esc(k.naam)} ›</button>`).join('')}</div></div>` : ''}`;
 }
 
 function etageBlad(d) {
@@ -837,7 +839,9 @@ function zonesKeuze(k) {
       <button type="button" class="knop klein-knop" data-zone-weg="${esc(z.id)}" aria-label="${esc(t('indeling.zone.weg', { naam: z.naam }))}">×</button>
     </div>`;
   });
-  return `<div><span class="label">${esc(t('indeling.zones'))}</span>${rijen.join('')}<div class="chips"><input class="chip plus" data-nieuwe-zone placeholder="${esc(t('indeling.plusZone'))}" aria-label="${esc(t('indeling.nieuweZone'))}" maxlength="40" style="width: 110px"></div></div>`;
+  // Hoe een lamp in een zone komt (28 oktober 2026): dat was niet te vinden.
+  const uitleg = k.zones.length ? `<p class="mini" style="margin: 6px 0 0">${esc(t('indeling.zoneLampUitleg'))}</p>` : '';
+  return `<div><span class="label">${esc(t('indeling.zones'))}</span>${rijen.join('')}<div class="chips"><input class="chip plus" data-nieuwe-zone placeholder="${esc(t('indeling.plusZone'))}" aria-label="${esc(t('indeling.nieuweZone'))}" maxlength="40" style="width: 110px"></div>${uitleg}</div>`;
 }
 /* De plek van een kamer op zijn etage, van links naar rechts zoals in de tekening. */
 function plekKeuze(d, k) {
@@ -1145,18 +1149,6 @@ document.addEventListener('change', async (e) => {
     k.rollen = { ...rollenNu(k), [el.dataset.rol]: el.value };
     const naam = toestelNaam(el.dataset.rol);
     await bewaar(next, t(['houdt', 'zon'].includes(el.value) ? `indeling.rolGezet.${el.value}` : 'indeling.rolGezet.kijken', { naam }));
-    return;
-  }
-  if (el.dataset.bkoppel) {
-    // Welke ruimte uit Home Assistant bij een deel buiten hoort (besluiten 166 en 193), net als bij Inrichten.
-    const next = concept();
-    const k = next?.kamers.find((x) => x.id === el.value);
-    if (!k) return;
-    const b = buitenNu(k);
-    k.buiten = { soort: el.dataset.bkoppel, auto: !!b.auto, tuinhuis: !!b.tuinhuis };
-    next.rond = huismodel.rondMet(next.rond, el.dataset.bkoppel);
-    const deel = huismodel.rondom().find(([, , s]) => s === el.dataset.bkoppel)?.[1] ?? el.dataset.bkoppel;
-    await bewaar(next, t('inr.hoortBij', { naam: k.naam, deel: deel.toLowerCase() }));
     return;
   }
   const next = concept();

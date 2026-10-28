@@ -63,7 +63,8 @@ function huisModel() {
   const netKw = s.netKw ?? 0;
   // De tekening zelf komt uit huismodel, net als op de andere pagina's (5S).
   // Huis 3.0 (besluit 187): de kelder onder de grond, op een eiland met het weer van nu.
-  const tek = huismodel.tekening(huisData, { kamer: kamerModel, zon });
+  // Een lamp buiten die je net schakelde, staat in de tekening al zoals je koos (besluit 206).
+  const tek = huismodel.tekening(buitenBlad.metGewenst(huisData), { kamer: kamerModel, zon });
   const { etages } = tek;
   const tijd = tijdVanDeDag(zon);
   const helder = zon?.heldereLuchtW ?? 0;
@@ -1151,16 +1152,23 @@ const openKamer = (e) => {
 document.addEventListener('click', async (e) => {
   const knop = e.target.closest('[data-weer] [data-bb-open], [data-weer] [data-bb-lamp], [data-weer] [data-bb-zone], [data-weer] [data-bb-kamer], [data-weer] [data-bb-buiten]');
   if (!knop || blad !== 'buiten') return;
-  const uit = await buitenBlad.tik(knop, huisData, async () => {
-    try {
-      huisData = await haal('api/huis');
-    } catch {
-      // De volgende keer.
-    }
-    teken();
-  });
+  const uit = await buitenBlad.tik(
+    knop,
+    huisData,
+    async () => {
+      try {
+        huisData = await haal('api/huis');
+      } catch {
+        // De volgende keer.
+      }
+      teken();
+    },
+    () => {
+      tekenBuiten();
+      teken();
+    },
+  );
   if (uit && uit !== true) openBuiten(uit);
-  else if (uit === true) teken();
 });
 $$('[data-alles-buiten]').forEach((k) => k.addEventListener('click', () => (buitenKeuze?.alles ? sluitWeer() : openBuiten({ alles: true }))));
 for (const podium of [document.getElementById('podium-wand'), document.getElementById('podium-tel')]) {

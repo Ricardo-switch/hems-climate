@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.78.0';
+export const VERSIE = '0.78.1';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,28 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.78.1',
+    datum: '2026-10-28',
+    beter: [
+      'Licht buiten is goed te zien: de border kleurt over de hele lengte mee, het tuinhuis straalt naar buiten en de spots onder het overstek geven een plas licht',
+      'Wat is er rond je huis?: alleen aanvinken, het komt op zijn vaste plek; bij elk deel een knop naar zijn lampen en zones',
+      'Bij de zones staat hoe je een lamp in een zone zet, en het blad buiten heeft er een link naar',
+    ],
+    opgelost: [
+      'Een lamp buiten schakelen slaat meteen om, ook in het huis; eerst wachtte de schakelaar op de lamp',
+    ],
+    en: {
+      beter: [
+        'Outdoor light is easy to see: the border lights up along its whole length, the shed glows outward and the canopy spots cast a pool of light',
+        'What is around your house?: just tick it, it goes in its fixed place; for each part a button to its lights and zones',
+        'The zones explain how to put a light in a zone, and the outdoor sheet links to it',
+      ],
+      opgelost: [
+        'Switching an outdoor light flips at once, in the house too; before, the switch waited for the light',
+      ],
+    },
+  },
   {
     versie: '0.78.0',
     datum: '2026-10-28',

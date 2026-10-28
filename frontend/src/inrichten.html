@@ -89,8 +89,6 @@
   .rijen > .bewerk { margin: 2px 0 8px; }
   .deel { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
   .deel > .schakelrij { width: 100%; margin-top: 0; }
-  .koppel { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 4px 0 14px; font-size: 12.5px; font-weight: 600; color: var(--gedempt); }
-  .koppel .veld { height: 32px; min-width: 0; flex: 1; max-width: 150px; font-size: 13px; }
   .veldje { display: grid; grid-template-columns: minmax(0, 1fr) 470px; gap: 20px; min-height: 0; }
   .veldje.breed { grid-template-columns: minmax(0, 1fr) 724px; }
   /* De kop zegt het al; zo past een apparaat met veel punten, met zijn rol onderaan, in beeld. */
@@ -245,8 +243,6 @@
   .regel .rechts.zon { color: var(--zon-t); }
   .regel.uit { background: transparent; border: 1px dashed rgb(var(--wit) / 0.14); }
   .regel .onder { grid-column: 2 / -1; display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
-  .regel .onder .koppel { padding: 0; }
-  .regel .onder .koppel .veld { max-width: 200px; }
   .schakel { position: relative; flex: none; width: 42px; height: 26px; padding: 0; border: 0; border-radius: 13px; background: rgb(var(--wit) / 0.16); cursor: pointer; }
   .schakel::after { content: ''; position: absolute; left: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform 0.15s; }
   .schakel[aria-checked="true"] { background: var(--mint); }

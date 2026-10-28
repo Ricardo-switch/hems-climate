@@ -2683,6 +2683,26 @@
       plek.border = [bx0 + 0.17, (gy0 + 0.95 + gy1) / 2, 0.25];
       plek.gazon = [(gazon.x0 + gazon.x1) / 2 - 0.25, (gazon.y0 + gazon.y1) / 2, 0.05];
       const borderLampen = t.borderLampen ?? [];
+      /*
+       * Brandt een lamp van de border, dan kleurt zijn stuk border mee: een gloed
+       * over de aarde en over de planten (28 oktober 2026). Eén lamp in Home
+       * Assistant is vaak een groep wandlampen; die verlicht de hele border.
+       */
+      const by0 = gy0 + 0.95;
+      const by1 = gy1 - 0.08;
+      borderLampen.slice(0, 6).forEach((l, i, alle) => {
+        if (!l.aan) return;
+        const kleur = l.kleur ?? '#FFD39A';
+        const y0 = by0 + ((by1 - by0) * i) / alle.length;
+        const y1 = by0 + ((by1 - by0) * (i + 1)) / alle.length;
+        grond.push(`<g filter="url(#${id}-zacht)" opacity="0.75">${poly([[bx0 - 0.18, y0, 0.005], [gx1 + 0.04, y0, 0.005], [gx1 + 0.04, y1, 0.005], [bx0 - 0.18, y1, 0.005]], `style="fill: ${kleur}" fill-opacity="0.55"`)}</g>`);
+        for (let y = y0 + 0.2; y < y1 - 0.05; y += 0.38) {
+          dingen.push([y + 0.2, () => {
+            const c = P(bx0 + 0.17, y, 0.16);
+            buiten.push(`<ellipse cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" rx="${(k * 0.32).toFixed(1)}" ry="${(k * 0.22).toFixed(1)}" style="fill: ${kleur}" opacity="0.4" filter="url(#${id}-zacht)"/>`);
+          }]);
+        }
+      });
       borderLampen.slice(0, 6).forEach((l, i, alle) => {
         const y = gy0 + 1.25 + ((gy1 - 0.35 - (gy0 + 1.25)) * (i + 0.5)) / alle.length;
         const x = bx0 + 0.1 + (i % 2) * 0.14;
@@ -2823,7 +2843,13 @@
       const glas = aan ? '#F4C27E' : nacht ? '#0f1a2a' : '#4d7eac';
       const pui = [[tx + 0.12, ty + d + 0.002, 0.05], [tx + b - 0.12, ty + d + 0.002, 0.05], [tx + b - 0.12, ty + d + 0.002, h - 0.1], [tx + 0.12, ty + d + 0.002, h - 0.1]];
       buiten.push(poly(pui, `fill="${glas}" stroke="#1c232c" stroke-width="1.4"`));
-      if (aan) buiten.push(`<g filter="url(#${id}-zacht)" opacity="0.55">${poly(pui, 'fill="#FFB765"')}</g>`);
+      if (aan) {
+        buiten.push(`<g filter="url(#${id}-zacht)" opacity="0.7">${poly(pui, 'fill="#FFB765"')}</g>`);
+        // Het licht van binnen valt door de pui naar buiten, over de vlonder en het gras (28 oktober 2026).
+        grond.push(`<g filter="url(#${id}-zacht)" opacity="0.9">${poly([[tx + 0.05, ty + d, 0.005], [tx + b - 0.05, ty + d, 0.005], [tx + b + 0.3, ty + d + over + 0.95, 0.005], [tx - 0.3, ty + d + over + 0.95, 0.005]], 'fill="#FFB765" fill-opacity="0.8"')}</g>`);
+        const kern = P(tx + b / 2, ty + d + 0.15, h * 0.45);
+        buiten.push(`<ellipse cx="${kern[0].toFixed(1)}" cy="${kern[1].toFixed(1)}" rx="${(k * 0.75).toFixed(1)}" ry="${(k * 0.45).toFixed(1)}" fill="#FFB765" opacity="0.3" filter="url(#${id}-zacht)"/>`);
+      }
       if (!aan && !nacht) buiten.push(poly([pui[0], [tx + 0.4, ty + d + 0.002, 0.05], [tx + 0.2, ty + d + 0.002, h - 0.1]], 'fill="#ffffff" opacity="0.12"'));
       for (const x of [tx + b * 0.42, tx + b * 0.7]) buiten.push(line([[x, ty + d + 0.003, 0.05], [x, ty + d + 0.003, h - 0.1]], 'stroke="#1c232c" stroke-width="1.4"'));
       // Een smal raam in de zijkant.
@@ -2850,8 +2876,11 @@
           const rx = k * 0.26;
           const ry = k * 0.1;
           buiten.push(`<defs><linearGradient id="${id}-spot${i}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color: ${kleur}" stop-opacity="0.75"/><stop offset="1" style="stop-color: ${kleur}" stop-opacity="0.08"/></linearGradient></defs>`);
-          buiten.push(`<polygon points="${[[lamp[0] - k * 0.025, lamp[1]], [lamp[0] + k * 0.025, lamp[1]], [voet[0] + rx, voet[1]], [voet[0] - rx, voet[1]]].map((p) => p.map((v) => v.toFixed(1)).join(',')).join(' ')}" fill="url(#${id}-spot${i})" opacity="0.55" filter="url(#${id}-zacht)"/>`);
-          buiten.push(`<ellipse cx="${voet[0].toFixed(1)}" cy="${voet[1].toFixed(1)}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}" style="fill: ${kleur}" opacity="0.5" filter="url(#${id}-zacht)"/>`);
+          buiten.push(`<polygon points="${[[lamp[0] - k * 0.025, lamp[1]], [lamp[0] + k * 0.025, lamp[1]], [voet[0] + rx, voet[1]], [voet[0] - rx, voet[1]]].map((p) => p.map((v) => v.toFixed(1)).join(',')).join(' ')}" fill="url(#${id}-spot${i})" opacity="0.8" filter="url(#${id}-zacht)"/>`);
+          buiten.push(`<ellipse cx="${voet[0].toFixed(1)}" cy="${voet[1].toFixed(1)}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}" style="fill: ${kleur}" opacity="0.75" filter="url(#${id}-zacht)"/>`);
+          // En een plas in zijn kleur op het gras voor het tuinhuis, zodat je het ook klein ziet.
+          const plas = P(x, ty + d + over + 0.3, 0.005);
+          grond.push(`<ellipse cx="${plas[0].toFixed(1)}" cy="${plas[1].toFixed(1)}" rx="${(k * 0.5).toFixed(1)}" ry="${(k * 0.22).toFixed(1)}" style="fill: ${kleur}" opacity="0.45" filter="url(#${id}-zacht)"/>`);
         }
         buiten.push(`<rect x="${(lamp[0] - k * 0.03).toFixed(1)}" y="${(lamp[1] - k * 0.012).toFixed(1)}" width="${(k * 0.06).toFixed(1)}" height="${(k * 0.024).toFixed(1)}" rx="${(k * 0.01).toFixed(1)}" style="fill: ${s.aan ? kleur : '#55626f'}"/>`);
       });

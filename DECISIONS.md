@@ -9510,6 +9510,25 @@ aantikken; de oprit en de garage openden de kamer, en je ging weg van Thuis.
   Zonnepanelen op de wand.
 - **Versie 0.78.0.**
 
+*Nagekomen, versie 0.78.1* (dezelfde avond, na proberen op het eigen huis):
+
+- **De schakelaar slaat meteen om**, en het huis kleurt meteen mee. Eerst
+  wachtte hij tot Home Assistant de lamp aan meldde; een groep Hue-lampen doet
+  er een paar tellen over.
+- **Licht buiten is te zien.** Een lamp van de border kleurt zijn stuk border
+  over de hele lengte; één lamp in Home Assistant is vaak een groep
+  wandlampen. Het licht van binnen valt uit het tuinhuis over de vlonder en het
+  gras, en de spots onder het overstek geven een plas in hun kleur. Eerst was
+  het een stip, en zag de bewoner niets gebeuren.
+- **Een lamp in een zone** zet je bij Kamers en indeling: tik op de lamp en
+  kies de zone. Dat staat er nu bij de zones, en het blad buiten heeft een link
+  naar de zones en lampen van dat deel.
+- **Wat is er rond je huis?: alleen aanvinken.** Het deel komt op zijn vaste
+  plek. De keuzelijst met de ruimte uit Home Assistant, het lijstje ruimtes en
+  het veld voor een nieuwe ruimte zijn weg; bij een deel dat aan staat een
+  knopje naar zijn lampen en zones. Een ruimte die bij geen deel hoort, staat
+  er nog om te openen. Bij Inrichten net zo.
+
 *Wat afviel:* een eigen pagina Buiten (je verlaat Thuis, en de schets liet het
 blad ernaast zien); de knop Buiten ook op de telefoon (de bovenbalk liep vol;
 een tik op een deel buiten opent het blad ook); de garagedeur bedienen.

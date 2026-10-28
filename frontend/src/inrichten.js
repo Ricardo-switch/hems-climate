@@ -676,21 +676,19 @@ function buitenStap() {
   const jacuzzi = (d.aans?.gevonden?.apparaten ?? []).find((x) => x.soort === 'jacuzzi');
   const delen = RONDOM.map(([w, naam, soort, icoon]) => {
     const aan = !!rond[w] && (!OP_OPRIT.has(w) || !!rond.oprit);
-    const gekoppeld = soort ? kamers.find((k) => buitenNu(k).soort === soort) : null;
-    const keuze = aan && soort && kamers.length
-      ? `<label class="koppel"><span>${esc(t('inr.ruimte'))}</span><select class="veld" data-bkoppel="${soort}" aria-label="${esc(t('inr.ruimteBij', { naam }))}">${gekoppeld ? '' : `<option value="">${esc(t('energie.geen'))}</option>`}${kamers.map((k) => `<option value="${esc(k.id)}" ${k.id === gekoppeld?.id ? 'selected' : ''}>${esc(k.naam)}</option>`).join('')}</select></label>`
-      : '';
+    // Aanvinken is genoeg (28 oktober 2026): het deel komt op zijn vaste plek; de ruimte
+    // uit Home Assistant die erbij hoort, volgt uit zijn naam of wat hij is bij Kamers en indeling.
     // In de tuin: het tuinhuis met plat dak, of het schuurtje met puntdak (24 oktober 2026).
     const soortKeuze = w === 'tuinhuis' && aan ? `<span class="chips">${knop('data-schuur="0"', t('inr.tuinhuis'), !rond.schuur)}${knop('data-schuur="1"', t('inr.schuurtje'), !!rond.schuur)}</span>` : '';
     const zin = w === 'jacuzzi' ? (jacuzzi ? jacuzzi.naam : t('inr.nietInHA')) : '';
-    return regel({ ik: w === 'tuinhuis' && rond.schuur ? 'schuur' : icoon, titel: naam, zin, rechts: schakelaar(`data-rond="${w}"`, naam, aan, OP_OPRIT.has(w) && !rond.oprit), onder: soortKeuze + keuze });
+    return regel({ ik: w === 'tuinhuis' && rond.schuur ? 'schuur' : icoon, titel: naam, zin, rechts: schakelaar(`data-rond="${w}"`, naam, aan, OP_OPRIT.has(w) && !rond.oprit), onder: soortKeuze });
   });
   // Ruimtes die bij geen deel horen dat aan staat: die tekent het huis nergens.
   const los = kamers.filter((k) => !RONDOM.some(([w, , s]) => s && rond[w] && buitenNu(k).soort === s));
   return {
     waar: waarVan('buiten'),
     kop: t('inr.buitenKop'),
-    uitleg: t(kamers.length ? 'inr.buitenRuimte' : 'inr.buitenZin'),
+    uitleg: t('inr.buitenZin'),
     inhoud: `<div class="rijen lijst">${delen.join('')}</div>${los.length ? tip(t('inr.losBuiten', { n: los.length, namen: lijstje(los.map((k) => k.naam)) })) : ''}`,
   };
 }
@@ -2399,15 +2397,6 @@ document.addEventListener('change', async (e) => {
     next.apparaten[el.dataset.verplaats] = { ...(next.apparaten[el.dataset.verplaats] ?? {}), kamer: doel.id, zone: null };
     openApparaat = null;
     await bewaarIndeling(next, t('inr.staatIn', { naam: doel.naam }));
-  } else if (el.dataset.bkoppel) {
-    // Welke ruimte uit Home Assistant bij een deel buiten hoort (besluit 166).
-    const next = concept();
-    const k = next?.kamers.find((x) => x.id === el.value);
-    if (!k) return;
-    const b = buitenNu(k);
-    k.buiten = { soort: el.dataset.bkoppel, auto: !!b.auto, tuinhuis: !!b.tuinhuis };
-    next.rond = huismodel.rondMet(next.rond, el.dataset.bkoppel);
-    await bewaarIndeling(next, t('inr.hoortBij', { naam: k.naam, deel: RONDOM.find(([, , s]) => s === el.dataset.bkoppel)?.[1].toLowerCase() ?? el.dataset.bkoppel }));
   } else if (el.dataset.plek) {
     const next = concept();
     if (!next || !el.value) return;
