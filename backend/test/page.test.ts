@@ -4187,16 +4187,17 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     await tel.locator('[data-terug]').click();
     expect(await lijst.locator('.deel', { hasText: 'Buiten' }).textContent()).toMatch(/garage/i);
 
-    // Een ruimte buiten die je Garage noemt, staat aan bij wat er rond het huis is (besluit 193).
+    // Een garage aanvinken zet hem op zijn vaste plek; een ruimte erbij maken hoeft niet meer (28 oktober 2026).
     const basis = structuredClone(layoutStore.current!);
     await layoutStore.save({ ...basis, rond: { ...basis.rond!, garage: false } });
     const huisNu = (await (await fetch(`${baseUrl}/api/huis`)).json()) as HouseReport;
     expect(huisNu.rond?.garage).toBe(false);
     await p.goto('about:blank');
     await p.goto(`${baseUrl}/indeling.html#buiten`);
-    await tel.locator('[data-blad] [data-nieuwe-kamer]').fill('Garage', { timeout: 10_000 });
-    await tel.locator('[data-blad] [data-kamer-toevoegen]').click();
+    await tel.locator('[data-blad] [data-rond="garage"]').click({ timeout: 10_000 });
     await expect.poll(() => rond()?.garage, kort).toBe(true);
+    // Geen keuzelijst meer met de ruimte uit Home Assistant, en geen veld voor een nieuwe ruimte.
+    expect(await tel.locator('[data-blad] select[data-bkoppel], [data-blad] [data-nieuwe-kamer]').count()).toBe(0);
     expect(fouten).toEqual([]);
     if (voor) await layoutStore.save(voor);
     await context.close();

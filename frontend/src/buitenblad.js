@@ -101,7 +101,7 @@
       ${meer.length ? `<h3 class="bb-sectie">${esc(t('buiten.ookHier'))}</h3><div class="bb-lijst">${meer.join('')}</div>` : ''}
       ${andere.length ? `<h3 class="bb-sectie">${esc(t('buiten.ookIn', { naam: r.naam }))}</h3><div class="bb-lijst">${andere.join('')}</div>` : ''}
       <div class="bb-voet"><button type="button" class="knop" data-bb-open="alles">${esc(t('buiten.allesBuiten'))}</button><a class="knop" href="kamer.html#${encodeURIComponent(r.id)}">${esc(t('buiten.openRuimte', { naam: r.naam }))}</a></div>
-      <p class="mini voet">${esc(t(r.buitenSoort === 'garage' || (huis?.toegang ?? []).some((x) => x.kamerId === r.id) ? 'buiten.voetDeur' : 'buiten.voet'))}</p>`;
+      <p class="mini voet">${esc(t(r.buitenSoort === 'garage' || (huis?.toegang ?? []).some((x) => x.kamerId === r.id) ? 'buiten.voetDeur' : 'buiten.voet'))} <a href="indeling.html#${encodeURIComponent(r.id)}">${esc(t('buiten.zonesInrichten', { naam: r.naam }))}</a></p>`;
   }
 
   /** Alles buiten: per deel aan of uit, voor het huis en in de tuin, en alles in één keer uit. */
@@ -144,11 +144,28 @@
   const heeftBuiten = (huis) => ruimtes(huis).length > 0;
 
   /**
-   * Een tik in het blad. Geeft een nieuwe keuze terug als er een ander deel
-   * open moet, `true` als er geschakeld is, anders null. `opnieuw` leest het
-   * huis opnieuw, zodra Home Assistant de nieuwe stand kan doorgeven.
+   * Het huis zoals je het net koos: elke lamp die je schakelde staat al aan of
+   * uit, ook in de tekening, voordat Home Assistant het doorgeeft (28 oktober
+   * 2026: een groep Hue-lampen doet er een paar tellen over).
    */
-  async function tik(knop, huis, opnieuw) {
+  function metGewenst(huis) {
+    if (!huis || !gewenst.size) return huis;
+    return {
+      ...huis,
+      etages: huis.etages.map((e) => ({
+        ...e,
+        ruimtes: e.ruimtes.map((r) => (r.apparaten.some((d) => gewenst.has(d.id)) ? { ...r, apparaten: r.apparaten.map((d) => (gewenst.has(d.id) ? { ...d, aan: gewenst.get(d.id) } : d)) } : r)),
+      })),
+    };
+  }
+
+  /**
+   * Een tik in het blad. Geeft een nieuwe keuze terug als er een ander deel
+   * open moet, `true` als er geschakeld is, anders null. `meteen` tekent wat je
+   * koos al voordat Home Assistant antwoordt; `opnieuw` leest het huis opnieuw,
+   * zodra Home Assistant de nieuwe stand kan doorgeven.
+   */
+  async function tik(knop, huis, opnieuw, meteen = () => {}) {
     const ds = knop.dataset;
     if (ds.bbOpen) {
       if (ds.bbOpen === 'alles') return { alles: true };
@@ -178,6 +195,8 @@
     }
     if (!body) return null;
     for (const [d, aan] of raakt) gewenst.set(d.id, aan);
+    // Meteen omzetten: de schakelaar wacht niet op de lamp.
+    meteen();
     await global.app.deur('api/licht', body).catch(() => null);
     // Even wachten tot Home Assistant de nieuwe stand doorgeeft; tot dan staat er wat je koos.
     for (const ms of [800, 2500]) setTimeout(() => void opnieuw(), ms);
@@ -188,5 +207,5 @@
     return true;
   }
 
-  global.buitenBlad = { html, tik, isBuiten, aantalAan, heeftBuiten };
+  global.buitenBlad = { html, tik, metGewenst, isBuiten, aantalAan, heeftBuiten };
 })(window);
