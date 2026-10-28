@@ -74,8 +74,10 @@ export interface Weergave {
   readonly weer: boolean;
   /** Feestdagen: een pompoen met Halloween, lichtjes met Kerst, vuurwerk met Oud en Nieuw, eieren met Pasen. */
   readonly feestdagen: boolean;
+  /** De baan van de zon rond het huis, met de uren, opkomst en ondergang (besluit 205); de zon zelf staat er altijd. */
+  readonly zonnebaan: boolean;
 }
-export const STANDAARD_WEERGAVE: Weergave = { eenvoudig: false, groteLetters: false, minderBeweging: false, seizoen: true, weer: true, feestdagen: true };
+export const STANDAARD_WEERGAVE: Weergave = { eenvoudig: false, groteLetters: false, minderBeweging: false, seizoen: true, weer: true, feestdagen: true, zonnebaan: true };
 
 /** Na hoeveel minuten zonder iemand aan het scherm de wand overdag rust; 0 is nooit. */
 export const RUST_MINUTEN = [0, 2, 5, 15] as const;

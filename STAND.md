@@ -188,7 +188,10 @@ verwijzing bestaat.
   Indeling, de assistent en het always-on display ([191]). Het sluipverbruik
   staat elke nacht in de app: een eigen scherm onder Opbrengst, een kaart op
   Thuis, een melding de ochtend erna als een nacht 50 W of meer boven je gewone
-  nacht ligt ([192]).
+  nacht ligt ([192]). Het dak volgt het huis: de nok langs of haaks op de
+  straat, op de gemeten helling, en het kompas draait met de voorgevel; bij
+  Zonnepanelen staat de echte zon met een ring van de dag, uit te zetten bij
+  Weergave ([205]).
 - **Gebouwd met Tailwind,** met een bouwstap ([24]). De terugblik is een andere
   waarheid dan de live stand ([26]) en gaat verder waar hij was ([63]).
 - **Voor de bewoner:** nooit een entity-ID ([45]); alleen een oorzaak die
@@ -677,4 +680,5 @@ verwijzing bestaat.
 [202]: DECISIONS.md#202-klaarzetten-voor-iedereen-de-assistent-met-één-knop-volledig-scherm-een-eigen-account-voor-de-wand
 [203]: DECISIONS.md#203-de-stem-van-het-apparaat-zelf-of-helemaal-in-huis
 [204]: DECISIONS.md#204-de-standaard-voor-een-nieuw-huis-en-terug-naar-standaard
+[205]: DECISIONS.md#205-het-dak-volgt-het-huis-en-de-ring-van-de-zon
 <!-- links:einde -->

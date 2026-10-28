@@ -91,7 +91,16 @@ export interface Dak {
   /** De kant en het aantal panelen bij het bevestigen; veranderen ze, dan vervalt het dak. */
   readonly kant: DakKant | null;
   readonly aantal: number | null;
+  /**
+   * Hoe de nok loopt (28 oktober 2026, besluit 205): langs de straat, met de
+   * dakvlakken voor en achter, of haaks erop, met de dakvlakken opzij. Weg:
+   * zoals de meting zegt (langs, tenzij een vlak opzij kijkt).
+   */
+  readonly nok?: Nok;
 }
+
+/** Hoe de nok loopt ten opzichte van de straat (besluit 205). */
+export type Nok = 'langs' | 'haaks';
 
 /** Wat de bewoner op Aanpassen kiest. */
 export interface DakAanpassing {
@@ -99,6 +108,8 @@ export interface DakAanpassing {
   readonly hellingDeg: number;
   readonly wpPerPaneel: number;
   readonly omvormerW: number | null;
+  /** Met de nok haaks op de straat liggen de vlakken opzij (besluit 205); weg is langs. */
+  readonly nok?: Nok;
 }
 
 /* ------------------------------------------------------------ de omvormer */
@@ -407,7 +418,8 @@ export function dakUitMeting(m: Meting, panelen: PanelenAntwoord, zon: VoorkantZ
 export function dakUitAanpassing(a: DakAanpassing, panelen: PanelenAntwoord, meting: Meting | null): Dak | { fout: string } {
   const n = aantalVan(panelen);
   if (n == null || n.totaal <= 0) return { fout: 'vul eerst het aantal panelen in' };
-  const voor = norm(a.voorgevelDeg);
+  // Met de nok haaks op de straat kijkt het vlak "voor" een kwart naar rechts (besluit 205).
+  const voor = norm(a.voorgevelDeg - (a.nok === 'haaks' ? 90 : 0));
   const helling = Math.round(a.hellingDeg);
   const k = panelen.ligging;
   let vlakken: Dak['vlakken'];
@@ -424,7 +436,7 @@ export function dakUitAanpassing(a: DakAanpassing, panelen: PanelenAntwoord, met
     const som = basis.reduce((s, v) => s + v.peakW, 0);
     vlakken = basis.map((v) => ({ azimuthDeg: norm(v.azimuthDeg), tiltDeg: helling, peakW: Math.round((totaal * v.peakW) / som) }));
   }
-  return { voorgevelDeg: voor, vlakken, omvormerW: a.omvormerW, bron: 'bewoner', kant: k, aantal: n.totaal };
+  return { voorgevelDeg: norm(a.voorgevelDeg), vlakken, omvormerW: a.omvormerW, bron: 'bewoner', kant: k, aantal: n.totaal, ...(a.nok ? { nok: a.nok } : {}) };
 }
 
 /* ------------------------------------------------------------ de ligging die geldt */
@@ -532,6 +544,8 @@ export interface LiggingView {
    * of null als de meting het al weet of de bewoner het bevestigde.
    */
   readonly vraagVoorkant: readonly VoorkantZon[] | null;
+  /** Hoe de nok loopt, als de bewoner dat koos (besluit 205); anders null en volgt de tekening de meting. */
+  readonly nok: Nok | null;
 }
 
 /** De ligging in woorden, per taal (besluit 185). Engels is Brits. */
@@ -661,5 +675,6 @@ export function liggingView(i: LiggingInput, lang: Lang = 'nl'): LiggingView {
     lijn,
     omvormerGevonden: i.omvormerGevonden,
     kanten,
+    nok: i.dak?.nok ?? null,
   };
 }

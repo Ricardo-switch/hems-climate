@@ -56,6 +56,12 @@ export interface SunReport {
   /** Per kwartier van vandaag, van middernacht tot middernacht. */
   readonly kwartieren: readonly { readonly tMs: number; readonly heldereLuchtW: number }[];
   /**
+   * De baan van de zon vandaag (28 oktober 2026, besluit 205): elke tien
+   * minuten, van net voor de opkomst tot net na de ondergang. Voor de ring van
+   * de zon rond het huis; leeg als hij vandaag niet opkomt.
+   */
+  readonly baan: readonly { readonly tMs: number; readonly richtingGraden: number; readonly hoogteGraden: number }[];
+  /**
    * De dag van de zon, voor de tekening van het huis: waar hij op de boog staat.
    * Uitgerekend in de dienst, zodat de pagina hem alleen hoeft neer te zetten (94).
    */
@@ -143,6 +149,13 @@ export function sunReport(
     }
   }
   const up = sun.elevationDeg > 0 && opMs != null && onderMs != null && onderMs > opMs;
+  const baan: { tMs: number; richtingGraden: number; hoogteGraden: number }[] = [];
+  if (opMs != null && onderMs != null) {
+    for (let t = opMs - 10 * 60_000; t <= onderMs + 10 * 60_000; t += 10 * 60_000) {
+      const p = sunPosition(t, location.latDeg, location.lonDeg);
+      baan.push({ tMs: t, richtingGraden: Math.round(p.azimuthDeg * 10) / 10, hoogteGraden: round1(p.elevationDeg) });
+    }
+  }
   const front = geometry.facades.find((f) => f.id === 'voorgevel') ?? geometry.facades[0];
   let opVoorkant: boolean | null = null;
   if (front && opMs != null) {
@@ -170,5 +183,6 @@ export function sunReport(
     heldereLuchtW: clearSkyW(geometry, location, nowMs, learned),
     heldereLucht: clearSkySource(learned),
     kwartieren: quarters,
+    baan,
   };
 }

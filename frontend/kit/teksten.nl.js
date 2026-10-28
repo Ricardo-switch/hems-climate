@@ -509,6 +509,8 @@
   'eigen.wg.weerZin': 'Regen en sneeuw rond het huis, zoals het buiten is.',
   'eigen.wg.feest': 'Feestdagen',
   'eigen.wg.feestZin': 'Een pompoen met Halloween, lichtjes met Kerst, vuurwerk met Oud en Nieuw, eieren met Pasen.',
+  'eigen.wg.zon': 'De baan van de zon',
+  'eigen.wg.zonZin': 'Een ring rond het huis met de uren, opkomst en ondergang. Uit: alleen de zon zelf.',
 
   // Een kamer (kamer.js)
   'kamer.huis': 'Huis',
@@ -1576,6 +1578,9 @@
   'panelen.richting.w': 'het westen',
   'panelen.richting.nw': 'het noordwesten',
   'panelen.richting': 'Richting',
+  'panelen.nok': 'De nok',
+  'panelen.nok.langs': 'Langs de straat',
+  'panelen.nok.haaks': 'Haaks op de straat',
   'panelen.helling': 'Helling',
   'panelen.vermogen': 'Vermogen',
   'panelen.omvormer': 'Omvormer',

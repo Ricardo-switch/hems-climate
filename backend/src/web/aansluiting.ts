@@ -520,7 +520,10 @@ function readDak(
     if (!getal(a['voorgevelDeg'], 0, 360) || !getal(a['hellingDeg'], 0, 90) || !getal(a['wpPerPaneel'], 50, 1000) || omvormerW === false) {
       return { fout: 'de voorkant is 0 tot 360°, de helling 0 tot 90°, een paneel 50 tot 1000 Wp' };
     }
-    return dakUitAanpassing({ voorgevelDeg: a['voorgevelDeg'] as number, hellingDeg: a['hellingDeg'] as number, wpPerPaneel: a['wpPerPaneel'] as number, omvormerW }, panelen, found.meting ?? null);
+    // Hoe de nok loopt (besluit 205): langs of haaks op de straat; weg is langs.
+    const nok = a['nok'];
+    if (nok != null && nok !== 'langs' && nok !== 'haaks') return { fout: 'de nok loopt langs of haaks op de straat' };
+    return dakUitAanpassing({ voorgevelDeg: a['voorgevelDeg'] as number, hellingDeg: a['hellingDeg'] as number, wpPerPaneel: a['wpPerPaneel'] as number, omvormerW, ...(nok ? { nok } : {}) }, panelen, found.meting ?? null);
   }
   const vlakken = Array.isArray(r['vlakken']) ? (r['vlakken'] as Record<string, unknown>[]) : [];
   const omvormerW = omvormer(r['omvormerW']);
@@ -541,6 +544,8 @@ function readDak(
     bron: r['bron'] as Dak['bron'],
     kant: panelen.ligging,
     aantal: aantalVan(panelen)?.totaal ?? null,
+    // Hoe de nok loopt (besluit 205), als de bewoner het koos.
+    ...(r['nok'] === 'langs' || r['nok'] === 'haaks' ? { nok: r['nok'] } : {}),
   };
 }
 

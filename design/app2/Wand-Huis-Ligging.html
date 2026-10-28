@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Ligging, zon en buiten (schets)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Ligging, zon en buiten (schets, 28 oktober 2026). Twee dilemma's van de
+   * bewoner, met de keuzes die hij maakte:
+   *
+   * 1. Alles klopt: het dak volgt het huis. Met de nok langs de straat liggen
+   *    de dakvlakken voor en achter, en is het voorste dakvlak van glas met de
+   *    panelen erop; met de nok haaks op de straat liggen ze opzij, zoals eerst.
+   *    Het kompas draait met de voorgevel, de zon loopt zijn echte baan, en
+   *    elk dakvlak licht op naar de echte hoek van de zon (#ochtend, #middag,
+   *    #haaks voor een ander huis).
+   * 2. Buiten in zones: in de achtertuin een vaste plek per soort (terras,
+   *    gazon, border, tuinhuis), elk aan te tikken, met de lampen op hun plek
+   *    in hun kleur; het tuinhuis met binnen en het overstek (#tuin). Een tik
+   *    op de oprit of garage geeft een kaartje met lampen, camera, deur, auto
+   *    en laadpaal (#oprit). Alles buiten op één blad (#buiten).
+   */
+  main { padding: 22px 26px 20px 22px; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+  .kopregel { display: flex; align-items: center; gap: 14px; }
+  .terug { height: 40px; padding: 0 14px; border-radius: 14px; display: inline-flex; align-items: center; background: rgb(var(--wit) / 0.06); border: 1px solid var(--glas-rand); font-weight: 700; font-size: 14px; color: var(--zacht); }
+  .stel { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 16px; min-height: 0; }
+  .podium { position: relative; min-height: 0; overflow: hidden; border-radius: 24px; }
+  .kaart { padding: 20px 22px; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+  .kaart h2 { margin: 0; font-family: var(--kop); font-size: 22px; font-weight: 600; }
+  .kaart .lead { margin: 0; font-size: 14px; color: var(--zacht); line-height: 1.45; }
+  .tijden { display: flex; gap: 6px; }
+  .tijden span { height: 34px; padding: 0 14px; border-radius: 11px; display: inline-flex; align-items: center; font-size: 13.5px; font-weight: 700; color: var(--zacht); background: rgb(var(--wit) / 0.05); border: 1px solid var(--glas-rand); }
+  .tijden span.aan { background: var(--accent); color: var(--op-accent); border-color: transparent; }
+  .vlakken { display: grid; gap: 8px; }
+  .vlak { padding: 10px 12px; border-radius: 14px; background: rgb(var(--wit) / 0.045); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; align-items: center; }
+  .vlak b { font-size: 14.5px; }
+  .vlak small { grid-column: 1; font-size: 12px; color: var(--gedempt); }
+  .vlak em { grid-row: 1 / 3; grid-column: 2; font-style: normal; font-family: var(--kop); font-size: 20px; font-weight: 600; color: var(--zon-t); }
+  .vlak .balkje { grid-column: 1 / 3; height: 6px; border-radius: 3px; background: rgb(var(--wit) / 0.08); overflow: hidden; margin-top: 6px; }
+  .vlak .balkje i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, #f7b548, #ffd27a); }
+  .regels { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+  .regels li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; font-size: 13px; color: var(--zacht); line-height: 1.4; }
+  .regels li i { font-style: normal; color: var(--ijs); font-weight: 800; }
+  .regels b { color: var(--tekst); }
+  .chip-dak { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border-radius: 999px; font-size: 12.5px; font-weight: 700; background: rgb(110 231 183 / 0.14); color: var(--mint-t); }
+  .klein { margin: 0; font-size: 12px; color: var(--gedempt); line-height: 1.4; }
+  .lampen { display: grid; gap: 6px; }
+  .lamp { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 13px; background: rgb(var(--wit) / 0.045); }
+  .lamp .bol { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; }
+  .lamp b { display: block; font-size: 14px; }
+  .lamp small { display: block; font-size: 12px; color: var(--gedempt); }
+  .schakel { width: 42px; height: 26px; border-radius: 13px; background: rgb(var(--wit) / 0.16); position: relative; }
+  .schakel::after { content: ''; position: absolute; left: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; }
+  .schakel.aan { background: var(--mint); }
+  .schakel.aan::after { left: 19px; background: #0b2a1f; }
+  .zonekop { display: flex; align-items: center; gap: 10px; }
+  .zonekop .ik { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: rgb(var(--wit) / 0.07); }
+  .zonekop .ik svg { width: 21px; height: 21px; }
+  .zonekop small { display: block; font-size: 12.5px; color: var(--gedempt); }
+  .knoprij { display: flex; gap: 8px; flex-wrap: wrap; }
+  .knoprij span { height: 38px; padding: 0 14px; border-radius: 12px; display: inline-flex; align-items: center; font-size: 13.5px; font-weight: 700; background: rgb(var(--wit) / 0.06); border: 1px solid var(--glas-rand); color: var(--tekst); }
+  .knoprij span.licht { background: var(--accent); color: var(--op-accent); border-color: transparent; }
+  .laden { padding: 12px; border-radius: 14px; background: linear-gradient(135deg, rgba(110, 231, 183, 0.16), rgba(111, 211, 255, 0.08)); border: 1px solid rgba(110, 231, 183, 0.3); display: grid; gap: 6px; }
+  .laden b { font-family: var(--kop); font-size: 22px; }
+  .laden .meet { height: 8px; border-radius: 4px; background: rgb(var(--wit) / 0.1); overflow: hidden; }
+  .laden .meet i { display: block; height: 100%; width: 64%; background: var(--mint); border-radius: 4px; }
+  .uit { height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14.5px; background: rgb(var(--wit) / 0.06); border: 1px solid var(--glas-rand); }
+  .groepje { display: grid; gap: 6px; }
+  .groepje > small { font-size: 12px; font-weight: 700; color: var(--gedempt); text-transform: uppercase; letter-spacing: 0.04em; }
+  [data-stand] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-dag" id="wand">
+  <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+  <main>
+    <div class="kopregel"><span class="terug">‹ Thuis</span><h1 class="kop-1" style="font-size: 38px" id="titel">Je huis</h1></div>
+    <div class="stel">
+      <div class="podium" id="podium"></div>
+      <section class="glas kaart" id="kaart"></section>
+    </div>
+  </main>
+</div>
+<script src="../../frontend/kit/teksten.nl.js"></script>
+<script src="../../frontend/kit/teksten.en.js"></script>
+<script src="../../frontend/kit/taal.js"></script>
+<script src="../../frontend/kit/nav.js"></script>
+<script src="../../frontend/kit/huis.js"></script>
+<script>
+  nav.balk(document.getElementById('balk'), 'thuis');
+  addEventListener('hashchange', () => location.reload());
+  const stand = location.hash.slice(1) || 'ochtend';
+
+  /*
+   * Waar de zon staat: richting (0 is noord, met de klok mee) en hoogte, voor
+   * een plek en een tijdstip (zoals sun.sun in Home Assistant het ook geeft).
+   * Bij de bouw rekent de app dit zelf uit, met de plek van Home Assistant.
+   */
+  function zonStand(ms, lat, lon) {
+    const r = Math.PI / 180;
+    const d = (ms - Date.UTC(2000, 0, 1, 12)) / 864e5;
+    const g = ((357.529 + 0.98560028 * d) % 360) * r;
+    const q = (280.459 + 0.98564736 * d) % 360;
+    const L = (q + 1.915 * Math.sin(g) + 0.02 * Math.sin(2 * g)) * r;
+    const e = (23.439 - 0.00000036 * d) * r;
+    const ra = Math.atan2(Math.cos(e) * Math.sin(L), Math.cos(L));
+    const dec = Math.asin(Math.sin(e) * Math.sin(L));
+    const gmst = (18.697374558 + 24.06570982441908 * d) % 24;
+    const H = ((gmst * 15 + lon) * r) - ra;
+    const la = lat * r;
+    const el = Math.asin(Math.sin(la) * Math.sin(dec) + Math.cos(la) * Math.cos(dec) * Math.cos(H));
+    const az = Math.atan2(-Math.sin(H), Math.tan(dec) * Math.cos(la) - Math.sin(la) * Math.cos(H));
+    return { az: ((az / r) + 360) % 360, el: el / r };
+  }
+  const LAT = 51.6;
+  const LON = 5.5;
+  // 28 oktober 2026: wintertijd, UTC + 1.
+  const op = (uur, min = 0) => Date.UTC(2026, 9, 28, uur - 1, min);
+  // De baan van vandaag, elke 5 minuten: met de tijd, het hele uur, en de klok bij opkomst en ondergang.
+  const baanVan = () => {
+    const lijst = Array.from({ length: 169 }, (_, i) => {
+      const t = op(5) + i * 5 * 60e3;
+      const min = (i * 5) % 60;
+      return { ...zonStand(t, LAT, LON), t, ...(min === 0 ? { uur: 5 + i / 12 } : {}) };
+    }).filter((p) => p.el > -0.5);
+    lijst[0].klok = klok(lijst[0].t);
+    lijst[lijst.length - 1].klok = klok(lijst[lijst.length - 1].t);
+    return lijst;
+  };
+
+  const r = Math.PI / 180;
+  const fel = (zon, vlak, helling) => Math.max(0, Math.sin(zon.el * r) * Math.cos(helling * r) + Math.cos(zon.el * r) * Math.sin(helling * r) * Math.cos((zon.az - vlak) * r));
+  const pct = (x) => `${Math.round(x * 100)}%`;
+  const klok = (ms) => new Date(ms).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Amsterdam' });
+  const richtingNaam = (deg) => ['noord', 'noordoost', 'oost', 'zuidoost', 'zuid', 'zuidwest', 'west', 'noordwest'][Math.round(((deg % 360) + 360) % 360 / 45) % 8];
+
+  const kamers = (dak) => [
+    { naam: 'Begane grond', kamers: [{ naam: 'Keuken', gewicht: 0.9, temp: '20,6°', apparaten: [] }, { naam: 'Woonkamer', gewicht: 1.3, temp: '20,9°', apparaten: [{ soort: 'bank' }] }] },
+    { naam: 'Eerste', kamers: [{ naam: 'Badkamer', gewicht: 0.8, temp: '19,4°', apparaten: [] }, { naam: 'Slaapkamer', gewicht: 1.3, temp: '18,7°', apparaten: [] }] },
+    { dak: true, kamers: dak ? [{ naam: 'Zolder', temp: '17,9°', apparaten: [{ soort: 'airco', aan: false }, { soort: 'wasmachine', aan: false }] }] : [] },
+  ];
+
+  const kaart = document.getElementById('kaart');
+  const podium = document.getElementById('podium');
+  const maat = podium.getBoundingClientRect();
+
+  // Bij Weergave uitgezet (#zonuit): geen ring en geen uren, de zon zelf blijft.
+  const zonUit = stand === 'zonuit';
+  if (zonUit) document.documentElement.classList.add('sc-geen-zonnebaan');
+  if (stand === 'ochtend' || stand === 'middag' || stand === 'haaks' || zonUit) {
+    // Het huis van de bewoner: de voorgevel kijkt naar 93° (oost), de nok loopt langs de straat.
+    const haaks = stand === 'haaks';
+    const voorgevel = haaks ? 180 : 93;
+    const helling = haaks ? 40 : 51;
+    const tijd = stand === 'middag' ? op(15, 0) : haaks ? op(11, 30) : op(9, 30);
+    const nu = { ...zonStand(tijd, LAT, LON), t: tijd };
+    // Met de nok langs de straat: voor en achter. Haaks: rechts (voorgevel − 90) en links (voorgevel + 90).
+    const vlakken = haaks
+      ? [{ naam: 'Rechts', deg: (voorgevel - 90 + 360) % 360, n: 8 }, { naam: 'Links', deg: (voorgevel + 90) % 360, n: 0 }]
+      : [{ naam: 'Voorkant', deg: voorgevel, n: 6 }, { naam: 'Achterkant', deg: (voorgevel + 180) % 360, n: 6 }];
+    huis.teken(podium, {
+      tijd: 'dag', seizoen: 'herfst', wolken: 0.15,
+      dak: { nok: haaks ? 'haaks' : 'langs', hellingDeg: helling },
+      zon: { aandeel: 0.7, nu, baan: baanVan(), panelen: vlakken[0].n, panelenLinks: vlakken[1].n },
+      kompas: { voorgevelDeg: voorgevel, groot: false },
+      etages: kamers(true),
+      voordeur: {}, tuin: { tuinhuis: true }, oprit: { auto: {} },
+    }, { breedte: maat.width, hoogte: maat.height, wereld: true, eigenLucht: false, marge: 0.05, schuifY: 30 });
+
+    if (zonUit) {
+      kaart.innerHTML = `
+        <h2>Weergave</h2>
+        <p class="lead">Bij Instellingen › Functies › Weergave, naast seizoen, weer en feestdagen.</p>
+        <div class="lampen">
+          <div class="lamp"><span class="bol" style="background: rgb(255 255 255 / 0.06)">☀</span><span><b>De baan van de zon</b><small>de ring met de uren, opkomst en ondergang</small></span><span class="schakel"></span></div>
+          <div class="lamp"><span class="bol" style="background: rgb(255 255 255 / 0.06)">❄</span><span><b>Het seizoen</b><small>bladeren, sneeuw en bloemen</small></span><span class="schakel aan"></span></div>
+          <div class="lamp"><span class="bol" style="background: rgb(255 255 255 / 0.06)">☂</span><span><b>Het weer</b><small>regen, sneeuw en wolken</small></span><span class="schakel aan"></span></div>
+        </div>
+        <p class="klein">Uit: geen ring en geen uren. De zon staat wel waar hij echt staat, en het dakvlak licht nog op.</p>`;
+    } else {
+    const tijden = haaks ? '' : `<div class="tijden"><span class="${stand === 'ochtend' ? 'aan' : ''}">09:30</span><span>12:30</span><span class="${stand === 'middag' ? 'aan' : ''}">15:00</span><span>17:30</span></div>`;
+    kaart.innerHTML = `
+      <h2>${haaks ? 'Een ander huis' : 'Zo ligt je huis'}</h2>
+      <span class="chip-dak">${haaks ? '✓ Nok haaks op de straat · gemeten' : '✓ Nok langs de straat · gemeten'}</span>
+      <p class="lead">${haaks
+        ? 'De voorgevel kijkt naar het zuiden; de dakvlakken liggen opzij, naar oost en west. Het kompas, de zon en de schaduw kloppen ook hier.'
+        : 'Je voorgevel kijkt naar het oosten (93°), de achtertuin naar het westen. De zon komt voor je huis op en gaat achter de tuin onder.'}</p>
+      ${tijden}
+      <div class="vlakken">${vlakken.map((v) => `<div class="vlak"><b>${v.naam === 'Voorkant' ? 'Dak aan de voorkant' : v.naam === 'Achterkant' ? 'Dak aan de achterkant' : `Dak ${v.naam.toLowerCase()}`}</b><small>${richtingNaam(v.deg)} · ${v.deg}° · helling ${helling}° · ${v.n ? `${v.n} panelen` : 'geen panelen'}</small><em>${pct(fel(nu, v.deg, helling))}</em><span class="balkje"><i style="width: ${pct(fel(nu, v.deg, helling))}"></i></span></div>`).join('')}</div>
+      <ul class="regels">
+        <li><i>☀</i><span>Om <b>${klok(tijd)}</b> staat de zon in het <b>${richtingNaam(nu.az)}</b> (${Math.round(nu.az)}°), <b>${Math.round(nu.el)}°</b> hoog. De ring is de baan van vandaag: doorgetrokken wat voorbij is, gestippeld wat nog komt.</span></li>
+        <li><i>✦</i><span>Een dakvlak licht op naar de echte hoek: ${haaks ? 'rechts (oost) in de ochtend, links (west) in de middag' : 'voor (oost) in de ochtend, achter (west) na de middag'}.</span></li>
+        <li><i>◐</i><span>De schaduw valt van de zon af, en is lang als de zon laag staat.</span></li>
+      </ul>
+      <p class="klein">${haaks ? 'Smart Climate ziet aan de meting of een dakvlak dezelfde kant op kijkt als de voorgevel. Klopt het niet, dan zet je het om bij Zonnepanelen › Zelf aanpassen.' : 'Het voorste dakvlak is van glas: zo zie je de zolder, met de panelen erop.'}</p>`;
+    }
+  }
+
+  /* ---- buiten: de tuin in zones, de oprit en de garage, en alles buiten op één blad ---- */
+  const KLEUR = { roze: '#FF6FB0', violet: '#8F86FF', ijs: '#6FD3FF', goud: '#FFD27A', mint: '#6EE7B7', warm: '#FFD39A' };
+  const bol = (kleur, aan) => `<span class="bol" style="background: ${aan ? `${kleur}33` : 'rgb(255 255 255 / 0.06)'}; box-shadow: ${aan ? `0 0 14px ${kleur}66` : 'none'}"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="${aan ? kleur : '#8291a6'}" stroke-width="2" stroke-linecap="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.5 1 2.5h6c0-1 .2-1.7 1-2.5A6 6 0 0 0 12 3z"/></svg></span>`;
+  const lamp = (naam, onder, kleur, aan) => `<div class="lamp">${bol(kleur, aan)}<span><b>${naam}</b><small>${onder}</small></span><span class="schakel${aan ? ' aan' : ''}"></span></div>`;
+  const IK = {
+    border: '<path d="M4 20c2-6 4-8 8-8s6 2 8 8"/><path d="M12 12V6M9 8c1-2 2-3 3-3s2 1 3 3"/>',
+    oprit: '<path d="M8 20 10 4M16 20 14 4M12 6v2M12 11v2M12 16v2"/>',
+    garage: '<path d="M3 21V9l9-5 9 5v12"/><path d="M7 21v-8h10v8M7 16h10"/>',
+  };
+  const kop = (ik, kleur, titel, onder) => `<div class="zonekop"><span class="ik" style="color: ${kleur}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${IK[ik]}</svg></span><span><h2>${titel}</h2><small>${onder}</small></span></div>`;
+  const tuin = (gekozen) => ({
+    tuinhuis: true, tuinhuisSoort: 'tuinhuis', tuinhuisAan: true,
+    overstekLampen: [{ aan: true, kleur: KLEUR.roze }, { aan: true, kleur: KLEUR.violet }],
+    borderLampen: [{ aan: true, kleur: KLEUR.roze }, { aan: true, kleur: KLEUR.ijs }, { aan: true, kleur: KLEUR.violet }, { aan: true, kleur: KLEUR.goud }, { aan: true, kleur: KLEUR.mint }],
+    lampen: [], terrasAan: false, zone: gekozen,
+  });
+  const avond = (extra) => ({
+    tijd: 'avond', seizoen: 'herfst',
+    dak: { nok: 'langs', hellingDeg: 51 },
+    zon: { aandeel: 0, panelen: 6, panelenLinks: 6 },
+    kompas: { voorgevelDeg: 93, groot: false },
+    etages: kamers(true),
+    voordeur: {}, garage: {},
+    ...extra,
+  });
+
+  if (stand === 'tuin') {
+    document.getElementById('titel').textContent = 'Achtertuin';
+    huis.teken(podium, avond({
+      tuin: tuin('border'), oprit: { auto: {} },
+      labels: [
+        { bij: 'border', titel: 'Border', toon: 'ijs', regels: ['5 lampen aan, in kleur'], dx: -40, dy: 90 },
+        { bij: 'tuinhuis', titel: 'Tuinhuis', toon: 'zacht', regels: ['binnen aan · overstek aan'], dx: -60, dy: -90 },
+        { bij: 'terras', titel: 'Terras', toon: 'zacht', regels: ['uit'], dx: -70, dy: 70 },
+        { bij: 'gazon', titel: 'Gazon', toon: 'zacht', regels: ['geen lampen'], dx: -90, dy: -40 },
+      ],
+    }), { breedte: maat.width, hoogte: maat.height, wereld: true, eigenLucht: false, marge: 0.05, zoom: 1.3, schuifX: -170, schuifY: 10 });
+    kaart.innerHTML = `
+      ${kop('border', 'var(--mint)', 'Border', 'Achtertuin · langs de rand · 5 lampen')}
+      <p class="lead">Je tikte op de border. Elke zone in de tuin heeft zijn vaste plek: het terras tegen het huis, het gazon in het midden, de border langs de rand, het tuinhuis achterin.</p>
+      <div class="knoprij"><span class="licht">Alles in de border uit</span><span>Kleur voor allemaal</span></div>
+      <div class="lampen">
+        ${lamp('Spot roos', 'roze · 60%', KLEUR.roze, true)}
+        ${lamp('Spot buxus', 'ijsblauw · 60%', KLEUR.ijs, true)}
+        ${lamp('Spot hortensia', 'violet · 45%', KLEUR.violet, true)}
+        ${lamp('Spot vijg', 'warm · 70%', KLEUR.goud, true)}
+        ${lamp('Spot varen', 'mint · 50%', KLEUR.mint, true)}
+      </div>
+      <div class="groepje"><small>Ook in de tuin</small>
+        <div class="lamp">${bol(KLEUR.warm, true)}<span><b>Tuinhuis</b><small>binnen · plafondlamp aan</small></span><span class="pijl">›</span></div>
+        <div class="lamp">${bol(KLEUR.roze, true)}<span><b>Tuinhuis, overstek</b><small>2 spots · roze en violet</small></span><span class="pijl">›</span></div>
+      </div>
+      <p class="klein">De zones kies je bij Kamers en indeling › Achtertuin; daar zet je ook welke lamp in welke zone hangt. Het tuinhuis heeft twee delen: binnen en het overstek.</p>`;
+  }
+
+  if (stand === 'oprit') {
+    document.getElementById('titel').textContent = 'Oprit';
+    huis.teken(podium, avond({
+      tuin: tuin(null), garage: { lampAan: true },
+      auto: { stand: 'laadt' }, oprit: { auto: {}, camera: { aan: true }, gekozen: true },
+      labels: [
+        { bij: 'laadpaal', titel: 'Laadt · 7,4 kW', toon: 'mint', regels: ['64% · klaar om 22:40'], dx: 40, dy: 140 },
+        { bij: 'garage', titel: 'Garage', toon: 'zacht', regels: ['deur dicht · lamp aan'], dx: 20, dy: -170 },
+      ],
+    }), { breedte: maat.width, hoogte: maat.height, wereld: true, eigenLucht: false, marge: 0.05, schuifY: 30 });
+    kaart.innerHTML = `
+      ${kop('oprit', 'var(--ijs)', 'Oprit', 'Voor het huis · auto, laadpaal en garage')}
+      <div class="laden"><span class="klein">De auto laadt, op zon en net</span><b>7,4 kW · 64%</b><span class="meet"><i></i></span><span class="klein">Klaar om 22:40 · 18,6 kWh geladen sinds 17:05</span></div>
+      <div class="lampen">
+        ${lamp('Spots oprit', 'warm wit · 80%', KLEUR.warm, true)}
+        ${lamp('Lamp garage', 'boven de deur', KLEUR.warm, true)}
+      </div>
+      <div class="groepje"><small>Ook hier</small>
+        <div class="lamp"><span class="bol" style="background: rgb(255 255 255 / 0.06)"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="#8291a6" stroke-width="2" stroke-linecap="round"><rect x="3" y="7" width="13" height="10" rx="2"/><path d="M16 11l5-3v8l-5-3"/></svg></span><span><b>Camera oprit</b><small>geen beweging · laatst om 18:12</small></span><span class="pijl">›</span></div>
+        <div class="lamp"><span class="bol" style="background: rgb(255 255 255 / 0.06)"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="#8291a6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${IK.garage}</svg></span><span><b>Garagedeur</b><small>dicht</small></span><span class="pijl">›</span></div>
+      </div>
+      <p class="klein">Een tik op de oprit of de garage opent dit kaartje; je blijft op Thuis. De garagedeur alleen bekijken: openen en dichtdoen nooit, net als bij een poort of voordeur.</p>`;
+  }
+
+  if (stand === 'buiten') {
+    document.getElementById('titel').textContent = 'Buiten';
+    huis.teken(podium, avond({ tuin: tuin(null), garage: { lampAan: true }, oprit: { auto: {}, camera: { aan: true } } }), { breedte: maat.width, hoogte: maat.height, wereld: true, eigenLucht: false, marge: 0.05, schuifY: 30 });
+    kaart.innerHTML = `
+      <h2>Alles buiten</h2>
+      <p class="lead">9 lampen aan, in 5 zones.</p>
+      <div class="uit">Alles buiten uit</div>
+      <div class="groepje"><small>Voor het huis</small>
+        ${lamp('Oprit', '2 lampen · warm wit', KLEUR.warm, true)}
+        ${lamp('Garage', 'lamp boven de deur', KLEUR.warm, true)}
+        ${lamp('Voortuin', 'geen lampen', KLEUR.warm, false)}
+      </div>
+      <div class="groepje"><small>Achtertuin</small>
+        ${lamp('Border', '5 lampen · in kleur', KLEUR.roze, true)}
+        ${lamp('Terras', '1 lamp', KLEUR.warm, false)}
+        ${lamp('Tuinhuis, binnen', 'plafondlamp', KLEUR.warm, true)}
+        ${lamp('Tuinhuis, overstek', '2 spots · roze en violet', KLEUR.violet, true)}
+      </div>
+      <p class="klein">Een tik op een naam opent die zone, zoals een tik op het huis.</p>`;
+  }
+</script>
+</body>
+</html>

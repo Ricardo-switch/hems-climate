@@ -1,5 +1,33 @@
 # Wat is er nieuw · What is new
 
+## 0.77.0
+
+*28 oktober 2026*
+
+**Nieuw**
+
+- Bij Zonnepanelen staat de echte zon, met een ring van de dag rond het huis: elk uur een stip, en de tijd van opkomst en ondergang
+- Zonnepanelen › Zelf aanpassen: kies of de nok langs of haaks op de straat loopt
+- Jij › Weergave: de baan van de zon aan of uit
+
+**Beter**
+
+- Het dak volgt je huis: met de nok langs de straat liggen de panelen op de voorkant, en het dak is zo steil als gemeten
+- Het kompas draait met de voorgevel, en op Thuis staat de zon aan de goede kant
+
+*English*
+
+**New**
+
+- Solar panels shows the real sun, with a ring of the day around the house: a dot every hour, and the time of sunrise and sunset
+- Solar panels › Adjust yourself: choose whether the ridge runs along or at right angles to the street
+- You › Display: the path of the sun on or off
+
+**Improved**
+
+- The roof follows your house: with the ridge along the street the panels are on the front, and the roof is as steep as measured
+- The compass turns with the front of the house, and on Home the sun is on the right side
+
 ## 0.76.0
 
 *28 oktober 2026*
