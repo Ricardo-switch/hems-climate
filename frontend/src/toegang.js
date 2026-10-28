@@ -137,9 +137,31 @@ function toegevoegdZin(i) {
   return `<p class="klein" style="margin: 0; color: var(--zon-t)">${esc(t('toegang.nietToegevoegd'))}</p>`;
 }
 
+/*
+ * De assistent met één knop (besluit 202): in de add-on zet Smart Climate de
+ * integratie neer, herstart Home Assistant en voegt hem toe. Zolang het loopt,
+ * kijkt de pagina elke drie tellen waar het is.
+ */
+let aanKijk = null;
+function aanzetVorm(i) {
+  const a = i.aanzetten;
+  if (a.bezig && !aanKijk) {
+    aanKijk = setTimeout(async () => {
+      aanKijk = null;
+      integratie = await fetch('api/integratie', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : integratie)).catch(() => integratie);
+      teken();
+    }, 3000);
+  }
+  const zin = a.bezig ? `${t(`inr.as.s.${a.stap}`)}…` : a.fout ? t('inr.as.fout', { fout: a.fout }) : t('inr.as.zin');
+  return `<p class="klein" style="margin: 0${a.fout && !a.bezig ? '; color: var(--gloed-t)' : ''}" aria-live="polite">${esc(zin)}</p>
+    ${a.bezig ? '' : `<button type="button" class="knop knop-licht" data-assistent-aan style="align-self: start">${esc(t(a.fout ? 'inr.as.opnieuw' : 'inr.as.knop'))}</button>`}${eenmalig()}`;
+}
+
 function integratieVorm() {
   const i = integratie;
   const zin = integratieZin ? `<p class="mini" style="margin: 0" aria-live="polite">${esc(integratieZin)}</p>` : '';
+  // Met één knop, in de add-on, zolang hij nog niet werkt (of het net loopt).
+  if (i?.aanzetten && i.staat !== 'anders' && (i.aanzetten.bezig || i.toegevoegd !== true || i.geladen !== i.versie)) return aanzetVorm(i);
   if (!i?.kan) return `<p class="klein" style="margin: 0">${esc(t('toegang.viaHACS'))}</p>${hacsStappen()}${eenmalig()}`;
   if (i.staat === 'anders') return `<p class="klein" style="margin: 0">${i.versie ? metHtml('toegang.staatHACSVersie', { versie: i.versie }) : t('toegang.staatHACS')}</p>${toegevoegdZin(i)}${zin}`;
   if (i.staat === 'nee') {
@@ -292,6 +314,14 @@ app.start('instellingen');
 document.addEventListener('click', async (e) => {
   const knop = e.target.closest('button');
   if (!knop) return;
+  // De assistent met één knop (besluit 202).
+  if (knop.hasAttribute('data-assistent-aan')) {
+    knop.disabled = true;
+    const res = await deur('api/integratie', { aanzetten: true }).catch(() => null);
+    if (res?.ok) integratie = await res.json().catch(() => integratie);
+    teken();
+    return;
+  }
   // De integratie neerzetten (besluit 184).
   if (knop.hasAttribute('data-integratie')) {
     knop.disabled = true;

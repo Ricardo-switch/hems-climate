@@ -7,6 +7,7 @@
 import { VERSIE } from '../version.js';
 import type { Sluipverbruik } from './sluipverbruik.js';
 import type { CameraNu } from './cameras.js';
+import type { AanzetStand } from './assistent-aan.js';
 import type { SiteConfig } from '../core/model.js';
 import type { LiveSnapshot } from '../adapters/homeassistant/shadow.js';
 import type { DivergenceReport } from './divergence.js';
@@ -217,6 +218,8 @@ export interface WebOptions {
   readonly integratie?: {
     readonly stand: () => Promise<IntegratieStand & { readonly geladen: string | null; readonly toegevoegd: boolean | null }>;
     readonly zetNeer: () => Promise<{ readonly ok: true; readonly stand: IntegratieStand } | { readonly ok: false; readonly reden: string }>;
+    /** De assistent met één knop (besluit 202): neerzetten, herstarten en toevoegen; alleen in de add-on. */
+    readonly aanzetten?: { readonly stand: () => AanzetStand; readonly start: () => void };
   };
   readonly deurbel?: () => { readonly camera: string; readonly naam: string; readonly laatsteMs: number | null; readonly reserve?: readonly string[] } | null;
   /**

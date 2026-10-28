@@ -19,11 +19,11 @@
 
 const { $$, esc, haal, deur, nl } = app;
 
-const d = { huis: null, ind: null, comfort: null, aans: null, energie: null, zon: null, functies: null, sessie: null, bewoners: null, klaar: null, voork: null };
+const d = { huis: null, ind: null, comfort: null, aans: null, energie: null, zon: null, functies: null, sessie: null, bewoners: null, klaar: null, voork: null, integ: null };
 
 async function laad() {
-  const namen = ['huis', 'ind', 'comfort', 'aans', 'energie', 'zon', 'functies', 'sessie', 'bewoners', 'klaar', 'voork'];
-  const uit = await Promise.allSettled(['api/huis', 'api/indeling', 'api/comfort', 'api/aansluiting', 'api/energie', 'api/zon', 'api/functies', 'api/sessie', 'api/bewoners', 'api/klaarzetten', 'api/voorkeuren'].map((p) => haal(p)));
+  const namen = ['huis', 'ind', 'comfort', 'aans', 'energie', 'zon', 'functies', 'sessie', 'bewoners', 'klaar', 'voork', 'integ'];
+  const uit = await Promise.allSettled(['api/huis', 'api/indeling', 'api/comfort', 'api/aansluiting', 'api/energie', 'api/zon', 'api/functies', 'api/sessie', 'api/bewoners', 'api/klaarzetten', 'api/voorkeuren', 'api/integratie'].map((p) => haal(p)));
   uit.forEach((r, i) => {
     if (r.status === 'fulfilled') d[namen[i]] = r.value;
   });
@@ -40,7 +40,7 @@ const HOOFDSTUKKEN = [
   ['klimaat', ['warmte', 'apparaat', 'meten', 'comfort', 'afwezig']],
   ['energie', ['zekering', 'zon', 'ligging', 'opzon', 'prijzen']],
   ['gemak', ['functies']],
-  ['schermen', ['wand']],
+  ['schermen', ['account', 'wand']],
   ['klaar', ['ha', 'klaar']],
 ].map(([h, stappen]) => [t(`inr.h.${h}`), stappen.map((s) => [s, t(`inr.stap.${s}`)])]);
 const STAPPEN = HOOFDSTUKKEN.flatMap(([, stappen]) => stappen);
@@ -82,7 +82,7 @@ function gedaan(id) {
   if (id === 'zekering') return d.aans?.antwoorden?.zekering != null;
   if (id === 'prijzen') return d.energie?.instellingen?.prijzen?.stroom != null;
   if (id === 'functies') return d.functies?.instellingen != null;
-  if (id === 'wand') return (d.bewoners?.schermen ?? []).length > 0;
+  if (id === 'wand' || id === 'account') return (d.bewoners?.schermen ?? []).length > 0;
   if (id === 'bewoners') return (d.bewoners?.bewoners ?? []).length > 0;
   return false;
 }
@@ -244,7 +244,7 @@ const IK = {
   boiler: '<rect x="7" y="2.5" width="10" height="19" rx="5"/><path d="M10 15h4"/>', accu: '<rect x="6" y="4" width="12" height="17" rx="2"/><path d="M10 2h4M12 9l-2 4h4l-2 4"/>',
   lamp: '<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z"/>', screen: '<rect x="4" y="4" width="16" height="4" rx="1"/><path d="M6 8v9h12V8"/>', camera: '<rect x="3" y="7" width="13" height="10" rx="2"/><path d="m16 11 5-3v8l-5-3"/>',
   praat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-5A8 8 0 1 1 21 12z"/>', zon: '<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/>', stekker: '<path d="M9 3v5M15 3v5M6 8h12v3a6 6 0 0 1-12 0zM12 17v4"/>',
-  meter: '<path d="M4 18a8 8 0 1 1 16 0"/><path d="M12 18l4-6"/>', koffer: '<rect x="4" y="7" width="16" height="13" rx="2"/><path d="M9 7V4h6v3M4 12h16"/>', tel: '<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18h2"/>',
+  meter: '<path d="M4 18a8 8 0 1 1 16 0"/><path d="M12 18l4-6"/>', tablet: '<rect x="4" y="3" width="16" height="18" rx="2.5"/><path d="M11 18h2"/>', koffer: '<rect x="4" y="7" width="16" height="13" rx="2"/><path d="M9 7V4h6v3M4 12h16"/>', tel: '<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18h2"/>',
 };
 /** Een regel; `tag: 'button'` maakt hem aan te tikken. Zin en rechts zijn al tekst of HTML. */
 function regel({ ik: icoon, titel, zin = '', rechts = '', toon = '', klasse = '', attrs = '', onder = '', tag = 'div' }) {
@@ -1381,6 +1381,28 @@ function schermRij(s) {
     </div>`;
 }
 /*
+ * Een eigen account voor de wand (besluit 202, schets Wand-Inrichten-Klaarzetten
+ * #wand): een tablet aan de muur logt het beste in met een eigen account in
+ * Home Assistant, geen beheerder. Waarom, en hoe in drie stappen, met een knop
+ * naar Personen. Is er al een scherm, dan staat dat er; zonder inlog (op het
+ * thuisnetwerk) is er geen account nodig.
+ */
+function accountStap() {
+  const schermen = d.bewoners?.schermen ?? [];
+  const inlog = d.sessie?.toegang === 'sessions' || app.inHA();
+  const waarom = `<div class="accblok"><div class="acckop"><span class="ik">${S(IK.tablet)}</span><div><b>${esc(t('inr.acc.waarom'))}</b><span>${esc(t('inr.acc.waaromZin'))}</span></div></div>
+    <ul class="accwaarom">${['w1', 'w2', 'w3'].map((k) => `<li>${esc(t(`inr.acc.${k}`))}</li>`).join('')}</ul></div>`;
+  let inhoud;
+  if (!inlog) inhoud = `${tip(t('inr.acc.geenInlog'))}`;
+  else if (schermen.length) inhoud = `${regel({ ik: 'tablet', titel: t('inr.acc.al', { naam: schermen.map((s) => s.naam).join(', ') }), zin: t('inr.acc.alZin'), rechts: '✓', toon: 'mint' })}${waarom}`;
+  else {
+    const stappen = ['s1', 's2', 's3'].map((k, i) => `<li><span class="nr">${i + 1}</span><span>${esc(t(`inr.acc.${k}`))}</span></li>`).join('');
+    const open = app.inHA() ? `<button type="button" class="knop" data-ha-pad="/config/person">${esc(t('inr.acc.open'))}</button>` : '';
+    inhoud = `${waarom}<div class="accblok"><b>${esc(t('inr.acc.hoe'))}</b><ol class="accstappen">${stappen}</ol>${open}</div>`;
+  }
+  return { waar: waarVan('account'), kop: t('inr.acc.kop'), uitleg: t('inr.acc.zin'), inhoud: `<div class="rijen">${inhoud}</div>` };
+}
+/*
  * De wand (besluit 158, 166 en 190): hoe hij eruitziet, in het klein, met de
  * kaarten om aan of uit te zetten; 's nachts uit en de taal. Dezelfde indeling
  * als op je telefoon (niet dubbel). Daaronder elk scherm.
@@ -1424,6 +1446,38 @@ async function bewaarVoorkeur(body) {
  * opent een tik dat scherm.
  */
 const KLAAR_STIP = { klaar: 'var(--mint)', mist: 'var(--gloed)', optioneel: 'var(--gedempt)' };
+/*
+ * De assistent met één knop (besluit 202, schets Wand-Inrichten-Klaarzetten
+ * #assistent en #bezig): de add-on zet de integratie neer, herstart Home
+ * Assistant en voegt hem toe. Alleen voor de beheerder, en alleen in de add-on.
+ */
+const AAN_STAPPEN = ['neerzetten', 'herstarten', 'toevoegen'];
+let aanKijk = null;
+function assistentBlok() {
+  const i = d.integ;
+  if (!i) return '';
+  if (i.toegevoegd === true && !i.aanzetten?.bezig) return regel({ ik: 'praat', titel: t('inr.as.aan'), zin: t('inr.as.aanZin'), rechts: '✓', toon: 'mint' });
+  const a = i.aanzetten;
+  if (!a) return '';
+  // Loopt het, dan elke drie tellen kijken waar het is; ook als de pagina tijdens het herstarten opnieuw laadde.
+  if (a.bezig && !aanKijk) {
+    aanKijk = setTimeout(async () => {
+      aanKijk = null;
+      d.integ = await haal('api/integratie').catch(() => d.integ);
+      if (!d.integ?.aanzetten?.bezig) d.klaar = await haal('api/klaarzetten').catch(() => d.klaar);
+      teken();
+    }, 3000);
+  }
+  const nog = a.stap === 'herstarten' && a.herstartMs ? Math.max(5, 60 - Math.round((Date.now() - a.herstartMs) / 1000)) : null;
+  const stappen = AAN_STAPPEN.map((s, n) => {
+    const klaar = a.klaar.includes(s);
+    const nu = a.bezig && a.stap === s;
+    return `<li><span class="nr${klaar ? ' klaar' : nu ? ' bezig' : ''}">${klaar ? '✓' : nu ? '' : n + 1}</span><span>${esc(t(`inr.as.s.${s}`))}</span><small>${nu && nog != null ? esc(t('inr.as.nog', { n: nog })) : ''}</small></li>`;
+  }).join('');
+  const zin = a.bezig ? t(a.stap === 'herstarten' ? 'inr.as.bezigZin' : 'inr.as.even') : a.fout ? t('inr.as.fout', { fout: a.fout }) : t('inr.as.zin');
+  const knop = a.bezig ? '' : `<button type="button" class="knop knop-licht" data-assistent-aan>${esc(t(a.fout ? 'inr.as.opnieuw' : 'inr.as.knop'))}</button>`;
+  return `<div class="asblok" aria-live="polite"><div class="askop"><span class="bol" aria-hidden="true"></span><div><b>${esc(t('inr.as.kop'))}</b><span${a.fout && !a.bezig ? ' class="fout"' : ''}>${esc(zin)}</span></div></div><ol class="accstappen asstappen">${stappen}</ol>${knop}</div>`;
+}
 function haStap() {
   const punten = d.klaar?.punten ?? [];
   const inHA = app.inHA();
@@ -1432,7 +1486,7 @@ function haStap() {
     waar: waarVan('ha'),
     kop: t('inr.ha.kop'),
     uitleg: t(inHA ? 'inr.ha.zin' : 'inr.ha.zinBuiten'),
-    inhoud: `<div class="rijen lijst klaarlijst">${rijen || `<p class="zacht">${esc(t('inr.lezen'))}</p>`}</div>${tip(t('inr.ha.tip'))}`,
+    inhoud: `${assistentBlok()}<div class="rijen lijst klaarlijst">${rijen || `<p class="zacht">${esc(t('inr.lezen'))}</p>`}</div>${tip(t('inr.ha.tip'))}`,
   };
 }
 async function bewaarAansluiting(a) {
@@ -1596,7 +1650,7 @@ function tekenNu() {
   $$('[data-voortgang]').forEach((el) => {
     el.innerHTML = STAPPEN.map(([id]) => `<i class="${id === nu ? 'nu' : nagelopen.has(id) ? 'al' : gedaan(id) ? 'half' : ''}"></i>`).join('');
   });
-  const v = { welkom, woning: woningStap, huis: huisStap, buiten: buitenStap, bewoners: bewonersStap, apparaten: apparatenStap, meten: metenStap, warmte: warmteStap, apparaat: kanStap, comfort: comfortStap, afwezig: afwezigStap, zon: zonStap, ligging: liggingStap, zekering: zekeringStap, opzon: opzonStap, prijzen: prijzenStap, functies: functiesStap, wand: wandStap, ha: haStap, klaar: klaarStap }[nu]();
+  const v = { welkom, woning: woningStap, huis: huisStap, buiten: buitenStap, bewoners: bewonersStap, apparaten: apparatenStap, meten: metenStap, warmte: warmteStap, apparaat: kanStap, comfort: comfortStap, afwezig: afwezigStap, zon: zonStap, ligging: liggingStap, zekering: zekeringStap, opzon: opzonStap, prijzen: prijzenStap, functies: functiesStap, wand: wandStap, ha: haStap, klaar: klaarStap, account: accountStap }[nu]();
   // Onderaan overal hetzelfde (besluit 158): Terug, Later en Volgende, tenzij de stap iets anders zegt.
   const [links, rechts] = v.voet ?? [terugKnop(), volgendeKnoppen()];
   const actief = document.activeElement;
@@ -1803,6 +1857,14 @@ document.addEventListener('click', async (e) => {
     // Een andere taal laadt de pagina opnieuw (taal.js).
     const uit = await bewaarVoorkeur({ plek: 'tel', taal: el.dataset.wtaal });
     if (uit) taal.zetKeuze(uit.tel.taal, { scherm: uit.scherm === true });
+    return;
+  }
+  // De assistent met één knop (besluit 202).
+  if (el.hasAttribute('data-assistent-aan')) {
+    el.disabled = true;
+    const res = await deur('api/integratie', { aanzetten: true }).catch(() => null);
+    if (res?.ok) d.integ = await res.json().catch(() => d.integ);
+    teken();
     return;
   }
   if (el.dataset.haPad) {

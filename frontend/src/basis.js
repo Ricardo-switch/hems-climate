@@ -667,7 +667,9 @@
    * Assistant: dat blijft staan als de app een andere pagina laadt. Dat mag
    * alleen na een tik, dus bij de eerste.
    *
-   * De keuze staat in dit apparaat (localStorage): de wand wel, de telefoon niet.
+   * De keuze staat in dit apparaat (localStorage). Standaard aan (25 oktober
+   * 2026, besluit 202): zo voelt de app van Home Assistant als een eigen app;
+   * de rondleiding wijst de knop terug naar Home Assistant. Uit is '0'.
    */
   const VOLLEDIG = 'sc-volledig-scherm';
   const inHA = () => global.parent !== global && /^\/api\/hassio_ingress\//.test(location.pathname);
@@ -737,9 +739,9 @@
   }
   function volledigGekozen() {
     try {
-      return localStorage.getItem(VOLLEDIG) === '1';
+      return localStorage.getItem(VOLLEDIG) !== '0';
     } catch {
-      return false;
+      return true;
     }
   }
   /*
@@ -879,8 +881,7 @@
   /** Aan of uit op dit apparaat, en meteen zo. */
   function zetVolledig(aan) {
     try {
-      if (aan) localStorage.setItem(VOLLEDIG, '1');
-      else localStorage.removeItem(VOLLEDIG);
+      localStorage.setItem(VOLLEDIG, aan ? '1' : '0');
     } catch {
       // Geen opslag (privévenster): dan alleen voor nu.
     }
@@ -1008,8 +1009,9 @@
     } catch {
       // Dan zegt de navigatie het pas na het laden goed.
     }
-    // De bel staat in de navigatie: zijn getal opnieuw.
+    // De bel staat in de navigatie: zijn getal opnieuw, en de knop naar Home Assistant ervoor.
     zetNav(tab);
+    knoppenNaarHA();
     void meldLaad();
     dispatchEvent(new Event('huissoort'));
   }

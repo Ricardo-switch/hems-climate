@@ -106,6 +106,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [178. Universeel, deel 2: regels per land, meer merken, en het typeplaatje](#178-universeel-deel-2-regels-per-land-meer-merken-en-het-typeplaatje)
 - [179. Klaarzetten in Home Assistant, bij Wat je huis kan](#179-klaarzetten-in-home-assistant-bij-wat-je-huis-kan)
 - [197. Wat elk apparaat kan: de klimaatstap per merk in Inrichten](#197-wat-elk-apparaat-kan-de-klimaatstap-per-merk-in-inrichten)
+- [202. Klaarzetten voor iedereen: de assistent met één knop, volledig scherm, een eigen account voor de wand](#202-klaarzetten-voor-iedereen-de-assistent-met-één-knop-volledig-scherm-een-eigen-account-voor-de-wand)
 
 **Meten, data en analyse**
 
@@ -9264,6 +9265,54 @@ telt niet, en is meer dan de helft tegelijk weg, dan is het huis even niet te
 lezen en telt het ook niet. Komt het apparaat terug, dan gaat de melding stil
 weg; na dertig dagen vergeet de bel het. Alleen bij de bel, niet op de
 telefoon.
+
+---
+
+## 202. Klaarzetten voor iedereen: de assistent met één knop, volledig scherm, een eigen account voor de wand
+
+*Onderwerp: configuratie en onboarding · Status: geldig*
+
+Op 25 oktober 2026, met de schets Wand-Inrichten-Klaarzetten. De bewoner vond
+de app functioneel af, maar zag waar mensen afhaken: het klaarzetten in Home
+Assistant. De integratie vroeg na het neerzetten nog om Home Assistant te
+herstarten en bij "Nieuw apparaat gevonden" op Toevoegen te tikken; de app
+voelde in de app van Home Assistant niet als een eigen app; en nergens stond
+dat een tablet aan de muur het beste een eigen account krijgt.
+
+*Besluit:*
+
+- **De assistent met één knop.** Bij Inrichten › Klaarzetten (blok "Praat met
+  je huis") en bij Instellingen › Toegang staat "Zet de assistent aan". Na die
+  tik van de beheerder zet de add-on de integratie neer (besluit 184),
+  herstart Home Assistant als hij die versie nog niet geladen heeft, en voegt
+  de integratie zelf toe met het adres en de sleutel van de add-on. Je ziet
+  de drie stappen met een vinkje, bij het herstarten "nog zo'n … tellen".
+  Lukt het niet, dan staat er waarom, met Probeer opnieuw.
+- **Dit verruimt de schrijfgrens, maar smal.** Naast licht, scènes en
+  schermen mag de add-on nu twee dingen: Home Assistant herstarten
+  (`homeassistant/restart`) en de eigen integratie toevoegen
+  (`config/config_entries/flow`, alleen `smart_climate`). Allebei alleen na
+  de tik, alleen in de add-on (via de Supervisor), en niet via HaClient. Geen
+  andere integraties, geen add-ons installeren.
+- **De stand blijft in de dienst** (`api/integratie` geeft `aanzetten` mee),
+  zodat een pagina die tijdens het herstarten opnieuw laadt, ziet waar het is.
+- **Volledig scherm staat standaard aan** in de app van Home Assistant; uit
+  is een keuze per apparaat bij Functies › Dit scherm. De rondleiding heeft
+  daar een extra stop die de knop terug naar Home Assistant aanwijst (in de
+  zijbalk boven de bel, op de telefoon naast het tandwiel). De knop wordt
+  opnieuw gezet als de navigatie opnieuw getekend wordt.
+- **Een eigen stap "Een eigen account voor de wand"** in Inrichten, vóór Hoe
+  ziet de wand eruit: waarom (de wand is een scherm, geen bewoner; geen
+  beheerder; uitloggen op je telefoon raakt de wand niet), de drie stappen en
+  een knop naar Personen. Is er al een scherm, dan staat er wie. Zonder inlog
+  (lokaal) alleen een korte zin.
+- **Versie 0.74.0.**
+
+*Wat afviel:* de add-on zelf add-ons laten installeren voor de stem (dan wordt
+hij manager en zakt zijn veiligheidsscore; voor "helemaal in huis" opent een
+knop de pagina van de add-on, dat komt in 0.75.0); herstarten zonder te vragen;
+een eigen app in de Play Store (later, als de rest staat).
+
 ---
 
 ## Wat nog een besluit wacht

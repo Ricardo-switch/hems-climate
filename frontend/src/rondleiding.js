@@ -16,8 +16,12 @@
   const GEZIEN = 'sc-rondleiding-gezien';
   const WAAR = 'sc-rondleiding';
 
-  /** Per stop: de pagina, waar en welke tekst (teksten.*.js: rond.<id>), en waar het licht op valt (wand, telefoon). Twaalf stops en Klaar (besluit 144). */
-  const STOPS = [
+  /**
+   * Per stop: de pagina, waar en welke tekst (teksten.*.js: rond.<id>), en waar
+   * het licht op valt (wand, telefoon). Twaalf stops en Klaar (besluit 144), en
+   * in de app van Home Assistant de knop terug naar Home Assistant (besluit 202).
+   */
+  const ALLE_STOPS = [
     {
       pagina: 'thuis.html',
       plek: 'thuis',
@@ -80,6 +84,14 @@
       doel: ['#balk [data-meldbel]', '#tel [data-meldbel]'],
     },
     {
+      // Volledig scherm (besluit 202): hoe je naar Home Assistant gaat, en terug. Alleen in Home Assistant.
+      pagina: 'thuis.html',
+      plek: 'thuis',
+      id: 'naarHA',
+      doel: ['#balk [data-naar-ha-knop]', '#tel [data-naar-ha-knop]'],
+      alleenInHA: true,
+    },
+    {
       pagina: 'instellingen.html',
       plek: 'instellingen',
       id: 'tandwiel',
@@ -99,6 +111,7 @@
       klaar: true,
     },
   ];
+  const STOPS = ALLE_STOPS.filter((s) => !s.alleenInHA || (global.app.inHA() && global.app.volledigGekozen()));
 
   const pagina = () => location.pathname.split('/').pop() || 'thuis.html';
   const lees = (opslag, sleutel) => {

@@ -100,8 +100,21 @@ export async function beheerRoutes(d: Diensten, v: Verzoek): Promise<boolean> {
       sendJson(res, 403, { fout: 'dit mag alleen de beheerder' });
       return true;
     }
+    const aan = integratie.aanzetten;
+    const metAan = async () => ({ ...(await integratie.stand()), ...(aan ? { aanzetten: aan.stand() } : {}) });
     if (method !== 'POST') {
-      sendJson(res, 200, await integratie.stand());
+      sendJson(res, 200, await metAan());
+      return true;
+    }
+    // Met één knop (besluit 202): neerzetten, herstarten en toevoegen; de pagina vraagt daarna de stand.
+    const body = (await readJson(req).catch(() => null)) as Record<string, unknown> | null;
+    if (body != null && typeof body === 'object' && body['aanzetten'] === true) {
+      if (!aan) {
+        sendJson(res, 409, { fout: 'dat kan alleen in de add-on' });
+        return true;
+      }
+      aan.start();
+      sendJson(res, 202, await metAan());
       return true;
     }
     const uit = await integratie.zetNeer();

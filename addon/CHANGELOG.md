@@ -1,5 +1,29 @@
 # Wat is er nieuw · What is new
 
+## 0.74.0
+
+*28 oktober 2026*
+
+**Nieuw**
+
+- De assistent met één knop: Zet de assistent aan, bij Inrichten en bij Toegang, zet de koppeling neer, herstart Home Assistant en voegt Smart Climate toe
+- Inrichten heeft een stap Een eigen account voor de wand: waarom, en hoe je het maakt
+
+**Beter**
+
+- In de app van Home Assistant staat Smart Climate meteen over het hele scherm; de rondleiding wijst de knop terug naar Home Assistant aan
+
+*English*
+
+**New**
+
+- The assistant with one button: Turn on the assistant, in Set up and in Access, installs the integration, restarts Home Assistant and adds Smart Climate
+- Set up has a step Its own account for the wall: why, and how to make it
+
+**Improved**
+
+- In the Home Assistant app, Smart Climate now opens full screen; the tour points out the button back to Home Assistant
+
 ## 0.73.1
 
 *25 oktober 2026*

@@ -67,7 +67,8 @@ verwijzing bestaat.
   wordt een ingreep met een eindtijd ([75]). Assist van Home Assistant vraagt
   hem via de integratie Smart Climate, zonder YAML: via HACS of met een knop
   in de app, en de add-on meldt zich vanzelf aan; de zinnen en de kamers komen
-  uit de add-on ([91], [184]).
+  uit de add-on ([91], [184]). In de add-on doet één knop "Zet de assistent
+  aan" alles: neerzetten, Home Assistant herstarten en toevoegen ([202]).
 - **Zonwering is klimaat;** licht regelt Smart Climate niet, maar de app heeft
   een knop voor lampen ([92], [97]).
 - **Op termijn:** een kastje met een verborgen Home Assistant en een dunne agent
@@ -359,6 +360,8 @@ verwijzing bestaat.
   De wand neemt de weergave, het thema en de taal over van wie hij volgt ([199]).
   De film is een trailer van acht shots met een camera over het huis, en
   Inrichten begint met een groot welkom waarin het huis zich opbouwt ([200]).
+  In de app van Home Assistant staat Smart Climate standaard over het hele
+  scherm, en Inrichten raadt de wand een eigen account aan ([202]).
   De kaart Camera's toont zoveel camera's als je kiest, met wat ze nu zien of
   wanneer het laatst, en een tik maakt het beeld groot en live ([201]).
 - **Meldingen** staan achter de bel in het menu, met Onderhoud en na een update
@@ -664,4 +667,5 @@ verwijzing bestaat.
 [199]: DECISIONS.md#199-de-wand-neemt-alle-persoonlijke-instellingen-over-van-wie-hij-volgt
 [200]: DECISIONS.md#200-de-film-als-trailer-en-een-groot-welkom-bij-inrichten
 [201]: DECISIONS.md#201-de-kaart-cameras-zoveel-cameras-als-je-wilt-met-wat-ze-zien
+[202]: DECISIONS.md#202-klaarzetten-voor-iedereen-de-assistent-met-één-knop-volledig-scherm-een-eigen-account-voor-de-wand
 <!-- links:einde -->

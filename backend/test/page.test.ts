@@ -1569,7 +1569,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await p.waitForTimeout(800);
     // Acht hoofdstukken met hun stappen (besluit 190).
     expect(await p.locator('#wand [data-stappen] .stap').count()).toBe(8);
-    expect(await p.locator('#wand [data-stappen] .stipjes i').count()).toBe(19);
+    expect(await p.locator('#wand [data-stappen] .stipjes i').count()).toBe(20);
     expect(await p.locator('#wand #balk').count()).toBe(0);
     await shot('welkom');
     // De getallen tikken open tot een lijst, en weer terug (besluit 158).
@@ -1687,8 +1687,12 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     expect(await kaart.locator('.schakel').count()).toBeGreaterThan(0);
     await shot('functies');
     await kaart.locator('[data-volgende]').click();
+    // Een eigen account voor de wand (besluit 202): waarom, en hoe.
+    await kaart.locator('h1', { hasText: 'Een eigen account voor de wand' }).waitFor();
+    await shot('account');
+    await kaart.locator('[data-volgende]').click();
     // De wand (besluit 190): de kaarten om aan of uit te zetten, en de wand in het klein.
-    await kaart.locator('.waar', { hasText: '7. Je schermen' }).waitFor();
+    await kaart.locator('h1', { hasText: 'Hoe ziet de wand eruit?' }).waitFor();
     expect(await kaart.locator('[data-wkaart]').count()).toBe(11);
     await kaart.locator('.wandje [data-mini] svg.sc-huis').waitFor();
     await shot('wand');
@@ -4090,19 +4094,24 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     const app = p.frameLocator('#app');
     await app.locator('#wand svg.sc-huis').first().waitFor();
     const berichten = () => p.evaluate<{ type: string; kioskMode?: boolean; path?: string }[]>('window.berichten');
-    // Uit, zoals op elk nieuw apparaat: geen kioskstand, geen knop.
-    expect(await berichten()).toEqual([]);
-    expect(await app.locator('#balk [data-naar-ha]').count()).toBe(0);
+    // Standaard aan (besluit 202): meteen de kioskstand, en de knop terug naar Home Assistant.
+    await expect.poll(berichten).toContainEqual({ type: 'home-assistant/subscribe-properties', kioskMode: true });
+    await app.locator('#balk [data-naar-ha]').waitFor();
 
     // Bij Functies › Weergave › Dit scherm aanzetten (besluit 167): meteen de kioskstand, het hele scherm en de knop.
     const frame = p.frames().find((f) => f.url().includes('/api/hassio_ingress/'))!;
     await frame.goto(`${HA}/api/hassio_ingress/abc/functies.html#scherm`);
     const vorm = app.locator('#wand [data-vorm]');
     await vorm.locator('h2', { hasText: 'Dit scherm' }).waitFor();
-    await vorm.locator('[data-volledig]').click();
-    await expect.poll(berichten).toContainEqual({ type: 'home-assistant/subscribe-properties', kioskMode: true });
-    expect(await p.evaluate<number>('window.schermVraag')).toBeGreaterThan(0);
     expect(await vorm.locator('[data-volledig]').getAttribute('aria-checked')).toBe('true');
+    // Uitzetten: de balken van Home Assistant terug, en geen knop.
+    await vorm.locator('[data-volledig]').click();
+    await expect.poll(() => vorm.locator('[data-volledig]').getAttribute('aria-checked')).toBe('false');
+    await expect.poll(() => app.locator('#balk [data-naar-ha]').count()).toBe(0);
+    await vorm.locator('[data-volledig]').click();
+    await expect.poll(() => berichten().then((b) => b.filter((x) => x.kioskMode != null).at(-1)?.kioskMode)).toBe(true);
+    expect(await p.evaluate<number>('window.schermVraag')).toBeGreaterThan(0);
+    await expect.poll(() => vorm.locator('[data-volledig]').getAttribute('aria-checked')).toBe('true');
     // De statusbalk in de kleur van de app, en de app van Home Assistant hoort het.
     const statusbalk = () => p.evaluate<string>("document.documentElement.style.getPropertyValue('--app-header-background-color')");
     await expect.poll(statusbalk).toBe('#0b1424');

@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.73.1';
+export const VERSIE = '0.74.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,26 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.74.0',
+    datum: '2026-10-28',
+    nieuw: [
+      'De assistent met één knop: Zet de assistent aan, bij Inrichten en bij Toegang, zet de koppeling neer, herstart Home Assistant en voegt Smart Climate toe',
+      'Inrichten heeft een stap Een eigen account voor de wand: waarom, en hoe je het maakt',
+    ],
+    beter: [
+      'In de app van Home Assistant staat Smart Climate meteen over het hele scherm; de rondleiding wijst de knop terug naar Home Assistant aan',
+    ],
+    en: {
+      nieuw: [
+        'The assistant with one button: Turn on the assistant, in Set up and in Access, installs the integration, restarts Home Assistant and adds Smart Climate',
+        'Set up has a step Its own account for the wall: why, and how to make it',
+      ],
+      beter: [
+        'In the Home Assistant app, Smart Climate now opens full screen; the tour points out the button back to Home Assistant',
+      ],
+    },
+  },
   {
     versie: '0.73.1',
     datum: '2026-10-25',

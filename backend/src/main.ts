@@ -12,6 +12,7 @@
  */
 
 import { Integratie } from './web/integratie.js';
+import { AssistentAan, voegToeViaFlow } from './web/assistent-aan.js';
 import { PushStore, alsMelding, ontvangersVan, paneelVan, proefTekst, teSturen, telefoonVan, vindTelefoons, type Telefoon } from './web/push.js';
 import { hostname } from 'node:os';
 import { loadDotEnv, tokenComplaint } from './env.js';
@@ -1323,6 +1324,49 @@ if (sleutel && version.installatie === 'add-on' && webPort != null && process.en
     .catch((error: unknown) => console.warn(`Aanmelden bij Home Assistant voor de integratie lukte niet: ${(error as Error).message}`));
 }
 
+/*
+ * De assistent met één knop (besluit 202): neerzetten, Home Assistant
+ * herstarten en de integratie toevoegen. Alleen in de add-on, met de sleutel
+ * en de weg via de Supervisor; herstarten en toevoegen gaan niet via HaClient
+ * (die schrijft alleen licht, scènes en schermen), maar hier, na een tik.
+ */
+const supervisorToken = process.env['SUPERVISOR_TOKEN'] ?? '';
+/** Of de verbinding met Home Assistant er nu is: valt weg bij het herstarten, en komt terug met 'ready'. */
+let haVerbonden = true;
+client.on('ready', () => (haVerbonden = true));
+client.on('disconnected', () => (haVerbonden = false));
+const assistentAan = integratie && sleutel && webPort != null && supervisorToken
+  ? new AssistentAan({
+      zetNeer: () => integratie.zetNeer(),
+      geladen: async () => {
+        const s = await integratieStand();
+        return s.geladen != null && s.geladen === s.nieuw;
+      },
+      toegevoegd: async () => (await integratieStand()).toegevoegd === true,
+      herstart: async () => {
+        // Home Assistant kijkt eerst of de configuratie klopt; tijdens het herstarten valt de verbinding weg.
+        await fetch('http://supervisor/core/api/services/homeassistant/restart', { method: 'POST', headers: { authorization: `Bearer ${supervisorToken}`, 'content-type': 'application/json' }, body: '{}' }).catch(() => null);
+      },
+      wachtOpHerstart: () =>
+        new Promise<void>((klaar, mis) => {
+          const tot = Date.now() + 6 * 60_000;
+          let weg = false;
+          const kijk = async () => {
+            if (Date.now() > tot) return mis(new Error('Home Assistant kwam niet terug na het herstarten'));
+            // Eerst weg (de verbinding valt), dan terug met de integratie geladen.
+            if (!weg && haVerbonden) return setTimeout(() => void kijk(), 1_000);
+            weg = true;
+            const s = haVerbonden ? await integratieStand().catch(() => null) : null;
+            if (s?.geladen != null) return klaar();
+            setTimeout(() => void kijk(), 3_000);
+          };
+          setTimeout(() => void kijk(), 2_000);
+        }),
+      voegToe: () => voegToeViaFlow('http://supervisor/core/api', supervisorToken, `http://${hostname()}:${webPort}`, sleutel),
+      nu: () => Date.now(),
+    })
+  : null;
+
 // "Toch die van" voorbij (besluit 147): opruimen, zodat hij later niet vanzelf terugkomt.
 if (bewonersStore) {
   setInterval(() => {
@@ -1476,7 +1520,7 @@ if (webPort != null) {
     // Meldingen op de telefoon (besluit 183): welke telefoons er zijn, en een proefmelding.
     telefoons: (userId: string | null) => telefoons().map((t) => ({ id: t.id, naam: t.naam, eigen: userId != null && t.account === userId })),
     proefmelding,
-    ...(integratie ? { integratie: { stand: integratieStand, zetNeer: () => integratie.zetNeer() } } : {}),
+    ...(integratie ? { integratie: { stand: integratieStand, zetNeer: () => integratie.zetNeer(), ...(assistentAan ? { aanzetten: { stand: () => assistentAan.stand, start: () => void assistentAan.start() } } : {}) } } : {}),
     // Het profiel (besluit 181): de bewoners op volgorde en wiens comfort geldt, voor de wand en de kleuren.
     ...(voorkeuren && bewonersStore
       ? {
