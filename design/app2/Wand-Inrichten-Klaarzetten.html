@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Klaarzetten voor iedereen (schets)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Klaarzetten voor iedereen (schets, 25 oktober 2026). Wat nu te moeilijk
+   * was voor wie geen Home Assistant-kenner is:
+   *
+   * - De assistent: de integratie neerzetten, Home Assistant herstarten en de
+   *   integratie toevoegen (#assistent, #bezig). Op 28 oktober 2026 zonder
+   *   eigen knop: dat gebeurt bij Klaar, terwijl de film speelt, en de
+   *   rondleiding wacht tot Home Assistant terug is.
+   * - De stem: standaard die van het apparaat zelf, zonder installatie; voor
+   *   gevorderden helemaal in huis met Whisper, Piper en het wekwoord (#stem).
+   *   Gebouwd 28 oktober 2026 (besluit 203): wat bij een keuze hoort, staat
+   *   alleen onder de gekozen kaart; bij het apparaat de schakelaar voor
+   *   verstaan via de browser, hier de drie add-ons.
+   * - De wand: een eigen account in Home Assistant voor de tablet, met waarom
+   *   en hoe (#wand).
+   * - Volledig scherm staat in de app van Home Assistant standaard aan; de
+   *   rondleiding wijst de knop terug naar Home Assistant (#rondleiding).
+   */
+  .scherm { position: relative; width: 1280px; height: 800px; overflow: hidden; }
+  .boven { position: absolute; left: 28px; right: 28px; top: 20px; display: flex; align-items: center; gap: 16px; }
+  .logo { width: 34px; height: 34px; border-radius: 11px; background: conic-gradient(from 200deg, #6fd3ff, #8f86ff, #ff7a4d, #f7b548, #6ee7b7, #6fd3ff); flex: none; }
+  .pad { flex: 1; display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; }
+  .h { padding: 7px 10px 8px; border-radius: 14px; background: rgb(var(--wit) / 0.04); border: 1px solid transparent; min-width: 0; }
+  .h b { display: block; font-size: 12.5px; font-weight: 700; color: var(--gedempt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .h .streep { display: flex; gap: 3px; margin-top: 6px; }
+  .h .streep i { flex: 1; height: 3px; border-radius: 2px; background: rgb(var(--wit) / 0.12); }
+  .h.klaar .streep i { background: var(--mint); }
+  .h.nu { background: rgb(var(--wit) / 0.09); border-color: rgb(var(--wit) / 0.16); }
+  .h.nu b { color: var(--tekst); }
+  .podium { position: absolute; left: 0; top: 78px; width: 790px; height: 706px; }
+  .vraag { position: absolute; right: 28px; top: 84px; bottom: 26px; width: 452px; padding: 22px 24px 18px; display: flex; flex-direction: column; gap: 12px; }
+  .vraag .waar { font-size: 12.5px; font-weight: 700; color: var(--gedempt); }
+  .vraag h1 { margin: 0; font-family: var(--kop); font-size: 30px; font-weight: 600; line-height: 1.08; letter-spacing: -0.02em; }
+  .vraag .lead { margin: 0; font-size: 14.5px; line-height: 1.45; color: var(--zacht); }
+  .vraag .inhoud { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+  .voet { display: flex; align-items: center; gap: 10px; padding-top: 12px; border-top: 1px solid rgb(var(--wit) / 0.07); }
+  .voet .terug { color: var(--zacht); font-weight: 700; font-size: 14px; }
+  .voet .later { margin-left: auto; color: var(--gedempt); font-size: 13px; font-weight: 600; }
+  .knop { height: 44px; padding: 0 20px; border-radius: 14px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700; font-size: 15px; background: rgb(var(--wit) / 0.08); }
+  .knop.licht { background: var(--ijs); color: #072033; }
+  .voet .knop.licht { margin-left: 8px; }
+  .knop.klein { height: 32px; padding: 0 12px; border-radius: 10px; font-size: 13px; }
+  .tip { padding: 10px 12px; border-radius: 14px; background: rgba(111, 211, 255, 0.08); color: var(--ijs-zacht); font-size: 12.5px; line-height: 1.4; }
+  .klaarregel { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 0 10px; align-items: center; padding: 6px 4px; border-top: 1px solid rgb(var(--wit) / 0.06); }
+  .klaarregel:first-child { border-top: 0; }
+  .klaarregel i { width: 8px; height: 8px; border-radius: 50%; }
+  .klaarregel b { font-size: 13.5px; display: block; }
+  .klaarregel span { font-size: 12px; color: var(--gedempt); display: block; }
+
+  /* Een blok dat iets voor je doet: een titel, waarom, en één knop; daaronder wat er gebeurt. */
+  .blok { padding: 14px 16px; border-radius: 18px; background: rgb(var(--wit) / 0.05); border: 1px solid rgb(var(--wit) / 0.08); display: flex; flex-direction: column; gap: 10px; }
+  .blok.uitgelicht { background: linear-gradient(160deg, rgba(143, 134, 255, 0.16), rgba(111, 211, 255, 0.08)); border-color: rgba(143, 134, 255, 0.35); }
+  .blok .kop { display: flex; align-items: center; gap: 12px; }
+  .blok .kop .bol { width: 40px; height: 40px; flex: none; border-radius: 50%; background: radial-gradient(circle at 34% 28%, #fff 0%, #bfe3ff 16%, #6fb7ff 40%, #6a5cff 72%, #2a1f6b 100%); box-shadow: 0 0 24px rgba(111, 170, 255, 0.5); }
+  .blok .kop .ik { width: 40px; height: 40px; flex: none; border-radius: 12px; display: grid; place-items: center; background: rgb(var(--wit) / 0.08); color: var(--zacht); }
+  .blok .kop .ik svg { width: 20px; height: 20px; }
+  .blok .kop b { display: block; font-size: 16px; }
+  .blok .kop span { display: block; font-size: 12.5px; color: var(--zacht); line-height: 1.35; }
+  .stappen { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+  .stappen li { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 10px; align-items: center; font-size: 13px; color: var(--zacht); }
+  .stappen .s { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 800; background: rgb(var(--wit) / 0.08); color: var(--zacht); }
+  .stappen .s.klaar { background: var(--mint); color: #062a1c; }
+  .stappen .s.bezig { background: transparent; box-shadow: inset 0 0 0 2px var(--ijs); border-top-color: transparent; animation: draai 1s linear infinite; }
+  @keyframes draai { to { transform: rotate(360deg); } }
+  .stappen li b { color: var(--tekst); font-weight: 600; }
+  .stappen small { font-size: 12px; color: var(--gedempt); }
+  .keuze { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; padding: 12px 14px; border-radius: 16px; background: rgb(var(--wit) / 0.04); border: 1.5px solid transparent; }
+  .keuze.aan { border-color: var(--ijs); background: rgba(111, 211, 255, 0.08); }
+  .keuze .rond { width: 20px; height: 20px; border-radius: 50%; border: 2px solid rgb(var(--wit) / 0.3); margin-top: 2px; }
+  .keuze.aan .rond { border-color: var(--ijs); box-shadow: inset 0 0 0 4px #0b1424; background: var(--ijs); }
+  .keuze b { display: block; font-size: 15px; }
+  .keuze .label { display: inline-block; margin-left: 6px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; vertical-align: 2px; }
+  .keuze .label.mint { background: rgba(110, 231, 183, 0.14); color: var(--mint-t); }
+  .keuze .label.gedempt { background: rgb(var(--wit) / 0.08); color: var(--zacht); }
+  .keuze p { margin: 3px 0 0; font-size: 12.5px; color: var(--zacht); line-height: 1.4; }
+  .keuze .onder { margin-top: 10px; display: grid; gap: 6px; }
+  .addon { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 12px; background: rgb(var(--wit) / 0.05); font-size: 13px; }
+  .addon b { font-size: 13.5px; }
+  .addon span { display: block; font-size: 11.5px; color: var(--gedempt); }
+  .addon .ok { font-size: 12px; font-weight: 800; color: var(--mint-t); }
+  .schakelrij { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--zacht); }
+  .schakel { flex: none; width: 40px; height: 24px; border-radius: 12px; background: rgb(var(--wit) / 0.14); position: relative; }
+  .schakel::after { content: ''; position: absolute; left: 3px; top: 3px; width: 18px; height: 18px; border-radius: 50%; background: #c8d2dc; }
+  .schakel.aan { background: var(--mint); }
+  .schakel.aan::after { left: 19px; background: #0b2a1f; }
+  .waarom { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+  .waarom li { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 8px; font-size: 13px; color: var(--zacht); line-height: 1.4; }
+  .waarom li::before { content: '✓'; color: var(--mint-t); font-weight: 800; }
+
+  /* De rondleiding op Thuis: de knop in de zijbalk uitgelicht. */
+  .thuis { position: absolute; inset: 0; display: none; }
+  .zijbalk { position: absolute; left: 20px; top: 20px; bottom: 20px; width: 56px; border-radius: 22px; background: rgba(14, 24, 40, 0.75); display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 16px 0; }
+  .zijbalk i { width: 30px; height: 30px; border-radius: 10px; background: rgb(var(--wit) / 0.08); }
+  .zijbalk .logo { width: 34px; height: 34px; }
+  .zijbalk .los { margin-top: auto; }
+  .zijbalk .naarha { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: rgb(var(--wit) / 0.1); color: var(--tekst); box-shadow: 0 0 0 4px #0b1424, 0 0 0 7px var(--ijs), 0 0 40px rgba(111, 211, 255, 0.6); }
+  .zijbalk .naarha svg { width: 20px; height: 20px; }
+  .zijbalk .bel { width: 36px; height: 36px; border-radius: 50%; background: rgb(var(--wit) / 0.08); }
+  .waas { position: absolute; inset: 0; background: rgba(4, 8, 16, 0.6); }
+  .ballon { position: absolute; left: 104px; bottom: 70px; width: 400px; padding: 20px 22px; border-radius: 22px; }
+  .ballon::before { content: ''; position: absolute; left: -9px; bottom: 44px; width: 18px; height: 18px; background: inherit; transform: rotate(45deg); border-left: 1px solid rgb(var(--wit) / 0.12); border-bottom: 1px solid rgb(var(--wit) / 0.12); }
+  .ballon .stap { font-size: 12.5px; font-weight: 700; color: var(--gedempt); }
+  .ballon h2 { margin: 6px 0 8px; font-family: var(--kop); font-size: 24px; font-weight: 600; line-height: 1.1; }
+  .ballon p { margin: 0 0 8px; font-size: 14px; color: var(--zacht); line-height: 1.45; }
+  .ballon .knoppen { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+  [data-alleen] { display: none; }
+</style>
+</head>
+<body class="lucht lucht-avond">
+<div class="scherm">
+  <div class="boven" id="boven"><span class="logo"></span><div class="pad" id="pad"></div></div>
+  <div class="podium" id="podium"></div>
+  <section class="glas vraag" id="vraag"></section>
+  <div class="thuis" id="thuis">
+    <div class="podium" id="podium2" style="left: 90px; top: 60px"></div>
+    <div class="waas"></div>
+    <nav class="zijbalk"><span class="logo"></span><i></i><i></i><i></i><i></i><i></i><span class="los"></span><span class="naarha"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h5"/><path d="M14 15.5h7M18 12.5l3 3-3 3"/></svg></span><span class="bel"></span><i></i></nav>
+    <div class="glas ballon"><span class="stap">Rondleiding · 2 van 7</span><h2>Smart Climate over het hele scherm</h2><p>In de app van Home Assistant staat Smart Climate standaard over het hele scherm, zonder de balken van Home Assistant.</p><p>Wil je naar Home Assistant? Tik op deze knop in de zijbalk. Met dezelfde knop ben je weer terug. Op de telefoon staat hij rechtsboven, naast het tandwiel.</p><p style="font-size: 12.5px; color: var(--gedempt)">Liever met de balken? Zet het uit bij Jij › Weergave.</p><div class="knoppen"><span class="knop klein">Vorige</span><span class="knop klein licht">Volgende</span></div></div>
+  </div>
+</div>
+<script src="../../frontend/kit/huis.js"></script>
+<script>
+  const S = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+  const IK = {
+    tablet: '<rect x="4" y="3" width="16" height="18" rx="2.5"/><path d="M11 18h2"/>',
+    stem: '<path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
+  };
+  const HOOFDSTUKKEN = [['Je huis', 3], ['Buiten', 1], ['Wie woont hier', 1], ['Klimaat', 5], ['Energie', 5], ['Gemak', 1], ['Je schermen', 1], ['Klaar', 2]];
+  const k = (naam, o = {}) => ({ naam, gewicht: o.gewicht ?? 1, apparaten: o.apparaten ?? [] });
+  const etages = [
+    { naam: 'Begane grond', kamers: [k('Entree', { gewicht: 0.6 }), k('Keuken', { apparaten: [{ soort: 'radiator' }] }), k('Woonkamer', { gewicht: 1.5, apparaten: [{ soort: 'airco' }, { soort: 'bank' }] })] },
+    { naam: '1e verdieping', kamers: [k('Badkamer'), k('Hobbykamer'), k('Slaapkamer Matts'), k('Slaapkamer Mylan')] },
+    { dak: true, kamers: [k('Slaapkamer'), k('Zolder', { gewicht: 1.4, apparaten: [{ soort: 'airco' }, { soort: 'droger' }] })] },
+  ];
+  const model = { tijd: 'avond', zon: { stand: 0.9, hoogte: 0.1, aandeel: 0, panelen: 6, panelenLinks: 6, opRechts: true }, etages, voordeur: {}, buitenunit: { aan: false }, net: true, oprit: { auto: {} }, tuin: { tuinhuis: true, tuinhuisSoort: 'tuinhuis' } };
+  const klaarlijst = (welke) => `<div class="lijst">${welke.map(([kleur, titel, zin]) => `<div class="klaarregel"><i style="background: ${kleur}"></i><span><b>${titel}</b><span>${zin}</span></span><span></span></div>`).join('')}</div>`;
+  const REST = [['var(--mint)', 'Thermostaten en airco’s', '5 apparaten voor verwarmen of koelen.'], ['var(--mint)', 'Camera’s en de deurbel', '2 camera’s, met een deurbel.'], ['var(--gedempt)', 'Een bewegingsmelder', 'Een bewegingsmelder bij de wand, om hem te wekken.']];
+
+  const STANDEN = {
+    assistent: {
+      stap: [7, 0], waar: '8. Klaar · Staat alles klaar?', kop: 'Staat alles klaar?', lead: 'Wat Smart Climate in Home Assistant gebruikt. Wat Smart Climate zelf kan klaarzetten, doet het bij Klaar.',
+      inhoud: `<div class="blok uitgelicht"><div class="kop"><span class="bol"></span><div><b>Praat met je huis</b><span>Gaat vanzelf aan bij Klaar, terwijl de film speelt.</span></div></div>
+          <ul class="stappen"><li><span class="s">1</span><span>De koppeling in Home Assistant zetten</span><small></small></li><li><span class="s">2</span><span>Home Assistant herstart, zo'n minuut</span><small></small></li><li><span class="s">3</span><span>Smart Climate toevoegen</span><small></small></li></ul></div>
+        ${klaarlijst(REST)}`,
+    },
+    bezig: {
+      stap: [7, 0], waar: '8. Klaar · Staat alles klaar?', kop: 'Staat alles klaar?', lead: 'Wat Smart Climate in Home Assistant gebruikt. Wat Smart Climate zelf kan klaarzetten, doet het bij Klaar.',
+      inhoud: `<div class="blok uitgelicht"><div class="kop"><span class="bol"></span><div><b>Praat met je huis</b><span>Even geduld: Home Assistant herstart. De app blijft open en gaat vanzelf verder.</span></div></div>
+          <ul class="stappen"><li><span class="s klaar">✓</span><span><b>De koppeling staat in Home Assistant</b></span><small>14:02</small></li><li><span class="s bezig"></span><span><b>Home Assistant herstart</b></span><small>nog zo'n 40 tellen</small></li><li><span class="s">3</span><span>Smart Climate toevoegen</span><small></small></li></ul></div>
+        ${klaarlijst(REST)}`,
+    },
+    stem: {
+      stap: [7, 1], waar: '8. Klaar · De stem', kop: 'Hoe praat je huis?', lead: 'Kies waar de stem vandaan komt. Dat kan later ook, bij Functies › Praten.',
+      inhoud: `<div class="keuze"><span class="rond"></span><div><b>Met dit apparaat <span class="label mint">Werkt meteen</span></b><p>De telefoon of tablet leest het antwoord voor en verstaat wat je zegt. Niets te installeren.</p></div></div>
+        <div class="keuze aan"><span class="rond"></span><div><b>Helemaal in huis <span class="label gedempt">Gevorderd</span></b><p>Verstaan en praten op je eigen Home Assistant, ook met "Hé huis". Installeer opent die add-on in Home Assistant; staan ze erin, dan maakt Smart Climate de spraakassistent zelf.</p>
+          <div class="onder"><div class="addon"><div><b>Whisper</b><span>verstaat wat je zegt</span></div><span class="knop klein">Installeer</span></div><div class="addon"><div><b>Piper</b><span>de stem, in het Nederlands</span></div><span class="ok">✓ Staat erin</span></div><div class="addon"><div><b>openWakeWord</b><span>luistert naar "Hé huis"</span></div><span class="knop klein">Installeer</span></div></div></div></div>
+        `,
+    },
+    wand: {
+      stap: [6, 0], waar: '7. Je schermen', kop: 'Een eigen account voor de wand', lead: 'Een tablet aan de muur logt het beste in met een eigen account in Home Assistant, niet met dat van jou.',
+      inhoud: `<div class="blok"><div class="kop"><span class="ik">${S(IK.tablet)}</span><div><b>Waarom een eigen account</b><span>Zo is de wand een scherm, en geen bewoner.</span></div></div>
+          <ul class="waarom"><li>De wand begroet wie er thuis is, en volgt diens kaarten en kleur.</li><li>Wie langsloopt, kan niets aan Home Assistant veranderen: het account is geen beheerder.</li></ul></div>
+        <div class="blok"><div class="kop"><div><b>Zo maak je het, één keer</b></div></div>
+          <ul class="stappen"><li><span class="s">1</span><span>Instellingen › Personen › <b>Persoon toevoegen</b>, bijvoorbeeld "Wand"</span><small></small></li><li><span class="s">2</span><span>Zet <b>Mag inloggen</b> aan, met een wachtwoord; laat <b>Beheerder</b> uit</span><small></small></li><li><span class="s">3</span><span>Log op de tablet in met dat account en kies <b>Dit is een scherm</b></span><small></small></li></ul>
+          <span class="knop">Open Personen in Home Assistant</span></div>`,
+    },
+  };
+
+  const id = location.hash.slice(1);
+  if (id === 'rondleiding') {
+    ['boven', 'podium', 'vraag'].forEach((x) => (document.getElementById(x).style.display = 'none'));
+    document.getElementById('thuis').style.display = 'block';
+    const p = document.getElementById('podium2');
+    huis.teken(p, model, { breedte: 790, hoogte: 706, wereld: true, eigenLucht: false, marge: 0.05 });
+  } else {
+    const s = STANDEN[id] ?? STANDEN.assistent;
+    document.getElementById('pad').innerHTML = HOOFDSTUKKEN.map(([naam, n], h) => `<div class="h${h < s.stap[0] ? ' klaar' : h === s.stap[0] ? ' nu' : ''}"><b>${h + 1}. ${naam}</b><div class="streep">${'<i></i>'.repeat(n)}</div></div>`).join('');
+    document.getElementById('vraag').innerHTML = `<span class="waar">${s.waar}</span><h1>${s.kop}</h1><p class="lead">${s.lead}</p><div class="inhoud">${s.inhoud}</div><div class="voet"><span class="terug">Terug</span><span class="later">Later</span><span class="knop licht">Volgende</span></div>`;
+    const p = document.getElementById('podium');
+    huis.teken(p, model, { breedte: 790, hoogte: 706, wereld: true, eigenLucht: false, marge: 0.05, schuifY: 20, meubels: true });
+  }
+</script>
+</body>
+</html>

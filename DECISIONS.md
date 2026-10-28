@@ -106,6 +106,8 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [178. Universeel, deel 2: regels per land, meer merken, en het typeplaatje](#178-universeel-deel-2-regels-per-land-meer-merken-en-het-typeplaatje)
 - [179. Klaarzetten in Home Assistant, bij Wat je huis kan](#179-klaarzetten-in-home-assistant-bij-wat-je-huis-kan)
 - [197. Wat elk apparaat kan: de klimaatstap per merk in Inrichten](#197-wat-elk-apparaat-kan-de-klimaatstap-per-merk-in-inrichten)
+- [202. Klaarzetten voor iedereen: de assistent met één knop, volledig scherm, een eigen account voor de wand](#202-klaarzetten-voor-iedereen-de-assistent-met-één-knop-volledig-scherm-een-eigen-account-voor-de-wand)
+- [203. De stem: van het apparaat zelf, of helemaal in huis](#203-de-stem-van-het-apparaat-zelf-of-helemaal-in-huis)
 
 **Meten, data en analyse**
 
@@ -9264,6 +9266,118 @@ telt niet, en is meer dan de helft tegelijk weg, dan is het huis even niet te
 lezen en telt het ook niet. Komt het apparaat terug, dan gaat de melding stil
 weg; na dertig dagen vergeet de bel het. Alleen bij de bel, niet op de
 telefoon.
+
+---
+
+## 202. Klaarzetten voor iedereen: de assistent met één knop, volledig scherm, een eigen account voor de wand
+
+*Onderwerp: configuratie en onboarding · Status: geldig*
+
+Op 25 oktober 2026, met de schets Wand-Inrichten-Klaarzetten. De bewoner vond
+de app functioneel af, maar zag waar mensen afhaken: het klaarzetten in Home
+Assistant. De integratie vroeg na het neerzetten nog om Home Assistant te
+herstarten en bij "Nieuw apparaat gevonden" op Toevoegen te tikken; de app
+voelde in de app van Home Assistant niet als een eigen app; en nergens stond
+dat een tablet aan de muur het beste een eigen account krijgt.
+
+*Besluit:*
+
+- **De assistent gaat aan bij Klaar, terwijl de film speelt.** De add-on zet
+  de integratie neer (besluit 184), herstart Home Assistant als hij die versie
+  nog niet geladen heeft, en voegt de integratie zelf toe met het adres en de
+  sleutel van de add-on. Bij Inrichten is daar geen eigen knop voor: het
+  begint als je bij Klaar op Speel af tikt, zodra de film zijn cijfers heeft
+  (daarna speelt hij zonder verbinding). Na de film wacht de rondleiding met
+  de drie stappen in beeld tot Home Assistant terug is; Overslaan doet
+  hetzelfde zonder film. Klaarzetten zegt alleen dat het bij Klaar gebeurt.
+  Bij Instellingen › Toegang staat de knop "Zet de assistent aan". Lukt het
+  niet, dan staat er waarom, met Probeer opnieuw.
+- **Dit verruimt de schrijfgrens, maar smal.** Naast licht, scènes en
+  schermen mag de add-on nu twee dingen: Home Assistant herstarten
+  (`homeassistant/restart`) en de eigen integratie toevoegen
+  (`config/config_entries/flow`, alleen `smart_climate`). Allebei alleen na
+  een tik van de beheerder (Speel af of Overslaan bij Klaar, of de knop bij
+  Toegang), alleen in de add-on (via de Supervisor), en niet via HaClient. Geen
+  andere integraties, geen add-ons installeren.
+- **De stand blijft in de dienst** (`api/integratie` geeft `aanzetten` mee),
+  zodat een pagina die tijdens het herstarten opnieuw laadt, ziet waar het is.
+- **Volledig scherm staat standaard aan** in de app van Home Assistant; uit
+  is een keuze per apparaat bij Functies › Dit scherm. De rondleiding heeft
+  daar een extra stop die de knop terug naar Home Assistant aanwijst (in de
+  zijbalk boven de bel, op de telefoon naast het tandwiel). De knop wordt
+  opnieuw gezet als de navigatie opnieuw getekend wordt.
+- **Een eigen stap "Een eigen account voor de wand"** in Inrichten, vóór Hoe
+  ziet de wand eruit: waarom (de wand is een scherm, geen bewoner; geen
+  beheerder; uitloggen op je telefoon raakt de wand niet), de drie stappen en
+  een knop naar Personen. Is er al een scherm, dan staat er wie. Zonder inlog
+  (lokaal) alleen een korte zin.
+- **Versie 0.74.0.**
+
+*Wat afviel:* de add-on zelf add-ons laten installeren voor de stem (dan wordt
+hij manager en zakt zijn veiligheidsscore; voor "helemaal in huis" opent een
+knop de pagina van de add-on, dat komt in 0.75.0); herstarten zonder te vragen;
+een eigen app in de Play Store (later, als de rest staat).
+
+*Aanvulling (28 oktober 2026, versie 0.75.0):* de app los op je startscherm
+(via de eigen poort in Tailscale, besluit 160) blijft te moeilijk voor de
+meeste mensen. Functies › Op je startscherm staat daarom onder een nieuw
+kopje **Gevorderd**; de gewone weg is de app van Home Assistant, met volledig
+scherm. Dat een add-on de startpagina van die app wordt, kan in Home
+Assistant niet; de app kan wel de laatst geopende pagina onthouden.
+
+---
+
+## 203. De stem: van het apparaat zelf, of helemaal in huis
+
+*Onderwerp: configuratie en onboarding · Status: geldig*
+
+Op 25 oktober 2026, met de schets Wand-Inrichten-Klaarzetten (#stem); gebouwd
+op 28 oktober. De bewoner zag dat de stem met Piper, Whisper en het wekwoord
+niet voor iedereen weggelegd is: drie add-ons installeren, ze koppelen en een
+spraakassistent maken. Zijn keuze: standaard de stem van het apparaat zelf,
+zonder installatie (B), en voor gevorderden helemaal in huis met één knop (A).
+De add-ons installeert de bewoner zelf (de add-on wordt geen manager), en
+verstaan via de browser staat aan, met eerlijke uitleg.
+
+*Besluit:*
+
+- **Waar de stem vandaan komt** is een keuze bij Functies › Praten en in een
+  nieuwe stap van Inrichten, "Hoe praat je huis?" (hoofdstuk Klaar, na
+  Klaarzetten): **Met dit apparaat** of **Helemaal in huis**. Wat bij een keuze
+  hoort, staat alleen onder de gekozen kaart; zo past het op de wand.
+- **Met dit apparaat**: de telefoon of tablet leest voor met zijn eigen stem
+  (alleen een stem die op het apparaat zelf draait), en zonder die stem Piper
+  als die er is. Verstaan gaat via de browser zelf (Chrome, Safari), als dat aan
+  staat; de tekst zegt dat Chrome het daarvoor naar Google stuurt en Safari naar
+  Apple. Kan de browser het niet (de app van Home Assistant, Fully Kiosk), of
+  staat het uit, dan verstaat Home Assistant het, als Whisper erin staat.
+- **Helemaal in huis**: Piper leest voor, Whisper verstaat, en "Hé huis" op de
+  wand gaat via openWakeWord, zoals het was (besluit 150). Alleen bij deze keuze
+  staan de spraakassistent en "dit scherm luistert" bij Functies › Praten.
+- **De drie add-ons op een rij** (alleen in de add-on, voor de beheerder):
+  per add-on Staat erin, Gevonden (Home Assistant zag hem, nog niet bevestigd)
+  of Installeer, dat zijn pagina in Home Assistant opent. Staan Whisper en
+  Piper erin of zijn ze gevonden, dan maakt **Maak de spraakassistent** de
+  rest: wat Home Assistant van de drie vond bevestigen, een spraakassistent
+  "Smart Climate" maken in de taal van de app (met "Hé huis" als dat wekwoord
+  er al is), en die kiezen met de stem helemaal in huis.
+- **De schrijfgrens wordt weer iets ruimer, en blijft smal.** Na die tik van
+  de beheerder mag de add-on via de Supervisor (niet via HaClient) twee dingen:
+  een gevonden Wyoming-add-on bevestigen (`config/config_entries/flow`, alleen
+  stromen van `wyoming`) en één spraakassistent maken
+  (`assist_pipeline/pipeline/create`). Een bestaande "Smart Climate" blijft
+  zoals hij is; Home Assistant zijn eigen voorkeur verandert niet. Lezen komt
+  erbij: `config_entries/flow/progress` en `wake_word/info`.
+- **De standaard**: wie de stem nog niet koos, krijgt helemaal in huis als Home
+  Assistant al een spraakassistent heeft die verstaat (wie Whisper al had,
+  houdt het); anders het apparaat.
+- **Versie 0.75.0.**
+
+*Wat afviel:* de add-ons zelf installeren (dan wordt de add-on manager en zakt
+zijn veiligheidsscore); verstaan via de browser standaard uit (dan werkt praten
+niet meteen); een stem die online praat voor het voorlezen; "Hé huis" in de
+browser zelf (eerst meten of de Tab A7 het aankan).
+
 ---
 
 ## Wat nog een besluit wacht

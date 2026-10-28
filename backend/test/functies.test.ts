@@ -98,7 +98,7 @@ describe('de keuzes controleren (besluit 109)', () => {
 
   it('neemt een ander beeld en een andere melder aan, als Home Assistant ze kent', () => {
     // Zonder weerbron in Home Assistant: Open-Meteo (besluit 127); licht staat aan tot je het uitzet.
-    expect(controleer(goed, g)).toEqual({ ok: true, functies: { ...goed, weer: { bron: 'open-meteo', uren: true }, licht: { bedienen: true }, schermen: { bedienen: true }, praten: { taalmodel: null, bedienen: true, spraak: null }, meldingen: { batterij: 10, filter: 10 } } });
+    expect(controleer(goed, g)).toEqual({ ok: true, functies: { ...goed, weer: { bron: 'open-meteo', uren: true }, licht: { bedienen: true }, schermen: { bedienen: true }, praten: { taalmodel: null, bedienen: true, spraak: null, stem: 'apparaat', verstaan: true }, meldingen: { batterij: 10, filter: 10 } } });
     expect(getoondeCameras(goed)).toEqual(new Set(['camera.camera_oprit_duidelijk']));
   });
 
@@ -107,7 +107,7 @@ describe('de keuzes controleren (besluit 109)', () => {
     const metModel = functiesGevonden(entities, devices, new Map([['ai_task.google_ai_task', st('ai_task.google_ai_task')], ['ai_task.weg', st('ai_task.weg', 'unavailable')], ['conversation.google', st('conversation.google')]]));
     expect(metModel.taalmodellen).toEqual([{ id: 'ai_task.google_ai_task', naam: 'Google AI Task' }]);
     // Standaard uit: het vaste antwoord werkt altijd.
-    expect(functiesVoorstel(metModel).praten).toEqual({ taalmodel: null, bedienen: true, spraak: null });
+    expect(functiesVoorstel(metModel).praten).toEqual({ taalmodel: null, bedienen: true, spraak: null, stem: 'apparaat', verstaan: true });
     expect(controleer({ ...goed, praten: { taalmodel: 'ai_task.google_ai_task', bedienen: false } }, metModel)).toMatchObject({ ok: true, functies: { praten: { taalmodel: 'ai_task.google_ai_task', bedienen: false } } });
     expect(controleer({ ...goed, praten: { taalmodel: 'conversation.google', bedienen: true } }, metModel).ok).toBe(false);
     expect(controleer({ ...goed, praten: { taalmodel: 'ai_task.weg', bedienen: true } }, metModel).ok).toBe(false);
@@ -118,6 +118,13 @@ describe('de keuzes controleren (besluit 109)', () => {
     const metSpraak = { ...g, spraakassistenten: [{ id: 'smart_climate', naam: 'Smart Climate', wekwoord: 'he_huis', spraakNaarTekst: true, taal: 'nl', voorkeur: false }] };
     expect(controleer({ ...goed, praten: { taalmodel: null, bedienen: true, spraak: 'smart_climate' } }, metSpraak)).toMatchObject({ ok: true, functies: { praten: { spraak: 'smart_climate' } } });
     expect(controleer({ ...goed, praten: { taalmodel: null, bedienen: true, spraak: 'bestaat_niet' } }, metSpraak).ok).toBe(false);
+    // Waar de stem vandaan komt (besluit 203): het apparaat of in huis, en verstaan via de browser ja of nee.
+    expect(controleer({ ...goed, praten: { taalmodel: null, bedienen: true, stem: 'huis', verstaan: false } }, metSpraak)).toMatchObject({ ok: true, functies: { praten: { stem: 'huis', verstaan: false } } });
+    expect(controleer({ ...goed, praten: { taalmodel: null, bedienen: true, stem: 'cloud' } }, metSpraak).ok).toBe(false);
+    expect(controleer({ ...goed, praten: { taalmodel: null, bedienen: true, verstaan: 'ja' } }, metSpraak).ok).toBe(false);
+    // Een ouder bestand zonder: in huis als Home Assistant al verstaat, anders het apparaat; verstaan aan.
+    expect(volledig({ ...goed, praten: { taalmodel: null, bedienen: true } }, metSpraak).praten).toMatchObject({ stem: 'huis', verstaan: true });
+    expect(volledig({ ...goed, praten: { taalmodel: null, bedienen: true } }, g).praten).toMatchObject({ stem: 'apparaat', verstaan: true });
     // Een ouder bestand zonder spraak: die van Home Assistant zelf.
     expect(volledig({ ...goed, praten: { taalmodel: null, bedienen: true } }, metSpraak).praten.spraak).toBeNull();
   });

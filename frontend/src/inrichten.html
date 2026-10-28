@@ -252,6 +252,61 @@
   .schakel[aria-checked="true"] { background: var(--mint); }
   .schakel[aria-checked="true"]::after { transform: translateX(16px); background: #0b2a1f; }
   .schakel:disabled { opacity: 0.4; cursor: default; }
+  /* Een eigen account voor de wand (besluit 202): waarom, en hoe in drie stappen. */
+  .accblok { display: flex; flex-direction: column; gap: 10px; flex: none; padding: 14px 16px; border-radius: 18px; background: rgb(var(--wit) / 0.05); border: 1px solid rgb(var(--wit) / 0.08); }
+  .accblok > b { font-size: 15px; }
+  .acckop { display: flex; align-items: center; gap: 12px; }
+  .acckop .ik { width: 40px; height: 40px; flex: none; border-radius: 12px; display: grid; place-items: center; background: rgb(var(--wit) / 0.08); color: var(--zacht); }
+  .acckop .ik svg { width: 20px; height: 20px; }
+  .acckop b { display: block; font-size: 15px; }
+  .acckop span { display: block; font-size: 12.5px; color: var(--zacht); }
+  .accwaarom, .accstappen { margin: 0; padding: 0; list-style: none; display: grid; gap: 7px; }
+  .accwaarom li { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 8px; font-size: 13px; color: var(--zacht); line-height: 1.4; }
+  .accwaarom li::before { content: '✓'; color: var(--mint-t); font-weight: 800; }
+  .accstappen li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; align-items: start; font-size: 13px; color: var(--zacht); line-height: 1.4; }
+  .accstappen .nr { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 800; background: rgb(var(--wit) / 0.08); }
+  .accblok .knop { align-self: stretch; }
+  /* De assistent met één knop (besluit 202): de bol, wat er gebeurt, en de knop. */
+  .asblok { display: flex; flex-direction: column; gap: 10px; flex: none; padding: 14px 16px; border-radius: 18px; background: linear-gradient(160deg, rgba(143, 134, 255, 0.16), rgba(111, 211, 255, 0.08)); border: 1px solid rgba(143, 134, 255, 0.35); }
+  .askop { display: flex; align-items: center; gap: 12px; }
+  .askop .bol { width: 40px; height: 40px; flex: none; border-radius: 50%; background: radial-gradient(circle at 34% 28%, #fff 0%, #bfe3ff 16%, #6fb7ff 40%, #6a5cff 72%, #2a1f6b 100%); box-shadow: 0 0 24px rgba(111, 170, 255, 0.5); }
+  .askop b { display: block; font-size: 15.5px; }
+  .askop span { display: block; font-size: 12.5px; color: var(--zacht); line-height: 1.35; }
+  .askop span.fout { color: var(--gloed-t); }
+  .asstappen li { grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; }
+  .asstappen small { font-size: 12px; color: var(--gedempt); }
+  .asstappen .nr.klaar { background: var(--mint); color: #062a1c; }
+  .asstappen .nr.bezig { background: transparent; box-shadow: inset 0 0 0 2px var(--ijs); animation: asdraai 1s linear infinite; border-radius: 50%; }
+  @keyframes asdraai { 0% { box-shadow: inset 0 0 0 2px rgba(111, 211, 255, 0.25); } 50% { box-shadow: inset 0 0 0 2px var(--ijs); } 100% { box-shadow: inset 0 0 0 2px rgba(111, 211, 255, 0.25); } }
+  .asblok .knop { align-self: stretch; height: 46px; }
+  /* Wachten op Home Assistant voor de rondleiding (besluit 202). */
+  .aswacht { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 16px; background: rgba(6, 10, 20, 0.88); backdrop-filter: blur(6px); }
+  .aswacht > div { width: min(440px, 100%); }
+  .aswacht p { margin: 12px 0 0; text-align: center; font-size: 13.5px; color: var(--zacht); }
+  /* Hoe praat je huis (besluit 203, schets #stem): twee keuzes, met wat erbij hoort eronder. */
+  .keuzes-stem { display: grid; gap: 10px; flex: none; }
+  .stemkeuze { display: grid; gap: 10px; padding: 12px 14px; border-radius: 16px; background: rgb(var(--wit) / 0.04); border: 1.5px solid transparent; }
+  .stemkeuze.aan { border-color: var(--ijs); background: rgba(111, 211, 255, 0.08); }
+  .keuzekop { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+  .keuzekop .rond { width: 20px; height: 20px; border-radius: 50%; border: 2px solid rgb(var(--wit) / 0.3); margin-top: 2px; box-sizing: border-box; }
+  .stemkeuze.aan .rond { border-color: var(--ijs); box-shadow: inset 0 0 0 4px #0b1424; background: var(--ijs); }
+  .keuzekop b { display: block; font-size: 15px; }
+  .keuzekop .zin { display: block; margin-top: 3px; font-size: 12.5px; color: var(--zacht); line-height: 1.4; }
+  .stemkeuze .label { display: inline-block; margin-left: 6px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; vertical-align: 2px; }
+  .stemkeuze .label.mint { background: rgba(110, 231, 183, 0.14); color: var(--mint-t); }
+  .stemkeuze .label.gedempt { background: rgb(var(--wit) / 0.08); color: var(--zacht); }
+  .stemkeuze .onder { margin-left: 32px; display: grid; gap: 6px; }
+  .stemkeuze .onder .mini { margin: 0; }
+  .stemkeuze .onder .mini.klaar { color: var(--mint-t); font-weight: 700; }
+  .stemkeuze .onder .mini.fout { color: var(--gloed-t); }
+  .stemkeuze .onder > .knop { height: 40px; justify-self: start; }
+  .addon { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 12px; background: rgb(var(--wit) / 0.05); font-size: 13px; }
+  .addon b { font-size: 13.5px; }
+  .addon span { display: block; font-size: 11.5px; color: var(--gedempt); }
+  .addon .ok { font-size: 12px; font-weight: 800; color: var(--mint-t); }
+  .addon .ok.gevonden { color: var(--ijs); }
+  .addon .knop { height: 32px; padding: 0 12px; font-size: 13px; }
+  .schakelrij { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--zacht); line-height: 1.4; }
   .tip { flex-shrink: 1; min-height: 0; overflow: hidden; padding: 10px 12px; border-radius: 14px; background: rgba(111, 211, 255, 0.08); color: var(--zacht); font-size: 13px; line-height: 1.45; }
   .tellen { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
   .teller { padding: 10px 12px; border: 0; border-radius: 14px; background: rgb(var(--wit) / 0.05); color: var(--tekst); font: inherit; text-align: left; }
@@ -347,7 +402,8 @@
   #wand .wk-zoekt i { width: 8px; height: 8px; border-radius: 50%; background: var(--mint); animation: wk-puls 1.6s infinite; }
   #wand .wk-zoekt.klaar i { animation: none; }
   @keyframes wk-puls { 0% { box-shadow: 0 0 0 0 rgba(110, 231, 183, 0.6); } 70% { box-shadow: 0 0 0 9px rgba(110, 231, 183, 0); } 100% { box-shadow: 0 0 0 0 rgba(110, 231, 183, 0); } }
-  #tel .welkom-groot { position: relative; min-height: 100dvh; display: flex; flex-direction: column; }
+  /* Alleen bij het welkom (28 oktober 2026): zonder body.inr-groot stond het op de telefoon onder elke stap. */
+  body.inr-groot #tel .welkom-groot { position: relative; min-height: 100dvh; display: flex; flex-direction: column; }
   #tel .wk-merk { position: absolute; left: 22px; top: 20px; z-index: 1; font-size: 16px; gap: 10px; }
   #tel .wk-merk i { width: 28px; height: 28px; border-radius: 9px; }
   #tel .wk-podium { height: 300px; flex: none; margin: 18px -10px 0; }
@@ -376,7 +432,9 @@
    * De telefoon (schets Tel-Inrichten-3): bovenin het hoofdstuk en hoe ver je
    * bent, het huis klein, dan de vraag; Terug, Later en Volgende vast onderaan.
    */
-  #tel .inhoud { padding: 14px 0 0; display: flex; flex-direction: column; }
+  /* Het scherm vol, zodat Terug, Later en Volgende bij elke stap onderin staan (28 oktober 2026). */
+  #tel .inhoud { padding: 14px 0 0; display: flex; flex-direction: column; min-height: 100dvh; }
+  #tel .inhoud > .kaart { flex: 1 0 auto; }
   #tel .kop3 { display: flex; align-items: center; gap: 12px; padding: 4px 18px 6px; }
   #tel .kop3 .logo { flex: none; width: 30px; height: 30px; border-radius: 10px; background: conic-gradient(from 200deg, #ff7a4d, #f7b548, #6ee7b7, #6fd3ff, #8f86ff, #ff7a4d); }
   #tel .telwaar { flex: 1; min-width: 0; }
@@ -394,7 +452,7 @@
   #tel .kaart h1 { font-size: 27px !important; line-height: 1.1 !important; }
   #tel .kaart .uitleg { font-size: 14.5px; }
   /* Onderaan vast in beeld, over de hele breedte: de knoppen blijven staan terwijl de vraag schuift. */
-  #tel .kaart > .voet { position: sticky; bottom: 0; z-index: 5; margin: 0 -18px; padding: 22px 18px calc(18px + env(safe-area-inset-bottom)); background: linear-gradient(180deg, transparent, rgb(var(--nacht) / 0.96) 34%); }
+  #tel .kaart > .voet { position: sticky; bottom: 0; z-index: 5; margin: auto -18px 0; padding: 22px 18px calc(18px + env(safe-area-inset-bottom)); background: linear-gradient(180deg, transparent, rgb(var(--nacht) / 0.96) 34%); }
   /* Op de telefoon schuift de pagina, niet de lijst: een eigen schuifvak hield de vinger vast. */
   #tel .rijen { overflow: visible; overscroll-behavior: auto; }
   #tel .rij { grid-template-columns: 1fr; gap: 6px; }

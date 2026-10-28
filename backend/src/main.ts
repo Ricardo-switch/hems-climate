@@ -12,12 +12,14 @@
  */
 
 import { Integratie } from './web/integratie.js';
+import { AssistentAan, voegToeViaFlow } from './web/assistent-aan.js';
 import { PushStore, alsMelding, ontvangersVan, paneelVan, proefTekst, teSturen, telefoonVan, vindTelefoons, type Telefoon } from './web/push.js';
 import { hostname } from 'node:os';
 import { loadDotEnv, tokenComplaint } from './env.js';
 import { inHouse, snelInHuis } from './web/inhuis.js';
 import { klaarzetten } from './web/klaarzetten.js';
-import { Stem } from './web/stem.js';
+import { Stem, kiesTaal } from './web/stem.js';
+import { InHuis, bevestigViaRest, maakViaWebsocket, type Stroom } from './web/stem-in-huis.js';
 import { rollenUitConfig } from './web/regeling.js';
 import { MeldingenStore } from './web/meldingen.js';
 import { meldingenBron } from './web/meldingen-bron.js';
@@ -1323,6 +1325,86 @@ if (sleutel && version.installatie === 'add-on' && webPort != null && process.en
     .catch((error: unknown) => console.warn(`Aanmelden bij Home Assistant voor de integratie lukte niet: ${(error as Error).message}`));
 }
 
+/*
+ * De assistent met één knop (besluit 202): neerzetten, Home Assistant
+ * herstarten en de integratie toevoegen. Alleen in de add-on, met de sleutel
+ * en de weg via de Supervisor; herstarten en toevoegen gaan niet via HaClient
+ * (die schrijft alleen licht, scènes en schermen), maar hier, na een tik.
+ */
+const supervisorToken = process.env['SUPERVISOR_TOKEN'] ?? '';
+/** Of de verbinding met Home Assistant er nu is: valt weg bij het herstarten, en komt terug met 'ready'. */
+let haVerbonden = true;
+client.on('ready', () => (haVerbonden = true));
+client.on('disconnected', () => (haVerbonden = false));
+const assistentAan = integratie && sleutel && webPort != null && supervisorToken
+  ? new AssistentAan({
+      zetNeer: () => integratie.zetNeer(),
+      geladen: async () => {
+        const s = await integratieStand();
+        return s.geladen != null && s.geladen === s.nieuw;
+      },
+      toegevoegd: async () => (await integratieStand()).toegevoegd === true,
+      herstart: async () => {
+        // Home Assistant kijkt eerst of de configuratie klopt; tijdens het herstarten valt de verbinding weg.
+        await fetch('http://supervisor/core/api/services/homeassistant/restart', { method: 'POST', headers: { authorization: `Bearer ${supervisorToken}`, 'content-type': 'application/json' }, body: '{}' }).catch(() => null);
+      },
+      wachtOpHerstart: () =>
+        new Promise<void>((klaar, mis) => {
+          const tot = Date.now() + 6 * 60_000;
+          let weg = false;
+          const kijk = async () => {
+            if (Date.now() > tot) return mis(new Error('Home Assistant kwam niet terug na het herstarten'));
+            // Eerst weg (de verbinding valt), dan terug met de integratie geladen.
+            if (!weg && haVerbonden) return setTimeout(() => void kijk(), 1_000);
+            weg = true;
+            const s = haVerbonden ? await integratieStand().catch(() => null) : null;
+            if (s?.geladen != null) return klaar();
+            setTimeout(() => void kijk(), 3_000);
+          };
+          setTimeout(() => void kijk(), 2_000);
+        }),
+      voegToe: () => voegToeViaFlow('http://supervisor/core/api', supervisorToken, `http://${hostname()}:${webPort}`, sleutel),
+      nu: () => Date.now(),
+    })
+  : null;
+
+/*
+ * Helemaal in huis (besluit 203): Whisper, Piper en openWakeWord bevestigen en
+ * er een spraakassistent van maken. Alleen in de add-on, via de Supervisor, na
+ * een tik van de beheerder; lezen gaat wel via HaClient.
+ */
+const stemInHuis = version.installatie === 'add-on' && supervisorToken && functiesStore
+  ? new InHuis({
+      entiteiten: () => [...allStates.values()].filter((s) => /^(stt|tts|wake_word)\./.test(s.entity_id)).map((s) => ({ id: s.entity_id, naam: String(s.attributes['friendly_name'] ?? '') })),
+      stromen: () => client.query<Stroom[]>('config_entries/flow/progress'),
+      bevestig: (flowId) => bevestigViaRest('http://supervisor/core/api', supervisorToken, flowId),
+      assistenten: async () => {
+        await spraakBij();
+        return spraakLijst.map((s) => ({ id: s.id, naam: s.naam, wekwoord: s.wekwoord }));
+      },
+      wekwoorden: async (entiteit) => ((await client.query<{ wake_words?: { id: string }[] }>('wake_word/info', { entity_id: entiteit })).wake_words ?? []).map((w) => w.id),
+      stemVoor: async (entiteit, lang) => {
+        const r = await client.query<{ providers?: { engine_id: string; supported_languages?: string[] }[] }>('tts/engine/list');
+        const taal = kiesTaal(r.providers?.find((p) => p.engine_id === entiteit)?.supported_languages ?? [], lang);
+        const stemmen = taal ? ((await client.query<{ voices?: { voice_id: string }[] | null }>('tts/engine/voices', { engine_id: entiteit, language: taal })).voices ?? []) : [];
+        return { taal, voice: stemmen[0]?.voice_id ?? null };
+      },
+      maak: async (a) => {
+        const id = await maakViaWebsocket('ws://supervisor/core/websocket', supervisorToken, a);
+        await spraakBij();
+        return id;
+      },
+      kies: async (id) => {
+        const g = functiesKeuzes();
+        const huidig = functiesStore.current ?? (g ? functiesVoorstel(g) : null);
+        if (!huidig) throw new Error('de functies zijn nog niet gelezen');
+        const nu = volledig(huidig, g);
+        await functiesStore.save({ ...nu, praten: { ...nu.praten, spraak: id, stem: 'huis' } });
+      },
+      wacht: (ms) => new Promise((klaar) => setTimeout(klaar, ms)),
+    })
+  : null;
+
 // "Toch die van" voorbij (besluit 147): opruimen, zodat hij later niet vanzelf terugkomt.
 if (bewonersStore) {
   setInterval(() => {
@@ -1476,7 +1558,8 @@ if (webPort != null) {
     // Meldingen op de telefoon (besluit 183): welke telefoons er zijn, en een proefmelding.
     telefoons: (userId: string | null) => telefoons().map((t) => ({ id: t.id, naam: t.naam, eigen: userId != null && t.account === userId })),
     proefmelding,
-    ...(integratie ? { integratie: { stand: integratieStand, zetNeer: () => integratie.zetNeer() } } : {}),
+    ...(integratie ? { integratie: { stand: integratieStand, zetNeer: () => integratie.zetNeer(), ...(assistentAan ? { aanzetten: { stand: () => assistentAan.stand, start: () => void assistentAan.start() } } : {}) } } : {}),
+    ...(stemInHuis ? { stemInHuis: { stand: () => stemInHuis.stand(), start: (lang: Lang) => void stemInHuis.start(lang) } } : {}),
     // Het profiel (besluit 181): de bewoners op volgorde en wiens comfort geldt, voor de wand en de kleuren.
     ...(voorkeuren && bewonersStore
       ? {

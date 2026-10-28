@@ -88,6 +88,32 @@ export async function beheerRoutes(d: Diensten, v: Verzoek): Promise<boolean> {
     return true;
   }
 
+  // Helemaal in huis (besluit 203): welke add-ons er staan, en de spraakassistent maken; alleen de beheerder, alleen in de add-on.
+  if (path === '/api/stem-in-huis') {
+    const inHuis = d.options.stemInHuis;
+    if (inHuis == null) {
+      sendJson(res, 404, { fout: 'dat kan alleen in de add-on' });
+      return true;
+    }
+    const wie = await d.wie(req);
+    if (!wie.beheerder) {
+      sendJson(res, 403, { fout: 'dit mag alleen de beheerder' });
+      return true;
+    }
+    if (method === 'POST') {
+      const body = (await readJson(req).catch(() => null)) as Record<string, unknown> | null;
+      if (body?.['maak'] !== true) {
+        sendJson(res, 400, { fout: 'stuur { maak: true }' });
+        return true;
+      }
+      inHuis.start(taalVan(url.searchParams.get('taal') ?? req.headers['x-taal']));
+      sendJson(res, 202, await inHuis.stand());
+      return true;
+    }
+    sendJson(res, 200, await inHuis.stand());
+    return true;
+  }
+
   // De integratie in Home Assistant (besluit 184): hoe hij erbij staat, en neerzetten; alleen de beheerder.
   if (path === '/api/integratie') {
     const integratie = d.options.integratie;
@@ -100,8 +126,21 @@ export async function beheerRoutes(d: Diensten, v: Verzoek): Promise<boolean> {
       sendJson(res, 403, { fout: 'dit mag alleen de beheerder' });
       return true;
     }
+    const aan = integratie.aanzetten;
+    const metAan = async () => ({ ...(await integratie.stand()), ...(aan ? { aanzetten: aan.stand() } : {}) });
     if (method !== 'POST') {
-      sendJson(res, 200, await integratie.stand());
+      sendJson(res, 200, await metAan());
+      return true;
+    }
+    // Met één knop (besluit 202): neerzetten, herstarten en toevoegen; de pagina vraagt daarna de stand.
+    const body = (await readJson(req).catch(() => null)) as Record<string, unknown> | null;
+    if (body != null && typeof body === 'object' && body['aanzetten'] === true) {
+      if (!aan) {
+        sendJson(res, 409, { fout: 'dat kan alleen in de add-on' });
+        return true;
+      }
+      aan.start();
+      sendJson(res, 202, await metAan());
       return true;
     }
     const uit = await integratie.zetNeer();

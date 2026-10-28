@@ -257,6 +257,8 @@ export class WebServer {
       (this.#d.options.sluipverbruik != null && path === '/api/sluipverbruik') ||
       // De integratie neerzetten (besluit 184): alleen custom_components/smart_climate, na een tik van de beheerder.
       (this.#d.options.integratie != null && path === '/api/integratie') ||
+      // Helemaal in huis (besluit 203): de spraakassistent maken, na een tik van de beheerder.
+      (this.#d.options.stemInHuis != null && path === '/api/stem-in-huis') ||
       // Een proefmelding naar je eigen telefoon (besluit 183): alleen notify.mobile_app_…
       (this.#d.options.proefmelding != null && path === '/api/proefmelding') ||
       (this.#d.options.energy != null && path === '/api/energie') ||

@@ -53,17 +53,18 @@ function venster() {
 
 /** Staafjes met de lijn van je gewone nacht en de grens van de melding. */
 function staven(rijen, { breedte, hoogte, label, lijnen = true, klein = false }) {
-  const l = klein ? 30 : 38;
   const rand = 6;
   const b = 24;
   const top = 10;
   const hoogste = Math.max(...rijen.map((x) => x.w), r.gewoonW + GRENS);
   const max = Math.max(100, Math.ceil((hoogste + 10) / 100) * 100);
+  // De as zo breed als zijn langste getal (28 oktober 2026): bij 1.200 viel de 1 op de telefoon weg.
+  const l = Math.max(klein ? 30 : 38, nl(max, 0).length * 6.6 + 12);
   const w = (breedte - l - rand) / rijen.length;
   const y = (v) => top + (1 - v / max) * (hoogte - top - b);
   let s = '';
   const stap = max > 400 ? 200 : 100;
-  for (let v = 0; v <= max; v += stap) s += `<line x1="${l}" x2="${breedte - rand}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" stroke="rgba(255,255,255,0.07)"/><text x="${l - 7}" y="${(y(v) + 4).toFixed(1)}" text-anchor="end" font-size="11" fill="#8291a6">${v}</text>`;
+  for (let v = 0; v <= max; v += stap) s += `<line x1="${l}" x2="${breedte - rand}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" stroke="rgba(255,255,255,0.07)"/><text x="${l - 7}" y="${(y(v) + 4).toFixed(1)}" text-anchor="end" font-size="11" fill="#8291a6">${nl(v, 0)}</text>`;
   rijen.forEach((x, i) => {
     const xs = l + i * w + w * 0.16;
     s += `<rect x="${xs.toFixed(1)}" y="${y(x.w).toFixed(1)}" width="${(w * 0.68).toFixed(1)}" height="${Math.max(0, y(0) - y(x.w)).toFixed(1)}" rx="3" fill="${x.hoog ? '#ff7a4d' : 'rgba(111,211,255,0.55)'}"><title>${esc(x.titel)}</title></rect>`;

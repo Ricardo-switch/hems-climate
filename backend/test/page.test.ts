@@ -961,6 +961,61 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await context.close();
   }, 30_000);
 
+  /*
+   * Inrichten op de telefoon, staand (28 oktober 2026): geen welkom onder de
+   * stap, en Terug, Later en Volgende bij elke stap onderin, kort of lang.
+   */
+  it('houdt op de telefoon bij elke stap van Inrichten de knoppen onderin, zonder welkom eronder', async () => {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, timezoneId: 'UTC', locale: 'nl-NL', hasTouch: true, isMobile: true });
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    for (const stap of ['woning', 'stem', 'warmte', 'ha', 'functies']) {
+      await p.goto(`${baseUrl}/inrichten.html#${stap}`);
+      const kaart = p.locator('#tel [data-kaart]');
+      await kaart.locator('h1').waitFor({ timeout: 10_000 });
+      await kaart.locator('.voet [data-volgende], .voet .knop').first().waitFor();
+      expect(await p.locator('#tel [data-welkom]').isVisible(), stap).toBe(false);
+      // Als de stap klaar is met opbouwen (de gegevens komen na de eerste tekening).
+      await expect.poll(() => kaart.locator('.voet').evaluate((v) => Math.round(v.getBoundingClientRect().bottom)), { message: stap, timeout: 5_000 }).toBeGreaterThanOrEqual(842);
+      expect(await kaart.locator('.voet').evaluate((v) => Math.round(v.getBoundingClientRect().bottom)), stap).toBeLessThanOrEqual(846);
+    }
+    expect(fouten).toEqual([]);
+    await context.close();
+  }, 60_000);
+
+  /*
+   * Etages op de telefoon (28 oktober 2026): vanuit elke etage naar elke andere.
+   * Vanaf Buiten kon het naar de eerste verdieping, vanuit de rest niet.
+   */
+  it('wisselt op de telefoon vanuit elke etage naar elke andere', async () => {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, timezoneId: 'UTC', locale: 'nl-NL', hasTouch: true, isMobile: true });
+    await context.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    const huis = (await (await fetch(`${baseUrl}/api/huis`)).json()) as HouseReport;
+    const etages = huis.etages.filter((e) => e.ruimtes.length);
+    expect(etages.length).toBeGreaterThanOrEqual(3);
+    await p.goto(`${baseUrl}/kamer.html#${encodeURIComponent(etages[0]!.ruimtes[0]!.id)}`);
+    const rij = p.locator('#tel [data-etages]');
+    await rij.locator('button').first().waitFor({ timeout: 10_000 });
+    for (const van of etages) {
+      for (const naar of etages) {
+        if (naar.id === van.id) continue;
+        await rij.locator(`[data-etage="${naar.id}"]`).tap({ timeout: 3_000 });
+        await expect.poll(() => rij.locator(`[data-etage="${naar.id}"]`).getAttribute('aria-pressed'), { timeout: 3_000 }).toBe('true');
+        await rij.locator(`[data-etage="${van.id}"]`).tap({ timeout: 3_000 });
+        await expect.poll(() => rij.locator(`[data-etage="${van.id}"]`).getAttribute('aria-pressed'), { timeout: 3_000 }).toBe('true');
+      }
+    }
+    expect(fouten).toEqual([]);
+    await context.close();
+  }, 60_000);
+
   /* Sensoren in de kamer (15 oktober 2026): wat ze meten, hun batterij, en beweging nu. */
   it('toont de bewegingsmelder in de kamer, met beweging nu', async () => {
     const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
@@ -1569,7 +1624,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await p.waitForTimeout(800);
     // Acht hoofdstukken met hun stappen (besluit 190).
     expect(await p.locator('#wand [data-stappen] .stap').count()).toBe(8);
-    expect(await p.locator('#wand [data-stappen] .stipjes i').count()).toBe(19);
+    expect(await p.locator('#wand [data-stappen] .stipjes i').count()).toBe(21);
     expect(await p.locator('#wand #balk').count()).toBe(0);
     await shot('welkom');
     // De getallen tikken open tot een lijst, en weer terug (besluit 158).
@@ -1687,8 +1742,12 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     expect(await kaart.locator('.schakel').count()).toBeGreaterThan(0);
     await shot('functies');
     await kaart.locator('[data-volgende]').click();
+    // Een eigen account voor de wand (besluit 202): waarom, en hoe.
+    await kaart.locator('h1', { hasText: 'Een eigen account voor de wand' }).waitFor();
+    await shot('account');
+    await kaart.locator('[data-volgende]').click();
     // De wand (besluit 190): de kaarten om aan of uit te zetten, en de wand in het klein.
-    await kaart.locator('.waar', { hasText: '7. Je schermen' }).waitFor();
+    await kaart.locator('h1', { hasText: 'Hoe ziet de wand eruit?' }).waitFor();
     expect(await kaart.locator('[data-wkaart]').count()).toBe(11);
     await kaart.locator('.wandje [data-mini] svg.sc-huis').waitFor();
     await shot('wand');
@@ -1696,6 +1755,18 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     // Klaarzetten (besluit 190): wat er in Home Assistant klaar moet staan.
     await kaart.locator('h1', { hasText: 'Staat alles klaar?' }).waitFor();
     await shot('ha');
+    await kaart.locator('[data-volgende]').click();
+    // Hoe praat je huis (besluit 203): het apparaat staat voorop; helemaal in huis kan ook.
+    await kaart.locator('h1', { hasText: 'Hoe praat je huis?' }).waitFor();
+    expect(await kaart.locator('[data-stembron="apparaat"]').getAttribute('aria-pressed')).toBe('true');
+    expect(await kaart.locator('[data-stemverstaan]').getAttribute('aria-checked')).toBe('true');
+    await shot('stem');
+    await kaart.locator('[data-stembron="huis"]').click();
+    await expect.poll(() => kaart.locator('[data-stembron="huis"]').getAttribute('aria-pressed')).toBe('true');
+    // Buiten de add-on: wat je zelf in Home Assistant doet.
+    expect(await kaart.textContent()).toContain('Instellingen › Spraakassistenten');
+    await kaart.locator('[data-stembron="apparaat"]').click();
+    await expect.poll(() => kaart.locator('[data-stembron="apparaat"]').getAttribute('aria-pressed')).toBe('true');
     await kaart.locator('[data-volgende]').click();
     await kaart.locator('h1', { hasText: 'Je huis staat erin' }).waitFor();
     await shot('klaar');
@@ -1774,6 +1845,150 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await context.close();
   }, 40_000);
 
+  /*
+   * De assistent gaat aan bij Klaar (besluit 202): geen knop bij Klaarzetten,
+   * Home Assistant herstart terwijl de film speelt, en de rondleiding wacht tot
+   * hij terug is. De add-on is hier nagebootst met een route.
+   */
+  it('zet de assistent aan terwijl de film speelt, en wacht dan op Home Assistant (besluit 202)', async () => {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    const shot = async (naam: string) => {
+      if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', `-${naam}.png`) });
+    };
+    const rust = { bezig: false, stap: null as string | null, klaar: [] as string[], fout: null, herstartMs: null as number | null };
+    let stand = { kan: true, staat: 'nee', versie: null as string | null, nieuw: VERSIE, geladen: null as string | null, toegevoegd: null as boolean | null, aanzetten: rust };
+    let aangezet = 0;
+    let vragenNa = 0;
+    await context.route(`${baseUrl}/api/integratie`, async (route) => {
+      if (route.request().method() === 'POST') {
+        aangezet += 1;
+        stand = { ...stand, staat: 'add-on', versie: VERSIE, aanzetten: { bezig: true, stap: 'herstarten', klaar: ['neerzetten'], fout: null, herstartMs: Date.now() } };
+      } else if (stand.aanzetten.bezig && ++vragenNa >= 2) {
+        // Na twee keer vragen is Home Assistant terug en is Smart Climate toegevoegd.
+        stand = { ...stand, geladen: VERSIE, toegevoegd: true, aanzetten: { ...rust, klaar: ['neerzetten', 'herstarten', 'toevoegen'] } };
+      }
+      await route.fulfill({ status: route.request().method() === 'POST' ? 202 : 200, contentType: 'application/json', body: JSON.stringify(stand) });
+    });
+    try {
+      // Klaarzetten: geen knop, wel wat er gaat gebeuren.
+      await p.goto(`${baseUrl}/inrichten.html#ha`);
+      const kaart = p.locator('#wand [data-kaart]');
+      await kaart.locator('.asblok', { hasText: 'Gaat vanzelf aan bij Klaar' }).waitFor({ timeout: 10_000 });
+      expect(await kaart.locator('[data-assistent-aan]').count()).toBe(0);
+      await shot('klaarzetten');
+      // Klaar (na Hoe praat je huis): Speel af zet hem aan zodra de film zijn cijfers heeft.
+      await kaart.locator('[data-volgende]').click();
+      await kaart.locator('h1', { hasText: 'Hoe praat je huis?' }).waitFor();
+      await kaart.locator('[data-volgende]').click();
+      await kaart.locator('h1', { hasText: 'Je huis staat erin' }).waitFor();
+      await kaart.locator('button', { hasText: 'Speel af' }).click();
+      const film = p.locator('.film');
+      await film.locator('[data-film-huis] svg.sc-huis').waitFor({ timeout: 10_000 });
+      await expect.poll(() => aangezet).toBe(1);
+      // Na de film (hier overgeslagen) wacht de rondleiding met de voortgang in beeld.
+      await film.locator('[data-film-klaar]').click();
+      const wacht = p.locator('.aswacht');
+      await wacht.locator('p', { hasText: 'Daarna begint de rondleiding.' }).waitFor();
+      expect(await wacht.textContent()).toContain('Home Assistant herstart');
+      await shot('wacht');
+      await p.waitForURL(/thuis\.html#rondleiding$/, { timeout: 15_000 });
+      expect(aangezet).toBe(1);
+      expect(fouten).toEqual([]);
+    } finally {
+      await context.close();
+    }
+  }, 40_000);
+
+  /*
+   * Helemaal in huis (besluit 203): per add-on of hij erin staat, en de
+   * spraakassistent maken met één tik. De add-on is nagebootst met een route.
+   */
+  it('maakt de spraakassistent helemaal in huis, met de add-ons op een rij (besluit 203)', async () => {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    const shot = async (naam: string) => {
+      if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', `-${naam}.png`) });
+    };
+    const addons = (w: string, pi: string, o: string) => [
+      { id: 'whisper', slug: 'core_whisper', staat: w },
+      { id: 'piper', slug: 'core_piper', staat: pi },
+      { id: 'openwakeword', slug: 'core_openwakeword', staat: o },
+    ];
+    let stand: Record<string, unknown> = { addons: addons('gevonden', 'aan', 'nee'), assistent: null, bezig: false, fout: null };
+    let gemaakt = 0;
+    let vragenNa = 0;
+    await context.route(`${baseUrl}/api/stem-in-huis`, async (route) => {
+      if (route.request().method() === 'POST') {
+        gemaakt += 1;
+        stand = { ...stand, bezig: true };
+      } else if (stand['bezig'] && ++vragenNa >= 2) {
+        stand = { addons: addons('aan', 'aan', 'nee'), assistent: { id: 'p1', wekwoord: null }, bezig: false, fout: null };
+      }
+      await route.fulfill({ status: route.request().method() === 'POST' ? 202 : 200, contentType: 'application/json', body: JSON.stringify(stand) });
+    });
+    try {
+      await p.goto(`${baseUrl}/inrichten.html#stem`);
+      const kaart = p.locator('#wand [data-kaart]');
+      const huis = kaart.locator('.stemkeuze', { hasText: 'Helemaal in huis' });
+      // De add-ons staan onder de keuze, als die gekozen is.
+      await huis.locator('[data-stembron="huis"]').click();
+      await huis.locator('.addon', { hasText: 'Whisper' }).waitFor({ timeout: 10_000 });
+      expect(await huis.locator('.addon', { hasText: 'Whisper' }).textContent()).toContain('Gevonden');
+      expect(await huis.locator('.addon', { hasText: 'Piper' }).textContent()).toContain('Staat erin');
+      // Buiten Home Assistant geen knop naar de add-on, wel waar het moet.
+      expect(await huis.locator('.addon', { hasText: 'openWakeWord' }).textContent()).toContain('Installeer in Home Assistant');
+      await shot('inhuis');
+      await huis.locator('[data-inhuis-maak]').click();
+      await huis.locator('.mini.klaar', { hasText: 'nog zonder "Hé huis"' }).waitFor({ timeout: 15_000 });
+      expect(gemaakt).toBe(1);
+      expect(await p.evaluate<boolean>('document.scrollingElement.scrollHeight <= innerHeight + 1')).toBe(true);
+      await shot('inhuis-klaar');
+      // Functies › Praten met helemaal in huis, zoals in een echt huis: twee spraakassistenten, één met Hé huis.
+      await context.route(`${baseUrl}/api/functies`, async (route) => {
+        if (route.request().method() !== 'GET') return route.continue();
+        const r = await route.fetch();
+        const j = (await r.json()) as { gevonden: Record<string, unknown> };
+        j.gevonden['spraakassistenten'] = [
+          { id: 'p1', naam: 'Smart Climate', wekwoord: 'he_huis', spraakNaarTekst: true, taal: 'nl', voorkeur: false },
+          { id: 'p2', naam: 'Home Assistant', wekwoord: null, spraakNaarTekst: true, taal: 'nl', voorkeur: true },
+        ];
+        await route.fulfill({ response: r, json: j });
+      });
+      await p.goto(`${baseUrl}/functies.html#praten`);
+      await p.locator('#wand [data-vorm] [data-kies="spraak"]').first().waitFor();
+      expect(await p.locator('#wand [data-vorm] [data-hier]').count()).toBe(2);
+      expect(await p.locator('#wand [data-vorm] [data-kies="stemVerstaan"]').count()).toBe(0);
+      await shot('praten-huis');
+      // Het past, met ruimte over: lettertypes tekenen in de CI iets anders (28 oktober 2026, 8 pixels).
+      const ruimte = await p.locator('#wand [data-vorm]').evaluate((v) => {
+        const proef = v.ownerDocument.createElement('div');
+        proef.style.cssText = 'height: 20px; flex: none';
+        v.append(proef);
+        const over = v.scrollHeight - v.clientHeight;
+        proef.remove();
+        return over;
+      });
+      expect(ruimte).toBeLessThanOrEqual(2);
+      await context.unroute(`${baseUrl}/api/functies`);
+      await p.goto(`${baseUrl}/inrichten.html#stem`);
+      // Terug naar de standaard, voor de tests hierna.
+      await kaart.locator('[data-stembron="apparaat"]').click();
+      await expect.poll(() => kaart.locator('[data-stembron="apparaat"]').getAttribute('aria-pressed')).toBe('true');
+      expect(fouten).toEqual([]);
+    } finally {
+      await context.close();
+    }
+  }, 40_000);
+
   it('toont het sluipverbruik onder Opbrengst (besluit 192)', async () => {
     const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
     await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
@@ -1809,6 +2024,19 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await p.reload();
     await p.locator('#tel h1', { hasText: 'gebruikt je huis' }).waitFor({ timeout: 10_000 });
     expect(await p.evaluate<boolean>('document.documentElement.scrollWidth <= innerWidth + 1')).toBe(true);
+    // Een nacht boven de 1.000 W (28 oktober 2026): het hele getal op de as, ook de eerste cijfer.
+    await context.route(`${baseUrl}/api/sluipverbruik`, async (route) => {
+      const r = await route.fetch();
+      const j = (await r.json()) as { nachten: { w: number; hoog: boolean }[] };
+      j.nachten[j.nachten.length - 1]!.w = 1250;
+      j.nachten[j.nachten.length - 1]!.hoog = true;
+      await route.fulfill({ response: r, json: j });
+    });
+    await p.reload();
+    const as = p.locator('#tel svg text[text-anchor="end"]', { hasText: '1.200' });
+    await as.first().waitFor({ timeout: 10_000 });
+    expect(await as.first().evaluate((x) => (x as unknown as { getBBox(): { x: number } }).getBBox().x)).toBeGreaterThanOrEqual(0);
+    if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-sluip-tel.png') });
     expect(fouten).toEqual([]);
     await context.close();
   }, 30_000);
@@ -1912,7 +2140,8 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await context.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
     // Een microfoon zonder microfoon: alleen bijhouden dat erom gevraagd is.
     await context.addInitScript({
-      content: "window.__micGevraagd = false; if (navigator.mediaDevices) navigator.mediaDevices.getUserMedia = () => { window.__micGevraagd = true; return Promise.reject(new Error('geen microfoon in de test')); };",
+      // Verstaan via de browser (besluit 203) telt ook: dan vraagt de browser zelf om de microfoon.
+      content: "window.__micGevraagd = false; if (navigator.mediaDevices) navigator.mediaDevices.getUserMedia = () => { window.__micGevraagd = true; return Promise.reject(new Error('geen microfoon in de test')); }; window.SpeechRecognition = window.webkitSpeechRecognition = class { start() { window.__micGevraagd = true; setTimeout(() => this.onend && this.onend(), 0); } stop() {} abort() {} };",
     });
     const p = await context.newPage();
     const fouten: string[] = [];
@@ -4090,19 +4319,24 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     const app = p.frameLocator('#app');
     await app.locator('#wand svg.sc-huis').first().waitFor();
     const berichten = () => p.evaluate<{ type: string; kioskMode?: boolean; path?: string }[]>('window.berichten');
-    // Uit, zoals op elk nieuw apparaat: geen kioskstand, geen knop.
-    expect(await berichten()).toEqual([]);
-    expect(await app.locator('#balk [data-naar-ha]').count()).toBe(0);
+    // Standaard aan (besluit 202): meteen de kioskstand, en de knop terug naar Home Assistant.
+    await expect.poll(berichten).toContainEqual({ type: 'home-assistant/subscribe-properties', kioskMode: true });
+    await app.locator('#balk [data-naar-ha]').waitFor();
 
     // Bij Functies › Weergave › Dit scherm aanzetten (besluit 167): meteen de kioskstand, het hele scherm en de knop.
     const frame = p.frames().find((f) => f.url().includes('/api/hassio_ingress/'))!;
     await frame.goto(`${HA}/api/hassio_ingress/abc/functies.html#scherm`);
     const vorm = app.locator('#wand [data-vorm]');
     await vorm.locator('h2', { hasText: 'Dit scherm' }).waitFor();
-    await vorm.locator('[data-volledig]').click();
-    await expect.poll(berichten).toContainEqual({ type: 'home-assistant/subscribe-properties', kioskMode: true });
-    expect(await p.evaluate<number>('window.schermVraag')).toBeGreaterThan(0);
     expect(await vorm.locator('[data-volledig]').getAttribute('aria-checked')).toBe('true');
+    // Uitzetten: de balken van Home Assistant terug, en geen knop.
+    await vorm.locator('[data-volledig]').click();
+    await expect.poll(() => vorm.locator('[data-volledig]').getAttribute('aria-checked')).toBe('false');
+    await expect.poll(() => app.locator('#balk [data-naar-ha]').count()).toBe(0);
+    await vorm.locator('[data-volledig]').click();
+    await expect.poll(() => berichten().then((b) => b.filter((x) => x.kioskMode != null).at(-1)?.kioskMode)).toBe(true);
+    expect(await p.evaluate<number>('window.schermVraag')).toBeGreaterThan(0);
+    await expect.poll(() => vorm.locator('[data-volledig]').getAttribute('aria-checked')).toBe('true');
     // De statusbalk in de kleur van de app, en de app van Home Assistant hoort het.
     const statusbalk = () => p.evaluate<string>("document.documentElement.style.getPropertyValue('--app-header-background-color')");
     await expect.poll(statusbalk).toBe('#0b1424');
