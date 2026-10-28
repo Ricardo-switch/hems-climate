@@ -18,7 +18,8 @@ import { hostname } from 'node:os';
 import { loadDotEnv, tokenComplaint } from './env.js';
 import { inHouse, snelInHuis } from './web/inhuis.js';
 import { klaarzetten } from './web/klaarzetten.js';
-import { Stem } from './web/stem.js';
+import { Stem, kiesTaal } from './web/stem.js';
+import { InHuis, bevestigViaRest, maakViaWebsocket, type Stroom } from './web/stem-in-huis.js';
 import { rollenUitConfig } from './web/regeling.js';
 import { MeldingenStore } from './web/meldingen.js';
 import { meldingenBron } from './web/meldingen-bron.js';
@@ -1367,6 +1368,43 @@ const assistentAan = integratie && sleutel && webPort != null && supervisorToken
     })
   : null;
 
+/*
+ * Helemaal in huis (besluit 203): Whisper, Piper en openWakeWord bevestigen en
+ * er een spraakassistent van maken. Alleen in de add-on, via de Supervisor, na
+ * een tik van de beheerder; lezen gaat wel via HaClient.
+ */
+const stemInHuis = version.installatie === 'add-on' && supervisorToken && functiesStore
+  ? new InHuis({
+      entiteiten: () => [...allStates.values()].filter((s) => /^(stt|tts|wake_word)\./.test(s.entity_id)).map((s) => ({ id: s.entity_id, naam: String(s.attributes['friendly_name'] ?? '') })),
+      stromen: () => client.query<Stroom[]>('config_entries/flow/progress'),
+      bevestig: (flowId) => bevestigViaRest('http://supervisor/core/api', supervisorToken, flowId),
+      assistenten: async () => {
+        await spraakBij();
+        return spraakLijst.map((s) => ({ id: s.id, naam: s.naam, wekwoord: s.wekwoord }));
+      },
+      wekwoorden: async (entiteit) => ((await client.query<{ wake_words?: { id: string }[] }>('wake_word/info', { entity_id: entiteit })).wake_words ?? []).map((w) => w.id),
+      stemVoor: async (entiteit, lang) => {
+        const r = await client.query<{ providers?: { engine_id: string; supported_languages?: string[] }[] }>('tts/engine/list');
+        const taal = kiesTaal(r.providers?.find((p) => p.engine_id === entiteit)?.supported_languages ?? [], lang);
+        const stemmen = taal ? ((await client.query<{ voices?: { voice_id: string }[] | null }>('tts/engine/voices', { engine_id: entiteit, language: taal })).voices ?? []) : [];
+        return { taal, voice: stemmen[0]?.voice_id ?? null };
+      },
+      maak: async (a) => {
+        const id = await maakViaWebsocket('ws://supervisor/core/websocket', supervisorToken, a);
+        await spraakBij();
+        return id;
+      },
+      kies: async (id) => {
+        const g = functiesKeuzes();
+        const huidig = functiesStore.current ?? (g ? functiesVoorstel(g) : null);
+        if (!huidig) throw new Error('de functies zijn nog niet gelezen');
+        const nu = volledig(huidig, g);
+        await functiesStore.save({ ...nu, praten: { ...nu.praten, spraak: id, stem: 'huis' } });
+      },
+      wacht: (ms) => new Promise((klaar) => setTimeout(klaar, ms)),
+    })
+  : null;
+
 // "Toch die van" voorbij (besluit 147): opruimen, zodat hij later niet vanzelf terugkomt.
 if (bewonersStore) {
   setInterval(() => {
@@ -1521,6 +1559,7 @@ if (webPort != null) {
     telefoons: (userId: string | null) => telefoons().map((t) => ({ id: t.id, naam: t.naam, eigen: userId != null && t.account === userId })),
     proefmelding,
     ...(integratie ? { integratie: { stand: integratieStand, zetNeer: () => integratie.zetNeer(), ...(assistentAan ? { aanzetten: { stand: () => assistentAan.stand, start: () => void assistentAan.start() } } : {}) } } : {}),
+    ...(stemInHuis ? { stemInHuis: { stand: () => stemInHuis.stand(), start: (lang: Lang) => void stemInHuis.start(lang) } } : {}),
     // Het profiel (besluit 181): de bewoners op volgorde en wiens comfort geldt, voor de wand en de kleuren.
     ...(voorkeuren && bewonersStore
       ? {

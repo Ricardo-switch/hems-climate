@@ -107,6 +107,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [179. Klaarzetten in Home Assistant, bij Wat je huis kan](#179-klaarzetten-in-home-assistant-bij-wat-je-huis-kan)
 - [197. Wat elk apparaat kan: de klimaatstap per merk in Inrichten](#197-wat-elk-apparaat-kan-de-klimaatstap-per-merk-in-inrichten)
 - [202. Klaarzetten voor iedereen: de assistent met één knop, volledig scherm, een eigen account voor de wand](#202-klaarzetten-voor-iedereen-de-assistent-met-één-knop-volledig-scherm-een-eigen-account-voor-de-wand)
+- [203. De stem: van het apparaat zelf, of helemaal in huis](#203-de-stem-van-het-apparaat-zelf-of-helemaal-in-huis)
 
 **Meten, data en analyse**
 
@@ -9316,6 +9317,59 @@ dat een tablet aan de muur het beste een eigen account krijgt.
 hij manager en zakt zijn veiligheidsscore; voor "helemaal in huis" opent een
 knop de pagina van de add-on, dat komt in 0.75.0); herstarten zonder te vragen;
 een eigen app in de Play Store (later, als de rest staat).
+
+---
+
+## 203. De stem: van het apparaat zelf, of helemaal in huis
+
+*Onderwerp: configuratie en onboarding · Status: geldig*
+
+Op 25 oktober 2026, met de schets Wand-Inrichten-Klaarzetten (#stem); gebouwd
+op 28 oktober. De bewoner zag dat de stem met Piper, Whisper en het wekwoord
+niet voor iedereen weggelegd is: drie add-ons installeren, ze koppelen en een
+spraakassistent maken. Zijn keuze: standaard de stem van het apparaat zelf,
+zonder installatie (B), en voor gevorderden helemaal in huis met één knop (A).
+De add-ons installeert de bewoner zelf (de add-on wordt geen manager), en
+verstaan via de browser staat aan, met eerlijke uitleg.
+
+*Besluit:*
+
+- **Waar de stem vandaan komt** is een keuze bij Functies › Praten en in een
+  nieuwe stap van Inrichten, "Hoe praat je huis?" (hoofdstuk Klaar, na
+  Klaarzetten): **Met dit apparaat** of **Helemaal in huis**. Wat bij een keuze
+  hoort, staat alleen onder de gekozen kaart; zo past het op de wand.
+- **Met dit apparaat**: de telefoon of tablet leest voor met zijn eigen stem
+  (alleen een stem die op het apparaat zelf draait), en zonder die stem Piper
+  als die er is. Verstaan gaat via de browser zelf (Chrome, Safari), als dat aan
+  staat; de tekst zegt dat Chrome het daarvoor naar Google stuurt en Safari naar
+  Apple. Kan de browser het niet (de app van Home Assistant, Fully Kiosk), of
+  staat het uit, dan verstaat Home Assistant het, als Whisper erin staat.
+- **Helemaal in huis**: Piper leest voor, Whisper verstaat, en "Hé huis" op de
+  wand gaat via openWakeWord, zoals het was (besluit 150). Alleen bij deze keuze
+  staan de spraakassistent en "dit scherm luistert" bij Functies › Praten.
+- **De drie add-ons op een rij** (alleen in de add-on, voor de beheerder):
+  per add-on Staat erin, Gevonden (Home Assistant zag hem, nog niet bevestigd)
+  of Installeer, dat zijn pagina in Home Assistant opent. Staan Whisper en
+  Piper erin of zijn ze gevonden, dan maakt **Maak de spraakassistent** de
+  rest: wat Home Assistant van de drie vond bevestigen, een spraakassistent
+  "Smart Climate" maken in de taal van de app (met "Hé huis" als dat wekwoord
+  er al is), en die kiezen met de stem helemaal in huis.
+- **De schrijfgrens wordt weer iets ruimer, en blijft smal.** Na die tik van
+  de beheerder mag de add-on via de Supervisor (niet via HaClient) twee dingen:
+  een gevonden Wyoming-add-on bevestigen (`config/config_entries/flow`, alleen
+  stromen van `wyoming`) en één spraakassistent maken
+  (`assist_pipeline/pipeline/create`). Een bestaande "Smart Climate" blijft
+  zoals hij is; Home Assistant zijn eigen voorkeur verandert niet. Lezen komt
+  erbij: `config_entries/flow/progress` en `wake_word/info`.
+- **De standaard**: wie de stem nog niet koos, krijgt helemaal in huis als Home
+  Assistant al een spraakassistent heeft die verstaat (wie Whisper al had,
+  houdt het); anders het apparaat.
+- **Versie 0.75.0.**
+
+*Wat afviel:* de add-ons zelf installeren (dan wordt de add-on manager en zakt
+zijn veiligheidsscore); verstaan via de browser standaard uit (dan werkt praten
+niet meteen); een stem die online praat voor het voorlezen; "Hé huis" in de
+browser zelf (eerst meten of de Tab A7 het aankan).
 
 ---
 

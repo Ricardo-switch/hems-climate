@@ -17,6 +17,9 @@
    *   rondleiding wacht tot Home Assistant terug is.
    * - De stem: standaard die van het apparaat zelf, zonder installatie; voor
    *   gevorderden helemaal in huis met Whisper, Piper en het wekwoord (#stem).
+   *   Gebouwd 28 oktober 2026 (besluit 203): wat bij een keuze hoort, staat
+   *   alleen onder de gekozen kaart; bij het apparaat de schakelaar voor
+   *   verstaan via de browser, hier de drie add-ons.
    * - De wand: een eigen account in Home Assistant voor de tablet, met waarom
    *   en hoe (#wand).
    * - Volledig scherm staat in de app van Home Assistant standaard aan; de
@@ -156,10 +159,9 @@
         ${klaarlijst(REST)}`,
     },
     stem: {
-      stap: [7, 0], waar: '8. Klaar · Staat alles klaar?', kop: 'Hoe praat je huis?', lead: 'De assistent werkt. Kies waar de stem vandaan komt; je kunt het later veranderen bij Functies › Praten.',
-      inhoud: `<div class="keuze aan"><span class="rond"></span><div><b>Met dit apparaat <span class="label mint">Werkt meteen</span></b><p>De telefoon of tablet leest het antwoord voor en verstaat wat je zegt. Niets te installeren.</p>
-          <div class="onder"><div class="schakelrij"><span>Verstaan via de browser. In Chrome gaat wat je zegt daarvoor naar Google.</span><span class="schakel aan"></span></div></div></div></div>
-        <div class="keuze"><span class="rond"></span><div><b>Helemaal in huis <span class="label gedempt">Gevorderd</span></b><p>Verstaan en praten op je eigen Home Assistant, ook met "Hé huis". Installeer opent die add-on in Home Assistant; staan ze erin, dan maakt Smart Climate de spraakassistent zelf.</p>
+      stap: [7, 1], waar: '8. Klaar · De stem', kop: 'Hoe praat je huis?', lead: 'Kies waar de stem vandaan komt. Dat kan later ook, bij Functies › Praten.',
+      inhoud: `<div class="keuze"><span class="rond"></span><div><b>Met dit apparaat <span class="label mint">Werkt meteen</span></b><p>De telefoon of tablet leest het antwoord voor en verstaat wat je zegt. Niets te installeren.</p></div></div>
+        <div class="keuze aan"><span class="rond"></span><div><b>Helemaal in huis <span class="label gedempt">Gevorderd</span></b><p>Verstaan en praten op je eigen Home Assistant, ook met "Hé huis". Installeer opent die add-on in Home Assistant; staan ze erin, dan maakt Smart Climate de spraakassistent zelf.</p>
           <div class="onder"><div class="addon"><div><b>Whisper</b><span>verstaat wat je zegt</span></div><span class="knop klein">Installeer</span></div><div class="addon"><div><b>Piper</b><span>de stem, in het Nederlands</span></div><span class="ok">✓ Staat erin</span></div><div class="addon"><div><b>openWakeWord</b><span>luistert naar "Hé huis"</span></div><span class="knop klein">Installeer</span></div></div></div></div>
         `,
     },

@@ -1,5 +1,23 @@
 # Wat is er nieuw · What is new
 
+## 0.75.0
+
+*28 oktober 2026*
+
+**Nieuw**
+
+- Praten werkt meteen met de stem van je telefoon of tablet: hij leest voor en verstaat je via de browser, zonder iets te installeren
+- Helemaal in huis: Inrichten zet Whisper, Piper en openWakeWord op een rij, en één knop maakt de spraakassistent
+- Inrichten heeft een stap Hoe praat je huis?, en Functies › Praten de keuze waar de stem vandaan komt
+
+*English*
+
+**New**
+
+- Talking works right away with the voice of your phone or tablet: it reads aloud and understands you through the browser, with nothing to install
+- Entirely at home: Set up lists Whisper, Piper and openWakeWord, and one button makes the voice assistant
+- Set up has a step How does your house talk?, and Features › Talking the choice where the voice comes from
+
 ## 0.74.0
 
 *28 oktober 2026*

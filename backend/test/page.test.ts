@@ -1569,7 +1569,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await p.waitForTimeout(800);
     // Acht hoofdstukken met hun stappen (besluit 190).
     expect(await p.locator('#wand [data-stappen] .stap').count()).toBe(8);
-    expect(await p.locator('#wand [data-stappen] .stipjes i').count()).toBe(20);
+    expect(await p.locator('#wand [data-stappen] .stipjes i').count()).toBe(21);
     expect(await p.locator('#wand #balk').count()).toBe(0);
     await shot('welkom');
     // De getallen tikken open tot een lijst, en weer terug (besluit 158).
@@ -1701,6 +1701,18 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await kaart.locator('h1', { hasText: 'Staat alles klaar?' }).waitFor();
     await shot('ha');
     await kaart.locator('[data-volgende]').click();
+    // Hoe praat je huis (besluit 203): het apparaat staat voorop; helemaal in huis kan ook.
+    await kaart.locator('h1', { hasText: 'Hoe praat je huis?' }).waitFor();
+    expect(await kaart.locator('[data-stembron="apparaat"]').getAttribute('aria-pressed')).toBe('true');
+    expect(await kaart.locator('[data-stemverstaan]').getAttribute('aria-checked')).toBe('true');
+    await shot('stem');
+    await kaart.locator('[data-stembron="huis"]').click();
+    await expect.poll(() => kaart.locator('[data-stembron="huis"]').getAttribute('aria-pressed')).toBe('true');
+    // Buiten de add-on: wat je zelf in Home Assistant doet.
+    expect(await kaart.textContent()).toContain('Instellingen › Spraakassistenten');
+    await kaart.locator('[data-stembron="apparaat"]').click();
+    await expect.poll(() => kaart.locator('[data-stembron="apparaat"]').getAttribute('aria-pressed')).toBe('true');
+    await kaart.locator('[data-volgende]').click();
     await kaart.locator('h1', { hasText: 'Je huis staat erin' }).waitFor();
     await shot('klaar');
     // De film als trailer (besluit 200): je eigen huis, pauzeren, het geluid uit en overslaan.
@@ -1814,7 +1826,9 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await kaart.locator('.asblok', { hasText: 'Gaat vanzelf aan bij Klaar' }).waitFor({ timeout: 10_000 });
       expect(await kaart.locator('[data-assistent-aan]').count()).toBe(0);
       await shot('klaarzetten');
-      // Klaar: Speel af zet hem aan zodra de film zijn cijfers heeft.
+      // Klaar (na Hoe praat je huis): Speel af zet hem aan zodra de film zijn cijfers heeft.
+      await kaart.locator('[data-volgende]').click();
+      await kaart.locator('h1', { hasText: 'Hoe praat je huis?' }).waitFor();
       await kaart.locator('[data-volgende]').click();
       await kaart.locator('h1', { hasText: 'Je huis staat erin' }).waitFor();
       await kaart.locator('button', { hasText: 'Speel af' }).click();
@@ -1829,6 +1843,71 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await shot('wacht');
       await p.waitForURL(/thuis\.html#rondleiding$/, { timeout: 15_000 });
       expect(aangezet).toBe(1);
+      expect(fouten).toEqual([]);
+    } finally {
+      await context.close();
+    }
+  }, 40_000);
+
+  /*
+   * Helemaal in huis (besluit 203): per add-on of hij erin staat, en de
+   * spraakassistent maken met één tik. De add-on is nagebootst met een route.
+   */
+  it('maakt de spraakassistent helemaal in huis, met de add-ons op een rij (besluit 203)', async () => {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    const shot = async (naam: string) => {
+      if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', `-${naam}.png`) });
+    };
+    const addons = (w: string, pi: string, o: string) => [
+      { id: 'whisper', slug: 'core_whisper', staat: w },
+      { id: 'piper', slug: 'core_piper', staat: pi },
+      { id: 'openwakeword', slug: 'core_openwakeword', staat: o },
+    ];
+    let stand: Record<string, unknown> = { addons: addons('gevonden', 'aan', 'nee'), assistent: null, bezig: false, fout: null };
+    let gemaakt = 0;
+    let vragenNa = 0;
+    await context.route(`${baseUrl}/api/stem-in-huis`, async (route) => {
+      if (route.request().method() === 'POST') {
+        gemaakt += 1;
+        stand = { ...stand, bezig: true };
+      } else if (stand['bezig'] && ++vragenNa >= 2) {
+        stand = { addons: addons('aan', 'aan', 'nee'), assistent: { id: 'p1', wekwoord: null }, bezig: false, fout: null };
+      }
+      await route.fulfill({ status: route.request().method() === 'POST' ? 202 : 200, contentType: 'application/json', body: JSON.stringify(stand) });
+    });
+    try {
+      await p.goto(`${baseUrl}/inrichten.html#stem`);
+      const kaart = p.locator('#wand [data-kaart]');
+      const huis = kaart.locator('.stemkeuze', { hasText: 'Helemaal in huis' });
+      // De add-ons staan onder de keuze, als die gekozen is.
+      await huis.locator('[data-stembron="huis"]').click();
+      await huis.locator('.addon', { hasText: 'Whisper' }).waitFor({ timeout: 10_000 });
+      expect(await huis.locator('.addon', { hasText: 'Whisper' }).textContent()).toContain('Gevonden');
+      expect(await huis.locator('.addon', { hasText: 'Piper' }).textContent()).toContain('Staat erin');
+      // Buiten Home Assistant geen knop naar de add-on, wel waar het moet.
+      expect(await huis.locator('.addon', { hasText: 'openWakeWord' }).textContent()).toContain('Installeer in Home Assistant');
+      await shot('inhuis');
+      await huis.locator('[data-inhuis-maak]').click();
+      await huis.locator('.mini.klaar', { hasText: 'nog zonder "Hé huis"' }).waitFor({ timeout: 15_000 });
+      expect(gemaakt).toBe(1);
+      expect(await p.evaluate<boolean>('document.scrollingElement.scrollHeight <= innerHeight + 1')).toBe(true);
+      await shot('inhuis-klaar');
+      // Functies › Praten met helemaal in huis: de spraakassistent en Hé huis, en het past op de wand.
+      await p.goto(`${baseUrl}/functies.html#praten`);
+      await p.locator('#wand [data-vorm] [data-kies="stemBron"]').first().waitFor();
+      expect(await p.locator('#wand [data-vorm] [data-hier]').count()).toBe(2);
+      expect(await p.locator('#wand [data-vorm] [data-kies="stemVerstaan"]').count()).toBe(0);
+      await shot('praten-huis');
+      expect(await p.locator('#wand [data-vorm]').evaluate((v) => v.scrollHeight - v.clientHeight)).toBeLessThanOrEqual(2);
+      await p.goto(`${baseUrl}/inrichten.html#stem`);
+      // Terug naar de standaard, voor de tests hierna.
+      await kaart.locator('[data-stembron="apparaat"]').click();
+      await expect.poll(() => kaart.locator('[data-stembron="apparaat"]').getAttribute('aria-pressed')).toBe('true');
       expect(fouten).toEqual([]);
     } finally {
       await context.close();
@@ -1973,7 +2052,8 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await context.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
     // Een microfoon zonder microfoon: alleen bijhouden dat erom gevraagd is.
     await context.addInitScript({
-      content: "window.__micGevraagd = false; if (navigator.mediaDevices) navigator.mediaDevices.getUserMedia = () => { window.__micGevraagd = true; return Promise.reject(new Error('geen microfoon in de test')); };",
+      // Verstaan via de browser (besluit 203) telt ook: dan vraagt de browser zelf om de microfoon.
+      content: "window.__micGevraagd = false; if (navigator.mediaDevices) navigator.mediaDevices.getUserMedia = () => { window.__micGevraagd = true; return Promise.reject(new Error('geen microfoon in de test')); }; window.SpeechRecognition = window.webkitSpeechRecognition = class { start() { window.__micGevraagd = true; setTimeout(() => this.onend && this.onend(), 0); } stop() {} abort() {} };",
     });
     const p = await context.newPage();
     const fouten: string[] = [];

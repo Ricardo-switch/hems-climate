@@ -19,11 +19,11 @@
 
 const { $$, esc, haal, deur, nl } = app;
 
-const d = { huis: null, ind: null, comfort: null, aans: null, energie: null, zon: null, functies: null, sessie: null, bewoners: null, klaar: null, voork: null, integ: null };
+const d = { huis: null, ind: null, comfort: null, aans: null, energie: null, zon: null, functies: null, sessie: null, bewoners: null, klaar: null, voork: null, integ: null, inHuis: null };
 
 async function laad() {
-  const namen = ['huis', 'ind', 'comfort', 'aans', 'energie', 'zon', 'functies', 'sessie', 'bewoners', 'klaar', 'voork', 'integ'];
-  const uit = await Promise.allSettled(['api/huis', 'api/indeling', 'api/comfort', 'api/aansluiting', 'api/energie', 'api/zon', 'api/functies', 'api/sessie', 'api/bewoners', 'api/klaarzetten', 'api/voorkeuren', 'api/integratie'].map((p) => haal(p)));
+  const namen = ['huis', 'ind', 'comfort', 'aans', 'energie', 'zon', 'functies', 'sessie', 'bewoners', 'klaar', 'voork', 'integ', 'inHuis'];
+  const uit = await Promise.allSettled(['api/huis', 'api/indeling', 'api/comfort', 'api/aansluiting', 'api/energie', 'api/zon', 'api/functies', 'api/sessie', 'api/bewoners', 'api/klaarzetten', 'api/voorkeuren', 'api/integratie', 'api/stem-in-huis'].map((p) => haal(p)));
   uit.forEach((r, i) => {
     if (r.status === 'fulfilled') d[namen[i]] = r.value;
   });
@@ -41,7 +41,7 @@ const HOOFDSTUKKEN = [
   ['energie', ['zekering', 'zon', 'ligging', 'opzon', 'prijzen']],
   ['gemak', ['functies']],
   ['schermen', ['account', 'wand']],
-  ['klaar', ['ha', 'klaar']],
+  ['klaar', ['ha', 'stem', 'klaar']],
 ].map(([h, stappen]) => [t(`inr.h.${h}`), stappen.map((s) => [s, t(`inr.stap.${s}`)])]);
 const STAPPEN = HOOFDSTUKKEN.flatMap(([, stappen]) => stappen);
 const ALLE = ['welkom', ...STAPPEN.map(([id]) => id)];
@@ -1519,6 +1519,65 @@ function haStap() {
     inhoud: `${assistentBlok()}<div class="rijen lijst klaarlijst">${rijen || `<p class="zacht">${esc(t('inr.lezen'))}</p>`}</div>${tip(t('inr.ha.tip'))}`,
   };
 }
+
+/*
+ * Hoe praat je huis (besluit 203, schets Wand-Inrichten-Klaarzetten #stem): met
+ * dit apparaat, zonder iets te installeren; of helemaal in huis met Whisper,
+ * Piper en openWakeWord. Die installeer je zelf (de knop opent hun pagina in
+ * Home Assistant); daarna maakt de add-on de spraakassistent met één tik.
+ */
+const ADDON_NAAM = { whisper: 'Whisper', piper: 'Piper', openwakeword: 'openWakeWord' };
+let inHuisKijk = null;
+function stemStap() {
+  const c = functiesNu();
+  const p = c?.praten ?? {};
+  const huis = p.stem === 'huis';
+  const kanBrowser = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+  // Wat bij een keuze hoort, staat alleen onder de gekozen: zo past het op de wand.
+  const keuze = (waarde, aan, kop, label, toon, zin, onder) =>
+    `<div class="stemkeuze${aan ? ' aan' : ''}"><button type="button" class="keuzekop" data-stembron="${waarde}" aria-pressed="${aan}"><span class="rond" aria-hidden="true"></span><span><b>${esc(kop)} <span class="label ${toon}">${esc(label)}</span></b><span class="zin">${esc(zin)}</span></span></button>${aan && onder ? `<div class="onder">${onder}</div>` : ''}</div>`;
+  const verstaan = `<div class="schakelrij"><span>${esc(t('inr.stem.verstaan'))}</span>${schakelaar(`data-stemverstaan="${p.verstaan === false}"`, t('inr.stem.verstaanLabel'), p.verstaan !== false)}</div>${kanBrowser ? '' : `<p class="mini">${esc(t('inr.stem.kanNiet'))}</p>`}`;
+  return {
+    waar: waarVan('stem'),
+    kop: t('inr.stem.kop'),
+    uitleg: t('inr.stem.zin'),
+    inhoud: c
+      ? `<div class="keuzes-stem" role="group" aria-label="${esc(t('inr.stem.kop'))}">
+          ${keuze('apparaat', !huis, t('inr.stem.apparaat'), t('inr.stem.meteen'), 'mint', t('inr.stem.apparaatZin'), verstaan)}
+          ${keuze('huis', huis, t('inr.stem.huis'), t('inr.stem.gevorderd'), 'gedempt', t('inr.stem.huisZin'), inHuisOnder())}
+        </div>`
+      : `<p class="zacht">${esc(t('inr.lezen'))}</p>`,
+  };
+}
+/** Onder Helemaal in huis: de drie add-ons, en de spraakassistent maken. */
+function inHuisOnder() {
+  const ih = d.inHuis;
+  // Buiten de add-on (of geen beheerder): wat je zelf in Home Assistant doet.
+  if (!ih) return `<p class="mini">${esc(t('inr.stem.zelf'))}</p>`;
+  const inHA = app.inHA();
+  const rijen = ih.addons
+    .map((a) => {
+      const rechts = a.staat === 'aan' ? `<span class="ok">${esc(t('inr.stem.staatErin'))}</span>` : a.staat === 'gevonden' ? `<span class="ok gevonden">${esc(t('inr.stem.gevonden'))}</span>` : inHA ? `<button type="button" class="knop klein" data-ha-pad="/hassio/addon/${esc(a.slug)}/info">${esc(t('inr.stem.installeer'))}</button>` : `<span class="mini">${esc(t('inr.stem.inHA'))}</span>`;
+      return `<div class="addon"><div><b>${esc(ADDON_NAAM[a.id] ?? a.id)}</b><span>${esc(t(`inr.stem.wat.${a.id}`))}</span></div>${rechts}</div>`;
+    })
+    .join('');
+  // Loopt het, dan elke drie tellen kijken waar het is.
+  if (ih.bezig && !inHuisKijk) {
+    inHuisKijk = setTimeout(async () => {
+      inHuisKijk = null;
+      d.inHuis = await haal('api/stem-in-huis').catch(() => d.inHuis);
+      if (!d.inHuis?.bezig) d.functies = await haal('api/functies').catch(() => d.functies);
+      teken();
+    }, 3000);
+  }
+  const kan = ih.addons.filter((a) => a.id !== 'openwakeword').every((a) => a.staat !== 'nee');
+  const onder = ih.assistent
+    ? `<p class="mini klaar">${esc(t(ih.assistent.wekwoord ? 'inr.stem.klaarMet' : 'inr.stem.klaarZonder'))}</p>`
+    : ih.bezig
+      ? `<p class="mini" aria-live="polite">${esc(t('inr.stem.bezig'))}</p>`
+      : `${ih.fout ? `<p class="mini fout">${esc(t('inr.as.fout', { fout: ih.fout }))}</p>` : ''}<button type="button" class="knop knop-licht" data-inhuis-maak ${kan ? '' : 'disabled'}>${esc(t(ih.fout ? 'inr.as.opnieuw' : 'inr.stem.maak'))}</button>${kan ? '' : `<p class="mini">${esc(t('inr.stem.eerst'))}</p>`}`;
+  return `${rijen}${onder}`;
+}
 async function bewaarAansluiting(a) {
   const opZon = Object.fromEntries(Object.entries(a.opZon).filter(([, v]) => typeof v === 'boolean'));
   const uit = await stuur('api/aansluiting', { panelen: a.panelen, zekering: a.zekering, tarief: a.tarief, verwarming: a.verwarming, voorkantZon: a.voorkantZon, dak: a.dak, elders: a.elders, opZon, opZonUit: a.opZonUit });
@@ -1682,7 +1741,7 @@ function tekenNu() {
   $$('[data-voortgang]').forEach((el) => {
     el.innerHTML = STAPPEN.map(([id]) => `<i class="${id === nu ? 'nu' : nagelopen.has(id) ? 'al' : gedaan(id) ? 'half' : ''}"></i>`).join('');
   });
-  const v = { welkom, woning: woningStap, huis: huisStap, buiten: buitenStap, bewoners: bewonersStap, apparaten: apparatenStap, meten: metenStap, warmte: warmteStap, apparaat: kanStap, comfort: comfortStap, afwezig: afwezigStap, zon: zonStap, ligging: liggingStap, zekering: zekeringStap, opzon: opzonStap, prijzen: prijzenStap, functies: functiesStap, wand: wandStap, ha: haStap, klaar: klaarStap, account: accountStap }[nu]();
+  const v = { welkom, woning: woningStap, huis: huisStap, buiten: buitenStap, bewoners: bewonersStap, apparaten: apparatenStap, meten: metenStap, warmte: warmteStap, apparaat: kanStap, comfort: comfortStap, afwezig: afwezigStap, zon: zonStap, ligging: liggingStap, zekering: zekeringStap, opzon: opzonStap, prijzen: prijzenStap, functies: functiesStap, wand: wandStap, ha: haStap, stem: stemStap, klaar: klaarStap, account: accountStap }[nu]();
   // Onderaan overal hetzelfde (besluit 158): Terug, Later en Volgende, tenzij de stap iets anders zegt.
   const [links, rechts] = v.voet ?? [terugKnop(), volgendeKnoppen()];
   const actief = document.activeElement;
@@ -2214,6 +2273,23 @@ document.addEventListener('click', async (e) => {
     if (el.dataset.fcam) c.cameras = { ...c.cameras, aan: el.dataset.fcam === 'true' };
     if (el.dataset.fpraat) c.praten = { ...c.praten, bedienen: el.dataset.fpraat === 'true' };
     await bewaarFuncties(c);
+  }
+  // Hoe praat je huis (besluit 203): waar de stem vandaan komt, en of de browser mag verstaan.
+  if (el.dataset.stembron || el.dataset.stemverstaan) {
+    const c = functiesNu();
+    if (!c) return;
+    if (el.dataset.stembron) c.praten = { ...c.praten, stem: el.dataset.stembron };
+    if (el.dataset.stemverstaan) c.praten = { ...c.praten, verstaan: el.dataset.stemverstaan === 'true' };
+    await bewaarFuncties(c);
+    return;
+  }
+  // Helemaal in huis: de spraakassistent maken; de stap kijkt daarna elke drie tellen.
+  if (el.hasAttribute('data-inhuis-maak')) {
+    el.disabled = true;
+    const res = await deur('api/stem-in-huis', { maak: true }).catch(() => null);
+    if (res?.ok) d.inHuis = await res.json().catch(() => d.inHuis);
+    teken();
+    return;
   }
 });
 

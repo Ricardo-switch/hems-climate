@@ -419,7 +419,54 @@
     return ronde('spraak', op);
   }
 
-  global.luisteren = { kan, aanHier, zetHier, start, eenmaal, niveau: () => mic?.niveau ?? 0 };
+  /* ------------------------------------------ verstaan via de browser (besluit 203) */
+
+  /*
+   * Zonder Whisper in Home Assistant kan de browser zelf verstaan: Chrome en Safari
+   * hebben dat, de app van Home Assistant en Fully Kiosk meestal niet. Chrome stuurt
+   * het geluid daarvoor naar Google; daarom alleen als dat bij Functies › Praten aan
+   * staat. Dezelfde berichten als `eenmaal`, zodat de Assistent het verschil niet ziet.
+   */
+  const Herkenner = global.SpeechRecognition || global.webkitSpeechRecognition;
+  /** Of deze browser zelf kan verstaan. */
+  const kanBrowser = () => !!(Herkenner && global.isSecureContext);
+  /** Zonder eigen opname geen echt niveau: half zolang je praat. */
+  let browserNiveau = 0;
+
+  function viaBrowser(op, taalCode) {
+    const r = new Herkenner();
+    r.lang = taalCode === 'en' ? 'en-GB' : 'nl-NL';
+    r.interimResults = false;
+    r.continuous = false;
+    r.maxAlternatives = 1;
+    let tekst = '';
+    let mis = false;
+    r.onspeechstart = () => {
+      browserNiveau = 0.5;
+      op({ soort: 'praat' });
+    };
+    r.onspeechend = () => {
+      browserNiveau = 0;
+      op({ soort: 'stil' });
+    };
+    r.onresult = (e) => (tekst = String(e.results?.[0]?.[0]?.transcript ?? '').trim());
+    r.onerror = (e) => {
+      // Niets gehoord: dan zegt 'tekst' zonder tekst dat het niet verstaan is.
+      if (e.error === 'no-speech') return;
+      mis = true;
+      if (e.error === 'aborted') return;
+      op({ soort: 'fout', reden: tk(e.error === 'not-allowed' || e.error === 'service-not-allowed' ? 'assistent.geenMicrofoon' : e.error === 'network' ? 'assistent.geenNet' : 'assistent.nietVerstaan') });
+    };
+    r.onend = () => {
+      browserNiveau = 0;
+      if (!mis) op({ soort: 'tekst', tekst });
+      op({ soort: 'dicht' });
+    };
+    r.start();
+    return { klaar: () => r.stop(), stop: () => r.abort() };
+  }
+
+  global.luisteren = { kan, aanHier, zetHier, start, eenmaal, kanBrowser, viaBrowser, niveau: () => mic?.niveau ?? browserNiveau };
   // De wand: meteen beginnen als het hier aan staat.
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
   else start();

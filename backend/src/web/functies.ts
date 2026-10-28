@@ -74,6 +74,14 @@ export interface Functies {
      * (besluit 150), of null: die Home Assistant zelf voorop heeft. Weg: null.
      */
     readonly spraak?: string | null;
+    /**
+     * Waar de stem vandaan komt (besluit 203): van het apparaat zelf (weg, de
+     * standaard: werkt zonder installatie), of helemaal in huis met Piper,
+     * Whisper en openWakeWord in Home Assistant.
+     */
+    readonly stem?: StemBron;
+    /** Of het apparaat ook mag verstaan via de browser (besluit 203); Chrome stuurt dat naar Google. Weg is aan. */
+    readonly verstaan?: boolean;
   };
   /**
    * Wanneer een batterij of een airco-filter een melding geeft (besluit 149):
@@ -92,6 +100,17 @@ export interface CameraKeuze {
    * Weg in een oudere vorm: geen.
    */
   readonly melders?: readonly CameraMelder[];
+}
+
+/** Waar de stem vandaan komt (besluit 203). */
+export type StemBron = 'apparaat' | 'huis';
+/**
+ * Waar de stem vandaan komt als de bewoner niets koos: helemaal in huis als
+ * Home Assistant al een spraakassistent heeft die verstaat (wie Whisper al had,
+ * houdt het), anders het apparaat zelf.
+ */
+export function standaardStem(g: FunctiesGevonden | null): StemBron {
+  return (g?.spraakassistenten ?? []).some((s) => s.spraakNaarTekst) ? 'huis' : 'apparaat';
 }
 
 /** Wat een melder op een camera ziet: beweging, of wat hij herkent. */
@@ -264,7 +283,8 @@ export function functiesVoorstel(g: FunctiesGevonden): Functies {
     licht: { bedienen: true },
     schermen: { bedienen: true },
     // Het taalmodel staat standaard uit (besluit 148): het vaste antwoord werkt altijd.
-    praten: { taalmodel: null, bedienen: true, spraak: null },
+    // De stem van het apparaat, ook verstaan (besluit 203): werkt meteen, zonder installatie.
+    praten: { taalmodel: null, bedienen: true, spraak: null, stem: standaardStem(g), verstaan: true },
     meldingen: STANDAARD_DREMPELS,
   };
 }
@@ -273,14 +293,14 @@ export function functiesVoorstel(g: FunctiesGevonden): Functies {
 export function volledig(
   f: Functies,
   g: FunctiesGevonden | null,
-): Functies & { weer: { bron: string | null; uren: boolean }; licht: { bedienen: boolean }; schermen: { bedienen: boolean }; praten: { taalmodel: string | null; bedienen: boolean; spraak: string | null }; meldingen: Drempels } {
+): Functies & { weer: { bron: string | null; uren: boolean }; licht: { bedienen: boolean }; schermen: { bedienen: boolean }; praten: { taalmodel: string | null; bedienen: boolean; spraak: string | null; stem: StemBron; verstaan: boolean }; meldingen: Drempels } {
   const weer = f.weer ?? { bron: g?.weerbronnen?.[0]?.id ?? null };
   return {
     ...f,
     weer: { bron: weer.bron, uren: weer.uren ?? true },
     licht: f.licht ?? { bedienen: true },
     schermen: f.schermen ?? { bedienen: true },
-    praten: { taalmodel: f.praten?.taalmodel ?? null, bedienen: f.praten?.bedienen ?? true, spraak: f.praten?.spraak ?? null },
+    praten: { taalmodel: f.praten?.taalmodel ?? null, bedienen: f.praten?.bedienen ?? true, spraak: f.praten?.spraak ?? null, stem: f.praten?.stem ?? standaardStem(g), verstaan: f.praten?.verstaan ?? true },
     meldingen: f.meldingen ?? STANDAARD_DREMPELS,
   };
 }
@@ -339,7 +359,7 @@ export function controleer(body: unknown, g: FunctiesGevonden): FunctiesUitkomst
   }
   // Praten met je huis (besluit 148): alleen een AI-taak die Home Assistant kent.
   const pratenIn = b['praten'];
-  let praten = { taalmodel: null as string | null, bedienen: true, spraak: null as string | null };
+  let praten = { taalmodel: null as string | null, bedienen: true, spraak: null as string | null, stem: 'apparaat' as StemBron, verstaan: true };
   if (pratenIn !== undefined) {
     const pr = (typeof pratenIn === 'object' && pratenIn != null ? pratenIn : {}) as Record<string, unknown>;
     const model = pr['taalmodel'] ?? null;
@@ -348,7 +368,12 @@ export function controleer(body: unknown, g: FunctiesGevonden): FunctiesUitkomst
     // De spraakassistent (besluit 150): alleen een die Home Assistant kent.
     const spraak = pr['spraak'] ?? null;
     if (spraak !== null && (typeof spraak !== 'string' || !(g.spraakassistenten ?? []).some((x) => x.id === spraak))) return { ok: false, reden: 'die spraakassistent kent Home Assistant niet' };
-    praten = { taalmodel: model as string | null, bedienen: pr['bedienen'], spraak: spraak as string | null };
+    // Waar de stem vandaan komt (besluit 203); weg is de standaard, en verstaan via de browser aan.
+    const stem = pr['stem'] ?? standaardStem(g);
+    if (stem !== 'apparaat' && stem !== 'huis') return { ok: false, reden: 'praten.stem is apparaat of huis' };
+    const verstaan = pr['verstaan'] ?? true;
+    if (typeof verstaan !== 'boolean') return { ok: false, reden: 'praten.verstaan is ja of nee' };
+    praten = { taalmodel: model as string | null, bedienen: pr['bedienen'], spraak: spraak as string | null, stem, verstaan };
   }
   // Wanneer een batterij of filter een melding geeft (besluit 149): een van de keuzes, of nooit.
   const meldingenIn = b['meldingen'];

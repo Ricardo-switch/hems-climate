@@ -17,6 +17,7 @@ import { sunReport } from '../sun.js';
 import { weatherInLang } from '../weather.js';
 import { startOfLocalDay } from '../today.js';
 import { MAX_ZEG } from '../stem.js';
+import { functiesVoorstel, volledig } from '../functies.js';
 import { sendJson } from '../http.js';
 import { taalVan, type Diensten, type Verzoek } from '../diensten.js';
 import { kostenDezeMaand } from './opbrengst.js';
@@ -39,7 +40,11 @@ export async function assistentRoutes(d: Diensten, v: Verzoek): Promise<boolean>
     if (tekst == null) {
       // Welke stem, en of die de taal van de app kan; zonder gebruikt de pagina de stem van het apparaat.
       const t = stem ? await stem.taalVoor(lang).catch(() => ({ taal: null, voice: null })) : { taal: null, voice: null };
-      sendJson(res, 200, { stem: stem?.naam ?? null, taal: t.taal, voice: t.voice });
+      // Waar de stem vandaan komt (besluit 203): het apparaat eerst, of Piper in huis; en of de browser mag verstaan.
+      const f = d.options.functies;
+      const g = f?.gevonden() ?? null;
+      const praten = f?.store.current ? volledig(f.store.current, g).praten : g ? functiesVoorstel(g).praten : null;
+      sendJson(res, 200, { stem: stem?.naam ?? null, taal: t.taal, voice: t.voice, bron: praten?.stem ?? 'apparaat', verstaan: praten?.verstaan ?? true });
       return true;
     }
     if (stem == null || stem.naam == null) {

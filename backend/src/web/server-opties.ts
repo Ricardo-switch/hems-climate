@@ -8,6 +8,7 @@ import { VERSIE } from '../version.js';
 import type { Sluipverbruik } from './sluipverbruik.js';
 import type { CameraNu } from './cameras.js';
 import type { AanzetStand } from './assistent-aan.js';
+import type { InHuisStand } from './stem-in-huis.js';
 import type { SiteConfig } from '../core/model.js';
 import type { LiveSnapshot } from '../adapters/homeassistant/shadow.js';
 import type { DivergenceReport } from './divergence.js';
@@ -221,6 +222,8 @@ export interface WebOptions {
     /** De assistent met één knop (besluit 202): neerzetten, herstarten en toevoegen; alleen in de add-on. */
     readonly aanzetten?: { readonly stand: () => AanzetStand; readonly start: () => void };
   };
+  /** Helemaal in huis (besluit 203): Whisper, Piper en openWakeWord, en de spraakassistent maken; alleen in de add-on. */
+  readonly stemInHuis?: { readonly stand: () => Promise<InHuisStand>; readonly start: (lang: Lang) => void };
   readonly deurbel?: () => { readonly camera: string; readonly naam: string; readonly laatsteMs: number | null; readonly reserve?: readonly string[] } | null;
   /**
    * De kaart Camera's (besluit 201): elke camera die het huis toont, met wat hij

@@ -30,6 +30,11 @@ let zon = null;
 let weer = null;
 let vandaag = null;
 let stemNaam = null;
+/** Waar de stem vandaan komt (besluit 203): 'apparaat' of 'huis'; en of de browser mag verstaan. */
+let stemBron = 'apparaat';
+let verstaanBrowser = true;
+/** Verstaan via de browser: bij de stem van het apparaat, als het mag en de browser het kan. */
+const viaBrowser = () => stemBron === 'apparaat' && verstaanBrowser && !!window.luisteren?.kanBrowser?.();
 /** Of een vraag uit het adres kwam (een tik op Thuis): dan meteen proberen te spreken. */
 let vanAdres = false;
 /** Wie hier woont (besluit 147): voor de begroeting met je naam. */
@@ -49,8 +54,13 @@ async function laadAlles() {
   if (v.status === 'fulfilled') vandaag = v.value;
   // Piper alleen als die de taal van de app kan (opgelost 15 oktober; per taal sinds besluit 185);
   // anders de stem van het apparaat. De dienst zoekt de stem bij de taal die de app meestuurt.
-  if (st.status === 'fulfilled') stemNaam = st.value?.stem && st.value?.taal ? st.value.stem : null;
+  if (st.status === 'fulfilled') zetStem(st.value);
   teken();
+}
+function zetStem(st) {
+  stemNaam = st?.stem && st?.taal ? st.stem : null;
+  stemBron = st?.bron === 'huis' ? 'huis' : 'apparaat';
+  verstaanBrowser = st?.verstaan !== false;
 }
 
 /* ------------------------------------------------------------ het gesprek */
@@ -399,7 +409,9 @@ function zeg(tekst, gesproken = tekst) {
     const apparaat = () => zegMetApparaat(tekst, gesproken, totLetter, lezen, geweigerd);
     // Een vraag via een tik op Thuis mag meteen proberen (opgelost 15 oktober).
     if (!voorlezen || !(ontgrendeld || vanAdres)) return lezen();
-    if (stemNaam) return void zegMetPiper(tekst, totLetter, apparaat, geweigerd);
+    // Helemaal in huis (besluit 203): Piper eerst. Anders de stem van het apparaat, en Piper als die er niet is.
+    if (stemBron === 'huis' && stemNaam) return void zegMetPiper(tekst, totLetter, apparaat, geweigerd);
+    if (!apparaatStem() && stemNaam) return void zegMetPiper(tekst, totLetter, lezen, geweigerd);
     apparaat();
   });
 }
@@ -525,17 +537,19 @@ async function microfoonTik() {
   $$('[data-niveau]').forEach((el) => (el.hidden = false));
   luistert = {};
   tekenNiveau();
+  const op = (b) => {
+    if (b.soort === 'tekst') {
+      stopLuisteren();
+      if (b.tekst) void vraag({ label: b.tekst, soort: 'vrij', tekst: b.tekst });
+      else void zeg(taal.t('assistent.nietVerstaan'));
+    } else if (b.soort === 'fout') {
+      stopLuisteren();
+      void zeg(b.reden);
+    } else if (b.soort === 'dicht') stopLuisteren();
+  };
   try {
-    luistert = await window.luisteren.eenmaal((b) => {
-      if (b.soort === 'tekst') {
-        stopLuisteren();
-        if (b.tekst) void vraag({ label: b.tekst, soort: 'vrij', tekst: b.tekst });
-        else void zeg(taal.t('assistent.nietVerstaan'));
-      } else if (b.soort === 'fout') {
-        stopLuisteren();
-        void zeg(b.reden);
-      } else if (b.soort === 'dicht') stopLuisteren();
-    });
+    // Verstaan door de browser zelf (besluit 203), of via Home Assistant.
+    luistert = viaBrowser() ? window.luisteren.viaBrowser(op, taal.code) : await window.luisteren.eenmaal(op);
   } catch (e) {
     stopLuisteren();
     void zeg(taal.t(e?.message === 'tik' ? 'assistent.tikMicrofoon' : 'assistent.geenMicrofoon'));
@@ -669,15 +683,16 @@ function tekenNu() {
     const naam = scherm?.naam ?? '';
     el.querySelector('span').textContent = taal.t('assistent.stopScherm', { naam: /^(screen|zonnescherm|scherm)/i.test(naam) ? taal.t('assistent.hetScherm', { naam: `${naam.charAt(0).toLowerCase()}${naam.slice(1)}` }) : naam });
   });
-  // De microfoon alleen waar hij kan: over https (besluit 150).
-  const micKan = !!window.luisteren?.kan();
+  // De microfoon alleen waar hij kan: over https (besluit 150), of als de browser zelf verstaat (besluit 203).
+  const micKan = !!window.luisteren?.kan() || viaBrowser();
   $$('[data-mic]').forEach((el) => (el.hidden = !micKan));
   $$('[data-vrij] input').forEach((el) => (el.placeholder = taal.t(micKan ? 'assistent.typOfMic' : 'assistent.typ')));
   $$('[data-voorlezen]').forEach((el) => {
     el.hidden = stand === 'praat';
     el.setAttribute('aria-pressed', String(voorlezen));
     el.querySelector('span').textContent = taal.t(voorlezen ? 'assistent.voorlezenAan' : 'assistent.voorlezenUit');
-    el.title = taal.t(voorlezen ? (stemNaam ? 'assistent.piper' : 'assistent.apparaatStem') : 'assistent.alleenTekst');
+    const piper = stemNaam && (stemBron === 'huis' || !apparaatStem());
+    el.title = taal.t(voorlezen ? (piper ? 'assistent.piper' : 'assistent.apparaatStem') : 'assistent.alleenTekst');
   });
   if (stand !== 'praat') tekenGolf([]);
   tekenHuis();
@@ -764,8 +779,13 @@ if (location.hash === '#typ') document.querySelector(`${app.zicht()} [data-vrij]
  */
 if (location.hash === '#praat') {
   history.replaceState(null, '', location.pathname);
-  if (window.luisteren?.kan()) void microfoonTik();
-  else document.querySelector(`${app.zicht()} [data-vrij] input`)?.focus();
+  // Eerst weten waar de stem vandaan komt (besluit 203): de browser zelf, of Home Assistant.
+  void haal('api/stem')
+    .then(zetStem, () => {})
+    .then(() => {
+      if (window.luisteren?.kan() || viaBrowser()) void microfoonTik();
+      else document.querySelector(`${app.zicht()} [data-vrij] input`)?.focus();
+    });
 }
 /** Een vraag uit het adres: #nu, #zon, #straks, #vandaag, #warm, #morgen, #kosten, #waarom/zolder. */
 function vraagUitAdres() {

@@ -368,15 +368,25 @@ function luisteren() {
       : !gekozen.wekwoord
         ? `${t('functies.luister.geenWekwoord')}${app.inHA() ? ` ${t('functies.luister.openWakeWord')}` : ''}`
         : '';
-  return `<h2 class="kop-2" style="margin-top: 8px">${esc(t('functies.luister.kop'))}</h2>
+  // Waar de stem vandaan komt (besluit 203): het apparaat zelf, met verstaan via de browser;
+  // of helemaal in huis, en alleen dan de spraakassistent en "Hé huis" op dit scherm.
+  const stemHuis = p.stem === 'huis';
+  const kop = `<h2 class="kop-2" style="margin-top: 8px">${esc(t('functies.stem.kop'))}</h2>
+    ${keuzes(t('functies.stem.kop'), 'stemBron', [['apparaat', t('inr.stem.apparaat')], ['huis', t('inr.stem.huis')]], stemHuis ? 'huis' : 'apparaat')}`;
+  if (!stemHuis) {
+    return `${kop}
+    <p class="mini">${esc(t('inr.stem.apparaatZin'))}</p>
+    <span class="veldnaam">${esc(t('inr.stem.verstaanLabel'))}</span>${keuzes(t('inr.stem.verstaanLabel'), 'stemVerstaan', aanUit(), p.verstaan !== false)}
+    <p class="mini">${esc(t('functies.stem.verstaanZin'))}</p>`;
+  }
+  return `${kop}
     <span class="veldnaam">${esc(t('functies.luister.assistent'))}</span>
     ${lijst.length ? keuzes(t('functies.luister.assistentLabel'), 'spraak', opties, p.spraak) : ''}
     ${gekozen?.wekwoord ? `<p class="mini">${metHtml('functies.luister.wekwoord', { woord: wekwoordNaam(gekozen.wekwoord) })}</p>` : ''}
     ${melding ? `<p class="uitleg" style="color: var(--zon-t)">${esc(melding)}</p>` : ''}
     <span class="veldnaam">${esc(t('functies.luister.hier'))}</span>
     <div class="keuzes" role="group" aria-label="${esc(t('functies.luister.hierLabel'))}"><button type="button" data-hier="aan" aria-pressed="${hier}" ${https ? '' : 'disabled'}>${esc(t('functies.aan'))}</button><button type="button" data-hier="uit" aria-pressed="${!hier}">${esc(t('functies.uit'))}</button></div>
-    ${https ? `<p class="mini">${esc(t('functies.luister.tablet'))}</p>` : `<p class="uitleg" style="color: var(--zon-t)">${esc(t('functies.luister.https'))}</p>`}
-    <p class="mini">${esc(t('functies.luister.privacy'))}</p>`;
+    ${https ? `<p class="mini">${esc(t('functies.luister.tablet'))}</p>` : `<p class="uitleg" style="color: var(--zon-t)">${esc(t('functies.luister.https'))}</p>`}`;
 }
 
 function weer() {
@@ -417,7 +427,7 @@ const NAAST = {
   scherm: ['functies.naast.scherm', 3],
   aod: ['functies.zoWerkt', 3],
   uit: ['functies.zoWerkt', 3],
-  praten: ['functies.zoWerkt', 4],
+  praten: ['functies.zoWerkt', 6],
   meldingen: ['functies.zoWerkt', 3],
   weer: ['functies.naast.weer', 3],
 };
@@ -557,6 +567,8 @@ document.addEventListener('click', (e) => {
       proef = null;
     } else if (s === 'pratenBedienen') concept.praten.bedienen = w;
     else if (s === 'spraak') concept.praten.spraak = w;
+    else if (s === 'stemBron') concept.praten.stem = w;
+    else if (s === 'stemVerstaan') concept.praten.verstaan = w;
     else if (s === 'seconden') concept.deurbel.seconden = w;
     else if (s === 'drempelBatterij') concept.meldingen.batterij = w;
     else if (s === 'drempelFilter') concept.meldingen.filter = w;

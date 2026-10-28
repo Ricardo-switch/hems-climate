@@ -45,10 +45,13 @@ const READ_COMMANDS: ReadonlySet<string> = new Set([
   'config_entries/get',
   // Wanneer de camera's het laatst beweging zagen (besluit 201): de historie van hun melders.
   'history/history_during_period',
+  // Helemaal in huis (besluit 203): welke add-ons Home Assistant vond, en welke wekwoorden er zijn.
+  'config_entries/flow/progress',
+  'wake_word/info',
 ]);
 
 /** Alleen deze leesopdrachten krijgen velden mee; de rest gaat zonder. */
-const READ_WITH_FIELDS: ReadonlySet<string> = new Set(['recorder/list_statistic_ids', 'recorder/statistics_during_period', 'tts/engine/voices', 'update/release_notes', 'manifest/get', 'config_entries/get', 'history/history_during_period']);
+const READ_WITH_FIELDS: ReadonlySet<string> = new Set(['recorder/list_statistic_ids', 'recorder/statistics_during_period', 'tts/engine/voices', 'update/release_notes', 'manifest/get', 'config_entries/get', 'history/history_during_period', 'wake_word/info']);
 
 /**
  * Zo lang wacht een vraag aan Home Assistant op antwoord, en een nieuwe
