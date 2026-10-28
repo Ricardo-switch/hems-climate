@@ -1878,6 +1878,7 @@
   'functies.deel.vast': 'vaste zinnen',
   'functies.deel.praten': 'Praten met je huis',
   'functies.deel.weergave': 'Weergave',
+  'functies.deel.gevorderd': 'Gevorderd',
   'functies.deel.volledig': 'volledig scherm',
   'functies.deel.zijbalk': 'met de zijbalk',
   'functies.deel.aodAan': 'aan, na {n} min',

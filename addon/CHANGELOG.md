@@ -10,6 +10,16 @@
 - Helemaal in huis: Inrichten zet Whisper, Piper en openWakeWord op een rij, en één knop maakt de spraakassistent
 - Inrichten heeft een stap Hoe praat je huis?, en Functies › Praten de keuze waar de stem vandaan komt
 
+**Beter**
+
+- Op je startscherm staat bij Functies onder Gevorderd: de app van Home Assistant is de gewone weg
+
+**Opgelost**
+
+- Op de telefoon kun je bij een kamer vanuit elke etage naar elke andere; de lucht van het huis lag over de knoppen
+- Bij sluipverbruik op de telefoon staat het hele getal op de as, ook boven de 1.000 W
+- Inrichten op de telefoon: geen welkom meer onder elke stap, en Terug, Later en Volgende blijven onderin
+
 *English*
 
 **New**
@@ -17,6 +27,16 @@
 - Talking works right away with the voice of your phone or tablet: it reads aloud and understands you through the browser, with nothing to install
 - Entirely at home: Set up lists Whisper, Piper and openWakeWord, and one button makes the voice assistant
 - Set up has a step How does your house talk?, and Features › Talking the choice where the voice comes from
+
+**Improved**
+
+- On your home screen is now under Advanced in Features: the Home Assistant app is the usual way
+
+**Fixed**
+
+- On the phone you can go from every floor to every other floor in a room; the sky of the house lay over the buttons
+- Standby use on the phone shows the whole number on the axis, also above 1,000 W
+- Set up on the phone: no welcome below every step any more, and Back, Later and Next stay at the bottom
 
 ## 0.74.0
 

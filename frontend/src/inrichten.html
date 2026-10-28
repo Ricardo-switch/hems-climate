@@ -402,7 +402,8 @@
   #wand .wk-zoekt i { width: 8px; height: 8px; border-radius: 50%; background: var(--mint); animation: wk-puls 1.6s infinite; }
   #wand .wk-zoekt.klaar i { animation: none; }
   @keyframes wk-puls { 0% { box-shadow: 0 0 0 0 rgba(110, 231, 183, 0.6); } 70% { box-shadow: 0 0 0 9px rgba(110, 231, 183, 0); } 100% { box-shadow: 0 0 0 0 rgba(110, 231, 183, 0); } }
-  #tel .welkom-groot { position: relative; min-height: 100dvh; display: flex; flex-direction: column; }
+  /* Alleen bij het welkom (28 oktober 2026): zonder body.inr-groot stond het op de telefoon onder elke stap. */
+  body.inr-groot #tel .welkom-groot { position: relative; min-height: 100dvh; display: flex; flex-direction: column; }
   #tel .wk-merk { position: absolute; left: 22px; top: 20px; z-index: 1; font-size: 16px; gap: 10px; }
   #tel .wk-merk i { width: 28px; height: 28px; border-radius: 9px; }
   #tel .wk-podium { height: 300px; flex: none; margin: 18px -10px 0; }
@@ -431,7 +432,9 @@
    * De telefoon (schets Tel-Inrichten-3): bovenin het hoofdstuk en hoe ver je
    * bent, het huis klein, dan de vraag; Terug, Later en Volgende vast onderaan.
    */
-  #tel .inhoud { padding: 14px 0 0; display: flex; flex-direction: column; }
+  /* Het scherm vol, zodat Terug, Later en Volgende bij elke stap onderin staan (28 oktober 2026). */
+  #tel .inhoud { padding: 14px 0 0; display: flex; flex-direction: column; min-height: 100dvh; }
+  #tel .inhoud > .kaart { flex: 1 0 auto; }
   #tel .kop3 { display: flex; align-items: center; gap: 12px; padding: 4px 18px 6px; }
   #tel .kop3 .logo { flex: none; width: 30px; height: 30px; border-radius: 10px; background: conic-gradient(from 200deg, #ff7a4d, #f7b548, #6ee7b7, #6fd3ff, #8f86ff, #ff7a4d); }
   #tel .telwaar { flex: 1; min-width: 0; }
@@ -449,7 +452,7 @@
   #tel .kaart h1 { font-size: 27px !important; line-height: 1.1 !important; }
   #tel .kaart .uitleg { font-size: 14.5px; }
   /* Onderaan vast in beeld, over de hele breedte: de knoppen blijven staan terwijl de vraag schuift. */
-  #tel .kaart > .voet { position: sticky; bottom: 0; z-index: 5; margin: 0 -18px; padding: 22px 18px calc(18px + env(safe-area-inset-bottom)); background: linear-gradient(180deg, transparent, rgb(var(--nacht) / 0.96) 34%); }
+  #tel .kaart > .voet { position: sticky; bottom: 0; z-index: 5; margin: auto -18px 0; padding: 22px 18px calc(18px + env(safe-area-inset-bottom)); background: linear-gradient(180deg, transparent, rgb(var(--nacht) / 0.96) 34%); }
   /* Op de telefoon schuift de pagina, niet de lijst: een eigen schuifvak hield de vinger vast. */
   #tel .rijen { overflow: visible; overscroll-behavior: auto; }
   #tel .rij { grid-template-columns: 1fr; gap: 6px; }

@@ -450,9 +450,12 @@ function delen() {
     // Weergave (besluit 167): dit scherm, het always-on display en wanneer het scherm uitgaat.
     { kop: t('functies.deel.weergave') },
     ...(app.inHA() ? [{ id: 'scherm', titel: t('functies.ditScherm'), zin: t(app.volledigGekozen() ? 'functies.deel.volledig' : 'functies.deel.zijbalk'), stand: 'goed' }] : []),
-    { id: 'startscherm', titel: t('functies.st.kop'), zin: startschermZin(), stand: app.geinstalleerd() ? 'goed' : 'leeg' },
     { id: 'aod', titel: t('functies.aod.kop'), zin: n.rustMin > 0 ? t('functies.deel.aodAan', { n: n.rustMin }) : t('functies.deel.uit'), stand: 'goed' },
     { id: 'uit', titel: t('functies.uit.kop'), zin: n.nacht ? `${n.van}–${n.tot}` : t(n.weg ? 'functies.deel.niemand' : 'functies.deel.nooit'), stand: 'goed' },
+    // Gevorderd (28 oktober 2026): de app los op je startscherm kan alleen via de eigen poort
+    // in Tailscale, en dat is voor de meeste mensen te moeilijk. De app van Home Assistant is de weg.
+    { kop: t('functies.deel.gevorderd') },
+    { id: 'startscherm', titel: t('functies.st.kop'), zin: startschermZin(), stand: app.geinstalleerd() ? 'goed' : 'leeg' },
   ];
 }
 

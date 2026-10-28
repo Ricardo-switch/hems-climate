@@ -961,6 +961,61 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await context.close();
   }, 30_000);
 
+  /*
+   * Inrichten op de telefoon, staand (28 oktober 2026): geen welkom onder de
+   * stap, en Terug, Later en Volgende bij elke stap onderin, kort of lang.
+   */
+  it('houdt op de telefoon bij elke stap van Inrichten de knoppen onderin, zonder welkom eronder', async () => {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, timezoneId: 'UTC', locale: 'nl-NL', hasTouch: true, isMobile: true });
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    for (const stap of ['woning', 'stem', 'warmte', 'ha', 'functies']) {
+      await p.goto(`${baseUrl}/inrichten.html#${stap}`);
+      const kaart = p.locator('#tel [data-kaart]');
+      await kaart.locator('h1').waitFor({ timeout: 10_000 });
+      await kaart.locator('.voet [data-volgende], .voet .knop').first().waitFor();
+      expect(await p.locator('#tel [data-welkom]').isVisible(), stap).toBe(false);
+      // Als de stap klaar is met opbouwen (de gegevens komen na de eerste tekening).
+      await expect.poll(() => kaart.locator('.voet').evaluate((v) => Math.round(v.getBoundingClientRect().bottom)), { message: stap, timeout: 5_000 }).toBeGreaterThanOrEqual(842);
+      expect(await kaart.locator('.voet').evaluate((v) => Math.round(v.getBoundingClientRect().bottom)), stap).toBeLessThanOrEqual(846);
+    }
+    expect(fouten).toEqual([]);
+    await context.close();
+  }, 60_000);
+
+  /*
+   * Etages op de telefoon (28 oktober 2026): vanuit elke etage naar elke andere.
+   * Vanaf Buiten kon het naar de eerste verdieping, vanuit de rest niet.
+   */
+  it('wisselt op de telefoon vanuit elke etage naar elke andere', async () => {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, timezoneId: 'UTC', locale: 'nl-NL', hasTouch: true, isMobile: true });
+    await context.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    const huis = (await (await fetch(`${baseUrl}/api/huis`)).json()) as HouseReport;
+    const etages = huis.etages.filter((e) => e.ruimtes.length);
+    expect(etages.length).toBeGreaterThanOrEqual(3);
+    await p.goto(`${baseUrl}/kamer.html#${encodeURIComponent(etages[0]!.ruimtes[0]!.id)}`);
+    const rij = p.locator('#tel [data-etages]');
+    await rij.locator('button').first().waitFor({ timeout: 10_000 });
+    for (const van of etages) {
+      for (const naar of etages) {
+        if (naar.id === van.id) continue;
+        await rij.locator(`[data-etage="${naar.id}"]`).tap({ timeout: 3_000 });
+        await expect.poll(() => rij.locator(`[data-etage="${naar.id}"]`).getAttribute('aria-pressed'), { timeout: 3_000 }).toBe('true');
+        await rij.locator(`[data-etage="${van.id}"]`).tap({ timeout: 3_000 });
+        await expect.poll(() => rij.locator(`[data-etage="${van.id}"]`).getAttribute('aria-pressed'), { timeout: 3_000 }).toBe('true');
+      }
+    }
+    expect(fouten).toEqual([]);
+    await context.close();
+  }, 60_000);
+
   /* Sensoren in de kamer (15 oktober 2026): wat ze meten, hun batterij, en beweging nu. */
   it('toont de bewegingsmelder in de kamer, met beweging nu', async () => {
     const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
@@ -1969,6 +2024,19 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await p.reload();
     await p.locator('#tel h1', { hasText: 'gebruikt je huis' }).waitFor({ timeout: 10_000 });
     expect(await p.evaluate<boolean>('document.documentElement.scrollWidth <= innerWidth + 1')).toBe(true);
+    // Een nacht boven de 1.000 W (28 oktober 2026): het hele getal op de as, ook de eerste cijfer.
+    await context.route(`${baseUrl}/api/sluipverbruik`, async (route) => {
+      const r = await route.fetch();
+      const j = (await r.json()) as { nachten: { w: number; hoog: boolean }[] };
+      j.nachten[j.nachten.length - 1]!.w = 1250;
+      j.nachten[j.nachten.length - 1]!.hoog = true;
+      await route.fulfill({ response: r, json: j });
+    });
+    await p.reload();
+    const as = p.locator('#tel svg text[text-anchor="end"]', { hasText: '1.200' });
+    await as.first().waitFor({ timeout: 10_000 });
+    expect(await as.first().evaluate((x) => (x as unknown as { getBBox(): { x: number } }).getBBox().x)).toBeGreaterThanOrEqual(0);
+    if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-sluip-tel.png') });
     expect(fouten).toEqual([]);
     await context.close();
   }, 30_000);

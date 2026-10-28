@@ -1873,6 +1873,7 @@
   'functies.deel.vast': 'fixed sentences',
   'functies.deel.praten': 'Talking to your house',
   'functies.deel.weergave': 'Layout',
+  'functies.deel.gevorderd': 'Advanced',
   'functies.deel.volledig': 'full screen',
   'functies.deel.zijbalk': 'with the sidebar',
   'functies.deel.aodAan': 'on, after {n} min',

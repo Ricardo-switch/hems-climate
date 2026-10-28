@@ -9318,6 +9318,13 @@ hij manager en zakt zijn veiligheidsscore; voor "helemaal in huis" opent een
 knop de pagina van de add-on, dat komt in 0.75.0); herstarten zonder te vragen;
 een eigen app in de Play Store (later, als de rest staat).
 
+*Aanvulling (28 oktober 2026, versie 0.75.0):* de app los op je startscherm
+(via de eigen poort in Tailscale, besluit 160) blijft te moeilijk voor de
+meeste mensen. Functies › Op je startscherm staat daarom onder een nieuw
+kopje **Gevorderd**; de gewone weg is de app van Home Assistant, met volledig
+scherm. Dat een add-on de startpagina van die app wordt, kan in Home
+Assistant niet; de app kan wel de laatst geopende pagina onthouden.
+
 ---
 
 ## 203. De stem: van het apparaat zelf, of helemaal in huis
