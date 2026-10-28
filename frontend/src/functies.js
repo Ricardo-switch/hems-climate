@@ -470,12 +470,28 @@ function tekenNu() {
   if (!info || !concept) return;
   const nu = groep.tekenDelen(delen());
   const vorm = { cameras, deurbel, licht, weer, praten, meldingen, scherm, startscherm: startschermVorm, aod, uit: schermUit }[nu]?.() ?? '';
-  $$('[data-vorm]').forEach((el) => (el.innerHTML = vorm));
+  // Terug naar standaard (besluit 204): rechtsboven, alleen als dit deel afwijkt van wat de app voorstelt.
+  const terug = afwijkend(nu) ? `<button type="button" class="knop stdknop" data-standaard-deel="${esc(nu)}">${esc(t('functies.std'))}</button>` : '';
+  $$('[data-vorm]').forEach((el) => {
+    el.innerHTML = terug + vorm;
+    el.classList.toggle('metstd', !!terug);
+  });
   const deel = NAAST[nu] ? nu : 'cameras';
   const [kopje, aantal] = NAAST[deel];
   const lijst = Array.from({ length: aantal }, (_, i) => t(`functies.naast.${deel}.${i + 1}`));
   $$('[data-naast]').forEach((el) => (el.innerHTML = `<div class="glas"><h3>${esc(t(kopje))}</h3><ul>${lijst.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>`));
 }
+/** Welke instellingen bij een deel horen (besluit 204), om ze terug te zetten naar het voorstel. */
+const STANDAARD_DEEL = { cameras: ['cameras'], deurbel: ['deurbel'], licht: ['licht', 'schermen'], weer: ['weer'], meldingen: ['meldingen'], praten: ['praten'] };
+function afwijkend(deel) {
+  const sleutels = STANDAARD_DEEL[deel];
+  return !!sleutels && sleutels.some((s) => info.voorstel?.[s] != null && JSON.stringify(concept[s]) !== JSON.stringify({ ...info.voorstel[s], ...vulAan(s, concept[s], info.voorstel[s]) }));
+}
+/** Velden die het voorstel niet noemt maar het concept wel (zoals een lege lijst): die tellen niet als afwijking. */
+function vulAan(s, nu, voorstel) {
+  return Object.fromEntries(Object.keys(nu ?? {}).filter((k) => !(k in voorstel)).map((k) => [k, nu[k]]));
+}
+
 function bewaar() {
   groep.bewaarStraks(async () => {
     const uit = await groep.stuur('api/functies', concept);
@@ -495,6 +511,13 @@ document.addEventListener('click', (e) => {
       teken();
       if (ja) groep.zegBewaard('ok', t('functies.gezet'));
     });
+    return;
+  }
+  // Terug naar standaard (besluit 204): dit deel weer zoals de app het voorstelt.
+  if (knop.dataset.standaardDeel) {
+    for (const s of STANDAARD_DEEL[knop.dataset.standaardDeel] ?? []) if (info.voorstel?.[s] != null) concept[s] = JSON.parse(JSON.stringify(info.voorstel[s]));
+    teken();
+    bewaar();
     return;
   }
   if (knop.dataset.kopieerAdres) {

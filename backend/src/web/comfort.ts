@@ -18,6 +18,7 @@ import { join } from 'node:path';
 
 import type { SiteConfig } from '../core/model.js';
 import { zonePriorityFor } from '../core/voorrang.js';
+import { STANDAARD_DAGDELEN, STANDAARD_KOEL, STANDAARD_PLAFOND_BOVEN, STANDAARD_WARM } from '../config/standaard.js';
 
 export const COMFORT_FILE = 'comfort.json';
 
@@ -101,6 +102,12 @@ export interface ComfortRoomView {
   readonly opZon: { readonly verwarmen: boolean; readonly koelen: boolean };
   /** Of het hoofdapparaat zelf koelt, van het net; anders koelt het van het net pas boven nooit warmer dan. */
   readonly koeltVanNet: boolean;
+  /**
+   * Wat de apparaten in de kamer kunnen (28 oktober 2026): van de laagste tot
+   * de hoogste stand, voor verwarmen en koelen apart; null als niets het kan.
+   * Een doel daarbuiten weigert de dienst, dus de app blijft erbinnen.
+   */
+  readonly haalbaar: { readonly verwarmen: readonly [number, number] | null; readonly koelen: readonly [number, number] | null };
 }
 
 /** Wiens comfort het is (besluit 147), en of je het mag aanpassen. */
@@ -126,6 +133,17 @@ export interface ComfortView {
   readonly apparatenOpZon: readonly { readonly id: string; readonly naam: string }[];
   readonly dagdelen: { readonly voorverwarmen: number; readonly dag: number; readonly nacht: number };
   readonly bereik: typeof COMFORT_RANGE;
+  /** De standaard voor een nieuw huis (besluit 204), voor "terug naar standaard" en een nieuw doel. */
+  readonly standaard: typeof STANDAARD_VIEW;
+}
+
+/** De standaard zoals de app hem krijgt (besluit 204). */
+const STANDAARD_VIEW = { warm: STANDAARD_WARM, koel: STANDAARD_KOEL, dagdelen: STANDAARD_DAGDELEN, plafondBoven: STANDAARD_PLAFOND_BOVEN } as const;
+
+/** Van de laagste tot de hoogste stand die een van deze apparaten kan, of null zonder apparaat. */
+function haalbaarVan(devices: readonly { readonly capabilities: { readonly setpointRange: readonly [number, number] } }[]): [number, number] | null {
+  if (!devices.length) return null;
+  return [Math.min(...devices.map((a) => a.capabilities.setpointRange[0])), Math.max(...devices.map((a) => a.capabilities.setpointRange[1]))];
 }
 
 /** Wat er nu geldt: de configuratie zoals de dienst hem gebruikt, met wat de app zette. */
@@ -149,6 +167,7 @@ export function comfortView(config: SiteConfig, comfort: Comfort | null): Comfor
         koelen: devices.some((a) => a.capabilities.canCool && (a.role === 'assist' || a.onSurplus === true)),
       },
       koeltVanNet: devices.some((a) => a.role === 'primary' && a.capabilities.canCool),
+      haalbaar: { verwarmen: haalbaarVan(devices.filter((a) => a.capabilities.canHeat)), koelen: haalbaarVan(devices.filter((a) => a.capabilities.canCool)) },
     };
   });
   const s = config.schedule;
@@ -175,7 +194,7 @@ export function comfortView(config: SiteConfig, comfort: Comfort | null): Comfor
     .sort((a, b) => (a.p < 0 ? Infinity : a.p) - (b.p < 0 ? Infinity : b.p) || a.i - b.i)
     .map((x) => x.z);
   const voorrang = { koelen: opVolgorde('cool', (k) => k.kanKoelen), verwarmen: opVolgorde('heat', (k) => k.kanVerwarmen), zon };
-  return { kamers, voorrang, apparatenOpZon, dagdelen: { voorverwarmen: s.preheatFromHour, dag: s.dayFromHour, nacht: s.nightFromHour }, bereik: COMFORT_RANGE };
+  return { kamers, voorrang, apparatenOpZon, dagdelen: { voorverwarmen: s.preheatFromHour, dag: s.dayFromHour, nacht: s.nightFromHour }, bereik: COMFORT_RANGE, standaard: STANDAARD_VIEW };
 }
 
 /**

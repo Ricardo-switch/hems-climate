@@ -108,6 +108,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [197. Wat elk apparaat kan: de klimaatstap per merk in Inrichten](#197-wat-elk-apparaat-kan-de-klimaatstap-per-merk-in-inrichten)
 - [202. Klaarzetten voor iedereen: de assistent met één knop, volledig scherm, een eigen account voor de wand](#202-klaarzetten-voor-iedereen-de-assistent-met-één-knop-volledig-scherm-een-eigen-account-voor-de-wand)
 - [203. De stem: van het apparaat zelf, of helemaal in huis](#203-de-stem-van-het-apparaat-zelf-of-helemaal-in-huis)
+- [204. De standaard voor een nieuw huis, en terug naar standaard](#204-de-standaard-voor-een-nieuw-huis-en-terug-naar-standaard)
 
 **Meten, data en analyse**
 
@@ -9377,6 +9378,52 @@ verstaan via de browser staat aan, met eerlijke uitleg.
 zijn veiligheidsscore); verstaan via de browser standaard uit (dan werkt praten
 niet meteen); een stem die online praat voor het voorlezen; "Hé huis" in de
 browser zelf (eerst meten of de Tab A7 het aankan).
+
+---
+
+## 204. De standaard voor een nieuw huis, en terug naar standaard
+
+*Onderwerp: configuratie en onboarding · Status: geldig*
+
+Op 28 oktober 2026. De bewoner wilde dat een nieuwe gebruiker niet zijn
+instellingen voorgeschoteld krijgt, en dat je op een paar plekken terug kunt
+naar de standaard. Nagelopen: het bestand van zijn huis (meter, Nest, zekering,
+panelen) zit niet in de add-on; een nieuwe installatie begint leeg en leest wat
+Home Assistant heeft. Wel stonden de standaarden op meer plekken, en net
+verschillend: een nieuwe kamer kreeg voorverwarmen 19°, de basisregels 20°;
+Inrichten liet de dag om 7:00 beginnen, de basisregels om 8:00.
+
+*Besluit:*
+
+- **Eén standaard, zuinig** (`backend/src/config/standaard.ts`): verwarmen tot
+  20° overdag, 16° 's nachts, voorverwarmen 19°, weg 15°, vakantie 12°; koelen
+  vanaf 25°, standaard alleen overdag (weg 27°, vakantie 28° als je het
+  aanzet); "nooit warmer dan" twee graden boven koelen. De dag van 7:00 tot
+  22:00, voorverwarmen vanaf 6:00. De basisregels, een kamer die er via de app
+  bij komt, Inrichten en Comfort lezen hem allemaal hier; `api/comfort` geeft
+  hem mee.
+- **Binnen wat de apparaten kunnen.** Comfort geeft per kamer mee van welke
+  tot welke stand de apparaten kunnen (`haalbaar`). Terug naar standaard en
+  Inrichten blijven daarbinnen: een thermostaat die bij 16° begint, krijgt 16°
+  voor weg. Eerst weigerde de dienst dan het hele comfort.
+- **Terug naar standaard** op vier plekken:
+  - bij een kamer in Comfort, klein in de kopregel, als hij afwijkt;
+  - Comfort › Terug naar standaard: alle kamers en (bij de hoofdgebruiker) de
+    dagdelen, pas na "zeker?";
+  - bij elk onderdeel van Functies dat een voorstel heeft (camera's, deurbel,
+    licht, weer, meldingen, praten), rechtsboven, als het afwijkt;
+  - bij Jij: het uiterlijk (thema, de kleur van je plek, de weergave) en de
+    kaarten op Thuis. Je favorieten blijven staan.
+- **Wat op het eerste huis is afgesteld, blijft**, met uitleg in de code: op
+  zon een graad verder, hulp bij opwarmen na vijf minuten en een halve graad,
+  400 W zonder meter. Redelijk voor een gemiddeld huis.
+- **Een huis met eigen waarden merkt niets**: dit vult alleen aan wat er nog
+  niet is. Het huis van de bewoner heeft zijn tijden en temperaturen in zijn
+  eigen bestand.
+- **Versie 0.76.0.**
+
+*Wat afviel:* de gangbare set (20/17/20/16/12, koelen vanaf 24°); de dag om
+8:00; de waarden van het eerste huis voorzichtiger maken.
 
 ---
 

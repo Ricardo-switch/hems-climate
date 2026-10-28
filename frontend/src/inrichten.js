@@ -1057,13 +1057,16 @@ function meest(lijst, anders) {
  */
 let comfortKeuze = null;
 let ookEigen = false;
+/** De standaard voor een nieuw huis (besluit 204), zoals de dienst hem geeft. */
+const standaard = () => d.comfort?.standaard ?? { warm: { dag: 20, nacht: 16, afwezig: 15, vakantie: 12 }, koel: { dag: 25, nacht: 25, afwezig: 27, vakantie: 28 }, dagdelen: { voorverwarmen: 6, dag: 7, nacht: 22 } };
 function comfortBasis() {
   const kamers = d.comfort?.kamers ?? [];
-  const warm = meest(kamers.filter((k) => k.kanVerwarmen).map((k) => k.modi.dag.heat), 20);
-  const koel = meest(kamers.filter((k) => k.kanKoelen).map((k) => k.modi.dag.cool), 24);
+  const s = standaard();
+  const warm = meest(kamers.filter((k) => k.kanVerwarmen).map((k) => k.modi.dag.heat), s.warm.dag);
+  const koel = meest(kamers.filter((k) => k.kanKoelen).map((k) => k.modi.dag.cool), s.koel.dag);
   const nachtHeat = meest(kamers.filter((k) => k.kanVerwarmen).map((k) => k.modi.nacht.heat), null);
   const nacht = kamers.every((k) => k.modi.nacht.heat == null && k.modi.nacht.cool == null) ? 'uit' : nachtHeat === warm ? 'zelfde' : 'koeler';
-  return { warm, koel: Math.max(koel, warm + 1), nacht, dag: d.comfort?.dagdelen?.dag ?? 7, avond: d.comfort?.dagdelen?.nacht ?? 22 };
+  return { warm, koel: Math.max(koel, warm + 1), nacht, dag: d.comfort?.dagdelen?.dag ?? s.dagdelen.dag, avond: d.comfort?.dagdelen?.nacht ?? s.dagdelen.nacht };
 }
 const comfortNu = () => comfortKeuze ?? comfortBasis();
 /** De kamers die de bewoner zelf anders zette dan de rest. */
@@ -1113,7 +1116,8 @@ let afwezigKeuze = null;
 function afwezigBasis() {
   const kamers = d.comfort?.kamers ?? [];
   const w = (m, s, anders) => meest(kamers.filter((k) => (s === 'heat' ? k.kanVerwarmen : k.kanKoelen)).map((k) => k.modi[m]?.[s]), anders);
-  return { afwezig: { heat: w('afwezig', 'heat', 16), cool: w('afwezig', 'cool', 26) }, vakantie: { heat: w('vakantie', 'heat', 12), cool: w('vakantie', 'cool', 28) } };
+  const s = standaard();
+  return { afwezig: { heat: w('afwezig', 'heat', s.warm.afwezig), cool: w('afwezig', 'cool', s.koel.afwezig) }, vakantie: { heat: w('vakantie', 'heat', s.warm.vakantie), cool: w('vakantie', 'cool', s.koel.vakantie) } };
 }
 function afwezigStap() {
   if (!d.comfort?.kamers?.length) return { waar: waarVan('afwezig'), kop: t('inr.afw.kop'), uitleg: t('inr.comfortLater'), inhoud: '' };
@@ -1134,10 +1138,15 @@ function afwezigStap() {
     inhoud: `<div class="rijen lijst">${rijen.join('')}</div>${tip(t('inr.afw.tip'))}`,
   };
 }
+/** Binnen wat de apparaten van een kamer kunnen (28 oktober 2026): anders weigert de dienst het hele comfort. */
+const haalbaarIn = (k, soort, v) => {
+  const r = k.haalbaar?.[soort === 'heat' ? 'verwarmen' : 'koelen'];
+  return v == null || !r ? v : Math.min(r[1], Math.max(r[0], v));
+};
 async function bewaarAfwezig() {
   const b = afwezigKeuze ?? afwezigBasis();
   const kamers = Object.fromEntries(d.comfort.kamers.map((k) => {
-    const paar = (m) => ({ heat: k.kanVerwarmen ? b[m].heat : null, cool: k.kanKoelen ? b[m].cool : null });
+    const paar = (m) => ({ heat: k.kanVerwarmen ? haalbaarIn(k, 'heat', b[m].heat) : null, cool: k.kanKoelen ? haalbaarIn(k, 'cool', b[m].cool) : null });
     return [k.id, { modi: { ...k.modi, afwezig: paar('afwezig'), vakantie: paar('vakantie') }, nooitWarmerC: k.nooitWarmerC, voorrang: k.voorrang, opZonC: k.opZonC }];
   }));
   const body = { kamers, dagdelen: { ...(d.comfort.dagdelen ?? {}) }, ...(d.comfort.voorrang ? { voorrang: { koelen: d.comfort.voorrang.koelen, verwarmen: d.comfort.voorrang.verwarmen } } : {}) };
@@ -1153,9 +1162,11 @@ async function bewaarComfort() {
   const houd = new Set(ookEigen ? [] : eigenKamers().map((k) => k.id));
   const kamers = Object.fromEntries(d.comfort.kamers.map((k) => {
     if (houd.has(k.id)) return [k.id, { modi: k.modi, nooitWarmerC: k.nooitWarmerC, voorrang: k.voorrang, opZonC: k.opZonC }];
-    const heat = k.kanVerwarmen ? c.warm : null;
-    const cool = k.kanKoelen ? c.koel : null;
-    const nacht = c.nacht === 'uit' ? { heat: null, cool: null } : c.nacht === 'zelfde' ? { heat, cool } : { heat: heat == null ? null : heat - 2, cool: cool == null ? null : Math.max(cool - 2, (heat ?? 0) - 1) };
+    const heat = k.kanVerwarmen ? haalbaarIn(k, 'heat', c.warm) : null;
+    const cool = k.kanKoelen ? haalbaarIn(k, 'cool', c.koel) : null;
+    // 's Nachts koeler: zoveel als de standaard tussen dag en nacht laat (besluit 204: vier graden).
+    const minder = standaard().warm.dag - standaard().warm.nacht;
+    const nacht = c.nacht === 'uit' ? { heat: null, cool: null } : c.nacht === 'zelfde' ? { heat, cool } : { heat: heat == null ? null : haalbaarIn(k, 'heat', heat - minder), cool: cool == null ? null : haalbaarIn(k, 'cool', Math.max(cool - 2, (heat ?? 0) - 1)) };
     return [k.id, { modi: { ...k.modi, dag: { heat, cool }, nacht }, nooitWarmerC: k.nooitWarmerC, voorrang: k.voorrang, opZonC: k.opZonC }];
   }));
   const body = { kamers, dagdelen: { ...(d.comfort.dagdelen ?? {}), dag: c.dag, nacht: c.avond }, ...(d.comfort.voorrang ? { voorrang: { koelen: d.comfort.voorrang.koelen, verwarmen: d.comfort.voorrang.verwarmen } } : {}) };

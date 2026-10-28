@@ -284,9 +284,10 @@ describe('het kleinst mogelijke bestand', () => {
     const c = result.config;
 
     expect(c.id).toBe('installatie');
+    // De standaard voor een nieuw huis (besluit 204): de dag vanaf 7 uur.
     expect(c.schedule).toEqual({
       preheatFromHour: 6,
-      dayFromHour: 8,
+      dayFromHour: 7,
       nightFromHour: 22,
       eveningExtensionLights: [],
     });
@@ -312,8 +313,11 @@ describe('het kleinst mogelijke bestand', () => {
     const result = parse(minimal());
     if (!result.ok) throw new Error(messages(result));
     const sp = result.config.zones[0]!.setpoints;
+    // De standaard voor een nieuw huis (besluit 204): zuinig.
     expect(sp.dag).toEqual({ heat: 20 });
-    expect(sp.nacht).toEqual({ heat: 17 });
+    expect(sp.nacht).toEqual({ heat: 16 });
+    expect(sp.voorverwarmen).toEqual({ heat: 19 });
+    expect(sp.afwezig).toEqual({ heat: 15 });
     expect(sp.vakantie).toEqual({ heat: 12 });
     expect(sp.handmatig).toEqual({});
     for (const mode of Object.values(sp)) {
@@ -328,7 +332,7 @@ describe('het kleinst mogelijke bestand', () => {
     if (!result.ok) throw new Error(messages(result));
     const sp = result.config.zones[0]!.setpoints;
     expect(sp.dag).toEqual({ heat: 21 });
-    expect(sp.nacht).toEqual({ heat: 17 });
+    expect(sp.nacht).toEqual({ heat: 16 });
   });
 
   it('zet pv-surplus uit in plaats van hem stil niets te laten doen', () => {

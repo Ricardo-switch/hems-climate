@@ -23,6 +23,7 @@
 import type { HaEntityState } from '../adapters/homeassistant/client.js';
 import { pointFor } from './meten.js';
 import type { Warmtebron } from './warmte.js';
+import { STANDAARD_KOEL, STANDAARD_WARM } from '../config/standaard.js';
 
 export const ROLLEN = ['houdt', 'zon', 'kijken'] as const;
 export type Rol = (typeof ROLLEN)[number];
@@ -282,12 +283,13 @@ export function withRegeling(
       thermalMass: 'medium',
       hysteresis: { onDelta: 0.3, offDelta: 0.2 },
       buffering: { enabled: opZon, bandC: opZon ? 1 : 0 },
+      // De standaard voor een nieuw huis (besluit 204).
       setpoints: {
-        dag: { ...(warm ? { heat: 20 } : {}), ...(koel ? { cool: 24 } : {}) },
-        nacht: warm ? { heat: 17 } : {},
-        voorverwarmen: warm ? { heat: 19 } : {},
-        afwezig: warm ? { heat: 16 } : {},
-        vakantie: warm ? { heat: 12 } : {},
+        dag: { ...(warm ? { heat: STANDAARD_WARM.dag } : {}), ...(koel ? { cool: STANDAARD_KOEL.dag } : {}) },
+        nacht: warm ? { heat: STANDAARD_WARM.nacht } : {},
+        voorverwarmen: warm ? { heat: STANDAARD_WARM.voorverwarmen } : {},
+        afwezig: warm ? { heat: STANDAARD_WARM.afwezig } : {},
+        vakantie: warm ? { heat: STANDAARD_WARM.vakantie } : {},
         handmatig: {},
       },
     }, actuators));

@@ -22,6 +22,7 @@
 
 import { vindOpslag, type Opslag } from './opslag.js';
 import type { Warmtebron } from './warmte.js';
+import { STANDAARD_DAGDELEN } from '../config/standaard.js';
 import { findCameras } from './camera.js';
 import { melderNaam, rookmelderNu, vindRookmelders, type Gevaar } from './rookmelders.js';
 import type { HaEntityState } from '../adapters/homeassistant/client.js';
@@ -1708,7 +1709,7 @@ export function houseBeforeSetup(registers: HouseRegisters, states: ReadonlyMap<
     actuators: [],
     power: { gridPower: { adapter: 'homeassistant', id: 'sensor.nog_niet_ingericht' }, startSurplusW: 0, stopImportW: 0, resumeSurplusW: 0, stabilisationMinutes: 0 },
     occupancy: [],
-    schedule: { preheatFromHour: 6, dayFromHour: 8, nightFromHour: 22, eveningExtensionLights: [] },
+    schedule: { preheatFromHour: STANDAARD_DAGDELEN.voorverwarmen, dayFromHour: STANDAARD_DAGDELEN.dag, nightFromHour: STANDAARD_DAGDELEN.nacht, eveningExtensionLights: [] },
     enabledStrategies: [],
     criticalInputs: [],
   };

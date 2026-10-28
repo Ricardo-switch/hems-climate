@@ -1381,6 +1381,94 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
    * balk of ergens anders niets. Eerst werd het bolletje onder de vinger
    * vervangen; dan bleef het slepen aan en sprong het naar elke volgende tik.
    */
+  /*
+   * Terug naar standaard (besluit 204): een kamer met één knop, en het hele huis
+   * pas na "zeker?". De standaard is zuinig: 20° overdag, 16° 's nachts.
+   */
+  it('zet een kamer en het hele huis terug naar de standaard (besluit 204)', async () => {
+    const was = comfortNu;
+    const wasConfig = configNu;
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    const shot = async (naam: string) => {
+      if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', `-${naam}.png`) });
+    };
+    try {
+      const zone = exampleSite.zones.find((z) => z.setpoints.dag?.heat != null)!;
+      await p.goto(`${baseUrl}/comfort.html#${zone.id}`);
+      const wand = p.locator('#wand');
+      const knop = wand.locator('[data-standaard-kamer]');
+      await knop.waitFor({ timeout: 10_000 });
+      await shot('std-kamer');
+      await knop.click();
+      await expect.poll(() => comfortNu?.kamers[zone.id]?.modi.nacht?.heat, { timeout: 5_000 }).toBe(16);
+      expect(comfortNu?.kamers[zone.id]?.modi.dag?.heat).toBe(20);
+      expect(comfortNu?.kamers[zone.id]?.modi.afwezig?.heat).toBe(15);
+      await expect.poll(() => knop.count()).toBe(0);
+      // Het hele huis: eerst vragen, dan alles, ook de dagdelen.
+      await p.goto(`${baseUrl}/comfort.html#standaard`);
+      await wand.locator('[data-vorm] h2', { hasText: 'Terug naar standaard' }).waitFor();
+      expect(await wand.locator('[data-vorm]').textContent()).toContain('16°');
+      await wand.locator('[data-standaard-alles="vraag"]').click();
+      await wand.locator('[data-standaard-alles="ja"]').waitFor();
+      await shot('std-zeker');
+      await wand.locator('[data-standaard-alles="ja"]').click();
+      await wand.locator('[data-vorm]', { hasText: 'Alles staat op de standaard.' }).waitFor({ timeout: 5_000 });
+      await expect.poll(() => comfortNu?.dagdelen, { timeout: 5_000 }).toEqual({ voorverwarmen: 6, dag: 7, nacht: 22 });
+      for (const z of exampleSite.zones) expect(comfortNu?.kamers[z.id]?.nooitWarmerC ?? null).toBeNull();
+      // Binnen wat de apparaten kunnen: de badkamerthermostaat begint bij 16°, dus weg wordt daar 16° in plaats van 15°.
+      expect(comfortNu?.kamers['badkamer']?.modi.afwezig?.heat).toBe(16);
+      expect(await p.evaluate<boolean>('document.documentElement.scrollHeight <= innerHeight + 1')).toBe(true);
+      expect(fouten).toEqual([]);
+    } finally {
+      comfortNu = was;
+      configNu = wasConfig;
+      await context.close();
+    }
+  }, 40_000);
+
+  /* Terug naar standaard bij Functies (per onderdeel) en bij Jij (het uiterlijk), besluit 204. */
+  it('zet een onderdeel van Functies en het uiterlijk bij Jij terug naar de standaard (besluit 204)', async () => {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    await p.goto(`${baseUrl}/functies.html#meldingen`);
+    const vk0 = await p.evaluate(`fetch('api/voorkeuren').then((r) => r.json())`) as { tel: { thema: string; kleur: string; weergave: Record<string, boolean> } };
+    const f0 = await p.evaluate(`fetch('api/functies').then((r) => r.json())`) as { instellingen: unknown; voorstel: { meldingen: { batterij: number } } };
+    const post = (pad: string, body: unknown) => p.evaluate(`fetch('${pad}', { method: 'POST', headers: { 'content-type': 'application/json' }, body: ${JSON.stringify(JSON.stringify(body))} }).then((r) => r.status)`);
+    try {
+      const wand = p.locator('#wand');
+      await wand.locator('[data-kies="drempelBatterij"]').first().waitFor({ timeout: 10_000 });
+      // Anders dan het voorstel: dan staat de knop er.
+      await wand.locator('[data-kies="drempelBatterij"][data-waarde="30"]').click();
+      const knop = wand.locator('[data-standaard-deel="meldingen"]');
+      await knop.waitFor();
+      await knop.click();
+      await expect.poll(async () => (await p.evaluate(`fetch('api/functies').then((r) => r.json())`) as { instellingen: { meldingen: { batterij: number } } }).instellingen.meldingen.batterij, { timeout: 5_000 }).toBe(f0.voorstel.meldingen.batterij);
+      await expect.poll(() => knop.count()).toBe(0);
+      // Jij: een ander thema, en terug.
+      expect(await post('api/voorkeuren', { plek: 'tel', thema: 'licht' })).toBe(200);
+      await p.goto(`${baseUrl}/jij.html`);
+      const terug = p.locator('#wand [data-std-uiterlijk], [data-jij] [data-std-uiterlijk]').first();
+      await terug.waitFor({ timeout: 10_000 });
+      await terug.click();
+      await expect.poll(async () => (await p.evaluate(`fetch('api/voorkeuren').then((r) => r.json())`) as { tel: { thema: string } }).tel.thema, { timeout: 5_000 }).toBe('donker');
+      await expect.poll(() => p.locator('[data-std-uiterlijk]').count()).toBe(0);
+      expect(fouten).toEqual([]);
+    } finally {
+      await post('api/voorkeuren', { plek: 'tel', thema: vk0.tel.thema, kleur: vk0.tel.kleur, weergave: vk0.tel.weergave });
+      if (f0.instellingen) await post('api/functies', f0.instellingen);
+      await context.close();
+    }
+  }, 40_000);
+
   it('sleept comfort met een vinger, en een tik ergens anders verandert niets', async () => {
     const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, hasTouch: true, timezoneId: 'UTC', locale: 'nl-NL' });
     await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
@@ -1436,7 +1524,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     const wand = p.locator('#wand');
     await wand.locator('[data-delen] .deel').first().waitFor({ timeout: 10_000 });
     const delen = await wand.locator('[data-delen] .deel b').allTextContents();
-    expect(delen).toEqual([...exampleSite.zones.map((z) => z.name), 'Dagdelen', 'Voorrang', 'Afwezig en vakantie']);
+    expect(delen).toEqual([...exampleSite.zones.map((z) => z.name), 'Dagdelen', 'Voorrang', 'Afwezig en vakantie', 'Terug naar standaard']);
     // De verwarmgreep van overdag een stuk naar rechts.
     const greep = wand.locator('[data-modus="dag"] [data-greep="heat"]');
     const vak = (await wand.locator('[data-modus="dag"] .schaal').boundingBox())!;
@@ -1494,7 +1582,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     expect(await p.evaluate<boolean>('document.scrollingElement.scrollHeight <= innerHeight + 1')).toBe(true);
     if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-voorrang.png') });
     // De dagdelen: overdag een uur later.
-    await wand.locator('[data-delen] .deel', { hasText: 'Dagdelen' }).click();
+    await wand.locator('[data-delen] .deel', { hasText: /^\s*Dagdelen/ }).click();
     await wand.locator('[data-uur="dag:1"]').click();
     await expect.poll(() => configNu.schedule.dayFromHour, { timeout: 5_000 }).toBe(exampleSite.schedule.dayFromHour + 1);
     expect(fouten).toEqual([]);

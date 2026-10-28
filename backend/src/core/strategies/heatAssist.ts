@@ -35,6 +35,11 @@ export interface HeatAssistOptions {
   readonly minShortfallC: number;
 }
 
+/**
+ * Overgenomen van het eerste huis, en bewust zo gelaten als algemene
+ * standaard (besluit 204): vijf minuten en een halve graad is voorzichtig
+ * genoeg voor een huis dat de app nog niet kent.
+ */
 export const HEAT_ASSIST_DEFAULTS: HeatAssistOptions = {
   startDelayMinutes: 5,
   minShortfallC: 0.5,

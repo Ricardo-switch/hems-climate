@@ -250,7 +250,10 @@ verwijzing bestaat.
   licht is te zien in het huis ([129]).
 - **Instellingen** staan in zes groepen met één opbouw, en wat mist staat
   bovenaan; **Comfort** zet je in de app, en de regeling neemt het meteen over;
-  **Wat je huis kan** toont per functie hoe het ervoor staat ([130]).
+  **Wat je huis kan** toont per functie hoe het ervoor staat ([130]). Een nieuw
+  huis begint zuinig (20° overdag, 16° 's nachts, de dag vanaf 7:00), binnen
+  wat de apparaten kunnen, en bij Comfort, Functies en Jij kun je terug naar
+  die standaard ([204]).
 - **Versie 0.9.0**, met wat er nieuw is; elke kamer heet overal zoals in
   Indeling; Comfort heeft een schakelaar per dagdeel; de batterijen zijn altijd
   te zien ([131]).
@@ -673,4 +676,5 @@ verwijzing bestaat.
 [201]: DECISIONS.md#201-de-kaart-cameras-zoveel-cameras-als-je-wilt-met-wat-ze-zien
 [202]: DECISIONS.md#202-klaarzetten-voor-iedereen-de-assistent-met-één-knop-volledig-scherm-een-eigen-account-voor-de-wand
 [203]: DECISIONS.md#203-de-stem-van-het-apparaat-zelf-of-helemaal-in-huis
+[204]: DECISIONS.md#204-de-standaard-voor-een-nieuw-huis-en-terug-naar-standaard
 <!-- links:einde -->
