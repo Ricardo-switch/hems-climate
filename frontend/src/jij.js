@@ -26,6 +26,7 @@ const IK = {
   downloaden: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
   bel: '<path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10 20a2 2 0 0 0 4 0"/>',
   taal: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
+  terug: '<path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3"/><path d="M4 4.5v4h4"/>',
 };
 /** De taal (besluit 185): vanzelf die van je account in Home Assistant, of zelf gekozen. De teksten in kit/teksten.*.js. */
 const TALEN = ['auto', 'nl', 'en'];
@@ -88,6 +89,11 @@ function teken() {
   const kleurNaam = KLEUREN.find(([k]) => k === v.tel.kleur)?.[1] ?? KLEUREN[0][1];
   const themaNaam = THEMAS.find(([x]) => x === v.tel.thema)?.[1] ?? THEMAS[0][1];
   const w = v.tel.weergave;
+  // Terug naar standaard (besluit 204): het thema, de kleur van je plek en de weergave.
+  const std = v.standaard;
+  const uiterlijkAnders = std && (v.tel.thema !== std.thema || v.tel.kleur !== std.kleur || Object.keys(std.weergave).some((k) => w[k] !== std.weergave[k]));
+  const kaartenAnders = std && JSON.stringify(v.tel.kaarten) !== JSON.stringify(std.kaarten);
+  const terug = (data) => `<button type="button" class="rij terugstd" ${data}>${ik('terug')}<b>${esc(t('jij.std'))}</b><small></small><span class="pijl"></span></button>`;
   const uiterlijk = `
     <section class="glas lijst" aria-labelledby="kop-uiterlijk">
       <h2 id="kop-uiterlijk">${esc(t('jij.uiterlijk'))}</h2>
@@ -95,6 +101,7 @@ function teken() {
       ${link('thuis.html#weergave', 'weergave', t('jij.weergave'), t(w.eenvoudig ? 'jij.eenvoudig' : 'jij.uitgebreid'))}
       ${schakel('groteLetters', 'letters', t('jij.letters'), t('jij.lettersZin'), w.groteLetters)}
       ${schakel('minderBeweging', 'beweging', t('jij.beweging'), t('jij.bewegingZin'), w.minderBeweging)}
+      ${uiterlijkAnders ? terug('data-std-uiterlijk') : ''}
     </section>`;
   if (!wie) {
     const zin = t(mij?.soort === 'scherm' ? 'jij.scherm' : 'jij.geenProfiel');
@@ -112,6 +119,7 @@ function teken() {
       <h2 id="kop-thuis">${esc(t('jij.thuis'))}</h2>
       ${link('thuis.html#aanpassen', 'kaarten', t('jij.kaarten'), t('jij.kaartenZin', { n: v.tel.kaarten.length }))}
       ${link('thuis.html#favorieten', 'favorieten', t('jij.favorieten'), t('jij.favorietenZin', { n: v.tel.favorieten.length }))}
+      ${kaartenAnders ? terug('data-std-kaarten') : ''}
       <p class="uitleg">${esc(t('jij.wandUitleg'))}</p>
     </section>
     <section class="glas lijst" aria-labelledby="kop-meldingen">
@@ -243,8 +251,11 @@ function sluitBlad() {
 }
 
 document.addEventListener('click', (e) => {
-  const el = e.target.closest('[data-thema-open], [data-taal-open], [data-blad-dicht], [data-achter], [data-thema], [data-kies-kleur], [data-kies-taal], [data-weergave], [data-melding], [data-proef]');
+  const el = e.target.closest('[data-thema-open], [data-taal-open], [data-blad-dicht], [data-achter], [data-thema], [data-kies-kleur], [data-kies-taal], [data-weergave], [data-melding], [data-proef], [data-std-uiterlijk], [data-std-kaarten]');
   if (!el || !v) return;
+  // Terug naar standaard (besluit 204): het uiterlijk, of de kaarten op Thuis.
+  if (el.matches('[data-std-uiterlijk]')) return void bewaar({ thema: v.standaard.thema, kleur: v.standaard.kleur, weergave: { ...v.standaard.weergave } });
+  if (el.matches('[data-std-kaarten]')) return void bewaar({ kaarten: [...v.standaard.kaarten], breed: [...v.standaard.breed] });
   if (el.matches('[data-melding]')) return void bewaar({ meldingen: { [el.dataset.melding]: el.getAttribute('aria-checked') !== 'true' } });
   if (el.matches('[data-proef]')) return void proefmelding(el);
   if (el.matches('[data-thema-open]')) openBlad();

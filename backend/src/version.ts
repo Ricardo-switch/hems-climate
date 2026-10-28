@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.75.0';
+export const VERSIE = '0.76.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,26 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.76.0',
+    datum: '2026-10-28',
+    nieuw: [
+      'Terug naar standaard: bij een kamer en voor het hele huis in Comfort, bij elk onderdeel van Functies, en bij Jij voor het uiterlijk en de kaarten',
+    ],
+    beter: [
+      'Een nieuw huis begint zuinig: 20° overdag, 16° \'s nachts, weg 15°, koelen vanaf 25°, de dag vanaf 7:00',
+      'Comfort en Inrichten blijven binnen wat de apparaten van een kamer kunnen; eerst werd het hele comfort dan geweigerd',
+    ],
+    en: {
+      nieuw: [
+        'Back to default: for a room and for the whole house in Comfort, for every part of Features, and in You for the look and the cards',
+      ],
+      beter: [
+        'A new house starts economical: 20° during the day, 16° at night, away 15°, cooling from 25°, the day from 7:00',
+        'Comfort and Set up stay within what the devices in a room can do; before, the whole comfort was refused',
+      ],
+    },
+  },
   {
     versie: '0.75.0',
     datum: '2026-10-28',

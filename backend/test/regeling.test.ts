@@ -106,7 +106,7 @@ describe('de regeling per kamer (besluit 138)', () => {
     expect(z['buffering']).toEqual({ enabled: true, bandC: 1 });
     const p = parse(uit.raw);
     expect(p.ok).toBe(true);
-    expect(p.ok && p.config.zones.find((x) => x.id === 'slaapkamer')?.setpoints.dag).toEqual({ heat: 20, cool: 24 });
+    expect(p.ok && p.config.zones.find((x) => x.id === 'slaapkamer')?.setpoints.dag).toEqual({ heat: 20, cool: 25 });
     expect(uit.toegevoegd).toEqual(['Airco slaapkamer doet mee in Slaapkamer', 'Slaapkamer doet mee in de regeling']);
   });
 

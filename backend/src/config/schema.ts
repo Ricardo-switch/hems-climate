@@ -44,6 +44,7 @@ import {
   type ThermalMass,
   type Zone,
 } from '../core/model.js';
+import { STANDAARD_DAGDELEN, STANDAARD_WARM } from './standaard.js';
 
 /** De schemaversie die deze code begrijpt. */
 export const SCHEMA_VERSION = 1;
@@ -352,13 +353,15 @@ function refList(
  * koelen zegt dat zelf.
  *
  * `handmatig` blijft met opzet leeg — daar heeft de bewoner het stuur.
+ *
+ * De getallen zijn de standaard voor een nieuw huis (besluit 204).
  */
 const DEFAULT_SETPOINTS: Readonly<Record<Mode, SetpointPair>> = {
-  dag: { heat: 20 },
-  nacht: { heat: 17 },
-  voorverwarmen: { heat: 20 },
-  afwezig: { heat: 16 },
-  vakantie: { heat: 12 },
+  dag: { heat: STANDAARD_WARM.dag },
+  nacht: { heat: STANDAARD_WARM.nacht },
+  voorverwarmen: { heat: STANDAARD_WARM.voorverwarmen },
+  afwezig: { heat: STANDAARD_WARM.afwezig },
+  vakantie: { heat: STANDAARD_WARM.vakantie },
   handmatig: {},
 };
 
@@ -1150,17 +1153,18 @@ export function parseSiteConfig(
   let schedule: Schedule | null = null;
   const scheduleRaw = blockOf(p, input['schedule'], 'schedule');
   if (scheduleRaw) {
-    const preheatFromHour = numOr(p, scheduleRaw, 'schedule', 'preheatFromHour', 6, {
+    // De standaard voor een nieuw huis (besluit 204): 6, 7 en 22 uur.
+    const preheatFromHour = numOr(p, scheduleRaw, 'schedule', 'preheatFromHour', STANDAARD_DAGDELEN.voorverwarmen, {
       min: 0,
       max: 23,
       integer: true,
     });
-    const dayFromHour = numOr(p, scheduleRaw, 'schedule', 'dayFromHour', 8, {
+    const dayFromHour = numOr(p, scheduleRaw, 'schedule', 'dayFromHour', STANDAARD_DAGDELEN.dag, {
       min: 0,
       max: 23,
       integer: true,
     });
-    const nightFromHour = numOr(p, scheduleRaw, 'schedule', 'nightFromHour', 22, {
+    const nightFromHour = numOr(p, scheduleRaw, 'schedule', 'nightFromHour', STANDAARD_DAGDELEN.nacht, {
       min: 0,
       max: 23,
       integer: true,

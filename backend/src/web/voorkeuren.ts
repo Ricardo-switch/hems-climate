@@ -191,6 +191,8 @@ export interface VoorkeurenView {
   /** Wie kijkt is een scherm, zoals de wand: dat blijft donker, ook met een breed scherm. */
   readonly scherm: boolean;
   readonly maxFavorieten: number;
+  /** De standaard (besluit 204), voor "terug naar standaard" bij Jij: de weergave, het thema, de kleur en de kaarten. */
+  readonly standaard: { readonly weergave: Weergave; readonly thema: Thema; readonly kleur: Kleur; readonly kaarten: readonly KaartId[]; readonly breed: readonly KaartId[] };
 }
 
 export type VoorkeurenResult = { readonly ok: true; readonly view: VoorkeurenView } | { readonly ok: false; readonly status: number; readonly reden: string };
@@ -218,6 +220,11 @@ export interface VoorkeurWie {
 export function kleurVan(b: Bestand, userId: string | null, p: Profielen | undefined): Kleur {
   const gekozen = userId == null ? undefined : b.accounts[userId]?.kleur;
   if (gekozen && (KLEUREN as readonly string[]).includes(gekozen)) return gekozen;
+  return standaardKleur(userId, p);
+}
+
+/** De kleur zonder eigen keuze: die van je plek in het huis (besluit 147), anders lucht. */
+export function standaardKleur(userId: string | null, p: Profielen | undefined): Kleur {
   const plek = userId == null ? -1 : accounts(p).indexOf(userId);
   return plek < 0 ? 'lucht' : KLEUREN[plek % KLEUREN.length]!;
 }
@@ -364,6 +371,7 @@ export function voorkeurenView(b: Bestand, wie: VoorkeurWie): VoorkeurenView {
     kleuren: Object.fromEntries((wie.profielen?.volgorde ?? []).map((x) => [x.id, kleurVan(b, x.account, wie.profielen)])),
     scherm: wie.scherm === true,
     maxFavorieten: MAX_FAVORIETEN,
+    standaard: { weergave: STANDAARD_WEERGAVE, thema: STANDAARD_THEMA, kleur: standaardKleur(wie.userId, wie.profielen), kaarten: STANDAARD_TEL, breed: STANDAARD_BREED },
   };
 }
 

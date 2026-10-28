@@ -30,8 +30,20 @@ const MAX = 30;
 const pct = (c) => ((Math.max(MIN, Math.min(MAX, c)) - MIN) / (MAX - MIN)) * 100;
 const graden = (c) => `${nl(c, Number.isInteger(c) ? 0 : 1)}°`;
 const MODI = ['dag', 'nacht', 'afwezig', 'vakantie'];
-/** Een nieuw doel als je verwarmen of koelen aanzet in een dagdeel. */
-const NIEUW = { heat: { dag: 20, nacht: 17, afwezig: 16, vakantie: 12 }, cool: { dag: 24, nacht: 24, afwezig: 26, vakantie: 28 } };
+/** Een nieuw doel als je verwarmen of koelen aanzet in een dagdeel: de standaard voor een nieuw huis (besluit 204). */
+const nieuw = (soort, m) => (soort === 'heat' ? comfort.standaard.warm : comfort.standaard.koel)[m];
+/** Een kamer op de standaard (besluit 204): verwarmen in elk dagdeel als hij dat kan, koelen alleen overdag. */
+function standaardModi(k) {
+  const s = comfort.standaard;
+  // Binnen wat de apparaten kunnen: een thermostaat die pas bij 16° begint, krijgt 16° voor weg.
+  const binnen = (v, r) => (r ? Math.min(r[1], Math.max(r[0], v)) : v);
+  const warm = (m) => (k.kanVerwarmen ? binnen(s.warm[m], k.haalbaar?.verwarmen) : null);
+  return { dag: { heat: warm('dag'), cool: k.kanKoelen ? binnen(s.koel.dag, k.haalbaar?.koelen) : null }, nacht: { heat: warm('nacht'), cool: null }, afwezig: { heat: warm('afwezig'), cool: null }, vakantie: { heat: warm('vakantie'), cool: null } };
+}
+const opStandaard = (k) => k.nooitWarmerC == null && MODI.every((m) => k.modi[m].heat === standaardModi(k)[m].heat && k.modi[m].cool === standaardModi(k)[m].cool);
+const dagdelenStandaard = () => ['voorverwarmen', 'dag', 'nacht'].every((x) => comfort.dagdelen[x] === comfort.standaard.dagdelen[x]);
+/** Na een tik op "Alles terug": eerst vragen of het zeker is. */
+let allesVragen = false;
 
 async function laadAlles() {
   const [c, s, z] = await Promise.allSettled([haal(deur), haal('api/state'), haal('api/zon')]);
@@ -64,6 +76,8 @@ function delen() {
     ...(vanHetHuis() ? [{ id: 'dagdelen', titel: t('instellingen.dagdelen'), zin: t('comfort.dagdelenZin', { dag: d.dag, nacht: d.nacht }), stand: 'goed' }] : []),
     ...(vanHetHuis() && (comfort.voorrang?.koelen?.length > 1 || comfort.voorrang?.verwarmen?.length > 1 || zonLijst()) ? [{ id: 'voorrang', titel: t('comfort.voorrang'), zin: voorrangZin(), stand: 'goed' }] : []),
     { id: 'afwezig', titel: t('comfort.afwezig'), zin: t('comfort.afwezigZin'), stand: 'goed' },
+    // Terug naar standaard (besluit 204): alle kamers, en bij de hoofdgebruiker ook de dagdelen.
+    { id: 'standaard', titel: t('comfort.std.titel'), zin: comfort.kamers.every(opStandaard) && (!vanHetHuis() || dagdelenStandaard()) ? t('comfort.std.staat') : t('comfort.std.kort'), stand: 'goed' },
   ];
 }
 
@@ -167,10 +181,35 @@ function kamerVorm(k) {
   const banden = ['dag', 'nacht'].map((m) => band(k, m)).join('');
   // Hoe het nu gaat, bovenin het kamervak (besluit 163): daar komt ook wat het huis leerde.
   const kort = state?.bewoner?.kamers?.find((x) => x.zoneId === k.id)?.kort;
-  return `<div class="bovenrij"><h2 class="kop-2">${esc(k.naam)}</h2>${kort ? `<span class="nukort">${esc(kort)}</span>` : ''}${nu != null ? `<span class="nu-temp">${esc(t('thuis.nuKlein'))} <b>${graden(Math.round(nu * 10) / 10)}</b></span>` : ''}</div>
+  // Terug naar standaard (besluit 204), in de kopregel: alleen als de kamer er niet al op staat.
+  const terug = (k.kanVerwarmen || k.kanKoelen) && !opStandaard(k) ? `<button type="button" class="knop stdknop" data-standaard-kamer>${esc(t('comfort.std.kamer'))}</button>` : '';
+  return `<div class="bovenrij"><h2 class="kop-2">${esc(k.naam)}</h2>${kort ? `<span class="nukort">${esc(kort)}</span>` : ''}${terug}${nu != null ? `<span class="nu-temp">${esc(t('thuis.nuKlein'))} <b>${graden(Math.round(nu * 10) / 10)}</b></span>` : ''}</div>
     ${banden}
     ${zonEnNet(k)}
 `;
+}
+
+/** Terug naar standaard voor het hele huis (besluit 204): wat het is, en eerst vragen of het zeker is. */
+function standaardVorm() {
+  const s = comfort.standaard;
+  const warm = comfort.kamers.some((k) => k.kanVerwarmen);
+  const koel = comfort.kamers.some((k) => k.kanKoelen);
+  const regels = [
+    warm ? t('comfort.std.warm', { dag: graden(s.warm.dag), nacht: graden(s.warm.nacht) }) : '',
+    koel ? t('comfort.std.koel', { dag: graden(s.koel.dag) }) : '',
+    warm ? t('comfort.std.weg', { weg: graden(s.warm.afwezig), vakantie: graden(s.warm.vakantie) }) : '',
+    vanHetHuis() ? t('comfort.std.dagdelen', { voor: s.dagdelen.voorverwarmen, dag: s.dagdelen.dag, nacht: s.dagdelen.nacht }) : '',
+  ].filter(Boolean);
+  const al = comfort.kamers.every(opStandaard) && (!vanHetHuis() || dagdelenStandaard());
+  const knop = al
+    ? `<p class="klein" style="margin: 0; color: var(--mint-t)">${esc(t('comfort.std.staat'))}</p>`
+    : allesVragen
+      ? `<p class="klein" style="margin: 0">${esc(t('comfort.std.zeker'))}</p><div style="display: flex; gap: 8px; flex-wrap: wrap"><button type="button" class="knop knop-licht" data-standaard-alles="ja">${esc(t('comfort.std.ja'))}</button><button type="button" class="knop" data-standaard-alles="nee">${esc(t('comfort.std.nee'))}</button></div>`
+      : `<div><button type="button" class="knop" data-standaard-alles="vraag">${esc(t('comfort.std.alles'))}</button></div>`;
+  return `<h2 class="kop-2">${esc(t('comfort.std.titel'))}</h2>
+    <p class="klein" style="margin: 0">${esc(t('comfort.std.uitleg'))}</p>
+    <ul class="klein" style="margin: 0; padding-left: 18px; display: grid; gap: 4px">${regels.map((r) => `<li>${esc(r)}</li>`).join('')}</ul>
+    ${knop}`;
 }
 
 function dagbalk() {
@@ -294,7 +333,7 @@ function tekenNu() {
   tekenWie();
   const nu = groep.tekenDelen(delen());
   const k = comfort.kamers.find((x) => x.id === nu);
-  const vorm = k ? kamerVorm(k) : nu === 'erbij' ? erbijVorm() : nu === 'dagdelen' ? dagdelenVorm() : nu === 'voorrang' ? voorrangVorm() : afwezigVorm();
+  const vorm = k ? kamerVorm(k) : nu === 'erbij' ? erbijVorm() : nu === 'dagdelen' ? dagdelenVorm() : nu === 'voorrang' ? voorrangVorm() : nu === 'standaard' ? standaardVorm() : afwezigVorm();
   $$('[data-vorm]').forEach((el) => (el.innerHTML = vorm));
   $$('[data-naast]').forEach((el) => (el.innerHTML = naast(nu)));
 }
@@ -483,18 +522,38 @@ document.addEventListener('click', (e) => {
     afwezigKamer = knop.dataset.afwezigKamer;
     return teken();
   }
+  // Terug naar standaard (besluit 204): deze kamer, of na "zeker?" alle kamers en de dagdelen.
+  if (knop.hasAttribute('data-standaard-kamer') && k) {
+    k.modi = standaardModi(k);
+    k.nooitWarmerC = null;
+    bewaar();
+    return teken();
+  }
+  if (knop.dataset.standaardAlles) {
+    const wat = knop.dataset.standaardAlles;
+    allesVragen = wat === 'vraag';
+    if (wat === 'ja') {
+      for (const x of comfort.kamers) {
+        x.modi = standaardModi(x);
+        x.nooitWarmerC = null;
+      }
+      if (vanHetHuis()) comfort.dagdelen = { ...comfort.standaard.dagdelen };
+      bewaar();
+    }
+    return teken();
+  }
   if (k && knop.dataset.opzon != null) {
     k.opZonC = Number(knop.dataset.opzon);
   } else if (k && rij && (knop.dataset.aan || knop.dataset.uit)) {
     const m = rij.dataset.modus;
-    if (knop.dataset.aan) zet(k, m, knop.dataset.aan, NIEUW[knop.dataset.aan][m]);
+    if (knop.dataset.aan) zet(k, m, knop.dataset.aan, nieuw(knop.dataset.aan, m));
     else k.modi = { ...k.modi, [m]: { ...k.modi[m], [knop.dataset.uit]: null } };
   } else if (k && knop.dataset.plafond) {
     const v = knop.dataset.plafond;
     const { min, max } = comfort.bereik.plafond;
     if (v === 'geen') k.nooitWarmerC = null;
-    else if (v === 'aan') k.nooitWarmerC = Math.max(min, (k.modi.dag.cool ?? 24) + 2);
-    else k.nooitWarmerC = Math.max(min, Math.min(max, (k.nooitWarmerC ?? 26) + Number(v)));
+    else if (v === 'aan') k.nooitWarmerC = Math.max(min, (k.modi.dag.cool ?? comfort.standaard.koel.dag) + comfort.standaard.plafondBoven);
+    else k.nooitWarmerC = Math.max(min, Math.min(max, (k.nooitWarmerC ?? comfort.standaard.koel.dag + comfort.standaard.plafondBoven) + Number(v)));
   } else if (knop.dataset.schuif) {
     // Een kamer hoger of lager in de lijst (besluit 134).
     const [richting, id, stap] = knop.dataset.schuif.split(':');

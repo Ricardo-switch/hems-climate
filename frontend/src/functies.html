@@ -16,6 +16,10 @@
   /* Functies (besluit 130): camera's, de deurbel, licht en screens, het weer, en praten met je huis (148). */
   .vorm .uitleg { font-size: 13px; color: var(--zacht); margin: 0; line-height: 1.45; }
   .vorm .mini { margin: 0; }
+  /* Terug naar standaard (besluit 204): klein, rechtsboven in het vak. */
+  .vorm { position: relative; }
+  .vorm .stdknop { position: absolute; top: 18px; right: 22px; height: 30px; padding: 0 12px; font-size: 13px; z-index: 1; }
+  .vorm.metstd > h2:first-of-type { padding-right: 200px; }
   #tel .inhoud { padding: 18px 16px 110px; display: flex; flex-direction: column; gap: 14px; }
   /* Praten met je huis (besluit 148): het vaste antwoord naast eigen woorden, en wat er naar buiten gaat. */
   .proef { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }

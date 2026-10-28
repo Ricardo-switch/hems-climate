@@ -84,7 +84,11 @@ export function controleerBronnen(kamer: string, waarde: unknown): { ok: true; b
   return { ok: true, bronnen };
 }
 
-/** Hoe ver een zone mag doorwarmen op zon, boven het doel van verwarmen. */
+/**
+ * Hoe ver een zone mag doorwarmen op zon, boven het doel van verwarmen. Een
+ * graad is ook in het eerste huis de keuze, en als algemene standaard
+ * bewust zo gelaten (besluit 204); per kamer kies je ½, 1 of 2.
+ */
 export const OP_ZON_BAND_C = 1;
 
 /**

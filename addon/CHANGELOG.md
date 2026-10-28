@@ -1,5 +1,29 @@
 # Wat is er nieuw · What is new
 
+## 0.76.0
+
+*28 oktober 2026*
+
+**Nieuw**
+
+- Terug naar standaard: bij een kamer en voor het hele huis in Comfort, bij elk onderdeel van Functies, en bij Jij voor het uiterlijk en de kaarten
+
+**Beter**
+
+- Een nieuw huis begint zuinig: 20° overdag, 16° 's nachts, weg 15°, koelen vanaf 25°, de dag vanaf 7:00
+- Comfort en Inrichten blijven binnen wat de apparaten van een kamer kunnen; eerst werd het hele comfort dan geweigerd
+
+*English*
+
+**New**
+
+- Back to default: for a room and for the whole house in Comfort, for every part of Features, and in You for the look and the cards
+
+**Improved**
+
+- A new house starts economical: 20° during the day, 16° at night, away 15°, cooling from 25°, the day from 7:00
+- Comfort and Set up stay within what the devices in a room can do; before, the whole comfort was refused
+
 ## 0.75.0
 
 *28 oktober 2026*

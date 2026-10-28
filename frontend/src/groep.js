@@ -29,6 +29,8 @@
     verwarming: ['var(--gloed)', '<path d="M12 3c1 3 5 5 5 10a5 5 0 0 1-10 0c0-2.5 1.5-3.5 2-5 1 1 1.5 2 1.5 3 1.5-1.5 1.5-5 1.5-8z"/>'],
     dagdelen: ['var(--ijs)', '<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>'],
     voorrang: ['var(--violet)', '<path d="M4 7h11M4 12h8M4 17h5"/><path d="M18 20V8M15 11l3-3 3 3"/>'],
+    // Terug naar standaard (besluit 204): een pijl die terugdraait.
+    standaard: ['var(--zacht)', '<path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3"/><path d="M4 4.5v4h4"/>'],
     afwezig: ['var(--zon)', '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>'],
     klimaat: ['var(--ijs)', '<rect x="3" y="6" width="18" height="8" rx="2"/><path d="M7 18c0-1.5 1-2 1-3M12 19c0-1.5 1-2 1-3M17 18c0-1.5 1-2 1-3"/>'],
     opzon: ['var(--zon)', '<rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="13" r="4.5"/><path d="M8 6.5h2"/>'],
