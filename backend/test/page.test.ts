@@ -1897,13 +1897,33 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       expect(gemaakt).toBe(1);
       expect(await p.evaluate<boolean>('document.scrollingElement.scrollHeight <= innerHeight + 1')).toBe(true);
       await shot('inhuis-klaar');
-      // Functies › Praten met helemaal in huis: de spraakassistent en Hé huis, en het past op de wand.
+      // Functies › Praten met helemaal in huis, zoals in een echt huis: twee spraakassistenten, één met Hé huis.
+      await context.route(`${baseUrl}/api/functies`, async (route) => {
+        if (route.request().method() !== 'GET') return route.continue();
+        const r = await route.fetch();
+        const j = (await r.json()) as { gevonden: Record<string, unknown> };
+        j.gevonden['spraakassistenten'] = [
+          { id: 'p1', naam: 'Smart Climate', wekwoord: 'he_huis', spraakNaarTekst: true, taal: 'nl', voorkeur: false },
+          { id: 'p2', naam: 'Home Assistant', wekwoord: null, spraakNaarTekst: true, taal: 'nl', voorkeur: true },
+        ];
+        await route.fulfill({ response: r, json: j });
+      });
       await p.goto(`${baseUrl}/functies.html#praten`);
-      await p.locator('#wand [data-vorm] [data-kies="stemBron"]').first().waitFor();
+      await p.locator('#wand [data-vorm] [data-kies="spraak"]').first().waitFor();
       expect(await p.locator('#wand [data-vorm] [data-hier]').count()).toBe(2);
       expect(await p.locator('#wand [data-vorm] [data-kies="stemVerstaan"]').count()).toBe(0);
       await shot('praten-huis');
-      expect(await p.locator('#wand [data-vorm]').evaluate((v) => v.scrollHeight - v.clientHeight)).toBeLessThanOrEqual(2);
+      // Het past, met ruimte over: lettertypes tekenen in de CI iets anders (28 oktober 2026, 8 pixels).
+      const ruimte = await p.locator('#wand [data-vorm]').evaluate((v) => {
+        const proef = v.ownerDocument.createElement('div');
+        proef.style.cssText = 'height: 20px; flex: none';
+        v.append(proef);
+        const over = v.scrollHeight - v.clientHeight;
+        proef.remove();
+        return over;
+      });
+      expect(ruimte).toBeLessThanOrEqual(2);
+      await context.unroute(`${baseUrl}/api/functies`);
       await p.goto(`${baseUrl}/inrichten.html#stem`);
       // Terug naar de standaard, voor de tests hierna.
       await kaart.locator('[data-stembron="apparaat"]').click();
