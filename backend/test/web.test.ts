@@ -1288,6 +1288,7 @@ describe('het huis als navigatie (ONTWERP §4)', () => {
       onvindbaar: [],
       batterijen: [],
       filters: [],
+      toegang: [],
       drempels: { batterij: 10, filter: 10 },
       opslag: { batterij: null, auto: null },
     };
@@ -1357,6 +1358,7 @@ describe('licht bedienen (besluit 97)', () => {
     onvindbaar: [],
     batterijen: [],
     filters: [],
+    toegang: [],
     drempels: { batterij: 10, filter: 10 },
     opslag: { batterij: null, auto: null },
   };

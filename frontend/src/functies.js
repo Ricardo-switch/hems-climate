@@ -148,12 +148,15 @@ function licht() {
 
 /* ------------------------------------------------------------ weergave */
 
-const NIEMAND = { nacht: true, van: '23:00', tot: '07:00', rustMin: 5, aanMin: 5, weg: true, dag: true, avond: true, helderDag: 100, helderAvond: 20, melder: null };
+const NIEMAND = { nacht: true, van: '23:00', tot: '07:00', rustMin: 5, aanMin: 5, weg: true, dag: true, avond: true, helderDag: 75, helderAvond: 25, melder: null };
 const niemandNu = () => ({ ...NIEMAND, ...voorkeur?.wand?.niemand });
 const magWand = () => !!voorkeur?.wand?.magAanpassen;
 const schakel = (aan, data, label, uit = false) => `<button type="button" class="schakelaar" role="switch" aria-checked="${aan}" aria-label="${esc(label)}" ${data} ${uit ? 'disabled' : ''}></button>`;
 const nkKeuzes = (label, attr, opties, huidig, uit = false) => `<div class="keuzes" role="group" aria-label="${esc(label)}">${opties.map(([w, x]) => `<button type="button" data-${attr}="${w}" aria-pressed="${w === huidig}" ${uit ? 'disabled' : ''}>${esc(x)}</button>`).join('')}</div>`;
 const minuten = (lijst) => lijst.map((n) => [n, t('algemeen.minuten', { n })]);
+/** Een schuif voor de helderheid, van 0 tot 100 (besluit 206); het getal ernaast loopt mee. */
+const nkSchuif = (label, attr, waarde, uit = false) =>
+  `<div class="nk-helder"><input class="nk-schuif" type="range" min="0" max="100" step="1" value="${waarde}" data-${attr} aria-label="${esc(label)}" ${uit ? 'disabled' : ''}><b data-nk-pct>${waarde}%</b></div>`;
 const alleenHoofd = () => (magWand() ? '' : `<p class="uitleg" style="color: var(--zon-t)">${esc(t('functies.alleenHoofd'))}</p>`);
 const voorDeWand = () => `<p class="mini">${esc(t('functies.voorDeWand'))}</p>`;
 
@@ -245,9 +248,9 @@ function aod() {
     <div class="${aan ? '' : 'uitgezet'}" data-nk-onder><span class="veldnaam">${esc(t('functies.aod.na'))}</span>${nkKeuzes(t('functies.aod.naLabel'), 'nk-rust', minuten([2, 5, 15]), n.rustMin, !mag || !aan)}</div>
     <div class="${aan ? '' : 'uitgezet'}">
       <div class="regelrij"><div class="l"><b>${esc(t('functies.aod.dagstand'))}</b><span data-nk-dagzin>${esc(t('functies.aod.dagZin', { wanneer: dagZin }))}</span></div>${schakel(n.dag, 'data-nk-dag', t('functies.aod.dagstand'), !mag || !aan || (n.dag && !n.avond))}</div>
-      <div><span class="veldnaam">${esc(t('functies.aod.helderDag'))}</span>${nkKeuzes(t('functies.aod.helderDagLabel'), 'nk-helder-dag', [[50, '50%'], [75, '75%'], [100, '100%']], n.helderDag, !mag)}</div>
+      <div><span class="veldnaam">${esc(t('functies.aod.helderDag'))}</span>${nkSchuif(t('functies.aod.helderDagLabel'), 'nk-helder-dag', n.helderDag, !mag)}</div>
       <div class="regelrij"><div class="l"><b>${esc(t('functies.aod.avondstand'))}</b><span data-nk-avondzin>${esc(t('functies.aod.avondZin', { wanneer: avondZin }))}</span></div>${schakel(n.avond, 'data-nk-avond', t('functies.aod.avondstand'), !mag || !aan || (n.avond && !n.dag))}</div>
-      <div class="${n.avond ? '' : 'uitgezet'}"><span class="veldnaam">${esc(t('functies.aod.helderAvond'))}</span>${nkKeuzes(t('functies.aod.helderAvond'), 'nk-helder-avond', [[10, '10%'], [20, '20%'], [30, '30%'], [50, '50%']], n.helderAvond, !mag || !aan || !n.avond)}</div>
+      <div class="${n.avond ? '' : 'uitgezet'}"><span class="veldnaam">${esc(t('functies.aod.helderAvond'))}</span>${nkSchuif(t('functies.aod.helderAvond'), 'nk-helder-avond', n.helderAvond, !mag || !aan || !n.avond)}</div>
     </div>
     ${n.nacht ? `<p class="mini">${esc(t('functies.aod.daarna', { van: n.van, tot: n.tot }))}</p>` : ''}
     ${alleenHoofd()}${voorDeWand()}
@@ -538,8 +541,6 @@ document.addEventListener('click', (e) => {
   // Dagstand of avondstand uit: de andere neemt het over; de laatste blijft aan (besluit 168).
   if (knop.hasAttribute('data-nk-dag')) return bewaarNiemand({ dag: !n.dag });
   if (knop.hasAttribute('data-nk-avond')) return bewaarNiemand({ avond: !n.avond });
-  if (knop.dataset.nkHelderDag) return bewaarNiemand({ helderDag: Number(knop.dataset.nkHelderDag) });
-  if (knop.dataset.nkHelderAvond) return bewaarNiemand({ helderAvond: Number(knop.dataset.nkHelderAvond) });
 
   if (knop.hasAttribute('data-nk-nacht')) return bewaarNiemand({ nacht: !n.nacht });
   if (knop.hasAttribute('data-nk-weg')) return bewaarNiemand({ weg: !n.weg });
@@ -613,8 +614,16 @@ document.addEventListener('click', (e) => {
   }
 });
 
+// De helderheid: het getal loopt mee met de schuif, bewaard bij loslaten (besluit 206).
+document.addEventListener('input', (e) => {
+  const el = e.target;
+  if (el.matches?.('.nk-schuif')) el.parentElement.querySelector('[data-nk-pct]').textContent = `${el.value}%`;
+});
+
 document.addEventListener('change', (e) => {
   const el = e.target;
+  if (el.matches?.('[data-nk-helder-dag]')) return bewaarNiemand({ helderDag: Math.round(Number(el.value)) });
+  if (el.matches?.('[data-nk-helder-avond]')) return bewaarNiemand({ helderAvond: Math.round(Number(el.value)) });
   if (el.matches?.('[data-nk-melder]')) return bewaarNiemand({ melder: el.value });
   if (el.matches?.('[data-nk-van], [data-nk-tot]') && /^\d\d:\d\d$/.test(el.value)) return bewaarNiemand({ [el.matches('[data-nk-van]') ? 'van' : 'tot']: el.value });
   const veld = e.target.closest('[data-veld]');

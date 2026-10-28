@@ -100,11 +100,30 @@ function huisModel() {
     zon: zon?.dag ? { stand: zon.dag.fractie, hoogte: zon.dag.hoogteDeel, aandeel: Math.min(1, (zonKw * 1000) / Math.max(helder, 1500)), opRechts: huismodel.zonOpRechts(aansluiting?.ligging, aansluiting?.antwoorden?.panelen) ?? undefined, ...opDak } : { aandeel: 0, ...opDak },
     // Het huis zelf, zoals elke pagina het tekent (besluit 191), met de panelen op een ander dak (besluit 187).
     // Geen kompas op Thuis (24 oktober 2026): dat hoort bij Zonnepanelen.
-    ...huismodel.huisDelen(tek, elders),
+    ...gekozenBuiten(huismodel.huisDelen(tek, elders)),
     net: true,
     stromen,
     labels,
   };
+}
+
+/**
+ * Het deel buiten waarvan het blad open is, licht op in het huis (besluit 206):
+ * een zone in de tuin op zijn plek, en de oprit, de garage of een ander deel
+ * met een stippellijn eromheen.
+ */
+function gekozenBuiten(delen) {
+  const k = buitenKeuze;
+  if (!k || k.alles) return delen;
+  const uit = { ...delen };
+  for (const naam of ['oprit', 'tuin', 'terras', 'voortuin', 'garage', 'balkon']) {
+    const deel = uit[naam];
+    if (!deel || deel.id !== k.kamer) continue;
+    const zone = naam === 'tuin' && k.zone ? Object.entries(deel.zones ?? {}).find(([, z]) => z.id === k.zone)?.[0] : null;
+    uit[naam] = zone ? { ...deel, zone } : { ...deel, gekozen: true };
+  }
+  if (uit.tuin && uit.tuin.tuinhuisId === k.kamer) uit.tuin = { ...uit.tuin, tuinhuisGekozen: true };
+  return uit;
 }
 
 /**
@@ -179,6 +198,13 @@ function tekenNu() {
   tekenGeldt();
   tekenOnderhoud();
   if (blad === 'batterij' && $$('[data-weer]').some((x) => !x.hidden)) tekenBatterijen();
+  if (blad === 'buiten' && buitenKeuze && $$('[data-weer]').some((x) => !x.hidden)) tekenBuiten();
+  // De knop Buiten (besluit 206): alleen als er iets buiten is, met hoeveel lampen er branden.
+  const buitenAan = buitenBlad.aantalAan(huisData);
+  $$('[data-alles-buiten]').forEach((k) => {
+    k.hidden = !buitenBlad.heeftBuiten(huisData);
+    k.querySelector('[data-alles-buiten-aantal]').textContent = buitenAan ? String(buitenAan) : '';
+  });
   const wandPodium = document.getElementById('podium-wand');
   if (!app.telStand()) huis.teken(wandPodium, model, { breedte: wandPodium.clientWidth || 860, hoogte: 612, marge: 0.04, schuifX: 10, schuifY: 10, tik: true });
   // Eenvoudig (besluit 164): geen getallen op het huis.
@@ -879,6 +905,8 @@ function tekenWeerknop() {
 
 /** Wat het blad nu toont: het weer of de batterijen (besluit 127). */
 let blad = 'weer';
+/** Welk deel buiten open staat (besluit 206): `{ kamer, zone }`, `{ alles: true }`, of null. */
+let buitenKeuze = null;
 
 /**
  * De batterijen in huis (besluit 127): elk klein apparaat met een batterij, de
@@ -972,7 +1000,34 @@ function openWeer(knop, soort = 'weer') {
 
 function sluitWeer() {
   $$('[data-weer], [data-weer-achter]').forEach((el) => (el.hidden = true));
-  $$('[data-buiten]').forEach((k) => k.setAttribute('aria-expanded', 'false'));
+  $$('[data-buiten], [data-alles-buiten]').forEach((k) => k.setAttribute('aria-expanded', 'false'));
+  // Het deel buiten licht niet meer op.
+  if (buitenKeuze) {
+    buitenKeuze = null;
+    teken();
+  }
+}
+
+/** Het blad van buiten (besluit 206), op de plek van het weer: op de wand naast het huis, op de telefoon onderin. */
+function tekenBuiten() {
+  const inhoud = buitenBlad.html(buitenKeuze, huisData);
+  if (inhoud == null) return void sluitWeer();
+  for (const el of $$('[data-weer]')) {
+    el.setAttribute('aria-label', t('buiten.alles'));
+    el.innerHTML = inhoud;
+    el.querySelector('.sluit').addEventListener('click', sluitWeer);
+  }
+}
+function openBuiten(keuze) {
+  const blad0 = document.getElementById(app.telStand() ? 'weer-tel' : 'weer-wand');
+  blad = 'buiten';
+  buitenKeuze = keuze;
+  tekenBuiten();
+  if (!buitenKeuze) return;
+  blad0.hidden = false;
+  if (blad0.id === 'weer-tel') document.querySelector('[data-weer-achter]').hidden = false;
+  $$('[data-alles-buiten]').forEach((k) => k.setAttribute('aria-expanded', String(!!keuze.alles)));
+  teken();
 }
 
 /* -------------------------------------------------------------- starten */
@@ -1060,7 +1115,8 @@ document.addEventListener('click', (e) => {
 // Tikken naast het blad sluit het ook, net als Escape.
 document.addEventListener('pointerdown', (e) => {
   const open = $$('[data-weer]').some((b) => !b.hidden);
-  if (open && !e.target.closest('[data-weer], [data-buiten], [data-onderhoud]')) sluitWeer();
+  // Een tik op een ander deel buiten opent dat deel, dus niet eerst dicht.
+  if (open && !e.target.closest('[data-weer], [data-buiten], [data-onderhoud], [data-alles-buiten], .podium .sc-tik')) sluitWeer();
 });
 // Op de telefoon: het blad naar beneden vegen.
 const telBlad = document.getElementById('weer-tel');
@@ -1084,10 +1140,29 @@ addEventListener('keydown', (e) => {
 // De rondleiding (besluit 139): de eerste keer vanzelf (rondleiding.js), daarna achter het vraagteken.
 $$('[data-uitleg]').forEach((b) => b.addEventListener('click', () => rondleiding.start()));
 // Een tik op een kamer in het huis opent die kamer.
+// Een deel buiten opent zijn blad, en je blijft op Thuis (besluit 206).
 const openKamer = (e) => {
   const k = e.target.closest('[data-kamer]');
-  if (k) location.href = `kamer.html#${encodeURIComponent(k.dataset.kamer)}`;
+  if (!k) return;
+  if (buitenBlad.isBuiten(huisData, k.dataset.kamer)) openBuiten({ kamer: k.dataset.kamer, zone: k.dataset.zone ?? null });
+  else location.href = `kamer.html#${encodeURIComponent(k.dataset.kamer)}`;
 };
+// In het blad: een lamp, een zone of een deel schakelen, of een ander deel openen.
+document.addEventListener('click', async (e) => {
+  const knop = e.target.closest('[data-weer] [data-bb-open], [data-weer] [data-bb-lamp], [data-weer] [data-bb-zone], [data-weer] [data-bb-kamer], [data-weer] [data-bb-buiten]');
+  if (!knop || blad !== 'buiten') return;
+  const uit = await buitenBlad.tik(knop, huisData, async () => {
+    try {
+      huisData = await haal('api/huis');
+    } catch {
+      // De volgende keer.
+    }
+    teken();
+  });
+  if (uit && uit !== true) openBuiten(uit);
+  else if (uit === true) teken();
+});
+$$('[data-alles-buiten]').forEach((k) => k.addEventListener('click', () => (buitenKeuze?.alles ? sluitWeer() : openBuiten({ alles: true }))));
 for (const podium of [document.getElementById('podium-wand'), document.getElementById('podium-tel')]) {
   podium.addEventListener('click', openKamer);
   podium.addEventListener('keydown', (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), openKamer(e)));

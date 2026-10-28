@@ -30,7 +30,7 @@
   const { nl, esc, haal, telStand } = global.app;
   const t = (k, p) => global.t(k, p);
 
-  const STANDAARD = { nacht: true, van: '23:00', tot: '07:00', rustMin: 5, aanMin: 5, weg: true, dag: true, avond: true, helderDag: 100, helderAvond: 20, melder: null };
+  const STANDAARD = { nacht: true, van: '23:00', tot: '07:00', rustMin: 5, aanMin: 5, weg: true, dag: true, avond: true, helderDag: 75, helderAvond: 25, melder: null };
   /** Pagina's om naar te kijken: daar gaat de wand terug naar Thuis. Wie iets invult, laat hij met rust. */
   const KIJKPAGINAS = /\/(vandaag|apparaten|opbrengst|assistent|kamer)\.html$/;
   const DIRECT = 'sc-niemand-direct';
@@ -114,7 +114,9 @@
    * de pagina wat er was en zette ze dat terug; laadde de wand intussen een
    * andere pagina, dan bleef het scherm de ochtend erna gedimd.
    */
-  const fel = (pct) => Math.max(1, Math.min(255, Math.round((Number(pct) || 100) * 2.55)));
+  // 0 is zo donker als het scherm kan, niet uit (besluit 206): uit is de nacht.
+  const pctVan = (pct, anders) => (Number.isFinite(Number(pct)) && pct !== null && pct !== '' ? Math.max(0, Math.min(100, Number(pct))) : anders);
+  const fel = (pct) => Math.max(1, Math.min(255, Math.round(pctVan(pct, 75) * 2.55)));
   function helderheid(st) {
     if (!scherm) return;
     fully((f) => {
@@ -127,7 +129,7 @@
     });
   }
   /** Zonder Fully Kiosk kan de app het scherm alleen donkerder kleuren: hoe lager, hoe donkerder. */
-  const dimVan = () => (global.fully ? 0 : Math.min(0.6, 0.65 * (1 - (Number(instelling.helderAvond) || 20) / 100)));
+  const dimVan = () => (global.fully ? 0 : Math.min(0.6, 0.65 * (1 - pctVan(instelling.helderAvond, 25) / 100)));
 
   /* ------------------------------------------------------------ tekenen */
 

@@ -89,8 +89,8 @@ const ligging = (() => {
   }
 
   function aanpassen(v, c) {
-    const dichtst = (lijst, x) => lijst.reduce((b, y) => (Math.abs(y[1] - x) < Math.abs(b[1] - x) ? y : b));
-    const helling = dichtst(HELLING, c.hellingDeg);
+    // Een gemeten helling die niet op een knop valt, staat in het vak "anders" (besluit 206).
+    const eigenHelling = !HELLING.some(([, d]) => d === Math.round(c.hellingDeg));
     const gevonden = v.omvormerGevonden;
     const eigenWp = !WP.includes(c.wpPerPaneel);
     const eigenOmvormer = c.omvormerW != null && c.omvormerW !== gevonden;
@@ -105,11 +105,10 @@ const ligging = (() => {
         </div></div>
       ${rij(t('panelen.nok'), `<div class="lig-chips">${['langs', 'haaks'].map((n) => chip(`data-lig-nok="${n}"`, t(`panelen.nok.${n}`), (c.nok ?? 'langs') === n, 'klein')).join('')}</div>`)}
       ${rij(t('panelen.helling'), `<div class="lig-chips">${HELLING.map(([k, d]) => {
-        const hier = helling[1] === d;
-        const graden = hier ? c.hellingDeg : d;
+        const hier = !eigenHelling && Math.round(c.hellingDeg) === d;
         const naam = t(`panelen.dak.${k}`);
-        return chip(`data-lig-helling="${graden}"`, k === 'plat' && !hier ? naam : `${naam} ${graden}°`, hier, 'klein');
-      }).join('')}</div>`)}
+        return chip(`data-lig-helling="${d}"`, k === 'plat' && !hier ? naam : `${naam} ${d}°`, hier, 'klein');
+      }).join('')}${zelf(`data-lig-hellingzelf aria-label="${esc(t('panelen.hellingLabel'))}"`, esc(t('panelen.anders')), eigenHelling ? Math.round(c.hellingDeg) : null, 0, 90, 1, '°')}</div>`)}
       ${rij(t('panelen.perPaneel'), `<div class="lig-chips">${WP.map((w) => chip(`data-lig-wp="${w}"`, `${w} Wp`, w === c.wpPerPaneel, 'klein')).join('')}${zelf(`data-lig-wpzelf aria-label="${esc(t('panelen.wattpiek'))}"`, esc(t('panelen.anders')), eigenWp ? c.wpPerPaneel : null, 50, 1000, 5, 'Wp')}</div>
         ${v.aantal ? `<small class="lig-onder">${esc(t('panelen.samen', { n: v.aantal, wp: c.wpPerPaneel, kwp: kWp(v.aantal * c.wpPerPaneel) }))}</small>` : ''}`)}
       ${rij(t('panelen.omvormer'), `<div class="lig-chips">${gevonden ? chip(`data-lig-omvormer="${gevonden}"`, `✓ ${watt(gevonden)} W`, c.omvormerW === gevonden, 'gevonden klein') : ''}${zelf(`data-lig-omvormerzelf aria-label="${esc(t('panelen.omvormerLabel'))}"`, esc(t('panelen.anders')), eigenOmvormer ? c.omvormerW : null, 100, 100000, 100, 'W')}${chip('data-lig-omvormer="geen"', t('panelen.weetNiet'), c.omvormerW == null, 'klein')}</div>`)}`;
@@ -252,12 +251,13 @@ const ligging = (() => {
     return 'teken';
   }
 
-  /** Een veld op Aanpassen: de fijne richting, een eigen wattpiek of omvormer. */
+  /** Een veld op Aanpassen: de fijne richting, een eigen helling, wattpiek of omvormer. */
   function verander(veld, staat) {
     const c = staat.concept;
     if (!c) return null;
     const n = Math.round(Number(veld.value));
     if (veld.hasAttribute('data-lig-draai')) c.voorgevelDeg = n;
+    else if (veld.hasAttribute('data-lig-hellingzelf') && n >= 0 && n <= 90) c.hellingDeg = n;
     else if (veld.hasAttribute('data-lig-wpzelf') && n >= 50 && n <= 1000) c.wpPerPaneel = n;
     else if (veld.hasAttribute('data-lig-omvormerzelf') && n >= 100 && n <= 100000) c.omvormerW = n;
     else return null;

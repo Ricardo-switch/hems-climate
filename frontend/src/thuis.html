@@ -222,6 +222,32 @@
   .weer .opbrengst i b { position: absolute; inset: 0 auto 0 0; border-radius: 4px; background: var(--zon); }
   .weer .opbrengst span { min-width: 74px; text-align: right; color: var(--tekst); font-weight: 600; }
   .weer .voet { margin: auto 0 0; padding-top: 10px; }
+  /* Buiten (besluit 206, schets Wand-Huis-Ligging): de lampen van een deel, wat er nog meer is, en alles buiten. */
+  .buitenknop { gap: 7px; }
+  .buitenknop svg { flex: none; }
+  .buitenknop b:empty { display: none; }
+  .buitenknop b { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--zon); color: var(--inkt); font-size: 12px; display: inline-grid; place-items: center; }
+  .weer .bb-hoofd { width: 100%; margin: 8px 0 4px; height: 44px; }
+  .weer .bb-sectie { margin: 14px 0 4px; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gedempt); }
+  .weer .bb-lijst { display: flex; flex-direction: column; gap: 6px; }
+  .weer .bb-rij { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 6px 12px 6px 8px; border-radius: 16px; background: rgb(var(--wit) / 0.05); color: inherit; text-decoration: none; border: 0; font: inherit; text-align: left; }
+  .weer .bb-ik { flex: none; width: 38px; height: 38px; border-radius: 12px; background: rgb(var(--wit) / 0.06); display: grid; place-items: center; color: var(--zacht); }
+  .weer .bb-ik svg { width: 20px; height: 20px; }
+  .weer .bb-tekst { flex: 1; min-width: 0; display: flex; flex-direction: column; background: none; border: 0; padding: 0; color: inherit; font: inherit; text-align: left; cursor: default; }
+  .weer button.bb-tekst, .weer .bb-link { cursor: pointer; }
+  .weer .bb-tekst b { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .weer .bb-tekst span { font-size: 12.5px; color: var(--gedempt); }
+  .weer .bb-pijl { flex: none; color: var(--gedempt); width: 18px; height: 18px; }
+  .weer .bb-auto { padding: 12px 14px; border-radius: 16px; background: rgb(var(--wit) / 0.05); display: flex; flex-direction: column; gap: 8px; }
+  .weer .bb-auto.laadt { background: color-mix(in srgb, var(--mint) 12%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--mint) 35%, transparent); }
+  .weer .bb-autokop { display: flex; align-items: center; gap: 12px; }
+  .weer .bb-autokop b { flex: 1; font-size: 15px; }
+  .weer .bb-pct { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .weer .bb-balk { height: 8px; border-radius: 4px; background: rgb(var(--wit) / 0.1); overflow: hidden; }
+  .weer .bb-balk i { display: block; height: 100%; border-radius: 4px; background: var(--mint); }
+  .weer .bb-auto small { font-size: 12.5px; color: var(--zacht); }
+  .weer .bb-voet { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+  .weer .bb-voet .knop { flex: 1; min-width: 0; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   /* Het weer per uur (besluit 128): een strook om opzij te vegen. */
   /* Zijwaarts de uren; omhoog vegen op de uren schuift het blad, niet niets. */
   .weer .uren { display: flex; gap: 4px; overflow-x: auto; overscroll-behavior-x: contain; padding: 2px 0 10px; margin-bottom: 2px; }
@@ -549,6 +575,7 @@
           <a class="pil" href="inrichten.html" data-inrichten hidden style="color: var(--ijs-t); text-decoration: none"><span data-t="thuis.inrichten"></span></a>
           <button type="button" class="wie" data-wie aria-haspopup="dialog" hidden></button>
           <button class="pil weerknop" type="button" data-buiten aria-haspopup="dialog" aria-controls="weer-wand"></button>
+          <button class="pil buitenknop" type="button" data-alles-buiten aria-haspopup="dialog" aria-controls="weer-wand" aria-expanded="false" hidden><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1 2V16h5.2v-.2c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg><span data-t="buiten.knop"></span><b data-alles-buiten-aantal></b></button>
           <button type="button" class="pil" data-modus aria-haspopup="dialog" data-t-aria-label="thuis.modus.kop"></button>
           <span class="pil" style="color: var(--mint-t)" data-fase><span class="stip" style="background: var(--mint)"></span><span data-t="thuis.kijktMee"></span></span>
           <button class="pil potlood" type="button" data-aanpassen data-t-aria-label="thuis.wandAanpassen" data-t-title="thuis.wandAanpassen" hidden><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg></button>
@@ -683,6 +710,7 @@
   <script src="rondleiding.js"></script>
   <script src="eigen.js"></script>
   <script src="niemand.js"></script>
+  <script src="buitenblad.js"></script>
   <script src="thuis.js"></script>
 </body>
 </html>

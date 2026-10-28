@@ -158,11 +158,11 @@
   /** Een deel van een buitenruimte uit zijn naam (besluit 167). */
   function buitenZoneUitNaam(naam) {
     const n = naam ?? '';
-    return /tuinhuis|schuur|huisje|berging|shed/i.test(n) ? 'tuinhuis' : /border|bloem|perk|haag|flower|bed|hedge/i.test(n) ? 'border' : /gazon|gras|lawn/i.test(n) ? 'gazon' : /terras|zithoek|lounge|patio|terrace/i.test(n) ? 'terras' : /moestuin|groente|kas|vegetable|greenhouse/i.test(n) ? 'moestuin' : /vijver|water|pond/i.test(n) ? 'vijver' : /pad|tegel|path/i.test(n) ? 'pad' : /speel|schommel|trampoline|play|swing/i.test(n) ? 'speelplek' : /carport/i.test(n) ? 'carport' : /oprit|driveway/i.test(n) ? 'oprit' : null;
+    return /overstek|luifel|canopy/i.test(n) ? 'overstek' : /tuinhuis|schuur|huisje|berging|shed/i.test(n) ? 'tuinhuis' : /border|bloem|perk|haag|flower|bed|hedge/i.test(n) ? 'border' : /gazon|gras|lawn/i.test(n) ? 'gazon' : /terras|zithoek|lounge|patio|terrace/i.test(n) ? 'terras' : /moestuin|groente|kas|vegetable|greenhouse/i.test(n) ? 'moestuin' : /vijver|water|pond/i.test(n) ? 'vijver' : /pad|tegel|path/i.test(n) ? 'pad' : /speel|schommel|trampoline|play|swing/i.test(n) ? 'speelplek' : /carport/i.test(n) ? 'carport' : /oprit|driveway/i.test(n) ? 'oprit' : null;
   }
   /** Een schuurtje, geen tuinhuis: aan de naam (24 oktober 2026). */
   const SCHUUR = /schuur|berging|shed/i;
-  const heeftHuisje = (r) => (r.zones ?? []).some((z) => (z.soort ?? buitenZoneUitNaam(z.naam)) === 'tuinhuis');
+  const heeftHuisje = (r) => (r.zones ?? []).some((z) => ['tuinhuis', 'overstek'].includes(z.soort ?? buitenZoneUitNaam(z.naam)));
   function soortBuiten(r) {
     if (r.buiten) return { ...r.buiten, tuinhuis: r.buiten.tuinhuis || ((r.buiten.soort === 'tuin' || r.buiten.soort === 'zijtuin') && heeftHuisje(r)) };
     const soort = buitenUitNaam(r.naam) ?? 'tuin';
@@ -195,6 +195,11 @@
       if (b.soort === 'tuinhuis') continue;
       const lampen = (r.apparaten ?? []).filter((a) => a.soort === 'licht');
       const zoneNaam = (a) => (r.zones ?? []).find((z) => z.id === a.zone)?.naam ?? '';
+      // De soort van de zone waar een lamp in hangt (besluit 206): de border, het terras, het overstek.
+      const zoneSoortVan = (a) => {
+        const z = (r.zones ?? []).find((x) => x.id === a.zone);
+        return z ? (z.soort ?? buitenZoneUitNaam(z.naam)) : null;
+      };
       const lampAan = lampen.some((a) => a.aan);
       // Een terras, balkon of voortuin heeft zijn eigen plek (besluit 113); een tweede tuin wordt de voortuin.
       if (b.soort === 'terras') {
@@ -221,8 +226,12 @@
         oprit = { id: r.id, naam: r.naam, auto: b.auto ? {} : null, camera: cam || (r.apparaten ?? []).some((a) => a.soort === 'camera') ? { aan: !!cam?.aan } : null, ...(b.soort === 'carport' ? { carport: true } : {}) };
       } else {
         if (tuin) continue;
-        const huisje = b.tuinhuis || huisjes.length ? [...lampen.filter((a) => /tuinhuis|schuur|berging|huisje/i.test(`${a.id} ${a.naam} ${zoneNaam(a)}`)), ...huisjeLampen] : [];
-        const overstekken = huisje.filter((a) => /overstek|luifel/i.test(a.id + a.naam));
+        const huisje = b.tuinhuis || huisjes.length ? [...lampen.filter((a) => ['tuinhuis', 'overstek'].includes(zoneSoortVan(a)) || /tuinhuis|schuur|berging|huisje/i.test(`${a.id} ${a.naam} ${zoneNaam(a)}`)), ...huisjeLampen] : [];
+        const overstekken = huisje.filter((a) => zoneSoortVan(a) === 'overstek' || /overstek|luifel/i.test(a.id + a.naam));
+        // De lampen in de border en op het terras staan daar in de tekening, elk in zijn kleur (besluit 206).
+        const inZone = (soort) => lampen.filter((a) => !huisje.includes(a) && zoneSoortVan(a) === soort);
+        const border = inZone('border');
+        const terrasLampen = inZone('terras');
         const overstek = overstekken.find((a) => a.aan) ?? overstekken[0];
         const binnenlamp = huisje.find((a) => !overstekken.includes(a));
         const scherm = (r.apparaten ?? []).find((a) => a.soort === 'screen');
@@ -240,7 +249,11 @@
           overstekKleur: overstek ? kleurVanLicht(overstek) : undefined,
           // De twee spots onder het overstek (24 oktober 2026): elk in de kleur van zijn lamp; met één lamp schijnen ze samen.
           overstekLampen: overstekken.slice(0, 2).map((a) => ({ aan: !!a.aan, kleur: kleurVanLicht(a) })),
-          lampen: lampen.filter((a) => !huisje.includes(a)).slice(0, 3).map((a) => ({ aan: a.aan, kleur: kleurVanLicht(a) })),
+          lampen: lampen.filter((a) => !huisje.includes(a) && !border.includes(a) && !terrasLampen.includes(a)).slice(0, 3).map((a) => ({ aan: a.aan, kleur: kleurVanLicht(a) })),
+          borderLampen: border.map((a) => ({ aan: !!a.aan, kleur: kleurVanLicht(a) })),
+          terrasAan: terrasLampen.some((a) => a.aan),
+          // De zones om op te tikken (besluit 206): per soort met een vaste plek de zone uit de indeling.
+          zones: Object.fromEntries((r.zones ?? []).map((z) => [z.soort ?? buitenZoneUitNaam(z.naam), { id: z.id, naam: z.naam }]).filter(([s]) => ['border', 'terras', 'gazon', 'tuinhuis', 'overstek'].includes(s)).reverse()),
           zonnescherm: scherm ? { dicht: scherm.positiePct == null ? 0 : 1 - scherm.positiePct / 100 } : null,
         };
       }
@@ -502,7 +515,7 @@
   /** Wat een buitenruimte is (besluit 167): een eigen lijst, zoals Soort kamer binnen. */
   const BUITEN_SOORTEN = soorten('buiten', ['tuin', 'voortuin', 'zijtuin', 'oprit', 'carport', 'terras', 'balkon', 'dakterras', 'tuinhuis', 'garage']);
   /** De delen van een buitenruimte (besluit 167). Een tuinhuis tekent het huisje in de tuin. */
-  const BUITEN_ZONES = soorten('buitenZone', ['gazon', 'border', 'terras', 'tuinhuis', 'moestuin', 'vijver', 'pad', 'speelplek', 'oprit', 'carport']);
+  const BUITEN_ZONES = soorten('buitenZone', ['gazon', 'border', 'terras', 'tuinhuis', 'overstek', 'moestuin', 'vijver', 'pad', 'speelplek', 'oprit', 'carport']);
   global.huismodel = { KAMER_SOORTEN, ZONE_SOORTEN, BUITEN_SOORTEN, BUITEN_ZONES, buitenUitNaam, buitenZoneUitNaam, thermostaten, cvThermostaat, isKetelKoppeling, ACTIEF,
 
  BUITEN, GANG, kleurVanLicht, zoneNaam, metLidwoord, metHoofdletter, etagesNaast, BRON_NAAM, ELEKTRISCH, bronNaam, opsomming, isElektrischSlim, inKamers, standVan, kortVan, kamerModel, isBuiten, soortBuiten, buiten, rondNu, rondom, OP_OPRIT, rondMet, tekening, huisDelen, panelenOpDak, kompasVan, zonOpRechts, zonNu, groetNamen, groetWie };
