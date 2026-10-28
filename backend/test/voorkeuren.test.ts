@@ -62,7 +62,11 @@ describe('weergave en de wand als niemand kijkt (besluit 164)', () => {
     expect(leesNiemand({ dag: 'ja' }, STANDAARD_NIEMAND).ok).toBe(false);
     // Een vaste helderheid per stand (21 oktober 2026).
     expect(leesNiemand({ helderAvond: 30, helderDag: 75 }, STANDAARD_NIEMAND)).toEqual({ ok: true, niemand: { ...STANDAARD_NIEMAND, helderAvond: 30, helderDag: 75 } });
-    expect(leesNiemand({ helderAvond: 5 }, STANDAARD_NIEMAND).ok).toBe(false);
+    // Een schuif van 0 tot 100 (besluit 206).
+    expect(leesNiemand({ helderAvond: 0, helderDag: 63 }, STANDAARD_NIEMAND)).toEqual({ ok: true, niemand: { ...STANDAARD_NIEMAND, helderAvond: 0, helderDag: 63 } });
+    expect(leesNiemand({ helderAvond: 101 }, STANDAARD_NIEMAND).ok).toBe(false);
+    expect(leesNiemand({ helderAvond: 12.5 }, STANDAARD_NIEMAND).ok).toBe(false);
+    expect(STANDAARD_NIEMAND).toMatchObject({ helderDag: 75, helderAvond: 25 });
     expect(leesNiemand({ helderDag: '100' }, STANDAARD_NIEMAND).ok).toBe(false);
     expect(leesNiemand({ van: '25:00' }, STANDAARD_NIEMAND).ok).toBe(false);
     expect(leesNiemand({ van: '7:00' }, STANDAARD_NIEMAND).ok).toBe(false);

@@ -89,7 +89,8 @@ export type OutsideKind = (typeof OUTSIDE_KINDS)[number];
  * binnen een keuken of zithoek. Een tuinhuis als deel van de tuin tekent het
  * huisje in de tuin.
  */
-export const OUTSIDE_ZONE_TYPES = ['gazon', 'border', 'terras', 'tuinhuis', 'moestuin', 'vijver', 'pad', 'speelplek', 'oprit', 'carport'] as const;
+// Het overstek van het tuinhuis is een eigen zone, met zijn eigen lampen (besluit 206).
+export const OUTSIDE_ZONE_TYPES = ['gazon', 'border', 'terras', 'tuinhuis', 'overstek', 'moestuin', 'vijver', 'pad', 'speelplek', 'oprit', 'carport'] as const;
 export type OutsideZoneType = (typeof OUTSIDE_ZONE_TYPES)[number];
 
 export interface LayoutOutside {

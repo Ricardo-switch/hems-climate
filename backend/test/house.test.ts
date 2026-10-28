@@ -421,6 +421,33 @@ describe('het voorstel uit Home Assistant', () => {
     expect(lampsFor(house, { soort: 'etage', id: 'kelder' })).toBeNull();
   });
 
+  it('geeft de lampen van een zone en van alles buiten (besluit 206)', () => {
+    const buiten = house.etages.find((e) => e.id === 'buiten')!.ruimtes;
+    const buitenLampen = buiten.flatMap((r) => r.apparaten).filter((d) => d.soort === 'licht').map((d) => d.id);
+    expect(buitenLampen).toContain('light.oprit');
+    expect(lampsFor(house, { soort: 'buiten', id: null })).toEqual(buitenLampen);
+    const oprit = buiten.find((r) => r.naam === 'Oprit')!;
+    const metZone = {
+      ...house,
+      etages: house.etages.map((e) => ({ ...e, ruimtes: e.ruimtes.map((r) => (r.id === oprit.id ? { ...r, zones: [{ id: 'poort', naam: 'Bij de poort' }], apparaten: r.apparaten.map((d) => (d.id === 'light.oprit' ? { ...d, zone: 'poort' } : d)) } : r)) })),
+    };
+    expect(lampsFor(metZone, { soort: 'zone', id: `${oprit.id}::poort` })).toEqual(['light.oprit']);
+    expect(lampsFor(metZone, { soort: 'zone', id: `${oprit.id}::vijver` })).toBeNull();
+    expect(lampsFor(metZone, { soort: 'zone', id: 'kelder::poort' })).toBeNull();
+  });
+
+  it('toont een garagedeur alleen om te bekijken, bij zijn ruimte (besluit 206)', () => {
+    const reg = { ...registers, entities: [...registers.entities, { ...registers.entities.find((e) => e.entity_id === 'light.oprit')!, entity_id: 'cover.garagedeur', name: null }] };
+    const st = new Map(states);
+    st.set('cover.garagedeur', { ...states.get('cover.screen')!, entity_id: 'cover.garagedeur', state: 'closed', attributes: { friendly_name: 'Garagedeur', device_class: 'garage' } });
+    const h = buildHouse(config, reg, st, snapshot);
+    const oprit = h.etages.find((e) => e.id === 'buiten')!.ruimtes.find((r) => r.naam === 'Oprit')!;
+    expect(h.toegang).toEqual([{ id: 'cover.garagedeur', naam: 'Garagedeur', open: false, kamerId: oprit.id }]);
+    // Geen scherm, dus geen knop (besluit 148).
+    expect(h.etages.flatMap((e) => e.ruimtes).flatMap((r) => r.apparaten).some((d) => d.id === 'cover.garagedeur')).toBe(false);
+    expect(house.toegang).toEqual([]);
+  });
+
   it('toont een groep met uitgezette lampen als één lamp, ook als Hue ze alleen bij naam noemt', () => {
     const bad = house.etages.find((e) => e.id === 'e1')!.ruimtes.find((r) => r.naam === 'Badkamer')!;
     expect(bad.apparaten.filter((d) => d.soort === 'licht').map((d) => [d.id, d.naam, d.stand])).toEqual([['light.hue_badkamer', 'Badkamer', 'uit']]);

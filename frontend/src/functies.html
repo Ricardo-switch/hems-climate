@@ -38,6 +38,14 @@
   .lichtkamer b { font-size: 14px; }
   .lichtkamer .keuzes button { height: 32px; padding: 0 11px; font-size: 13px; }
   .lichtkamer .keuzes button small { font-weight: 600; opacity: 0.7; }
+  /* De helderheid van de wand (besluit 206): een schuif van donker naar fel. */
+  .nk-helder { display: flex; align-items: center; gap: 12px; }
+  .nk-helder b { min-width: 4.5ch; text-align: right; font-size: 15px; font-variant-numeric: tabular-nums; }
+  .nk-schuif { -webkit-appearance: none; appearance: none; flex: 1; min-width: 0; height: 36px; border-radius: 12px; background: linear-gradient(90deg, rgba(255, 255, 255, 0.06), rgba(255, 236, 200, 0.85)); outline: none; margin: 0; }
+  .nk-schuif::-webkit-slider-thumb { -webkit-appearance: none; width: 30px; height: 30px; border-radius: 10px; background: #fff; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4); cursor: pointer; }
+  .nk-schuif::-moz-range-thumb { width: 30px; height: 30px; border-radius: 10px; background: #fff; border: 0; cursor: pointer; }
+  .nk-schuif:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
+  .nk-schuif:disabled { opacity: 0.45; }
 </style>
 </head>
 <body class="lucht lucht-dag">

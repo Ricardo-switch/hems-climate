@@ -22,7 +22,11 @@
 
 import { lampsFor, type HouseReport } from './house.js';
 
-export type LightTarget = 'lamp' | 'kamer' | 'etage' | 'huis';
+/**
+ * Een zone is `kamer::zone`, zoals de border in de achtertuin; `buiten` is alles
+ * buiten het huis en gaat alleen uit (besluit 206).
+ */
+export type LightTarget = 'lamp' | 'kamer' | 'zone' | 'etage' | 'buiten' | 'huis';
 
 export interface LightRequest {
   readonly doel: LightTarget;
@@ -47,7 +51,7 @@ export type LightResult =
   | { readonly ok: true; readonly lampen: number }
   | { readonly ok: false; readonly status: 400 | 404 | 429 | 502 | 503; readonly reden: string };
 
-const TARGETS: readonly LightTarget[] = ['lamp', 'kamer', 'etage', 'huis'];
+const TARGETS: readonly LightTarget[] = ['lamp', 'kamer', 'zone', 'etage', 'buiten', 'huis'];
 
 /** Toetst een verzoek en geeft alleen de bekende velden terug, of een reden. */
 export function parseLightRequest(body: unknown): { ok: true; request: LightRequest } | { ok: false; reden: string } {
@@ -58,12 +62,16 @@ export function parseLightRequest(body: unknown): { ok: true; request: LightRequ
     return { ok: false, reden: `doel is een van ${TARGETS.join(', ')}` };
   }
   const id = b['id'] ?? null;
-  if (doel === 'huis' ? id !== null : typeof id !== 'string' || id === '' || id.length > 120) {
-    return { ok: false, reden: doel === 'huis' ? 'het huis heeft geen id' : `een ${doel} heeft een id` };
+  const zonderId = doel === 'huis' || doel === 'buiten';
+  if (zonderId ? id !== null : typeof id !== 'string' || id === '' || id.length > 240) {
+    return { ok: false, reden: zonderId ? `${doel === 'huis' ? 'het huis' : 'buiten'} heeft geen id` : `een ${doel} heeft een id` };
   }
+  if (doel === 'zone' && !/^.+::.+$/.test(id as string)) return { ok: false, reden: 'een zone is kamer::zone' };
   const aan = b['aan'];
   if (typeof aan !== 'boolean') return { ok: false, reden: 'aan is waar of onwaar' };
-  if (aan && (doel === 'etage' || doel === 'huis')) return { ok: false, reden: doel === 'huis' ? 'het hele huis gaat alleen uit' : 'een hele etage gaat alleen uit' };
+  if (aan && (doel === 'etage' || doel === 'huis' || doel === 'buiten')) {
+    return { ok: false, reden: doel === 'huis' ? 'het hele huis gaat alleen uit' : doel === 'buiten' ? 'alles buiten gaat alleen uit' : 'een hele etage gaat alleen uit' };
+  }
   const h = b['helderheidPct'] ?? null;
   if (h !== null && (!aan || typeof h !== 'number' || !Number.isInteger(h) || h < 1 || h > 100)) {
     return { ok: false, reden: 'helderheidPct is een geheel getal van 1 tot en met 100, en alleen bij aan' };

@@ -116,17 +116,15 @@ export interface Niemand {
    * iemand de app gebruikt) en in de avondstand. Eerst zette de avondstand
    * de helderheid laag en onthield de pagina wat er was; laadde de wand
    * intussen een andere pagina, dan bleef hij ook de ochtend erna zo laag.
+   * Sinds besluit 206 met een schuif, van 0 tot 100: standaard 75 overdag en
+   * 25 in de avondstand.
    */
-  readonly helderDag: HelderDag;
-  readonly helderAvond: HelderAvond;
+  readonly helderDag: number;
+  readonly helderAvond: number;
   /** De bewegingsmelder die het display aanzet, of null. */
   readonly melder: string | null;
 }
-export const HELDER_DAG = [50, 75, 100] as const;
-export type HelderDag = (typeof HELDER_DAG)[number];
-export const HELDER_AVOND = [10, 20, 30, 50] as const;
-export type HelderAvond = (typeof HELDER_AVOND)[number];
-export const STANDAARD_NIEMAND: Niemand = { nacht: true, van: '23:00', tot: '07:00', rustMin: 5, aanMin: 5, weg: true, dag: true, avond: true, helderDag: 100, helderAvond: 20, melder: null };
+export const STANDAARD_NIEMAND: Niemand = { nacht: true, van: '23:00', tot: '07:00', rustMin: 5, aanMin: 5, weg: true, dag: true, avond: true, helderDag: 75, helderAvond: 25, melder: null };
 
 /** De eigen kleuren (besluit 181), in de volgorde waarin bewoners er een krijgen. Nooit een kleur die iets betekent. */
 export const KLEUREN = ['lucht', 'framboos', 'zeegroen', 'violet', 'koper', 'grafiet'] as const;
@@ -332,10 +330,8 @@ export function leesNiemand(x: unknown, nu: Niemand): { ok: true; niemand: Niema
       if (typeof w !== 'string' || !TIJD.test(w)) return { ok: false, reden: `${k} is een tijd als 23:00` };
     } else if (k === 'rustMin') {
       if (!(RUST_MINUTEN as readonly unknown[]).includes(w)) return { ok: false, reden: `rust overdag is ${RUST_MINUTEN.join(', ')} minuten` };
-    } else if (k === 'helderDag') {
-      if (!(HELDER_DAG as readonly unknown[]).includes(w)) return { ok: false, reden: `helderheid overdag is ${HELDER_DAG.join(', ')} procent` };
-    } else if (k === 'helderAvond') {
-      if (!(HELDER_AVOND as readonly unknown[]).includes(w)) return { ok: false, reden: `helderheid in de avondstand is ${HELDER_AVOND.join(', ')} procent` };
+    } else if (k === 'helderDag' || k === 'helderAvond') {
+      if (!Number.isInteger(w) || (w as number) < 0 || (w as number) > 100) return { ok: false, reden: `${k === 'helderDag' ? 'helderheid overdag' : 'helderheid in de avondstand'} is een geheel getal van 0 tot en met 100 procent` };
     } else if (k === 'melder') {
       if (w !== null && (typeof w !== 'string' || w.length > 160 || !MELDER.test(w))) return { ok: false, reden: 'de melder is een binary_sensor uit Home Assistant' };
     } else return { ok: false, reden: `die keuze bestaat niet: ${k}` };

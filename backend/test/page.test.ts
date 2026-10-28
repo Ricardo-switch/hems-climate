@@ -1132,9 +1132,100 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await naarHuis();
       await p.waitForTimeout(500);
       expect(await svg.locator('text', { hasText: '↑' }).count()).toBe(0);
+      // Ook de stippelboog van Thuis gaat dan weg; de zon zelf blijft.
+      const boog = (uit: boolean) =>
+        p.evaluate(`(() => {
+          document.documentElement.classList.toggle('sc-geen-zonnebaan', ${uit});
+          const el = document.createElement('div');
+          document.body.append(el);
+          huis.teken(el, { tijd: 'dag', etages: [{ naam: 'Begane grond', kamers: [{ id: 'wk', naam: 'Woonkamer', apparaten: [] }] }], zon: { stand: 0.4, aandeel: 0.5 } }, { breedte: 860, hoogte: 612 });
+          const n = el.querySelectorAll('[stroke-dasharray="2 7"]').length;
+          el.remove();
+          return n;
+        })()`);
+      expect(await boog(true)).toBe(0);
+      expect(await boog(false)).toBe(1);
       expect(fouten).toEqual([]);
     } finally {
       await zet(true);
+      await context.close();
+    }
+  }, 40_000);
+
+  it('opent buiten een blad naast het huis: lampen per deel, zones in de tuin en alles buiten uit (besluit 206)', async () => {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, timezoneId: 'Europe/Amsterdam', locale: 'nl-NL' });
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+    await context.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    try {
+      await p.goto(`${baseUrl}/thuis.html`);
+      await p.locator('#wand svg.sc-huis .sc-tik').first().waitFor();
+      const blad = p.locator('#weer-wand');
+      // Een tik op de oprit: het blad, en je blijft op Thuis.
+      await p.locator('#wand .sc-tik[aria-label="Oprit"]').click();
+      await expect.poll(() => blad.isVisible()).toBe(true);
+      expect(await blad.locator('h2').textContent()).toBe('Oprit');
+      expect(new URL(p.url()).pathname).toBe('/thuis.html');
+      // De oprit licht op in het huis, met een stippellijn.
+      await expect.poll(() => p.locator('#wand svg.sc-huis [stroke-dasharray="7 5"]').count()).toBeGreaterThan(0);
+      if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-oprit.png') });
+      // Een lamp schakelen: alleen licht, via dezelfde deur als de knoppen in een kamer.
+      const voor = lightCalls.length;
+      await blad.locator('[data-bb-lamp="light.oprit"]').click();
+      await expect.poll(() => lightCalls.slice(voor)).toEqual([expect.stringMatching(/^turn_(on|off) light\.oprit$/)]);
+      // Alles buiten: per deel, en alles in één keer uit.
+      await blad.locator('[data-bb-open="alles"]').click();
+      await expect.poll(() => blad.locator('h2').textContent()).toBe('Alles buiten');
+      expect(await blad.locator('.bb-sectie').allTextContents()).toEqual(['Voor het huis', 'In de tuin']);
+      if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-buiten.png') });
+      const uit = blad.locator('[data-bb-buiten]');
+      if (await uit.isEnabled()) {
+        const n = lightCalls.length;
+        await uit.click();
+        await expect.poll(() => lightCalls.length).toBe(n + 1);
+        expect(lightCalls.at(-1)).toMatch(/^turn_off .*light\.oprit/);
+      }
+      // De knop Buiten in de kopregel opent en sluit hetzelfde blad.
+      await blad.locator('.sluit').click();
+      await expect.poll(() => blad.isVisible()).toBe(false);
+      await p.locator('#wand [data-alles-buiten]').click();
+      await expect.poll(() => blad.locator('h2').textContent()).toBe('Alles buiten');
+      await p.keyboard.press('Escape');
+      await expect.poll(() => blad.isVisible()).toBe(false);
+
+      // De tuin in zones: de lampen van de border in hun kleur, het overstek bij het tuinhuis, en elke zone om op te tikken.
+      const achtertuin = {
+        id: 'achtertuin',
+        naam: 'Achtertuin',
+        buiten: { soort: 'tuin', auto: false, tuinhuis: true },
+        zones: [{ id: 'b', naam: 'Border', soort: 'border' }, { id: 'o', naam: 'Overstek', soort: 'overstek' }, { id: 't', naam: 'Terras' }],
+        apparaten: [
+          { id: 'light.roos', soort: 'licht', naam: 'Spot roos', aan: true, zone: 'b', licht: { tint: [330, 60] } },
+          { id: 'light.buxus', soort: 'licht', naam: 'Spot buxus', aan: false, zone: 'b' },
+          { id: 'light.overstek', soort: 'licht', naam: 'Spots', aan: true, zone: 'o' },
+          { id: 'light.terras', soort: 'licht', naam: 'Terraslamp', aan: true, zone: 't' },
+        ],
+      };
+      const tuin = (await p.evaluate(`huismodel.buiten([${JSON.stringify(achtertuin)}]).tuin`)) as Record<string, unknown>;
+      expect(tuin['borderLampen']).toEqual([{ aan: true, kleur: 'hsl(330 60% 70%)' }, { aan: false, kleur: '#FFD9A0' }]);
+      expect(tuin['overstekAan']).toBe(true);
+      expect(tuin['terrasAan']).toBe(true);
+      expect(tuin['lampen']).toEqual([]);
+      expect(tuin['zones']).toEqual({ border: { id: 'b', naam: 'Border' }, overstek: { id: 'o', naam: 'Overstek' }, terras: { id: 't', naam: 'Terras' } });
+      const zones = (await p.evaluate(`(() => {
+        const el = document.createElement('div');
+        document.body.append(el);
+        huis.teken(el, { etages: [{ naam: 'Begane grond', kamers: [{ id: 'wk', naam: 'Woonkamer', apparaten: [] }] }], tuin: { ...${JSON.stringify(tuin)}, zone: 'border' } }, { breedte: 860, hoogte: 612, tik: true });
+        const uit = [...el.querySelectorAll('.sc-tik[data-zone]')].map((x) => x.getAttribute('data-kamer') + '::' + x.getAttribute('data-zone'));
+        el.remove();
+        return uit;
+      })()`)) as string[];
+      expect(zones.sort()).toEqual(['achtertuin::b', 'achtertuin::o', 'achtertuin::t']);
+      expect(fouten).toEqual([]);
+    } finally {
       await context.close();
     }
   }, 40_000);

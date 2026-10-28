@@ -374,7 +374,8 @@
     if (klassen?.contains('sc-geen-seizoen')) model = { ...model, seizoen: undefined };
     if (klassen?.contains('sc-geen-weer')) model = { ...model, weer: undefined };
     // De ring van de zon met de uren (28 oktober 2026) kan uit bij Weergave; de zon zelf blijft.
-    if (klassen?.contains('sc-geen-zonnebaan') && model.zon) model = { ...model, zon: { ...model.zon, geenRing: true } };
+    // De baan van de zon uit bij Weergave (besluit 205): geen ring, en op Thuis ook geen stippelboog (`geenBaan`).
+    if (klassen?.contains('sc-geen-zonnebaan') && model.zon) model = { ...model, zon: { ...model.zon, geenRing: true, geenBaan: true } };
     // De feestdag: wat het model zegt (een schets), anders vandaag, op het eiland, als het aan staat.
     const feest = model.feest !== undefined ? model.feest : opts.wereld && !klassen?.contains('sc-geen-feest') ? feestdagVan(Date.now()) : null;
     const id = `h${++uid}`;
@@ -468,15 +469,17 @@
     const kamers = [];
     // Met `opts.tik`: per kamer een onzichtbaar vlak om op te tikken, bovenop alles.
     const tikken = [];
-    const tik = (kamer, pts) => {
+    const tik = (kamer, pts, extra = '') => {
       if (!opts.tik) return;
       const naam = esc(kamer.naam ?? '');
-      tikken.push(poly(pts, `class="sc-tik" data-kamer="${esc(kamer.id ?? kamer.naam)}" fill="transparent" role="link" tabindex="0" aria-label="${naam}"`));
+      tikken.push(poly(pts, `class="sc-tik" data-kamer="${esc(kamer.id ?? kamer.naam)}"${extra} fill="transparent" role="link" tabindex="0" aria-label="${naam}"`));
     };
     // Waar apparaten staan, voor de labels.
     const plek = {};
     /** Waar het tuinhuis echt getekend is, om erop te tikken (25 oktober 2026: het vak stond ernaast). */
     let tuinhuisVak = null;
+    /** Waar de zones van de tuin liggen (besluit 206): per soort een vak op de grond, om op te tikken. */
+    let tuinVakken = {};
     /**
      * Onder het dak: waar de airco hangt (besluit 166), tegen de linkermuur of
      * op de achtermuur bij de nok; de droger staat er niet onder.
@@ -651,7 +654,7 @@
       const ry = Math.min(boog * 0.74, voet - k * 0.3);
       const sx = mid[0] + opkomst * boog * Math.cos(Math.PI * f);
       const sy = voet - ry * Math.sin(Math.PI * f);
-      lucht.push(`<path d="M ${mid[0] - boog} ${voet} A ${boog} ${ry} 0 0 1 ${mid[0] + boog} ${voet}" fill="none" stroke="${KLEUR.zon}" stroke-opacity="0.16" stroke-width="1.5" stroke-dasharray="2 7"/>`);
+      if (!model.zon.geenBaan) lucht.push(`<path d="M ${mid[0] - boog} ${voet} A ${boog} ${ry} 0 0 1 ${mid[0] + boog} ${voet}" fill="none" stroke="${KLEUR.zon}" stroke-opacity="0.16" stroke-width="1.5" stroke-dasharray="2 7"/>`);
       const r = k * 0.22;
       lucht.push(`<circle cx="${sx}" cy="${sy}" r="${r * 3.2}" fill="url(#${id}-zon)" opacity="${(0.22 + 0.3 * (1 - (model.wolken ?? 0))).toFixed(2)}"/>`);
       lucht.push(`<circle cx="${sx}" cy="${sy}" r="${r}" fill="#FFD27A" opacity="${(1 - 0.55 * (model.wolken ?? 0)).toFixed(2)}"/>`);
@@ -2757,7 +2760,8 @@
       if (t.tuinhuis !== false) dingen.push([gy0, () => (t.tuinhuisSoort === 'schuur' ? tuinhuis3(padX - 0.5, gy0 + 0.02, t) : tuinhuisPlat(padX - 0.55, gy0 + 0.02, t))]);
       dingen.sort((a, b) => a[0] - b[0]).forEach(([, teken]) => teken());
       // De gekozen zone (`zone`) licht op (schets Wand-Huis-Ligging): na een tik, met zijn kaartje ernaast.
-      const vak = { border: { x0: bx0 - 0.04, y0: gy0 + 0.9, x1: gx1 + 0.02, y1: gy1 - 0.04 }, terras: ter, gazon, tuinhuis: tuinhuisVak }[t.zone];
+      tuinVakken = { border: { x0: bx0 - 0.04, y0: gy0 + 0.9, x1: gx1 + 0.02, y1: gy1 - 0.04 }, terras: ter, gazon, tuinhuis: tuinhuisVak, overstek: tuinhuisVak };
+      const vak = tuinVakken[t.zone];
       if (vak) markeer(vak);
     }
     /** Een plek op de grond die oplicht: een rand in ijsblauw met een gloed (schets Wand-Huis-Ligging). */
@@ -2953,6 +2957,16 @@
         labels.push(`<text x="${t[0]}" y="${t[1] + 30}" text-anchor="middle" font-family="Figtree, sans-serif" font-size="13" font-weight="700" fill="${deel.gekozen ? KLEUR.ijs : KLEUR.zacht}">${esc(deel.naam)}</text>`);
       }
       if (deel.id) tik(deel, vlak);
+    }
+    // De zones van de tuin (besluit 206), na de tuin zelf: die liggen erbovenop. Het
+    // tuinhuis als zone van de tuin heeft zijn eigen omtrek, net als een losse ruimte.
+    // Is het tuinhuis een eigen ruimte, dan opent het huisje die ruimte en niet de zone.
+    for (const [soort, zone] of Object.entries((model.tuin?.id && model.tuin.zones) || {})) {
+      const v = tuinVakken[soort];
+      const huisje = v != null && v === tuinhuisVak;
+      if (!v || !zone?.id || (huisje && tuinhuis)) continue;
+      const pts = huisje ? [[v.x0, v.y1, 0], [v.x1, v.y1, 0], [v.x1, v.y0, 0], [v.x1, v.y0, v.h], [v.x0, v.y0, v.h], [v.x0, v.y1, v.h]] : [[v.x0, v.y0, 0], [v.x1, v.y0, 0], [v.x1, v.y1, 0], [v.x0, v.y1, 0]];
+      tik({ id: model.tuin.id, naam: zone.naam }, pts, ` data-zone="${esc(zone.id)}"`);
     }
 
     /*

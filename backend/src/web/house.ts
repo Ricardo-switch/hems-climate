@@ -373,6 +373,11 @@ export interface HouseReport {
   readonly batterijen: readonly HouseBattery[];
   /** Filters van airco's die bijna op zijn (onder de drempel, besluit 129), de leegste eerst. */
   readonly filters: readonly HouseBattery[];
+  /**
+   * Garagedeuren, poorten en deuren (besluit 206): alleen om te bekijken. Open
+   * of dicht doet de app nooit (besluit 148); null is onbekend.
+   */
+  readonly toegang: readonly HouseToegang[];
   /** Onder welk percentage een batterij of filter een melding geeft (besluit 149); null is nooit. */
   readonly drempels: Drempels;
   /** De thuisbatterij en de auto, als het huis ze heeft (besluit 182). */
@@ -1638,7 +1643,7 @@ export function outsideFromNames(room: Pick<LayoutRoom, 'naam' | 'zones'>, devic
                     : 'tuin';
   const huisje = /tuinhuis|schuur|berging|huisje/i;
   // Een deel dat een tuinhuis is (besluit 167), of zo heet, of een apparaat dat zo heet.
-  const metHuisje = room.zones.some((z) => z.soort === 'tuinhuis' || huisje.test(z.naam)) || devices.some((d) => huisje.test(d.naam));
+  const metHuisje = room.zones.some((z) => z.soort === 'tuinhuis' || z.soort === 'overstek' || huisje.test(z.naam)) || devices.some((d) => huisje.test(d.naam));
   return { soort, auto: soort === 'oprit' || soort === 'carport', tuinhuis: (soort === 'tuin' || soort === 'zijtuin') && metHuisje };
 }
 
@@ -1736,6 +1741,15 @@ export function summarize(devices: readonly HouseDevice[], lang: Lang = 'nl'): H
   const klimaat =
     running.length === 0 ? w.draaitNiets : running.length === 1 ? `${running[0]!.naam}: ${running[0]!.stand}` : w.nDraaien(running.length);
   return { lampenAan, screens, draait: running.length, klimaat };
+}
+
+/** Een garagedeur, poort of deur, alleen om te bekijken (besluit 206). */
+export interface HouseToegang {
+  readonly id: string;
+  readonly naam: string;
+  readonly open: boolean | null;
+  /** De ruimte waar hij bij hoort, uit het gebied in Home Assistant. */
+  readonly kamerId: string | null;
 }
 
 /** Hoe het huis ligt (besluit 205). */
@@ -1957,6 +1971,16 @@ export function buildHouse(
     .filter(({ d }) => d.klimaat?.filter?.pct != null && onderDrempel(d.klimaat.filter.pct, drempels.filter))
     .map(({ r, d }) => ({ id: d.id, naam: d.naam, pct: d.klimaat!.filter!.pct!, kamer: r.naam, kamerId: r.id, leeg: true }))
     .sort((a, b) => a.pct - b.pct);
+  // Garagedeuren, poorten en deuren (besluit 206): wat Home Assistant zegt, nooit een knop.
+  const gebiedVan = (e: HaRegistryEntity) => e.area_id ?? (e.device_id ? (deviceArea.get(e.device_id) ?? null) : null);
+  const toegang: HouseToegang[] = registers.entities
+    .filter((e) => e.entity_id.startsWith('cover.') && !e.disabled_by && !e.hidden_by && geenScherm(e, states.get(e.entity_id)))
+    .map((e) => {
+      const s = states.get(e.entity_id)?.state;
+      const gebied = gebiedVan(e);
+      const kamer = gebied ? roomByArea.get(gebied) : undefined;
+      return { id: e.entity_id, naam: e.name ?? friendly(states.get(e.entity_id), e.entity_id), open: s === 'open' || s === 'opening' ? true : s === 'closed' || s === 'closing' ? false : null, kamerId: kamer?.id ?? null };
+    });
   return {
     indeling: saved ? 'eigen' : 'voorstel',
     dakEtage,
@@ -1972,6 +1996,7 @@ export function buildHouse(
     onvindbaar: unreachable,
     batterijen,
     filters,
+    toegang,
     drempels,
     opslag: vindOpslag(registers, states),
   };
@@ -1984,7 +2009,7 @@ export function buildHouse(
  */
 export function lampsFor(
   house: HouseReport,
-  doel: { readonly soort: 'lamp' | 'kamer' | 'etage' | 'huis'; readonly id: string | null },
+  doel: { readonly soort: 'lamp' | 'kamer' | 'zone' | 'etage' | 'buiten' | 'huis'; readonly id: string | null },
 ): string[] | null {
   const lampsIn = (rooms: readonly HouseRoom[]) => rooms.flatMap((r) => r.apparaten.filter((d) => d.soort === 'licht').map((d) => d.id));
   const rooms = house.etages.flatMap((f) => f.ruimtes);
@@ -1999,6 +2024,16 @@ export function lampsFor(
       const room = rooms.find((r) => r.id === doel.id);
       return room ? lampsIn([room]) : null;
     }
+    // De lampen in één zone van een ruimte, zoals de border (besluit 206).
+    case 'zone': {
+      const [kamer, zone] = (doel.id ?? '').split('::');
+      const room = rooms.find((r) => r.id === kamer);
+      if (!room || !room.zones.some((z) => z.id === zone)) return null;
+      return room.apparaten.filter((d) => d.soort === 'licht' && d.zone === zone).map((d) => d.id);
+    }
+    // Alles buiten: de etage buiten en elke ruimte die buiten ligt (besluit 206).
+    case 'buiten':
+      return lampsIn(house.etages.flatMap((f) => f.ruimtes.filter((r) => f.id === 'buiten' || r.buiten != null)));
     case 'lamp':
       return lampsIn(rooms).includes(doel.id ?? '') ? [doel.id as string] : null;
   }

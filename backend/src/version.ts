@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.77.0';
+export const VERSIE = '0.78.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,40 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.78.0',
+    datum: '2026-10-28',
+    nieuw: [
+      'Buiten op Thuis: een tik op de oprit, de garage of een zone in de tuin opent een blad met de lampen, en je blijft op Thuis',
+      'Alles buiten: elk deel aan of uit, en alles buiten uit in één keer, met de knop Buiten op de wand',
+      'De tuin in zones: de border, het terras, het gazon en het tuinhuis met zijn overstek, elk aan te tikken',
+    ],
+    beter: [
+      'De lampen in de border staan op hun plek in hun eigen kleur; het terras en het overstek lichten op',
+      'Bij de oprit de auto aan de lader, en de garagedeur open of dicht (alleen bekijken)',
+      'De helderheid van het always-on display met een schuif van 0 tot 100, standaard 75 overdag en 25 in de avond',
+      'De helling van het dak vul je precies in bij Zonnepanelen › Zelf aanpassen',
+    ],
+    opgelost: [
+      'De baan van de zon uit bij Weergave haalt nu ook de stippelboog op Thuis weg; eerst veranderde daar niets',
+    ],
+    en: {
+      nieuw: [
+        'Outside on Home: tap the driveway, the garage or a garden zone to open a sheet with its lights, and you stay on Home',
+        'Everything outside: each part on or off, and everything outside off at once, with the Outside button on the wall',
+        'The garden in zones: the border, the patio, the lawn and the shed with its canopy, each one tappable',
+      ],
+      beter: [
+        'The border lights are drawn where they are, in their own colour; the patio and the canopy light up',
+        'At the driveway the car on the charger, and the garage door open or closed (view only)',
+        'The brightness of the always-on display with a slider from 0 to 100, by default 75 by day and 25 in the evening',
+        'Enter the exact roof pitch in Solar panels › Adjust yourself',
+      ],
+      opgelost: [
+        'Turning off the path of the sun in Display now also removes the dotted arc on Home; before, nothing changed there',
+      ],
+    },
+  },
   {
     versie: '0.77.0',
     datum: '2026-10-28',

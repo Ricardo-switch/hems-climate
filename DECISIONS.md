@@ -207,6 +207,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [200. De film als trailer, en een groot welkom bij Inrichten](#200-de-film-als-trailer-en-een-groot-welkom-bij-inrichten)
 - [201. De kaart Camera's: zoveel camera's als je wilt, met wat ze zien](#201-de-kaart-cameras-zoveel-cameras-als-je-wilt-met-wat-ze-zien)
 - [205. Het dak volgt het huis, en de ring van de zon](#205-het-dak-volgt-het-huis-en-de-ring-van-de-zon)
+- [206. Buiten op Thuis: de tuin in zones, een blad per deel, en alles buiten uit](#206-buiten-op-thuis-de-tuin-in-zones-een-blad-per-deel-en-alles-buiten-uit)
 
 **Veiligheid**
 
@@ -9467,6 +9468,51 @@ gemeten dak (51°), en stond de zon als een stip op een boog.
 *Wat afviel:* een platte ring onder het huis (raakte de tekst en de labels);
 de ring ook op Thuis; het dak altijd op de gemeten helling zonder grens (een
 plat dak tekent toch schuin, met de panelen erop zoals eerst).
+
+---
+
+## 206. Buiten op Thuis: de tuin in zones, een blad per deel, en alles buiten uit
+
+*Onderwerp: weergave · Status: geldig*
+
+Op 28 oktober 2026, uit de schets Wand-Huis-Ligging. De bewoner heeft in de
+achtertuin een border met gekleurde spots, en een tuinhuis met licht binnen en
+gekleurde spots onder het overstek. Op Thuis kon je alleen het tuinhuis
+aantikken; de oprit en de garage openden de kamer, en je ging weg van Thuis.
+
+*Besluit:*
+
+- **De tuin in zones, elk op een vaste plek**: het terras tegen het huis, het
+  gazon in het midden, de border langs de rand, het tuinhuis achterin. Het
+  overstek van het tuinhuis is een eigen soort zone. Een lamp in de border
+  staat in de border, in de kleur van zijn lamp; het terras en het overstek
+  lichten op als hun lampen branden. Elke zone is aan te tikken.
+- **Een blad per deel, en je blijft op Thuis.** Een tik op de oprit, de garage,
+  de tuin of een zone opent een blad naast het huis (op de telefoon onderin), en
+  dat deel licht op in de tekening. Erin: de lampen met een schakelaar, alle
+  lampen aan of uit, en wat er nog meer is: de auto aan de lader, een camera,
+  de garagedeur, en de andere zones.
+- **De garagedeur alleen bekijken.** `api/huis` geeft `toegang`: garagedeuren,
+  poorten en deuren met open of dicht. De app opent of sluit ze nooit (besluit
+  148).
+- **Alles buiten**: een knop Buiten in de kopregel van de wand, met hoeveel
+  lampen er branden. Per deel aan of uit, voor het huis en in de tuin, en
+  "Alles buiten uit" in één keer. `api/licht` kent daarvoor `zone`
+  (`kamer::zone`) en `buiten`; buiten gaat alleen uit. Alleen lampen, binnen de
+  schrijfgrens van besluit 97.
+- **Erbij in deze versie**: de helling van het dak kun je precies invullen bij
+  Zonnepanelen › Zelf aanpassen (de bewoner mat 44°); de helderheid van het
+  always-on display is een schuif van 0 tot 100, standaard 75 overdag en 25 in
+  de avondstand.
+- **De baan van de zon (besluit 205) doet overal iets**: uit haalt ook de
+  stippelboog op Thuis weg, op de wand en op de telefoon. De bewoner zette hem
+  uit op zijn telefoon en zag niets veranderen, want de ring staat alleen bij
+  Zonnepanelen op de wand.
+- **Versie 0.78.0.**
+
+*Wat afviel:* een eigen pagina Buiten (je verlaat Thuis, en de schets liet het
+blad ernaast zien); de knop Buiten ook op de telefoon (de bovenbalk liep vol;
+een tik op een deel buiten opent het blad ook); de garagedeur bedienen.
 
 ---
 
