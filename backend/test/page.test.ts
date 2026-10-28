@@ -4031,9 +4031,10 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     await expect.poll(() => layoutStore.current?.apparaten[id]?.kamer ?? a.id, kort).toBe(a.id);
 
     // Zones met een soort, schuiven, en een kamer naar links of rechts (besluit 145).
-    // Alleen het hekje wisselen opent de kamer niet: opnieuw laden.
+    // Alleen het hekje wisselen opent de kamer niet, en opnieuw laden kon net te laat zijn: dan had de
+    // pagina het adres al naar de etage gezet (CI, 28 oktober 2026). Daarom eerst weg, dan vers erheen.
+    await p.goto('about:blank');
     await p.goto(`${baseUrl}/indeling.html#${encodeURIComponent(a.id)}`);
-    await p.reload();
     await p.waitForLoadState('networkidle');
     await expect.poll(() => p.locator('#wand [data-actie="kamernaam"]').inputValue(), kort).toBe(a.naam);
     const zonesVan = () => layoutStore.current?.kamers.find((k) => k.id === a.id)?.zones ?? [];
@@ -4068,8 +4069,8 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
 
     // De gevel van een scherm kiezen (besluit 145).
     const metScreen = huisNu.etages.flatMap((e) => e.ruimtes).find((r) => r.apparaten.some((x) => x.id === 'cover.screen'))!;
+    await p.goto('about:blank');
     await p.goto(`${baseUrl}/indeling.html#${encodeURIComponent(metScreen.id)}`);
-    await p.reload();
     await p.waitForLoadState('networkidle');
     await p.locator('#wand .app[data-app="cover.screen"]').click(kort);
     await p.locator('#wand [data-app-gevel]').selectOption('achtergevel', kort);
@@ -4191,8 +4192,8 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     await layoutStore.save({ ...basis, rond: { ...basis.rond!, garage: false } });
     const huisNu = (await (await fetch(`${baseUrl}/api/huis`)).json()) as HouseReport;
     expect(huisNu.rond?.garage).toBe(false);
+    await p.goto('about:blank');
     await p.goto(`${baseUrl}/indeling.html#buiten`);
-    await p.reload();
     await tel.locator('[data-blad] [data-nieuwe-kamer]').fill('Garage', { timeout: 10_000 });
     await tel.locator('[data-blad] [data-kamer-toevoegen]').click();
     await expect.poll(() => rond()?.garage, kort).toBe(true);
