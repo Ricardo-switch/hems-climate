@@ -83,6 +83,8 @@ const ligging = (() => {
       hellingDeg: w?.hellingDeg ?? 40,
       wpPerPaneel: w?.wpPerPaneel ?? 400,
       omvormerW: w?.omvormerW ?? v.omvormerGevonden ?? null,
+      // Hoe de nok loopt (besluit 205): wat de bewoner koos, anders langs de straat.
+      nok: v.nok ?? 'langs',
     };
   }
 
@@ -101,6 +103,7 @@ const ligging = (() => {
           <label class="mini lig-vol">${esc(t('panelen.fijner', { graden: Math.round(c.voorgevelDeg) }))}<input class="lig-draai" type="range" min="0" max="355" step="1" value="${Math.round(c.voorgevelDeg) % 360}" data-lig-draai aria-label="${esc(t('panelen.draaiLabel'))}"></label>
           ${kaartKnop(c)}
         </div></div>
+      ${rij(t('panelen.nok'), `<div class="lig-chips">${['langs', 'haaks'].map((n) => chip(`data-lig-nok="${n}"`, t(`panelen.nok.${n}`), (c.nok ?? 'langs') === n, 'klein')).join('')}</div>`)}
       ${rij(t('panelen.helling'), `<div class="lig-chips">${HELLING.map(([k, d]) => {
         const hier = helling[1] === d;
         const graden = hier ? c.hellingDeg : d;
@@ -235,6 +238,10 @@ const ligging = (() => {
     if (!c) return null;
     if (knop.hasAttribute('data-lig-kaart')) {
       void opDeKaart(staat);
+      return 'teken';
+    }
+    if (ds.ligNok) {
+      c.nok = ds.ligNok;
       return 'teken';
     }
     if (ds.ligVoorgevel) c.voorgevelDeg = Number(ds.ligVoorgevel);

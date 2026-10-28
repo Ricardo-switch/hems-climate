@@ -28,7 +28,7 @@ import { melderNaam, rookmelderNu, vindRookmelders, type Gevaar } from './rookme
 import type { HaEntityState } from '../adapters/homeassistant/client.js';
 import { defaultSceneColors, whiteScene } from './scene-colors.js';
 import type { HaArea, HaDevice, HaFloor, HaRegistryEntity } from '../adapters/homeassistant/discovery.js';
-import type { Facade, HeatStore, SiteConfig } from '../core/model.js';
+import type { Facade, Geometry, HeatStore, SiteConfig } from '../core/model.js';
 import type { HeatStoreExplanation } from '../core/decision.js';
 import { roomStatus, withArticle, type DecisionView, type Lang, type RoomKind } from './assistant.js';
 import {
@@ -321,6 +321,12 @@ export interface HouseReport {
   readonly rond: LayoutAround | null;
   /** Wat voor huis het is (besluit 190): vrijstaand als de bewoner niets koos. */
   readonly woning: Woning;
+  /**
+   * Hoe het huis ligt, voor de tekening (28 oktober 2026, besluit 205): waar
+   * de voorgevel naartoe kijkt, hoe de nok loopt en hoe steil het dak is. Null
+   * zolang de ligging niet bekend is; dan tekent de app het zoals eerst.
+   */
+  readonly ligging: HuisLigging | null;
   readonly etages: readonly HouseFloor[];
   readonly lampenAan: number;
   readonly samenvatting: HouseSummary;
@@ -1732,6 +1738,30 @@ export function summarize(devices: readonly HouseDevice[], lang: Lang = 'nl'): H
   return { lampenAan, screens, draait: running.length, klimaat };
 }
 
+/** Hoe het huis ligt (besluit 205). */
+export interface HuisLigging {
+  readonly voorgevelDeg: number;
+  readonly nok: 'langs' | 'haaks';
+  /** De helling van het schuine dak, of null bij een plat dak of zonder panelen. */
+  readonly hellingDeg: number | null;
+}
+
+/**
+ * De ligging voor de tekening, uit de gevels en de vlakken van de panelen. De
+ * nok loopt langs de straat (de dakvlakken voor en achter), tenzij elk schuin
+ * vlak opzij kijkt: dan haaks. Zo volgt een keuze bij Aanpassen vanzelf, want
+ * die draait de vlakken.
+ */
+export function huisLigging(geometry: Geometry | undefined): HuisLigging | null {
+  const voor = geometry?.facades.find((f) => f.id === 'voorgevel') ?? geometry?.facades[0];
+  if (!voor) return null;
+  const schuin = (geometry?.solarPlanes ?? []).filter((p) => p.tiltDeg >= 12);
+  const verschil = (a: number, b: number) => Math.abs(((a - b + 540) % 360) - 180);
+  const opzij = schuin.length > 0 && schuin.every((p) => Math.min(verschil(p.azimuthDeg, voor.azimuthDeg), verschil(p.azimuthDeg, voor.azimuthDeg + 180)) > 45);
+  const helling = schuin.length ? Math.round(schuin.reduce((s, p) => s + p.tiltDeg, 0) / schuin.length) : null;
+  return { voorgevelDeg: Math.round(((voor.azimuthDeg % 360) + 360) % 360), nok: opzij ? 'haaks' : 'langs', hellingDeg: helling };
+}
+
 export function buildHouse(
   config: SiteConfig,
   registers: HouseRegisters,
@@ -1932,6 +1962,7 @@ export function buildHouse(
     dakEtage,
     rond: layout.rond ?? null,
     woning: layout.woning ?? 'vrijstaand',
+    ligging: huisLigging(config.geometry),
     etages: floors,
     lampenAan: floors.reduce((n, f) => n + f.lampenAan, 0),
     samenvatting: summarize(floors.flatMap((f) => f.ruimtes.flatMap((r) => r.apparaten)), lang),

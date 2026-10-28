@@ -168,7 +168,8 @@ function tekenPanelenHuis() {
     beschrijving: t('panelen3.huisLabel'),
     tijd: 'dag',
     seizoen: 'zomer',
-    zon: { stand: 0.68, aandeel: 0.8, ...huismodel.panelenOpDak(a.panelen, tek.piekW) },
+    // De echte zon met de ring van vandaag (besluit 205); op de telefoon zonder ring.
+    zon: { stand: 0.68, aandeel: 0.8, ...(huismodel.zonNu(zon) ?? {}), ...(app.telStand() ? { geenRing: true } : {}), ...huismodel.panelenOpDak(a.panelen, tek.piekW) },
     ...(leert ? { spook: ['panelen'] } : {}),
     wolken: 0.1,
     ...(huismodel.kompasVan(v, a.panelen) ? { kompas: { ...huismodel.kompasVan(v, a.panelen), groot: true } } : {}),

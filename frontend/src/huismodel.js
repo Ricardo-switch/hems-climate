@@ -366,7 +366,30 @@
       buitenunit: aircos.length ? { aan: aircos.some((a) => a.aan || ACTIEF.test(a.klimaat?.actieCode ?? '')), aantal: aircos.length } : null,
       piekW,
       panelen: aantalPanelen ?? (piekW > 0 ? Math.max(1, Math.round(piekW / 400)) : 0),
+      ligging: huis?.ligging ?? null,
     };
+  }
+
+  /**
+   * De zon van nu en de baan van vandaag (28 oktober 2026, besluit 205), uit
+   * api/zon, voor de ring rond het huis: elk heel uur een stip, en de tijd van
+   * opkomst en ondergang bij de uiteinden. Null zonder zon.
+   */
+  function zonNu(zon) {
+    if (!zon?.zon || !Array.isArray(zon.baan) || !zon.baan.length) return null;
+    const klok = (ms) => global.taal?.klok?.(ms) ?? new Date(ms).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+    let vorigUur = null;
+    const baan = zon.baan.map((p) => {
+      const uur = new Date(p.tMs).getHours();
+      const nieuw = vorigUur != null && uur !== vorigUur;
+      vorigUur = uur;
+      return { az: p.richtingGraden, el: p.hoogteGraden, t: p.tMs, ...(nieuw ? { uur } : {}) };
+    });
+    const op = baan.findIndex((p) => p.el >= 0);
+    const onder = baan.length - 1 - [...baan].reverse().findIndex((p) => p.el >= 0);
+    if (op >= 0 && zon.dag?.opMs != null) baan[op] = { ...baan[op], klok: klok(zon.dag.opMs) };
+    if (onder >= 0 && onder < baan.length && zon.dag?.onderMs != null) baan[onder] = { ...baan[onder], klok: klok(zon.dag.onderMs) };
+    return { nu: { az: zon.zon.richtingGraden, el: zon.zon.hoogteGraden, t: zon.tMs }, baan: baan.slice(Math.max(0, op), onder + 1) };
   }
 
   /**
@@ -390,16 +413,16 @@
   }
 
   /**
-   * Hoe het kompas op het eiland staat (besluit 187). In de tekening ligt de
-   * voorkant van het dak op het vlak rechts en de achterkant links (zie
-   * panelenOpDak); het kompas draait zo dat die vlakken naar hun gemeten
-   * richting wijzen. Zonder vlakken de richting van de voorgevel; anders null.
+   * Hoe het kompas op het eiland staat (besluit 187): naar waar de voorgevel
+   * kijkt. Sinds besluit 205 volgt het dak het huis, dus het kompas draait met
+   * de voorgevel en niet meer met een dakvlak. Zonder voorgevel kijkt het
+   * dakvlak aan de voorkant dezelfde kant op (de nok langs de straat).
    */
   function kompasVan(lig, p) {
     const w = lig?.nu ?? lig?.voorstel;
+    if (w?.voorgevelDeg != null) return { voorgevelDeg: w.voorgevelDeg };
     const vlak = w?.vlakken?.[0];
-    if (vlak) return { voorgevelDeg: (vlak.azimuthDeg + (p?.ligging === 'achterkant' ? -90 : 90) + 360) % 360 };
-    return w?.voorgevelDeg != null ? { voorgevelDeg: w.voorgevelDeg } : null;
+    return vlak ? { voorgevelDeg: (vlak.azimuthDeg + (p?.ligging === 'achterkant' ? 180 : 0) + 360) % 360 } : null;
   }
 
   /**
@@ -471,6 +494,8 @@
       balkon: tek.balkon,
       voortuin: tek.voortuin,
       garage: tek.garage && e.garage ? { ...tek.garage, panelen: e.garage } : tek.garage,
+      // Hoe het huis ligt (besluit 205): de nok en de helling, en de voorgevel voor de zon.
+      ...(tek.ligging ? { dak: { nok: tek.ligging.nok, ...(tek.ligging.hellingDeg ? { hellingDeg: tek.ligging.hellingDeg } : {}) }, voorgevelDeg: tek.ligging.voorgevelDeg } : {}),
     };
   }
 
@@ -480,5 +505,5 @@
   const BUITEN_ZONES = soorten('buitenZone', ['gazon', 'border', 'terras', 'tuinhuis', 'moestuin', 'vijver', 'pad', 'speelplek', 'oprit', 'carport']);
   global.huismodel = { KAMER_SOORTEN, ZONE_SOORTEN, BUITEN_SOORTEN, BUITEN_ZONES, buitenUitNaam, buitenZoneUitNaam, thermostaten, cvThermostaat, isKetelKoppeling, ACTIEF,
 
- BUITEN, GANG, kleurVanLicht, zoneNaam, metLidwoord, metHoofdletter, etagesNaast, BRON_NAAM, ELEKTRISCH, bronNaam, opsomming, isElektrischSlim, inKamers, standVan, kortVan, kamerModel, isBuiten, soortBuiten, buiten, rondNu, rondom, OP_OPRIT, rondMet, tekening, huisDelen, panelenOpDak, kompasVan, zonOpRechts, groetNamen, groetWie };
+ BUITEN, GANG, kleurVanLicht, zoneNaam, metLidwoord, metHoofdletter, etagesNaast, BRON_NAAM, ELEKTRISCH, bronNaam, opsomming, isElektrischSlim, inKamers, standVan, kortVan, kamerModel, isBuiten, soortBuiten, buiten, rondNu, rondom, OP_OPRIT, rondMet, tekening, huisDelen, panelenOpDak, kompasVan, zonOpRechts, zonNu, groetNamen, groetWie };
 })(window);

@@ -1087,6 +1087,58 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     }
   });
 
+  /*
+   * Zon, dak en kompas (besluit 205): het dak volgt het huis (hier de nok langs
+   * de straat, met een dakvlak van glas), en bij Zonnepanelen loopt de zon zijn
+   * ring van vandaag met de tijd van opkomst. Bij Weergave kan de ring uit.
+   */
+  it('tekent het dak zoals het huis ligt, en bij Zonnepanelen de ring van de zon (besluit 205)', async () => {
+    const huis = (await (await fetch(`${baseUrl}/api/huis`)).json()) as HouseReport;
+    expect(huis.ligging).toEqual({ voorgevelDeg: 97, nok: 'langs', hellingDeg: 47 });
+    const zon = (await (await fetch(`${baseUrl}/api/zon`)).json()) as { baan: unknown[] };
+    expect(zon.baan.length).toBeGreaterThan(30);
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, timezoneId: 'Europe/Amsterdam', locale: 'nl-NL' });
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+    await context.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    const zet = (aan: boolean) => p.evaluate(`fetch('api/voorkeuren', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ plek: 'tel', weergave: { zonnebaan: ${aan} } }) }).then((r) => r.status)`);
+    try {
+      const wand = p.locator('#wand');
+      const svg = wand.locator('[data-pan-podium] svg.sc-huis');
+      // Naar het huis bij Zonnepanelen; zonder antwoorden over het dak (los gedraaid) eerst die, zoals de test van Energie.
+      const naarHuis = async () => {
+        await wand.locator('[data-pan-podium] svg.sc-huis, h3:has-text("Op welke kant van het dak")').first().waitFor({ timeout: 10_000 });
+        if (await wand.locator('h3', { hasText: 'Op welke kant van het dak' }).count()) {
+          await wand.locator('button', { hasText: 'Beide kanten' }).click();
+          await wand.getByLabel('Aantal aan de voorkant').fill('6');
+          await wand.getByLabel('Aantal aan de voorkant').press('Tab');
+          await wand.getByLabel('Aantal aan de achterkant').fill('6');
+          await wand.getByLabel('Aantal aan de achterkant').press('Tab');
+          await wand.locator('[data-pan-klaar]').click();
+        }
+        await svg.waitFor({ timeout: 10_000 });
+      };
+      await p.goto(`${baseUrl}/energie.html#panelen`);
+      await naarHuis();
+      // De opkomst met een pijl omhoog, bij het begin van de ring.
+      await expect.poll(() => svg.locator('text', { hasText: '↑' }).count(), { timeout: 10_000 }).toBe(1);
+      if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-zonring.png') });
+      // Uit bij Weergave: geen ring meer.
+      expect(await zet(false)).toBe(200);
+      await p.reload();
+      await naarHuis();
+      await p.waitForTimeout(500);
+      expect(await svg.locator('text', { hasText: '↑' }).count()).toBe(0);
+      expect(fouten).toEqual([]);
+    } finally {
+      await zet(true);
+      await context.close();
+    }
+  }, 40_000);
+
   it('toont Thuis in het Engels als je dat bij Jij kiest, en haalt de toegankelijkheidscontrole', async () => {
     const zet = (taal: string) => fetch(`${baseUrl}/api/voorkeuren`, { method: 'POST', headers: { 'content-type': 'application/json', origin: baseUrl }, body: JSON.stringify({ plek: 'tel', taal }) });
     // Een bewoner op zijn eigen telefoon: een scherm, zoals de wand, volgt zijn eigen account.
@@ -2726,7 +2778,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await blad.locator('[data-wg-eenvoudig="true"]').click();
       await blad.locator('[data-wg-schakel="groteLetters"]').click();
       await blad.locator('[data-wg-schakel="minderBeweging"]').click();
-      await expect.poll(weergave).toEqual({ eenvoudig: true, groteLetters: true, minderBeweging: true, seizoen: true, weer: true, feestdagen: true });
+      await expect.poll(weergave).toEqual({ eenvoudig: true, groteLetters: true, minderBeweging: true, seizoen: true, weer: true, feestdagen: true, zonnebaan: true });
       expect(await blad.locator('[data-wg-schakel="groteLetters"]').getAttribute('aria-checked')).toBe('true');
       await blad.locator('[data-blad-dicht]').click();
       await blad.waitFor({ state: 'hidden' });

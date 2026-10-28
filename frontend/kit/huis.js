@@ -124,7 +124,7 @@
   }
   // Afmetingen in eenheden van het huis.
   const FH = 1.55; // hoogte van een etage
-  const D = 1.5; // diepte van het huis
+  let D = 1.5; // diepte van het huis; dieper met de nok langs de straat (zie svg)
   /** Een binnenunit op ware grootte: zo'n 90 bij 30 centimeter, bij een etage van 2,6 meter (besluit 131). */
   const AIRCO = { b: 0.56, h: 0.19, d: 0.15 };
   /** De radiator op de achtermuur: breedte, hoogte boven de vloer en zelf. */
@@ -212,6 +212,27 @@
   }
 
   /** Alle punten die in beeld moeten, om de schaal te bepalen. */
+  /*
+   * De ring van de zon (28 oktober 2026, schets Wand-Huis-Ligging): ruim om het
+   * huis, met het midden boven de nok. Zo loopt de zon vóór een huis op het
+   * zuiden over het dak heen en niet erdoorheen. De hoogte is wat opgerekt, zodat
+   * de middag duidelijk boven de ochtend en de avond staat.
+   */
+  function ringPunt(model, W, Ht, { az, el }) {
+    const r = Math.PI / 180;
+    const Rd = Math.max(W, D) * 0.7 + 2.8;
+    const zc = Ht + R + 1.4;
+    const v = voorDegVan(model) ?? 180;
+    const c = Math.cos(el * r);
+    return [W / 2 - Rd * c * Math.sin((az - v) * r), D / 2 + Rd * c * Math.cos((az - v) * r), zc + Rd * Math.sin(Math.max(0, el) * r)];
+  }
+  /** Of de ring er is: de echte zon, een kompas en een baan, en niet uitgezet bij Weergave. */
+  const metRing = (model) => !!(model.zon?.nu && model.zon.baan?.length && voorDegVan(model) != null && !model.zon.geenRing);
+  /** Waar de voorgevel naartoe kijkt (besluit 205): uit het huis, of uit het kompas. */
+  function voorDegVan(model) {
+    return model.voorgevelDeg ?? model.kompas?.voorgevelDeg ?? null;
+  }
+
   function omtrek(model, g, opts = {}) {
     const { W, Ht } = g;
     const lagen = lagenVan(model);
@@ -234,6 +255,9 @@
     if (model.terras) pts.push([g.W + 2.0, D + 0.4, 0], [g.W + 2.0, 0.4, 0.8]);
     if (model.voortuin) pts.push([W + 0.1, D + 1.7, 0], [1.3, D + 1.7, 0]);
     if (model.zon) pts.push([W / 2, D / 2, Ht + R + 1.6]);
+    // De ring van de zon past in beeld; zonder ring alleen de zon zelf.
+    if (metRing(model)) model.zon.baan.filter((p, i) => i % 3 === 0 && p.el > -1.5).forEach((p) => pts.push(ringPunt(model, W, Ht, p)));
+    else if (model.zon?.nu && voorDegVan(model) != null && model.zon.nu.el > 0) pts.push(ringPunt(model, W, Ht, model.zon.nu));
     // Een appartement (huis 3.0): de verdiepingen eronder en erboven.
     if (model.woning === 'appartement') {
       const ge = gebouwVan(model);
@@ -349,14 +373,27 @@
     const klassen = typeof document !== 'undefined' ? document.documentElement.classList : null;
     if (klassen?.contains('sc-geen-seizoen')) model = { ...model, seizoen: undefined };
     if (klassen?.contains('sc-geen-weer')) model = { ...model, weer: undefined };
+    // De ring van de zon met de uren (28 oktober 2026) kan uit bij Weergave; de zon zelf blijft.
+    if (klassen?.contains('sc-geen-zonnebaan') && model.zon) model = { ...model, zon: { ...model.zon, geenRing: true } };
     // De feestdag: wat het model zegt (een schets), anders vandaag, op het eiland, als het aan staat.
     const feest = model.feest !== undefined ? model.feest : opts.wereld && !klassen?.contains('sc-geen-feest') ? feestdagVan(Date.now()) : null;
     const id = `h${++uid}`;
     R = (model.etages ?? []).some((e) => e.dak && (e.kamers ?? []).length > 0) ? 2.0 : 1.15;
+    // Met de nok langs de straat een dieper huis, zodat het dak met zijn echte helling een zolder overhoudt.
+    D = model.dak?.nok === 'langs' ? 2.3 : 1.5;
     const breed = opts.breedte ?? 760;
     const hoog = opts.hoogte ?? 560;
     const g = opbouw(model);
     const { W, Ht } = g;
+    /*
+     * De gemeten helling (28 oktober 2026, schets Wand-Huis-Ligging): de nok zo
+     * hoog als de helling zegt, over de halve diepte (langs de straat) of de
+     * halve breedte (haaks). Binnen grenzen, zodat de zolder een kamer blijft.
+     */
+    if (model.dak?.hellingDeg != null) {
+      const halfweg = model.dak.nok === 'langs' ? D / 2 : W / 2;
+      R = Math.max(0.9, Math.min(2.4, halfweg * Math.tan((model.dak.hellingDeg * Math.PI) / 180)));
+    }
 
     // Schaal en oorsprong zo dat alles past, met marge.
     const raw = omtrek(model, g, opts).map(([x, y, z]) => proj(x, y, z));
@@ -527,9 +564,83 @@
      * `zon.opRechts` zegt het, anders het kompas van het model, anders links.
      * Eerst kwam hij altijd links op, ook als daar het westen lag.
      */
-    const opRechts = model.zon?.opRechts ?? (model.kompas?.voorgevelDeg != null ? Math.cos(((180 - model.kompas.voorgevelDeg) * Math.PI) / 180) > 0 : false);
+    const opRechts = model.zon?.opRechts ?? (voorDegVan(model) != null ? Math.cos(((180 - voorDegVan(model)) * Math.PI) / 180) > 0 : false);
     const opkomst = opRechts ? 1 : -1;
-    if (model.zon?.stand != null && !nacht) {
+    /*
+     * De echte zon (28 oktober 2026, schets Wand-Huis-Ligging): met `zon.nu`
+     * ({ az, el } in graden) en het kompas staat hij waar hij echt staat. Een
+     * richting op de grond ligt in de tekening zoals het kompas hem tekent; de
+     * lucht laat zien hoe die richting van links naar rechts valt, en hoe hoog
+     * de zon staat. `zon.baan` is de baan van vandaag, van opkomst tot ondergang.
+     */
+    const voorgevelDeg = voorDegVan(model);
+    const echteZon = model.zon?.nu && voorgevelDeg != null ? model.zon.nu : null;
+    const opGrond = (az) => [-Math.sin(((az - voorgevelDeg) * Math.PI) / 180), Math.cos(((az - voorgevelDeg) * Math.PI) / 180)];
+    /*
+     * De baan van de dag als een ring rond het huis (28 oktober 2026): in 3D,
+     * van opkomst tot ondergang, zo hoog als de zon staat. Wat achter het huis
+     * loopt, valt achter het huis; wat ervoor loopt, ervoor (`zonVoor`). Wat al
+     * voorbij is, doorgetrokken; wat nog komt, gestippeld. Laag oranje, hoog
+     * lichtgeel. Bij de uren een stip, bij opkomst en ondergang de tijd.
+     */
+    const zonVoor = [];
+    /** Waar de zon nu in beeld staat, voor de bundel naar het dakvlak dat licht vangt. */
+    let zonInBeeld = null;
+    if (echteZon && !nacht) {
+      const rad = Math.PI / 180;
+      const op3 = (p) => ringPunt(model, W, Ht, p);
+      // Uit bij Weergave (`geenRing`): geen ring en geen uren, alleen de zon.
+      const baan = metRing(model) ? model.zon.baan.filter((p) => p.el > -1.5) : [];
+      const top = Math.max(20, ...baan.map((p) => p.el));
+      const kleur = (el) => {
+        const f = Math.max(0, Math.min(1, el / top));
+        const mix = (a, b) => Math.round(a + (b - a) * f).toString(16).padStart(2, '0');
+        return `#${mix(0xff, 0xff)}${mix(0x8a, 0xe8)}${mix(0x4c, 0xa8)}`;
+      };
+      const voor = (p) => op3(p)[1] > D / 2 + 0.4;
+      // Een zachte gloed onder de hele ring, achter het huis.
+      if (baan.length > 1) lucht.push(`<polyline points="${baan.map((p) => pt(P(...op3(p)))).join(' ')}" fill="none" stroke="#FFC46B" stroke-width="${(k * 0.16).toFixed(1)}" stroke-opacity="0.07" stroke-linecap="round" filter="url(#${id}-zacht)"/>`);
+      for (let i = 0; i < baan.length - 1; i++) {
+        const a = baan[i];
+        const b = baan[i + 1];
+        const gedaan = echteZon.t != null && b.t != null && b.t <= echteZon.t;
+        const laag = voor({ az: (a.az + b.az) / 2, el: (a.el + b.el) / 2 }) ? zonVoor : lucht;
+        laag.push(`<line x1="${P(...op3(a))[0].toFixed(1)}" y1="${P(...op3(a))[1].toFixed(1)}" x2="${P(...op3(b))[0].toFixed(1)}" y2="${P(...op3(b))[1].toFixed(1)}" stroke="${kleur((a.el + b.el) / 2)}" stroke-width="${gedaan ? 2.6 : 1.6}" stroke-opacity="${laag === zonVoor ? (gedaan ? 0.42 : 0.28) : gedaan ? 0.85 : 0.6}" stroke-linecap="round" ${gedaan ? '' : 'stroke-dasharray="1 6"'}/>`);
+      }
+      // De uren, om de drie uur, en de tijd van opkomst en ondergang.
+      for (const p of baan) {
+        if (p.uur == null || p.uur % 3 !== 0 || p.el < 1) continue;
+        const q = P(...op3(p));
+        const laag = voor(p) ? zonVoor : lucht;
+        laag.push(`<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="3" fill="${kleur(p.el)}" opacity="0.85"/>`);
+        laag.push(`<text x="${q[0].toFixed(1)}" y="${(q[1] - 9).toFixed(1)}" text-anchor="middle" font-family="Figtree, sans-serif" font-size="11.5" font-weight="700" fill="${kleur(p.el)}" opacity="0.8" stroke="#0a1220" stroke-opacity="0.6" stroke-width="3" paint-order="stroke">${p.uur}</text>`);
+      }
+      for (const [p, pijl] of [[baan[0], '↑'], [baan[baan.length - 1], '↓']]) {
+        if (!p?.klok) continue;
+        const q = P(...op3({ ...p, el: Math.max(0, p.el) }));
+        const laag = voor(p) ? zonVoor : lucht;
+        laag.push(`<path d="M ${(q[0] - 9).toFixed(1)} ${q[1].toFixed(1)} a 9 9 0 0 1 18 0 z" fill="#FF9A55" opacity="0.85"/><line x1="${(q[0] - 14).toFixed(1)}" y1="${q[1].toFixed(1)}" x2="${(q[0] + 14).toFixed(1)}" y2="${q[1].toFixed(1)}" stroke="#FFB27A" stroke-width="1.5" opacity="0.8"/>`);
+        laag.push(`<text x="${q[0].toFixed(1)}" y="${(q[1] + 18).toFixed(1)}" text-anchor="middle" font-family="Figtree, sans-serif" font-size="12" font-weight="700" fill="#FFC79A" stroke="#0a1220" stroke-opacity="0.6" stroke-width="3" paint-order="stroke">${pijl} ${esc(p.klok)}</text>`);
+      }
+      // De zon zelf: een gloed, een krans van stralen en een kern.
+      if (echteZon.el > 0) {
+        const q = P(...op3(echteZon));
+        zonInBeeld = q;
+        const laag = voor(echteZon) ? zonVoor : lucht;
+        // Vóór het huis wat zachter: het huis blijft leesbaar.
+        const helder = (1 - 0.5 * (model.wolken ?? 0)) * (laag === zonVoor ? 0.8 : 1);
+        defs.push(`<radialGradient id="${id}-kern"><stop offset="0" stop-color="#FFFBEA"/><stop offset="0.55" stop-color="#FFE29A"/><stop offset="1" stop-color="#FFB547"/></radialGradient>`);
+        laag.push(`<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="${(k * 1.1).toFixed(1)}" fill="url(#${id}-zon)" opacity="${(0.55 * helder).toFixed(2)}"/>`);
+        laag.push(`<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="${(k * 0.5).toFixed(1)}" fill="#FFD27A" opacity="${(0.16 * helder).toFixed(2)}" filter="url(#${id}-zacht)"/>`);
+        const stralen = Array.from({ length: 12 }, (_, i) => {
+          const h = (i * 30 + 15) * rad;
+          const [r0, r1] = [k * 0.32, k * (i % 2 ? 0.44 : 0.52)];
+          return `<line x1="${(q[0] + Math.cos(h) * r0).toFixed(1)}" y1="${(q[1] + Math.sin(h) * r0).toFixed(1)}" x2="${(q[0] + Math.cos(h) * r1).toFixed(1)}" y2="${(q[1] + Math.sin(h) * r1).toFixed(1)}"/>`;
+        }).join('');
+        laag.push(`<g stroke="#FFD98A" stroke-width="2" stroke-linecap="round" opacity="${(0.7 * helder).toFixed(2)}">${stralen}</g>`);
+        laag.push(`<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="${(k * 0.24).toFixed(1)}" fill="url(#${id}-kern)" opacity="${helder.toFixed(2)}"/>`);
+      }
+    } else if (model.zon?.stand != null && !nacht) {
       // De zon staat óp de boog: een halve ellips van opkomst tot ondergang,
       // en `stand` is de hoek erlangs. Zo valt hij nooit naast de stippellijn,
       // ook niet halverwege de ochtend.
@@ -759,7 +870,57 @@
 
     const dak = !model.zonderDak && !appartement;
     const zt = z0;
-    if (dak) {
+    /*
+     * De nok langs de straat (28 oktober 2026, schets Wand-Huis-Ligging): de
+     * dakvlakken liggen voor en achter, de gevels links en rechts lopen door tot
+     * de nok. Het voorste dakvlak is van glas, zodat je de zolder blijft zien;
+     * de achterwand van de zolder is het achterste dakvlak, van binnen gezien.
+     * Zonder `dak.nok` blijft het zoals het was: de nok van voor naar achter.
+     */
+    const nokLangs = dak && model.dak?.nok === 'langs';
+    /** Hoe fel de zon nu op een dakvlak schijnt (0 tot 1), met de echte zon; null zonder. */
+    const opVlak = (vlakDeg) => {
+      if (!echteZon || echteZon.el <= 0) return null;
+      const r = Math.PI / 180;
+      const helling = (model.dak?.hellingDeg ?? 45) * r;
+      const c = Math.sin(echteZon.el * r) * Math.cos(helling) + Math.cos(echteZon.el * r) * Math.sin(helling) * Math.cos((echteZon.az - vlakDeg) * r);
+      return Math.max(0, Math.min(1, c));
+    };
+    if (nokLangs) {
+      const onderDak = dakEtage?.kamers ?? [];
+      const nok = D / 2;
+      const totaal = onderDak.reduce((t, k2) => t + (k2.gewicht ?? 1), 0) || 1;
+      let x0 = 0;
+      for (const kamer of onderDak.length ? onderDak : [null]) {
+        const x1 = kamer ? x0 + (W * (kamer.gewicht ?? 1)) / totaal : W;
+        const lampAan = (kamer?.apparaten ?? []).some((a) => a.soort === 'lamp' && a.aan);
+        const donker = nacht && !lampAan;
+        const achter = [[x0, 0, zt], [x1, 0, zt], [x1, nok, zt + R], [x0, nok, zt + R]];
+        huis.push(poly(achter, `fill="${donker ? '#141c29' : kleurAchter(kamer)}"`));
+        if (kamer && !donker) huis.push(poly(achter, `fill="url(#${id}-w-${(nacht || schemer) && lampAan ? kleurWas(kamer) ?? 'lamp' : kamer.stand ?? 'rust'})"`));
+        huis.push(poly([[x0, 0, zt], [x1, 0, zt], [x1, D, zt], [x0, D, zt]], `fill="${donker ? '#0f151f' : '#1a2330'}"`));
+        if (x0 > 0) huis.push(poly([[x0, 0, zt], [x0, D, zt], [x0, nok, zt + R]], `fill="${donker ? '#121a26' : '#3a4a60'}"`));
+        if (kamer) {
+          sfeer(kamer, x0, x1, zt, zt + R * 0.8);
+          // De inrichting en de apparaten, tegen de achterwand: die is laag, want daar zit de goot.
+          const dakPlafond = () => zt + R * 0.55;
+          erBoven = false;
+          aircoDak = (kamer.apparaten ?? []).some((a) => a.soort === 'airco') ? aircoOnderDak(x0, x1, zt, dakPlafond) : null;
+          inrichten(kamer, x0, x1, zt, zt + R * 0.85, dakPlafond, donker);
+          blokKamer = kamer.id ?? kamer.naam;
+          dezeKamer = kamer;
+          for (const app of kamer.apparaten ?? []) apparaat(app, x0, x1, zt, zt + R * 0.85, true, dakPlafond);
+          aircoDak = null;
+          const xm = (x0 + x1) / 2;
+          kamers.push({ id: kamer.id, naam: kamer.naam, xm, z0: zt, z1: zt + R });
+          tik(kamer, [[x0, D, zt], [x1, D, zt], [x1, nok, zt + R], [x0, nok, zt + R]]);
+          kamerLabel(kamer, xm, zt + R * 0.4, true, (x1 - x0) * 0.8, R * 0.7);
+        }
+        x0 = x1;
+      }
+      huis.push(poly([[0, D, zt], [W, D, zt], [W, D, zt - 0.09], [0, D, zt - 0.09]], `fill="#3c4a5b"`));
+    }
+    if (dak && !nokLangs) {
     // Het dak, met de kamers eronder; elk met zijn stuk van de schuine wand.
     const onderDak = dakEtage?.kamers ?? [];
     const dakZ = (x) => zt + R * (1 - Math.abs(x - W / 2) / (W / 2));
@@ -851,7 +1012,63 @@
       }
       z0 = z1;
     }
-    if (dak) {
+    // De nok langs de straat (schets Wand-Huis-Ligging): rechts een puntgevel, voor een dakvlak van glas.
+    if (dak && nokLangs) {
+      const nok = D / 2;
+      const voorDeg = voorDegVan(model) ?? 180;
+      huis.push(poly([[W, 0, zt], [W, D, zt], [W, nok, zt + R]], `fill="url(#${id}-muur)"`));
+      if (zonKracht > 0) huis.push(poly([[W, 0, zt], [W, D, zt], [W, nok, zt + R]], `fill="url(#${id}-rand)"`));
+      // De nok, en de goot achter: van het achterste dakvlak zie je van voren alleen de rand.
+      huis.push(poly([[-0.08, nok - 0.05, zt + R + 0.04], [W + 0.14, nok - 0.05, zt + R + 0.04], [W + 0.14, nok + 0.05, zt + R + 0.04], [-0.08, nok + 0.05, zt + R + 0.04]], 'fill="#2c3542"'));
+      // Panelen in rijen over een dakvlak, van de goot (u 0) naar de nok (u 1), over de breedte (v).
+      const rij = (n, q, stijl) => {
+        const aantal = Math.max(0, Math.min(36, Math.round(n)));
+        if (!aantal) return;
+        const rijen = aantal <= 6 ? 1 : aantal <= 16 ? 2 : 3;
+        const kol = Math.ceil(aantal / rijen);
+        const hoog = (0.78 - (rijen - 1) * 0.04) / rijen;
+        const breed = (W - 0.4) / kol;
+        for (let i = 0; i < aantal; i++) {
+          const r = Math.floor(i / kol);
+          const c = i % kol;
+          const u0 = 0.14 + r * (hoog + 0.04);
+          const v0 = 0.2 + c * breed;
+          huis.push(poly([q(u0, v0), q(u0, v0 + breed - 0.06), q(u0 + hoog, v0 + breed - 0.06), q(u0 + hoog, v0)], stijl));
+        }
+      };
+      const voorQ = (u, v) => [v, D + 0.08 - u * (D + 0.08 - nok), zt - 0.06 + u * (R + 0.06) + 0.02];
+      const achterQ = (u, v) => [v, -0.06 + u * (nok + 0.06), zt - 0.06 + u * (R + 0.06) + 0.02];
+      const voorN = model.zon?.panelen ?? 0;
+      const achterN = model.zon?.panelenLinks ?? 0;
+      // Achter: door het glas heen alleen de omtrek, zoals het andere dakvlak eerst.
+      rij(achterN, achterQ, `fill="#4d7eac" fill-opacity="0.18" stroke="#9cc0e4" stroke-opacity="0.6" stroke-width="1"`);
+      const achterLicht = opVlak(voorDeg + 180);
+      if (achterLicht) rij(achterN, achterQ, `fill="#FFC24D" fill-opacity="${(0.4 * achterLicht).toFixed(2)}"`);
+      // Het glas van het voorste dakvlak, met een rand en een zweem.
+      const glas = [[-0.06, D + 0.1, zt - 0.08], [W + 0.14, D + 0.1, zt - 0.08], [W + 0.14, nok, zt + R], [-0.06, nok, zt + R]];
+      huis.push(poly(glas, `fill="#9cc0e4" fill-opacity="0.06" stroke="#C9D6E2" stroke-opacity="0.5" stroke-width="1.2" stroke-linejoin="round"`));
+      rij(voorN, voorQ, spook(model, 'panelen') ? `fill="none" stroke="${KLEUR.zon}" stroke-opacity="0.5" stroke-dasharray="3 3"` : `fill="url(#${id}-paneel)" fill-opacity="0.5" stroke="#8fb3d9" stroke-opacity="0.8" stroke-width="0.9"`);
+      const voorLicht = opVlak(voorDeg);
+      if (voorLicht) rij(voorN, voorQ, `fill="#FFC24D" fill-opacity="${(0.42 * voorLicht).toFixed(2)}"`);
+      bundel(voorLicht, glas);
+    }
+    /*
+     * Een zachte bundel van de zon naar een dakvlak dat licht vangt, en een warme
+     * glans erover (schets Wand-Huis-Ligging): hoe meer licht, hoe sterker.
+     */
+    function bundel(licht, vlak) {
+      if (!zonInBeeld || !licht || licht < 0.15) return;
+      const hoeken = vlak.map((p) => P(...p));
+      const midden = hoeken.reduce((s, p) => [s[0] + p[0] / hoeken.length, s[1] + p[1] / hoeken.length], [0, 0]);
+      const gid = `${id}-bundel-${Math.round(licht * 100)}-${Math.round(midden[0])}`;
+      defs.push(`<linearGradient id="${gid}" gradientUnits="userSpaceOnUse" x1="${zonInBeeld[0].toFixed(1)}" y1="${zonInBeeld[1].toFixed(1)}" x2="${midden[0].toFixed(1)}" y2="${midden[1].toFixed(1)}"><stop offset="0" stop-color="#FFD27A" stop-opacity="${(0.45 * licht).toFixed(2)}"/><stop offset="0.65" stop-color="#FFB547" stop-opacity="${(0.14 * licht).toFixed(2)}"/><stop offset="1" stop-color="#FFA53D" stop-opacity="0.02"/></linearGradient>`);
+      // Van de zon naar de twee hoeken die het verst uit elkaar liggen, gezien vanaf de zon.
+      const hoek = (p) => Math.atan2(p[1] - zonInBeeld[1], p[0] - zonInBeeld[0]);
+      const opHoek = [...hoeken].sort((a, b) => hoek(a) - hoek(b));
+      zonVoor.push(`<polygon points="${pt(zonInBeeld)} ${pt(opHoek[0])} ${pt(midden)} ${pt(opHoek[opHoek.length - 1])}" fill="url(#${gid})"/>`);
+      zonVoor.push(`<polygon points="${hoeken.map(pt).join(' ')}" fill="#FFB547" opacity="${(0.14 * licht).toFixed(2)}"/>`);
+    }
+    if (dak && !nokLangs) {
     // Rechter dakvlak met panelen.
     huis.push(poly([[W / 2, -0.08, zt + R], [W + 0.14, -0.08, zt - 0.08], [W + 0.14, D + 0.08, zt - 0.08], [W / 2, D + 0.08, zt + R]], `fill="url(#${id}-dak)"`));
     // Panelen alleen als het huis ze heeft: `panelen: 0` is geen panelen.
@@ -889,11 +1106,18 @@
         huis.push(`<g class="sc-glans">${poly([q(0.1, 0.05), q(0.1, D - 0.05), q(0.92, D - 0.05), q(0.92, 0.05)], `fill="url(#${id}-glans)"`)}</g>`);
       }
     }
+    // De bundel naar het rechter dakvlak (schets Wand-Huis-Ligging), als de zon erop staat.
+    if (echteZon) bundel(opVlak((voorDegVan(model) ?? 180) - 90), [[W / 2, -0.08, zt + R], [W + 0.14, -0.08, zt - 0.08], [W + 0.14, D + 0.08, zt - 0.08], [W / 2, D + 0.08, zt + R]]);
     // Sneeuw op het dak (huis 3.0): een witte laag, ook over de panelen.
     if (model.weer === 'sneeuw') huis.push(poly([[W / 2, -0.08, zt + R + 0.03], [W + 0.14, -0.08, zt - 0.05], [W + 0.14, D + 0.08, zt - 0.05], [W / 2, D + 0.08, zt + R + 0.03]], 'fill="#eef3f8" opacity="0.9"'));
     }
     // De doorsnede: de omtrek van het huis aan de voorkant, als een snijlijn.
-    if (dak) {
+    if (dak && nokLangs) {
+      // Met de nok langs de straat: de rechthoek van de etages, de nok, en de rand van de puntgevel.
+      huis.push(line([[0, D, 0], [0, D, zt], [W, D, zt], [W, D, 0]], `stroke="#C9D6E2" stroke-opacity="0.55" stroke-width="2.2" stroke-linejoin="round"`));
+      huis.push(line([[W, D, zt], [W, D / 2, zt + R], [W, 0, zt]], `stroke="#C9D6E2" stroke-opacity="0.35" stroke-width="1.4" stroke-linejoin="round"`));
+      huis.push(line([[0, D / 2, zt + R], [W, D / 2, zt + R]], `stroke="#C9D6E2" stroke-opacity="0.45" stroke-width="1.4"`));
+    } else if (dak) {
       huis.push(line([[0, D, 0], [0, D, zt], [W / 2, D, zt + R], [W, D, zt], [W, D, 0]], `stroke="#C9D6E2" stroke-opacity="0.55" stroke-width="2.2" stroke-linejoin="round"`));
       huis.push(line([[W / 2, D, zt + R], [W / 2, 0, zt + R]], `stroke="#C9D6E2" stroke-opacity="0.25" stroke-width="1.2"`));
     } else {
@@ -901,7 +1125,7 @@
       huis.push(line([[0, D, zt], [0, 0, zt], [W, 0, zt], [W, D, zt]], `stroke="#C9D6E2" stroke-opacity="0.3" stroke-width="1.4" stroke-linejoin="round"`));
     }
     // Schoorsteen of afvoer van de cv, als die er is.
-    if (model.cv && dak) {
+    if (model.cv && dak && !nokLangs) {
       const cx = W * 0.32;
       const zz = zt + R * (cx / (W / 2)) - 0.1;
       huis.push(poly([[cx, 0.4, zz], [cx + 0.18, 0.4, zz], [cx + 0.18, 0.4, zz + 0.55], [cx, 0.4, zz + 0.55]], 'fill="#3a4656"'));
@@ -919,6 +1143,10 @@
     if (model.buitenunit) bouwBuitenunit(model.buitenunit, W);
     // De garage vóór de batterij: die kan ertegenaan staan (huis 3.0).
     if (model.garage && eiland) bouwGarage(model.garage);
+    if (eiland) {
+      plek.oprit = [-1.95, D - 0.2, 0.2];
+      plek.garage = [-2.0, -1.25, 1.15];
+    }
     if (model.batterij || spook(model, 'batterij')) bouwBatterij(model.batterij, spook(model, 'batterij'));
     // Op het eiland (huis 3.0) heeft de tuin een vaste indeling, met het terras erin.
     if (model.tuin && eiland) bouwTuin3(model.tuin);
@@ -1008,9 +1236,10 @@
 
     /* ---- labels: getallen op het huis ---- */
     const anker = {
-      panelen: [W * 0.76, D * 0.55, zt + R * 0.48],
+      // Met de nok langs de straat (schets Wand-Huis-Ligging): voor op het glas, achter bij de nok.
+      panelen: nokLangs ? [W * 0.62, D * 0.8, zt + R * 0.38] : [W * 0.76, D * 0.55, zt + R * 0.48],
       // Het andere dakvlak (huis 3.0): voor een label bij panelen aan die kant.
-      panelenLinks: [W * 0.24, D * 0.55, zt + R * 0.48],
+      panelenLinks: nokLangs ? [W * 0.3, D * 0.22, zt + R * 0.62] : [W * 0.24, D * 0.55, zt + R * 0.48],
       batterij: plek.batterij ?? [W + 0.32, D - 0.47, 1.0],
       auto: [-1.95, D - 1.0, 0.86],
       laadpaal: [-0.95, D + 0.1, 0.75],
@@ -2305,8 +2534,16 @@
       if (voordeur && !nis) {
         for (let y = D + 0.1; y < yF - 0.15; y += 0.3) grond.push(poly([[voordeur.x0, y, 0.004], [voordeur.x1, y, 0.004], [voordeur.x1, y + 0.22, 0.004], [voordeur.x0, y + 0.22, 0.004]], 'fill="#ffffff" opacity="0.1"'));
       }
-      // De schaduw van het huis, met de zon mee: op de grond, binnen het eiland.
-      if (!nacht && model.zon?.stand != null) {
+      // De schaduw van de echte zon (schets Wand-Huis-Ligging): van de zon af, langer als hij laag staat.
+      if (!nacht && echteZon && echteZon.el > 2) {
+        const [zx, zy] = opGrond(echteZon.az);
+        const lang = Math.min(0.55, 0.22 / Math.tan((Math.max(6, echteZon.el) * Math.PI) / 180));
+        const val = (x, y, z) => [x - zx * z * lang, y - zy * z * lang, 0.006];
+        const nokPunten = model.dak?.nok === 'langs' ? [[0, D / 2, Ht + R], [W, D / 2, Ht + R]] : [[W / 2, 0, Ht + R], [W / 2, D, Ht + R]];
+        const hoeken = [[0, 0, 0], [W, 0, 0], [W, D, 0], [0, D, 0], [0, 0, Ht], [W, 0, Ht], [W, D, Ht], [0, D, Ht], ...nokPunten].map(([x, y, z]) => val(x, y, z));
+        const sterkte = (0.22 + 0.3 * zonKracht) * (1 - 0.5 * (model.wolken ?? 0));
+        grond.push(`<g clip-path="url(#${id}-eiland)"><g filter="url(#${id}-zacht)" opacity="${sterkte.toFixed(2)}">${poly(omhulsel(hoeken), `fill="${licht ? '#2c3a48' : '#02050a'}"`)}</g></g>`);
+      } else if (!nacht && model.zon?.stand != null) {
         const f = Math.max(0, Math.min(1, model.zon.stand));
         const hoog = Math.max(0.3, Math.sin(Math.PI * f));
         // Van de zon af: komt hij rechts op, dan valt de schaduw 's ochtends naar links.
@@ -2434,6 +2671,29 @@
       grond.push(poly([[bx0, gy0 + 0.95, 0.004], [gx1, gy0 + 0.95, 0.004], [gx1, gy1 - 0.08, 0.004], [bx0, gy1 - 0.08, 0.004]], `fill="${sneeuw ? '#dfe6ee' : licht ? '#8a7560' : '#3a2e24'}"`));
       grond.push(line([[bx0, gy0 + 0.95, 0.006], [bx0, gy1 - 0.08, 0.006]], `stroke="${sneeuw ? '#c9d3dd' : '#5a4634'}" stroke-width="1.5"`));
       const bloemen = herfst ? ['#e0a04a', '#c9543a', '#e8c25a'] : winter || sneeuw ? null : ['#f2a7c3', '#f6d36b', '#b7a0f2', '#ffffff'];
+      /*
+       * De tuin in zones (28 oktober 2026, schets Wand-Huis-Ligging): elke zone een
+       * vaste plek, voor een label en om op te tikken. De lampen van de border
+       * staan in de border, elk in de kleur van zijn lamp.
+       */
+      const gazon = { x0: W + 0.35, y0: gy0 + 1.0, x1: bx0 - 0.08, y1: 0.22 };
+      plek.border = [bx0 + 0.17, (gy0 + 0.95 + gy1) / 2, 0.25];
+      plek.gazon = [(gazon.x0 + gazon.x1) / 2 - 0.25, (gazon.y0 + gazon.y1) / 2, 0.05];
+      const borderLampen = t.borderLampen ?? [];
+      borderLampen.slice(0, 6).forEach((l, i, alle) => {
+        const y = gy0 + 1.25 + ((gy1 - 0.35 - (gy0 + 1.25)) * (i + 0.5)) / alle.length;
+        const x = bx0 + 0.1 + (i % 2) * 0.14;
+        dingen.push([y + 0.01, () => {
+          buiten.push(doos(x - 0.02, y - 0.02, 0, 0.04, 0.04, 0.16, ['#56636f', '#47525d', '#3b4651']));
+          const kop = P(x, y, 0.18);
+          buiten.push(`<circle cx="${kop[0].toFixed(1)}" cy="${kop[1].toFixed(1)}" r="${(k * 0.065).toFixed(1)}" fill="${l.aan ? l.kleur ?? '#FFD39A' : '#3c4755'}"/>`);
+          if (l.aan) {
+            const voet = P(x, y, 0.01);
+            buiten.push(`<ellipse cx="${voet[0].toFixed(1)}" cy="${voet[1].toFixed(1)}" rx="${(k * 0.6).toFixed(1)}" ry="${(k * 0.27).toFixed(1)}" fill="${l.kleur ?? '#FFD39A'}" opacity="0.55" filter="url(#${id}-zacht)"/>`);
+            buiten.push(`<circle cx="${kop[0].toFixed(1)}" cy="${kop[1].toFixed(1)}" r="${(k * 0.16).toFixed(1)}" fill="${l.kleur ?? '#FFD39A'}" opacity="0.35" filter="url(#${id}-zacht)"/>`);
+          }
+        }]);
+      });
       let z3 = 7;
       const rnd3 = () => ((z3 = (z3 * 16807) % 2147483647) / 2147483647);
       for (let y = gy0 + 1.1; y < gy1 - 0.15; y += 0.3) {
@@ -2444,6 +2704,7 @@
       // Het terras tegen de gevel, voorin.
       // Niet tegen de gevel: daar staat de buitenunit.
       const ter = { x0: W + 0.5, x1: W + 1.5, y0: 0.35, y1: gy1 - 0.05 };
+      plek.terras = [(ter.x0 + ter.x1) / 2, (ter.y0 + ter.y1) / 2, 0.45];
       if (model.terras || t.terras !== false) {
         grond.push(poly([[ter.x0, ter.y0, 0.006], [ter.x1, ter.y0, 0.006], [ter.x1, ter.y1, 0.006], [ter.x0, ter.y1, 0.006]], `fill="${sneeuw ? '#e6ecf2' : licht ? '#c3cad2' : '#3b4652'}"`));
         for (let x = ter.x0 + 0.3; x < ter.x1 - 0.05; x += 0.3) grond.push(line([[x, ter.y0, 0.008], [x, ter.y1, 0.008]], 'stroke="#2c353f" stroke-width="1"'));
@@ -2495,6 +2756,15 @@
       // Een schuurtje met puntdak, of een tuinhuis met plat dak en overstek (24 oktober 2026).
       if (t.tuinhuis !== false) dingen.push([gy0, () => (t.tuinhuisSoort === 'schuur' ? tuinhuis3(padX - 0.5, gy0 + 0.02, t) : tuinhuisPlat(padX - 0.55, gy0 + 0.02, t))]);
       dingen.sort((a, b) => a[0] - b[0]).forEach(([, teken]) => teken());
+      // De gekozen zone (`zone`) licht op (schets Wand-Huis-Ligging): na een tik, met zijn kaartje ernaast.
+      const vak = { border: { x0: bx0 - 0.04, y0: gy0 + 0.9, x1: gx1 + 0.02, y1: gy1 - 0.04 }, terras: ter, gazon, tuinhuis: tuinhuisVak }[t.zone];
+      if (vak) markeer(vak);
+    }
+    /** Een plek op de grond die oplicht: een rand in ijsblauw met een gloed (schets Wand-Huis-Ligging). */
+    function markeer(v) {
+      const rand = [[v.x0, v.y0, 0.012], [v.x1, v.y0, 0.012], [v.x1, v.y1, 0.012], [v.x0, v.y1, 0.012]];
+      grond.push(`<g filter="url(#${id}-zacht)" opacity="0.7">${poly(rand, `fill="none" stroke="${KLEUR.ijs}" stroke-width="5"`)}</g>`);
+      grond.push(poly(rand, `fill="${KLEUR.ijs}" fill-opacity="0.12" stroke="${KLEUR.ijs}" stroke-width="2" stroke-linejoin="round"`));
     }
     /** Een struik in de border: twee bollen, met bloemen of bladeren in het seizoen (huis 3.0). */
     function struik(x, y, s, bloemen, sneeuw) {
@@ -2796,6 +3066,7 @@
       ${eiland && stromen.length ? `<g filter="url(#${id}-gloed)" opacity="0.7">${stromen.join('').replace(/ class="sc-stroom"/g, '')}</g>` : ''}
       <g>${stromen.join('')}</g>
       <g>${lichter(buiten.join(''))}</g>
+      ${zonVoor.length ? `<g>${zonVoor.join('')}</g>` : ''}
       ${weer.length ? `${weerStijl}<g>${weer.join('')}</g>` : ''}
       <g>${labels.join('')}</g>
       ${tikken.length ? `<g>${tikken.join('')}</g>` : ''}

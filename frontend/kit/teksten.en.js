@@ -504,6 +504,8 @@
   'eigen.wg.weerZin': 'Rain and snow around the house, as it is outside.',
   'eigen.wg.feest': 'Holidays',
   'eigen.wg.feestZin': 'A pumpkin at Halloween, lights at Christmas, fireworks at New Year, eggs at Easter.',
+  'eigen.wg.zon': 'The path of the sun',
+  'eigen.wg.zonZin': 'A ring around the house with the hours, sunrise and sunset. Off: just the sun itself.',
 
   // A room (kamer.js)
   'kamer.huis': 'House',
@@ -1571,6 +1573,9 @@
   'panelen.richting.w': 'west',
   'panelen.richting.nw': 'north-west',
   'panelen.richting': 'Direction',
+  'panelen.nok': 'The ridge',
+  'panelen.nok.langs': 'Along the street',
+  'panelen.nok.haaks': 'At right angles to the street',
   'panelen.helling': 'Pitch',
   'panelen.vermogen': 'Power',
   'panelen.omvormer': 'Inverter',

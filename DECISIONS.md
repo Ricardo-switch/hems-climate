@@ -206,6 +206,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [199. De wand neemt alle persoonlijke instellingen over van wie hij volgt](#199-de-wand-neemt-alle-persoonlijke-instellingen-over-van-wie-hij-volgt)
 - [200. De film als trailer, en een groot welkom bij Inrichten](#200-de-film-als-trailer-en-een-groot-welkom-bij-inrichten)
 - [201. De kaart Camera's: zoveel camera's als je wilt, met wat ze zien](#201-de-kaart-cameras-zoveel-cameras-als-je-wilt-met-wat-ze-zien)
+- [205. Het dak volgt het huis, en de ring van de zon](#205-het-dak-volgt-het-huis-en-de-ring-van-de-zon)
 
 **Veiligheid**
 
@@ -9424,6 +9425,48 @@ Inrichten liet de dag om 7:00 beginnen, de basisregels om 8:00.
 
 *Wat afviel:* de gangbare set (20/17/20/16/12, koelen vanaf 24°); de dag om
 8:00; de waarden van het eerste huis voorzichtiger maken.
+
+---
+
+## 205. Het dak volgt het huis, en de ring van de zon
+
+*Onderwerp: weergave · Status: geldig*
+
+Op 28 oktober 2026. Bij het huis van de bewoner ligt de nok langs de straat:
+de voorgevel kijkt naar het oosten (93°), en de zon valt 's ochtends op de
+voorgevel en het dakvlak aan de voorkant. De tekening had het poppenhuis met
+de nok van voor naar achter, dus de panelen lagen opzij en het kompas draaide
+met een dakvlak in plaats van met het huis. Ook was het dak steiler dan het
+gemeten dak (51°), en stond de zon als een stip op een boog.
+
+*Besluit:*
+
+- **Het dak zoals het huis ligt.** `api/huis` geeft `ligging` mee: waar de
+  voorgevel kijkt, hoe de nok loopt en hoe steil het dak is. De nok loopt
+  langs de straat, tenzij elk schuin vlak opzij kijkt; dan haaks. Langs de
+  straat tekent het huis een glazen dakvlak aan de voorkant met de panelen
+  erop, en de zolder erachter met een schuine achterwand; haaks blijft het
+  poppenhuis. De helling is het gemiddelde van de schuine vlakken.
+- **Zelf kiezen** bij Zonnepanelen › Zelf aanpassen: "De nok", langs of haaks
+  op de straat. Haaks draait de vlakken een kwart, zodat de opbrengst klopt
+  met de tekening.
+- **Het kompas draait met de voorgevel**, op elke pagina met het huis.
+- **De echte zon.** `api/zon` geeft de baan van vandaag mee, elke tien
+  minuten van net voor opkomst tot net na ondergang. Bij Zonnepanelen staat de
+  zon op zijn echte plek, met een ring rond het huis: een stip per uur en de
+  tijd van opkomst en ondergang bij de uiteinden. De straal valt op het dakvlak
+  dat de zon het best raakt; bij een dak opzij loopt de ring er niet doorheen.
+  De schaduw valt aan de andere kant.
+- **Niet op Thuis en niet op de telefoon.** Op Thuis liep de ring door de kop,
+  de stromen en de labels; daar staat de zon zoals eerst op zijn boog, maar nu
+  aan de goede kant. Op de telefoon is het te krap.
+- **Uit te zetten** bij Jij › Weergave: "De baan van de zon". Uit staat
+  alleen de zon zelf.
+- **Versie 0.77.0.**
+
+*Wat afviel:* een platte ring onder het huis (raakte de tekst en de labels);
+de ring ook op Thuis; het dak altijd op de gemeten helling zonder grens (een
+plat dak tekent toch schuin, met de panelen erop zoals eerst).
 
 ---
 
