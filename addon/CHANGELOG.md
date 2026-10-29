@@ -1,5 +1,27 @@
 # Wat is er nieuw · What is new
 
+## 0.82.0
+
+*29 oktober 2026*
+
+**Nieuw**
+
+- "Het is koud in de woonkamer" maakt het nu echt warmer: de assistent zet de dagtemperatuur van je eigen regeling een graad hoger, tot 22:00, en daarna weer terug. Aan te zetten bij Functies › Praten
+
+**Beter**
+
+- 's Nachts zet de assistent de verwarming eerst weer aan; je eigen timer zet hem na twee uur terug
+
+*English*
+
+**New**
+
+- "It is cold in the living room" now really makes it warmer: the assistant raises the day temperature of your own control by one degree until 22:00, then sets it back. Turn it on under Features › Talking to your house
+
+**Improved**
+
+- At night the assistant first turns the heating back on; your own timer sets it back after two hours
+
 ## 0.81.0
 
 *29 oktober 2026*

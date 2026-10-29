@@ -8,7 +8,9 @@
 import { assistKamers } from '../assist.js';
 import { TodayCache } from '../today.js';
 import { ask, LANGS, parseQuestion } from '../assistant.js';
-import type { Lang, Question } from '../assistant.js';
+import type { BrugVraag, Lang, Question } from '../assistant.js';
+import { brugVraag } from '../klimaatbrug.js';
+import type { SiteConfig } from '../../core/model.js';
 import { uitspraak } from '../uitspraak.js';
 import { afsluiter, begrijp, isHalf, isRuis, MAX_TEKST } from '../woordzoeker.js';
 import { bedienbaar, herkenOpdracht, kiesUit, type Herkend, type Optie } from '../opdracht.js';
@@ -229,6 +231,8 @@ export async function assistentRoutes(d: Diensten, v: Verzoek): Promise<boolean>
       weer,
       kosten,
       sluip,
+      // De klimaatbrug (besluit 210): als hij aan staat, wordt een wens om te verwarmen een opdracht.
+      brug: klimaatBrugVoor(d, config, vrijeTekst),
       zoninval,
       config,
       snapshot: d.options.latest(),
@@ -282,6 +286,12 @@ export async function assistentRoutes(d: Diensten, v: Verzoek): Promise<boolean>
 }
 
 /** Een opdracht als antwoord: de zin, in eigen woorden als dat kan, en wat de pagina moet sturen. */
+/** De klimaatbrug voor de assistent, of null als hij uit staat of het oude systeem er niet is. */
+function klimaatBrugVoor(d: Diensten, config: SiteConfig, tekst: string | null): BrugVraag | null {
+  const k = d.options.klimaat;
+  return k != null && k.aan() && k.brug.beschikbaar ? brugVraag(k.brug, config, tekst) : null;
+}
+
 /** De keuzes die de pagina meestuurt: hooguit vier, elk een label en een zin, en anders geen. */
 export function optiesUit(ruw: string | null): Optie[] {
   if (ruw == null || ruw.length > 1200) return [];

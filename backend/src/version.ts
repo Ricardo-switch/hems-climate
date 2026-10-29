@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.81.0';
+export const VERSIE = '0.82.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,20 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.82.0',
+    datum: '2026-10-29',
+    nieuw: [
+      '"Het is koud in de woonkamer" maakt het nu echt warmer: de assistent zet de dagtemperatuur van je eigen regeling een graad hoger, tot 22:00, en daarna weer terug. Aan te zetten bij Functies › Praten',
+    ],
+    beter: ['\'s Nachts zet de assistent de verwarming eerst weer aan; je eigen timer zet hem na twee uur terug'],
+    en: {
+      nieuw: [
+        '"It is cold in the living room" now really makes it warmer: the assistant raises the day temperature of your own control by one degree until 22:00, then sets it back. Turn it on under Features › Talking to your house',
+      ],
+      beter: ['At night the assistant first turns the heating back on; your own timer sets it back after two hours'],
+    },
+  },
   {
     versie: '0.81.0',
     datum: '2026-10-29',

@@ -1816,6 +1816,8 @@
   'functies.praten.blijft': 'Stays in the house',
   'functies.praten.blijftZin': 'Your voice, camera pictures, and who is home',
   'functies.praten.bedienen': 'Control with the assistant',
+  'functies.praten.klimaat': "Climate through your own control",
+  'functies.praten.klimaatZin': "Until the app takes over, the assistant moves the knobs of your own control in Home Assistant. \"It is cold in the living room\" raises the day temperature by one degree until 22:00; then the app sets it back. The attic does not take part.",
   'functies.praten.zeg': 'Say what you want, such as "dim the lights downstairs a little" or "close the screen". It happens straight away, and the house says what it did. {wat}, as in Lights and screens. Never a garage door, gate or door; air conditioners and heating only once Smart Climate may control them.',
   'functies.praten.lampen': 'Lights and scenes',
   'functies.praten.lampenSchermen': 'Lights and scenes, screens and the awning',

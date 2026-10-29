@@ -41,6 +41,7 @@ import type { Access } from './auth.js';
 import type { BewonersView, Wie } from './bewoners.js';
 import type { MeldingenStore } from './meldingen.js';
 import type { Stem } from './stem.js';
+import type { KlimaatBrug } from './klimaatbrug.js';
 
 /** De versie die het image meekreeg bij het bouwen. */
 export interface Version {
@@ -347,6 +348,11 @@ export interface WebOptions {
   readonly lights?: LightSwitch;
   /** Schermen bedienen voor de bewoner (besluit 121); weg als de installatie het niet toestaat. */
   readonly covers?: CoverSwitch;
+  /**
+   * De klimaatbrug (besluit 210): de knoppen van het oude systeem, tot stap B.
+   * Alleen in de add-on; `aan` is de schakelaar bij Functies › Praten.
+   */
+  readonly klimaat?: { readonly brug: KlimaatBrug; readonly aan: () => boolean };
   /**
    * Wie mag bedienen (besluit 99): een eigen inlog via Home Assistant, Ingress
    * van de add-on, of open (alleen voor tests). Verplicht, zodat een nieuwe

@@ -87,6 +87,7 @@ import { configFingerprint, recordRun } from './adapters/runs.js';
 import { Onboarding } from './web/onboarding.js';
 import { FeedbackLog } from './web/feedback.js';
 import { laadWekmodellen, type Wekmodellen } from './web/wekwoord.js';
+import { BRUG_ENTITEITEN, KlimaatBrug, MODUS_OPTIES } from './web/klimaatbrug.js';
 
 
 const packageRoot = resolve(dirname(new URL(import.meta.url).pathname), '..');
@@ -436,6 +437,9 @@ const client = new HaClient({
   // Een melding naar de telefoon van een bewoner (besluit 183): alleen notify.mobile_app_…, en alleen
   // in de add-on; de NAS kijkt mee en blijft stil, anders kwam elke melding dubbel.
   allowNotify: Boolean(process.env['SUPERVISOR_TOKEN']),
+  // De klimaatbrug (besluit 210): alleen de knoppen van het oude systeem, als de brug aan staat
+  // of er nog iets terug moet. Alleen in de add-on (zie `klimaatBrug`).
+  allowKnoppen: (): { readonly entiteiten: readonly string[]; readonly opties: readonly string[] } => (klimaatAan() || (klimaatBrug?.terugzetten.length ?? 0) > 0 ? { entiteiten: BRUG_ENTITEITEN, opties: MODUS_OPTIES } : { entiteiten: [], opties: [] }),
 });
 
 // De twee verwijzen naar elkaar: de runner duwt besluiten naar de weergave, de
@@ -545,6 +549,32 @@ async function spraakBij(): Promise<void> {
 client.on('ready', () => void spraakBij());
 setInterval(() => void spraakBij(), 5 * 60_000).unref();
 /*
+ * De klimaatbrug (besluit 210): tot stap B de knoppen van het oude systeem,
+ * als de bewoner dat bij Functies aanzet. Alleen in de add-on: de NAS kijkt
+ * mee en blijft eraf, anders zou een opdracht twee keer gaan. Elke minuut zet
+ * hij terug wat voorbij zijn tijd is, ook als de brug intussen uit ging.
+ */
+const klimaatBrug: KlimaatBrug | null = process.env['SUPERVISOR_TOKEN']
+  ? new KlimaatBrug({
+      state: (id) => allStates.get(id),
+      zet: (knop, waarde): Promise<void> => client.callService('input_number', 'set_value', { value: waarde }, { entity_id: knop }),
+      kies: (select, optie): Promise<void> => client.callService('input_select', 'select_option', { option: optie }, { entity_id: select }),
+      map: logDir !== '' ? logDir : null,
+    })
+  : null;
+function klimaatAan(): boolean {
+  const f = klimaatBrug ? functiesNu() : null;
+  return f != null && volledig(f, functiesKeuzes()).praten.klimaat;
+}
+if (klimaatBrug) {
+  setInterval(() => {
+    klimaatBrug.ronde().then(
+      (gedaan) => gedaan.forEach((g) => console.log(`[klimaatbrug] ${g}`)),
+      (e: unknown) => console.warn(`[klimaatbrug] terugzetten lukte niet: ${(e as Error).message}`),
+    );
+  }, 60_000).unref();
+}
+/*
  * Het wekwoord in de dienst (besluit 208): `wekwoord/` naast `dist`, in de
  * add-on, op de NAS en in de repository. Zonder de modellen hoort
  * Home Assistant het wekwoord, zoals eerst.
@@ -584,7 +614,7 @@ const functiesKeuzes = (): FunctiesGevonden | null => {
     gevondenVoor = houseRegisters;
   }
   // De spraakassistenten (besluit 150) komen apart: die vraagt de dienst Home Assistant zelf.
-  return { ...gevondenNu, spraakassistenten: spraakLijst };
+  return { ...gevondenNu, spraakassistenten: spraakLijst, klimaatBrug: klimaatBrug?.beschikbaar ?? false };
 };
 
 /**
@@ -1570,6 +1600,7 @@ if (webPort != null) {
     house: houseReport,
     ...(lightSwitch ? { lights: lightSwitch } : {}),
     ...(coverSwitch ? { covers: coverSwitch } : {}),
+    ...(klimaatBrug ? { klimaat: { brug: klimaatBrug, aan: klimaatAan } } : {}),
     ...(layoutStore && siteConfig
       ? {
           layout: {

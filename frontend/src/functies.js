@@ -372,6 +372,9 @@ function praten() {
     ${bedienKan ? `<h2 class="kop-2" style="margin-top: 8px">${esc(t('functies.praten.bedienen'))}</h2>
     ${keuzes(t('functies.praten.bedienen'), 'pratenBedienen', aanUit(), p.bedienen)}
     <p class="mini">${esc(t('functies.praten.zeg', { wat: t(info.schermMogelijk ? 'functies.praten.lampenSchermen' : 'functies.praten.lampen') }))}</p>` : ''}
+    ${info.gevonden.klimaatBrug ? `<h2 class="kop-2" style="margin-top: 8px">${esc(t('functies.praten.klimaat'))}</h2>
+    ${keuzes(t('functies.praten.klimaat'), 'pratenKlimaat', aanUit(), p.klimaat === true)}
+    <p class="mini">${esc(t('functies.praten.klimaatZin'))}</p>` : ''}
     ${luisteren()}`;
 }
 
@@ -654,6 +657,8 @@ document.addEventListener('click', (e) => {
       concept.praten.taalmodel = w;
       proef = null;
     } else if (s === 'pratenBedienen') concept.praten.bedienen = w;
+    // De klimaatbrug (besluit 210): de knoppen van je eigen regeling, tot stap B.
+    else if (s === 'pratenKlimaat') concept.praten.klimaat = w;
     else if (s === 'spraak') concept.praten.spraak = w;
     else if (s === 'stemBron') concept.praten.stem = w;
     else if (s === 'stemVerstaan') concept.praten.verstaan = w;

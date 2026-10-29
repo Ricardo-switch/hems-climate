@@ -8,6 +8,7 @@
 import { OUTSIDE_FLOOR, floorName, floorOrder, standardFloors } from '../layout.js';
 import { readJson, sendJson } from '../http.js';
 import { taalVan, type Diensten, type Verzoek } from '../diensten.js';
+import { brugVerzoek } from '../klimaatbrug.js';
 
 /** De routes van dit onderwerp; waar als het verzoek hier is afgehandeld. */
 export async function huisRoutes(d: Diensten, v: Verzoek): Promise<boolean> {
@@ -100,6 +101,45 @@ export async function huisRoutes(d: Diensten, v: Verzoek): Promise<boolean> {
     const result = await covers.move(body);
     if (result.ok) sendJson(res, 200, { ok: true });
     else sendJson(res, result.status, { fout: result.reden });
+    return true;
+  }
+
+  // De klimaatbrug (besluit 210): verwarmen of koelen via de knoppen van het oude systeem.
+  if (path === '/api/klimaat') {
+    const k = d.options.klimaat;
+    const config = d.config();
+    if (k == null || config == null || !k.aan() || !k.brug.beschikbaar) {
+      sendJson(res, 503, { wachten: 'klimaat via je eigen regeling staat niet aan' });
+      return true;
+    }
+    if (method !== 'POST') {
+      sendJson(res, 405, { fout: 'klimaat bedien je met een POST' });
+      return true;
+    }
+    let body: unknown;
+    try {
+      body = await readJson(req);
+    } catch (error) {
+      sendJson(res, 400, { fout: (error as Error).message });
+      return true;
+    }
+    const uit = brugVerzoek(body, config, Date.now());
+    if (!uit.ok) {
+      sendJson(res, 400, { fout: uit.reden });
+      return true;
+    }
+    const p = k.brug.plan(uit.wens, uit.temperatuurC, null, config.timezone);
+    if (!p.ok) {
+      sendJson(res, 409, { fout: p.reden });
+      return true;
+    }
+    try {
+      await k.brug.voerUit({ ...p.plan, totMs: uit.totMs });
+    } catch (error) {
+      sendJson(res, 502, { fout: `Home Assistant weigerde: ${(error as Error).message}` });
+      return true;
+    }
+    sendJson(res, 200, { ok: true, doel: p.plan.doel });
     return true;
   }
 
