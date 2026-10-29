@@ -220,8 +220,11 @@ const VRAGEN: readonly [Question['kind'], string][] = [
   ['warm', 'hoe warm het overal is'],
   ['weer', 'het weer en de zon van vandaag'],
   ['morgen', 'het weer en de zon van morgen'],
-  ['kosten', 'wat apparaten deze maand kostten'],
+  ['kosten', 'wat de stroom, het gas en de apparaten deze maand kostten'],
   ['sluip', 'het sluipverbruik: wat het huis vannacht en gemiddeld gebruikte als er niets draaide'],
+  ['thuis', 'of er iemand thuis is'],
+  ['terug', 'hoeveel stroom er vandaag en deze maand terugging naar het net'],
+  ['draait', 'of de wasmachine, droger of vaatwasser draait of klaar is'],
 ];
 
 const VELDEN: Readonly<Record<string, AiTaskField>> = {
@@ -321,6 +324,7 @@ export function vanKeuze(ruw: unknown, b: Bedienbaar, zones: readonly Kamerlijst
       const kamer = veld(d, 'kamer');
       return zones.some((z) => z.id === kamer) ? { soort: 'vraag', vraag: { kind: 'waarom', kamer } } : { soort: 'niets' };
     }
+    if (kind === 'draait') return { soort: 'vraag', vraag: { kind, apparaat: '' } };
     return { soort: 'vraag', vraag: { kind } as Question };
   }
   return { soort: 'niets' };

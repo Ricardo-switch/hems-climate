@@ -290,13 +290,25 @@ const MORGEN = ['morgen', 'overmorgen', 'regen', 'regent', 'regenen', 'bui', 'bu
 const KOSTEN = ['kost', 'kosten', 'kostte', 'kostten', 'geld', 'euro', 'cost', 'costs', 'costing', 'money', 'euros', 'how much do', 'how much does', 'how much did'];
 /** Het sluipverbruik (besluit 192). */
 const SLUIP = ['sluipverbruik', 'sluip*', 'sluimer*', 'standby', 'stand by', 'basislast', 'nachtverbruik', 'verbruik vannacht', 'nachts verbruik', 'baseload', 'base load', 'phantom*', 'vampire', 'idle power', 'overnight use', 'night use'];
+/** Of er iemand thuis is, wat er terugging, en of een apparaat draait (29 oktober 2026). */
+const THUIS = ['iemand thuis', 'wie is thuis', 'wie is er thuis', 'wie zijn er thuis', 'wie zijn thuis', 'niemand thuis', 'is er iemand', 'anyone home', 'anybody home', 'someone home', 'somebody home', 'who is home', 'who is at home', 'nobody home'];
+const TERUG = ['teruggeleverd', 'terugleveren', 'teruglevering', 'terug geleverd', 'terug naar het net', 'terug het net', 'exported', 'export', 'fed back', 'fed in', 'back to the grid', 'sent back'];
+const DRAAIT = ['draait', 'draaien', 'draaide', 'aan het draaien', 'klaar', 'bezig', 'running', 'done', 'finished', 'still on'];
+/** Waar een opdracht zonder kamer over gaat: alleen klimaat; licht en schermen zijn van de opdrachten (besluit 148). */
+const KLIMAAT = ['airco', 'aircos', 'airco’s', 'airconditioning', 'ac', 'verwarming', 'kachel', 'cv', 'warmtepomp', 'heater', 'heating', 'heat pump', 'air conditioner', 'air conditioning', 'aircon'];
+const NIET_KLIMAAT = ['licht', 'lichten', 'lamp', 'lampen', 'lampje', 'scène', 'scene', 'scherm', 'schermen', 'zonnescherm', 'rolluik', 'gordijn', 'light', 'lights', 'screen', 'blind', 'blinds', 'awning', 'tv', 'muziek', 'music'];
+const MACHINES = ['wasmachine', 'vaatwasser', 'vaatwasmachine', 'droger', 'wasdroger', 'washing machine', 'washer', 'dishwasher', 'dryer', 'tumble dryer'];
+
 const WAAROM = ['waarom', 'hoe komt', 'warm', 'warmer', 'koud', 'kouder', 'heet', 'temperatuur', 'graden', 'wacht', 'why', 'how come', 'hot', 'cold', 'colder', 'temperature', 'degrees', 'waiting'];
 
 /** Koel, verwarm of zet uit; null als er geen wens in staat. */
 function wensIn(los: readonly string[], tekst: string): Wish | null {
   if (los.some((t) => t.startsWith('koel') || t === 'cool' || t === 'cooling')) return 'koelen';
   if (los.some((t) => t.startsWith('verwarm') || t === 'heat' || t === 'heating') || ` ${tekst} `.includes(' warm op ') || ` ${tekst} `.includes(' warm up ')) return 'verwarmen';
-  if ((los.includes('zet') || los.includes('turn') || los.includes('switch')) && (los.includes('uit') || los.includes('off'))) return 'uit';
+  const zet = los.includes('zet') || los.includes('doe') || los.includes('turn') || los.includes('switch');
+  if (zet && (los.includes('uit') || los.includes('off'))) return 'uit';
+  // "Zet de airco aan" (29 oktober 2026): aan zonder meer.
+  if (zet && (los.includes('aan') || los.includes('on'))) return 'aan';
   return null;
 }
 
@@ -419,8 +431,11 @@ export function begrijp(ruw: string, config: SiteConfig, lang: Lang): Begrepen {
   const waarom = telt(WAAROM, tekst, los);
   const wens = wensIn(los, tekst);
   const huis: { vraag: Question; score: number }[] = [];
-  if (kamer != null && wens != null && !los.includes('waarom') && !los.includes('why')) {
-    huis.push({ vraag: { kind: 'doe', kamer, wens, temperatuurC: getalIn(los) }, score: 4 });
+  // Zonder kamer zoekt de assistent zelf de kamer die het kan, of vraagt welke (29 oktober 2026).
+  const klimaat = telt(KLIMAAT, tekst, los) > 0;
+  const nietKlimaat = telt(NIET_KLIMAAT, tekst, los) > 0;
+  if (wens != null && !los.includes('waarom') && !los.includes('why') && !((wens === 'aan' || wens === 'uit') && nietKlimaat) && (kamer != null || klimaat)) {
+    huis.push({ vraag: { kind: 'doe', kamer: kamer ?? '', wens, temperatuurC: getalIn(los) }, score: kamer != null ? 4 : 3 });
   }
   if (kamer != null) huis.push({ vraag: { kind: 'waarom', kamer }, score: 2 + waarom });
   const straks = telt(STRAKS, tekst, los);
@@ -441,6 +456,13 @@ export function begrijp(ruw: string, config: SiteConfig, lang: Lang): Begrepen {
   if (kosten) huis.push({ vraag: { kind: 'kosten' }, score: 3 * kosten });
   const sluip = telt(SLUIP, tekst, los);
   if (sluip) huis.push({ vraag: { kind: 'sluip' }, score: 6 * sluip });
+  const thuis = telt(THUIS, tekst, los);
+  if (thuis) huis.push({ vraag: { kind: 'thuis' }, score: 5 * thuis });
+  const terug = telt(TERUG, tekst, los);
+  if (terug) huis.push({ vraag: { kind: 'terug' }, score: 4 * terug });
+  // Een apparaat dat op zon wacht, bij zijn naam of een gewone naam; wat het kost, blijft kosten.
+  const machine = (config.deferrables ?? []).map((a) => gewoon(a.name)).find((n) => n !== '' && ` ${tekst} `.includes(` ${n} `)) ?? MACHINES.find((m) => ` ${tekst} `.includes(` ${m} `)) ?? null;
+  if (machine != null && !kosten) huis.push({ vraag: { kind: 'draait', apparaat: machine }, score: 3 + 2 * telt(DRAAIT, tekst, los) });
   const nu = telt(NU, tekst, los);
   // "Waarom staat de airco aan?" zonder kamer gaat over wat hij nu doet.
   if (nu || (waarom && kamer == null)) huis.push({ vraag: { kind: 'nu' }, score: Math.max(1, 2 * nu - 1) });

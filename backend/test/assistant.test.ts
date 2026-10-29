@@ -403,6 +403,54 @@ describe('morgen en kosten (besluit 142)', () => {
     expect(een.antwoord).toContain('De airco zolder kostte in oktober € 0,56, voor 4,5 kWh.');
     expect(askNl({ kind: 'kosten' }).antwoord).toContain('eigen meter');
   });
+
+  it('zegt eerst wat het hele huis kostte (29 oktober 2026)', () => {
+    const huis = { stroomEuro: 42.5, gasEuro: 18, totaalEuro: 95.3, vanNetKwh: 160, terugKwh: 45 };
+    const a = askNl({ kind: 'kosten' }, view(), { kosten: { maand: 'oktober', apparaten: [{ id: 'z', naam: 'Airco zolder', kwh: 4.5, zonKwh: 2.4, euro: 0.56 }], huis } });
+    expect(a.antwoord).toBe(
+      'In oktober kostte de stroom tot nu toe € 42,50 en het gas € 18,00, met wat je terugleverde er al af. Met de vaste kosten erbij is dat € 95,30. De airco zolder kostte in oktober € 0,56, voor 4,5 kWh. Bij de apparaten reken ik alleen wat van het net kwam.',
+    );
+    // Zonder apparaten met een meter alleen het huis.
+    expect(askNl({ kind: 'kosten' }, view(), { kosten: { maand: 'oktober', apparaten: [], huis: { ...huis, gasEuro: null, totaalEuro: null, terugKwh: 0 } } }).antwoord).toBe(
+      'In oktober kostte de stroom tot nu toe € 42,50.',
+    );
+  });
+});
+
+describe('thuis, terug en draait (29 oktober 2026)', () => {
+  const person = (id: string) => ({ id, ref: { adapter: 'homeassistant', id: `person.${id}` } });
+  const metMensen = { ...config, occupancy: [person('ricardo'), person('shira')] };
+  const vraag = (c: typeof config, q: Question, v: DecisionView | null = view(), extra: { today?: TodayReport | null; kosten?: AskContext['kosten'] } = {}) =>
+    ask(q, { config: c, snapshot: v, today: extra.today ?? null, kosten: extra.kosten ?? null, nowMs: AT, shadow: true, lang: 'nl' }).antwoord;
+
+  it('zegt of er iemand thuis is, op naam als er bewoners zijn', () => {
+    expect(vraag({ ...config, occupancy: [] }, { kind: 'thuis' })).toBe('Dat zie ik niet: er is geen aanwezigheid gekoppeld.');
+    expect(vraag(metMensen, { kind: 'thuis' })).toBe('Ja, er is iemand thuis.');
+    expect(vraag(metMensen, { kind: 'thuis' }, view({ explanation: explanation({ occupied: false }) }))).toBe('Er is nu niemand thuis.');
+    const profielen = { ...metMensen, profiles: [{ id: 'r', name: 'Ricardo', occupancyIds: ['ricardo'], zones: {} }, { id: 's', name: 'Shira', occupancyIds: ['shira'], zones: {} }] };
+    const beiden = view({ explanation: explanation({ profile: { id: 'r', name: 'Ricardo', reason: 'thuis', home: ['r', 's'] } }) });
+    expect(vraag(profielen, { kind: 'thuis' }, beiden)).toBe('Ricardo en Shira zijn thuis.');
+  });
+
+  it('zegt wat er vandaag en deze maand terugging naar het net', () => {
+    const today = { vanMs: AT - 3_600_000, totMs: AT, kwartieren: [], zonWh: 9000, netAfWh: 2000, netTerugWh: 3200, apparaten: [], uitstelbaar: [], warmtebuffers: [], zones: [], besluiten: [] } as unknown as TodayReport;
+    const kosten = { maand: 'oktober', apparaten: [], huis: { stroomEuro: 42.5, gasEuro: null, totaalEuro: null, vanNetKwh: 160, terugKwh: 45 } };
+    expect(vraag(config, { kind: 'terug' }, view(), { today, kosten })).toBe('Vandaag ging er 3,2 kWh terug naar het net. In oktober tot nu toe 45 kWh.');
+    expect(vraag(config, { kind: 'terug' }, view(), { today: { ...today, netTerugWh: 0 } })).toBe('Vandaag ging er nog niets terug naar het net.');
+  });
+
+  it('zegt of een apparaat dat op zon wacht draait, en welke het niet kent', () => {
+    const droger = { id: 'droger', name: 'Droger', remoteStart: { adapter: 'homeassistant', id: 'binary_sensor.droger_remote' }, estimatedW: 800, latestStart: '17:00' };
+    const c = { ...config, deferrables: [droger] };
+    const draait = view({ explanation: explanation({ deferrables: [{ id: 'droger', state: 'running', reason: 'program_running', remainingMin: 42 }] }) });
+    expect(vraag(c, { kind: 'draait', apparaat: 'droger' }, draait)).toBe('De droger draait, nog 42 minuten.');
+    const klaar = view({ explanation: explanation({ deferrables: [{ id: 'droger', state: 'running', reason: 'program_finished', doneSinceMs: AT - 60_000 }] }) });
+    expect(vraag(c, { kind: 'draait', apparaat: 'droger' }, klaar)).toBe('De droger is klaar.');
+    const wacht = view({ explanation: explanation({ deferrables: [{ id: 'droger', state: 'waiting', reason: 'surplus_insufficient' }] }) });
+    expect(vraag(c, { kind: 'draait', apparaat: '' }, wacht)).toBe('De droger staat klaar en wacht op zon.');
+    expect(vraag(c, { kind: 'draait', apparaat: 'wasmachine' }, draait)).toBe('De wasmachine zie ik niet; ik volg alleen de droger.');
+    expect(vraag({ ...config, deferrables: [] }, { kind: 'draait', apparaat: 'wasmachine' })).toBe('De wasmachine zie ik niet: ik volg geen apparaten die op zon wachten.');
+  });
 });
 
 describe('doe (fase 1: alleen zeggen wat hij zou doen)', () => {
@@ -419,6 +467,17 @@ describe('doe (fase 1: alleen zeggen wat hij zou doen)', () => {
     expect(a.antwoord).not.toContain('21°');
     expect(parseQuestion(new URLSearchParams('v=doe&kamer=zolder&wens=drogen'))).toMatchObject({ ok: true, question: { wens: 'drogen' } });
     expect(askNl({ kind: 'doe', kamer: 'badkamer', wens: 'drogen', temperatuurC: null }).antwoord).toBe('De badkamer heeft geen apparaat dat kan drogen.');
+  });
+
+  it('vraagt welke kamer zonder kamer, en kiest bij aan wat de kamer nodig heeft (29 oktober 2026)', () => {
+    expect(askNl({ kind: 'doe', kamer: '', wens: 'koelen', temperatuurC: null }).antwoord).toBe(
+      'Welke kamer bedoel je: de woonkamer of de zolder? Schakelen mag ik nog niet, dus zet het nu even zelf.',
+    );
+    // De zolder is warmer dan het doel: aan is koelen.
+    expect(askNl({ kind: 'doe', kamer: 'zolder', wens: 'aan', temperatuurC: null }).antwoord).toContain('de airco zolder op koelen zetten');
+    const koud = view({ explanation: explanation({ perZone: [{ zoneId: 'zolder', temperatureC: 18, humidityPct: null, targetC: 21, demand: 'heat', reason: 'zone_below_setpoint' }] }) });
+    expect(askNl({ kind: 'doe', kamer: 'zolder', wens: 'aan', temperatuurC: null }, koud).antwoord).toContain('op verwarmen zetten');
+    expect(parseQuestion(new URLSearchParams('v=doe&kamer=zolder&wens=aan'))).toMatchObject({ ok: true, question: { wens: 'aan' } });
   });
 
   it('verwarmt eerst met wat de basiswarmte levert', () => {
@@ -498,11 +557,14 @@ describe('elk getal heeft een bron, in elke toestand', () => {
         { kind: 'weer' },
         { kind: 'morgen' },
         { kind: 'kosten' },
+        { kind: 'thuis' },
+        { kind: 'terug' },
+        { kind: 'draait', apparaat: k.pick(['', 'droger', 'wasmachine']) },
         ...config.zones.map((z) => ({ kind: 'waarom' as const, kamer: z.name })),
-        ...config.zones.map((z) => ({
+        ...[...config.zones.map((z) => z.id), ''].map((kamer) => ({
           kind: 'doe' as const,
-          kamer: z.id,
-          wens: k.pick(['koelen', 'verwarmen', 'uit'] as const),
+          kamer,
+          wens: k.pick(['koelen', 'verwarmen', 'uit', 'aan', 'drogen'] as const),
           temperatuurC: k.chance(0.5) ? null : k.numberAttr(10, 35),
         })),
       ];
@@ -535,7 +597,12 @@ describe('elk getal heeft een bron, in elke toestand', () => {
           };
       const kosten = k.chance(0.2)
         ? null
-        : { maand: 'oktober', apparaten: config.actuators.slice(0, k.int(0, 3)).map((a) => ({ id: a.id, naam: a.name, kwh: k.numberAttr(0, 300), zonKwh: k.numberAttr(0, 100), euro: num(0, 90) })) };
+        : {
+            maand: 'oktober',
+            apparaten: config.actuators.slice(0, k.int(0, 3)).map((a) => ({ id: a.id, naam: a.name, kwh: k.numberAttr(0, 300), zonKwh: k.numberAttr(0, 100), euro: num(0, 90) })),
+            // Het hele huis (29 oktober 2026), soms zonder prijs of gas.
+            ...(k.chance(0.3) ? {} : { huis: { stroomEuro: num(-40, 300), gasEuro: num(0, 200), totaalEuro: num(0, 600), vanNetKwh: k.numberAttr(0, 900), terugKwh: k.numberAttr(0, 500) } }),
+          };
       const zoninval = k.chance(0.3) ? null : { boven: k.chance(0.5), gevels: k.chance(0.5) ? ['Voorgevel'] : [] };
       for (const lang of LANGS) {
         for (const shadow of [true, false]) {

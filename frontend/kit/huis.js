@@ -2693,11 +2693,11 @@
         const kleur = l.kleur ?? '#FFD39A';
         const y0 = by0 + ((by1 - by0) * i) / alle.length;
         const y1 = by0 + ((by1 - by0) * (i + 1)) / alle.length;
-        grond.push(`<g filter="url(#${id}-zacht)" opacity="0.75">${poly([[bx0 - 0.18, y0, 0.005], [gx1 + 0.04, y0, 0.005], [gx1 + 0.04, y1, 0.005], [bx0 - 0.18, y1, 0.005]], `style="fill: ${kleur}" fill-opacity="0.55"`)}</g>`);
+        grond.push(`<g filter="url(#${id}-zacht)" opacity="0.5">${poly([[bx0 - 0.04, y0, 0.005], [gx1 - 0.06, y0, 0.005], [gx1 - 0.06, y1, 0.005], [bx0 - 0.04, y1, 0.005]], `style="fill: ${kleur}" fill-opacity="0.35"`)}</g>`);
         for (let y = y0 + 0.2; y < y1 - 0.05; y += 0.38) {
           dingen.push([y + 0.2, () => {
             const c = P(bx0 + 0.17, y, 0.16);
-            buiten.push(`<ellipse cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" rx="${(k * 0.32).toFixed(1)}" ry="${(k * 0.22).toFixed(1)}" style="fill: ${kleur}" opacity="0.4" filter="url(#${id}-zacht)"/>`);
+            buiten.push(`<ellipse cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" rx="${(k * 0.26).toFixed(1)}" ry="${(k * 0.18).toFixed(1)}" style="fill: ${kleur}" opacity="0.22" filter="url(#${id}-zacht)"/>`);
           }]);
         }
       });
@@ -2710,8 +2710,8 @@
           buiten.push(`<circle cx="${kop[0].toFixed(1)}" cy="${kop[1].toFixed(1)}" r="${(k * 0.065).toFixed(1)}" fill="${l.aan ? l.kleur ?? '#FFD39A' : '#3c4755'}"/>`);
           if (l.aan) {
             const voet = P(x, y, 0.01);
-            buiten.push(`<ellipse cx="${voet[0].toFixed(1)}" cy="${voet[1].toFixed(1)}" rx="${(k * 0.6).toFixed(1)}" ry="${(k * 0.27).toFixed(1)}" fill="${l.kleur ?? '#FFD39A'}" opacity="0.55" filter="url(#${id}-zacht)"/>`);
-            buiten.push(`<circle cx="${kop[0].toFixed(1)}" cy="${kop[1].toFixed(1)}" r="${(k * 0.16).toFixed(1)}" fill="${l.kleur ?? '#FFD39A'}" opacity="0.35" filter="url(#${id}-zacht)"/>`);
+            buiten.push(`<ellipse cx="${voet[0].toFixed(1)}" cy="${voet[1].toFixed(1)}" rx="${(k * 0.4).toFixed(1)}" ry="${(k * 0.18).toFixed(1)}" fill="${l.kleur ?? '#FFD39A'}" opacity="0.4" filter="url(#${id}-zacht)"/>`);
+            buiten.push(`<circle cx="${kop[0].toFixed(1)}" cy="${kop[1].toFixed(1)}" r="${(k * 0.12).toFixed(1)}" fill="${l.kleur ?? '#FFD39A'}" opacity="0.3" filter="url(#${id}-zacht)"/>`);
           }
         }]);
       });

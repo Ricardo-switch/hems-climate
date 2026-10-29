@@ -38,6 +38,11 @@ describe('woordzoeker in het Engels (besluit 185, stap 9 deel 6)', () => {
     expect(en('Please warm up the badkamer')).toEqual({ kind: 'doe', kamer: 'badkamer', wens: 'verwarmen', temperatuurC: null });
     expect(en('Switch off the woonkamer')).toEqual({ kind: 'doe', kamer: 'woonkamer', wens: 'uit', temperatuurC: null });
     expect(en('How warm is it everywhere?')).toEqual({ kind: 'warm' });
+    // Nieuw op 29 oktober 2026.
+    expect(en('Turn on the air conditioner')).toEqual({ kind: 'doe', kamer: '', wens: 'aan', temperatuurC: null });
+    expect(en('Is anyone home?')).toEqual({ kind: 'thuis' });
+    expect(en('How much did we feed back to the grid today?')).toEqual({ kind: 'terug' });
+    expect(en('Is the dryer still running?')).toEqual({ kind: 'draait', apparaat: 'dryer' });
     expect(en('What is the weather tomorrow?')).toEqual({ kind: 'morgen' });
     expect(en('Will it rain today?')).toEqual({ kind: 'weer' });
     expect(en('How much do the air conditioners cost?')).toEqual({ kind: 'kosten' });
@@ -165,5 +170,27 @@ describe('woordzoeker', () => {
     expect(huis('Wat kost de airco?')).toEqual({ kind: 'kosten' });
     expect(huis('Hoeveel geld kostte de airco deze maand')).toEqual({ kind: 'kosten' });
     expect(app('Waar komt het weer vandaan?')).toBe('functies.html');
+  });
+});
+
+describe('nieuwe vragen (29 oktober 2026)', () => {
+  it('zet de airco aan zonder kamer, maar laat licht aan de opdrachten', () => {
+    expect(huis('Zet de airco aan')).toEqual({ kind: 'doe', kamer: '', wens: 'aan', temperatuurC: null });
+    expect(huis('Zet de verwarming op zolder aan')).toEqual({ kind: 'doe', kamer: 'zolder', wens: 'verwarmen', temperatuurC: null });
+    expect(huis('Zet de airco op zolder aan')).toEqual({ kind: 'doe', kamer: 'zolder', wens: 'aan', temperatuurC: null });
+    expect(huis('Zet het licht in de woonkamer aan')).not.toMatchObject({ kind: 'doe' });
+    expect(huis('Doe de lampen uit')).not.toMatchObject({ kind: 'doe' });
+    expect(huis('Waarom staat de airco aan?')).toEqual({ kind: 'nu' });
+  });
+
+  it('verstaat thuis, teruggeleverd en of een apparaat draait', () => {
+    expect(huis('Is er iemand thuis?')).toEqual({ kind: 'thuis' });
+    expect(huis('Wie is er thuis?')).toEqual({ kind: 'thuis' });
+    expect(huis('Hoeveel heb ik vandaag teruggeleverd?')).toEqual({ kind: 'terug' });
+    expect(huis('Draait de wasmachine nog?')).toEqual({ kind: 'draait', apparaat: 'wasmachine' });
+    expect(huis('Is de droger klaar?')).toEqual({ kind: 'draait', apparaat: 'droger' });
+    // Wat iets kost, blijft kosten.
+    expect(huis('Wat kost de wasmachine?')).toEqual({ kind: 'kosten' });
+    expect(huis('Wat kost de stroom deze maand?')).toEqual({ kind: 'kosten' });
   });
 });
