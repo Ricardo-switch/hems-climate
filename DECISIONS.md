@@ -9737,10 +9737,16 @@ en 's avonds bij "zet de zithoek aan" vragen of de sfeerverlichting aan moet.
   onthoudt niets: de gekozen zin gaat gewoon opnieuw door de woordzoeker, met
   dezelfde deuren en regels.
 - **'s Avonds de sfeerverlichting.** Gaat het licht van een kamer of zone aan
-  terwijl het uit was, 's avonds of later, en heeft die kamer een scène met
-  sfeer, gezellig of avond in de naam, dan vraagt het huis "Wil je de
-  sfeerverlichting?", met Ja (de scène) en "Nee, gewoon licht". Eén voorstel,
-  zonder aandringen; overdag niet.
+  terwijl het uit was, 's avonds of later, dan vraagt het huis "Wil je de
+  sfeerverlichting?" als er in die zone of kamer een sfeerlamp staat naast
+  ander licht (sfeer, gezellig of avond in de naam), of bij een hele kamer een
+  scène met zo'n naam. Ja zet alleen de sfeerlamp aan (of de scène), "Nee,
+  gewoon licht" alles. Eén voorstel, zonder aandringen; overdag niet, en niet
+  in een zone zonder sfeerlamp, zoals de keuken van een woonkeuken.
+- **Gevonden op de wand (0.80.0):** "Kan je de lamp in de keuken aanzetten?"
+  werd "Welk licht bedoel je?". In de Indeling is de keuken hier een zone van
+  de woonkamer (een woonkeuken), en de assistent kende alleen kamers. Met de
+  zones gaat het nu goed; de test bootst deze indeling na.
 - **Wat het taalmodel straks mag zien.** Voor het brein (stap 3 van het plan)
   koos de bewoner: alles wat de assistent nodig heeft, ook of er iemand thuis
   is. Dat verruimt besluit 148 zodra het brein er is; in deze versie gaat er

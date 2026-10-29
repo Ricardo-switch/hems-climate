@@ -112,22 +112,57 @@ describe('een gevoel wordt een opdracht', () => {
   });
 });
 
+/**
+ * Zoals het huis van de bewoner (29 oktober 2026): de woonkamer is een
+ * woonkeuken met twee zones, de zithoek (plafonnière en sfeerverlichting) en
+ * de keuken. In 0.80.0 kende de assistent alleen kamers, en "kan je de lamp in
+ * de keuken aanzetten?" werd "Welk licht bedoel je?".
+ */
+function woonkeuken(recept: Lichtrecept | null): Bedienbaar {
+  const plafonniere = lamp('light.woonkamer_plafonniere', 'Plafonnière', 'beneden', 'Woonkamer', { zone: 'zithoek' });
+  const sfeer = lamp('light.sfeerverlichting', 'Sfeerverlichting', 'beneden', 'Woonkamer', { zone: 'zithoek' });
+  const keuken = lamp('light.keuken', 'Plafonnière keuken', 'beneden', 'Woonkamer', { zone: 'keuken' });
+  const kamers = [{ id: 'beneden', naam: 'Woonkamer', etageId: 'bg', lampen: [plafonniere, sfeer, keuken] }];
+  return {
+    kamers,
+    zones: [
+      { id: 'beneden::zithoek', naam: 'Zithoek', kamerId: 'beneden', kamer: 'Woonkamer', lampen: [plafonniere, sfeer] },
+      { id: 'beneden::keuken', naam: 'Keuken', kamerId: 'beneden', kamer: 'Woonkamer', lampen: [keuken] },
+    ],
+    lampen: kamers.flatMap((k) => k.lampen),
+    scenes: [{ id: 'scene.woonkamer_sfeer', naam: 'Sfeer', kamer: 'Woonkamer' }],
+    schermen: [],
+    etages: [{ id: 'bg', naam: 'Begane grond' }],
+    recept,
+  };
+}
+
 describe('de delen van een kamer, en de sfeerverlichting', () => {
-  it("kent de zithoek, en stelt 's avonds de sfeerverlichting voor", () => {
-    const vraag = vraagTerug(herkenOpdracht('zet de zithoek aan', huis(AVOND), 'nl'));
-    expect(vraag.antwoord).toBe('Wil je de sfeerverlichting in de woonkamer?');
-    expect(vraag.keuze?.map((k) => k.label)).toEqual(['Ja', 'Nee, gewoon licht']);
-    // Ja: de scène.
-    const ja = kiesUit('ja graag', vraag.keuze!)!;
-    expect(opdracht(herkenOpdracht(ja.tekst, huis(AVOND), 'nl')).body).toEqual({ id: 'scene.woonkamer_sfeer' });
-    // Nee: gewoon de lampen van de zithoek, warm voor de avond, zonder nog eens te vragen.
-    const nee = kiesUit('nee', vraag.keuze!)!;
-    expect(opdracht(herkenOpdracht(nee.tekst, huis(AVOND), 'nl')).body).toEqual({ doel: 'zone', id: 'woonkamer::zithoek', aan: true, helderheidPct: 70, kleur: 'warm' });
+  it('"kan je de lamp in de keuken aanzetten?": de keuken is een deel van de woonkamer', () => {
+    const o = opdracht(herkenOpdracht('Kan je de lamp in de keuken aanzetten?', woonkeuken(AVOND), 'nl'));
+    // Geen voorstel voor sfeer: in de keuken staat geen sfeerlamp.
+    expect(o.body).toEqual({ doel: 'zone', id: 'beneden::keuken', aan: true, helderheidPct: 70, kleur: 'warm' });
+    expect(o.antwoord).toBe('Het licht in de keuken is aan, op 70%, warm voor de avond.');
   });
 
-  it('overdag geen voorstel, en een kamer zonder sfeerscène ook niet', () => {
-    expect(opdracht(herkenOpdracht('zet de zithoek aan', huis(DAG), 'nl')).body).toMatchObject({ doel: 'zone', id: 'woonkamer::zithoek' });
-    expect(herkenOpdracht('licht keuken aan', huis(AVOND), 'nl')?.ok).toBe(true);
+  it("kent de zithoek, en stelt 's avonds de sfeerverlichting voor", () => {
+    const vraag = vraagTerug(herkenOpdracht('zet de zithoek aan', woonkeuken(AVOND), 'nl'));
+    expect(vraag.antwoord).toBe('Wil je de sfeerverlichting in de zithoek?');
+    expect(vraag.keuze?.map((k) => k.label)).toEqual(['Ja', 'Nee, gewoon licht']);
+    // Ja: alleen de sfeerverlichting, warm voor de avond.
+    const ja = kiesUit('ja graag', vraag.keuze!)!;
+    expect(opdracht(herkenOpdracht(ja.tekst, woonkeuken(AVOND), 'nl')).body).toEqual({ doel: 'lamp', id: 'light.sfeerverlichting', aan: true, helderheidPct: 70, kleur: 'warm' });
+    // Nee: de hele zithoek, zonder nog eens te vragen.
+    const nee = kiesUit('nee', vraag.keuze!)!;
+    expect(opdracht(herkenOpdracht(nee.tekst, woonkeuken(AVOND), 'nl')).body).toEqual({ doel: 'zone', id: 'beneden::zithoek', aan: true, helderheidPct: 70, kleur: 'warm' });
+  });
+
+  it('bij de hele kamer de scène met sfeer, en overdag geen voorstel', () => {
+    const vraag = vraagTerug(herkenOpdracht('licht woonkamer aan', woonkeuken(AVOND), 'nl'));
+    expect(kiesUit('ja', vraag.keuze!)?.tekst).toBe('Sfeerverlichting aan');
+    const zonderLamp = vraagTerug(herkenOpdracht('licht woonkamer aan', huis(AVOND), 'nl'));
+    expect(kiesUit('ja', zonderLamp.keuze!)?.tekst).toBe('scène Sfeer');
+    expect(opdracht(herkenOpdracht('zet de zithoek aan', woonkeuken(DAG), 'nl')).body).toMatchObject({ doel: 'zone', id: 'beneden::zithoek', helderheidPct: 100 });
   });
 });
 

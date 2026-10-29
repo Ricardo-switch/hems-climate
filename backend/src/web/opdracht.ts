@@ -277,16 +277,15 @@ export function lichtOpdracht(doel: LichtDoel, actie: LichtActie, waarde: number
     const recept = b.recept ?? null;
     const alUit = lampen.every((l) => !l.aan);
     // 's Avonds de sfeerverlichting (besluit 209): eerst vragen, met ja of gewoon het licht.
-    const kamerNaam = doel.soort === 'kamer' ? doel.kamer.naam : doel.soort === 'zone' ? doel.zone.kamer : null;
-    const sfeer = kamerNaam != null && alUit && !opts.gewoon && recept != null && SFEERMOMENT.has(recept.moment) ? sfeerScene(b, kamerNaam) : null;
-    if (sfeer && kamerNaam != null) {
-      const plek = doel.soort === 'zone' ? doel.zone.naam : kamerNaam;
+    const sfeer = (doel.soort === 'kamer' || doel.soort === 'zone') && alUit && !opts.gewoon && recept != null && SFEERMOMENT.has(recept.moment) ? sfeerVoor(b, doel, lang) : null;
+    if (sfeer && (doel.soort === 'kamer' || doel.soort === 'zone')) {
+      const plek = doel.soort === 'zone' ? doel.zone.naam : doel.kamer.naam;
       return {
         ok: false,
-        antwoord: nl ? `Wil je de sfeerverlichting ${kamerZin(kamerNaam)}?` : `Would you like the mood lighting in ${kamerNaam}?`,
+        antwoord: nl ? `Wil je de sfeerverlichting ${kamerZin(plek)}?` : `Would you like the mood lighting in ${plek}?`,
         keuze: nl
-          ? [{ label: 'Ja', tekst: `scène ${sfeer.naam}` }, { label: 'Nee, gewoon licht', tekst: `licht ${plek} gewoon aan` }]
-          : [{ label: 'Yes', tekst: `scene ${sfeer.naam}` }, { label: 'No, just the lights', tekst: `lights ${plek} just on` }],
+          ? [{ label: 'Ja', tekst: sfeer }, { label: 'Nee, gewoon licht', tekst: `licht ${plek} gewoon aan` }]
+          : [{ label: 'Yes', tekst: sfeer }, { label: 'No, just the lights', tekst: `lights ${plek} just on` }],
       };
     }
     // Licht dat bij het moment past (besluit 209), alleen als het uit was.
@@ -327,10 +326,24 @@ export function lichtOpdracht(doel: LichtDoel, actie: LichtActie, waarde: number
   }
 }
 
-/** Een scène voor de sfeer in die kamer, op naam: "Sfeer", "Gezellig", "Avond" (besluit 209). */
+/** Sfeer op naam: een scène of een lamp met "sfeer", "gezellig" of "avond" erin (besluit 209). */
 const SFEER = /\b(sfeer\w*|gezellig\w*|avond\w*|knus|cosy|cozy|relax\w*|mood|evening)\b/;
-function sfeerScene(b: Bedienbaar, kamerNaam: string): BedienScene | null {
-  return b.scenes.find((s) => s.kamer === kamerNaam && SFEER.test(gewoon(s.naam))) ?? null;
+
+/**
+ * Wat "ja" doet als het huis 's avonds de sfeerverlichting voorstelt, als zin
+ * die de woordzoeker zelf verstaat; null als er niets voor te stellen is.
+ * Eerst een sfeerlamp in dezelfde zone of kamer, naast ander licht (de
+ * sfeerverlichting in de zithoek, naast de plafonnière); bij een hele kamer
+ * anders een scène met sfeer in de naam. Een zone zonder sfeerlamp, zoals de
+ * keuken in een woonkeuken, krijgt geen voorstel.
+ */
+function sfeerVoor(b: Bedienbaar, doel: Extract<LichtDoel, { soort: 'kamer' | 'zone' }>, lang: Lang): string | null {
+  const lampen = doel.soort === 'zone' ? doel.zone.lampen : doel.kamer.lampen;
+  const sfeerLampen = lampen.filter((l) => SFEER.test(gewoon(l.naam)));
+  if (sfeerLampen.length && sfeerLampen.length < lampen.length) return `${sfeerLampen[0]!.naam} ${lang === 'nl' ? 'aan' : 'on'}`;
+  if (doel.soort !== 'kamer') return null;
+  const scene = b.scenes.find((s) => s.kamer === doel.kamer.naam && SFEER.test(gewoon(s.naam)));
+  return scene ? `${lang === 'nl' ? 'scène' : 'scene'} ${scene.naam}` : null;
 }
 
 /** Na het licht: de andere lampen in dezelfde kamer, en alles uit. */
