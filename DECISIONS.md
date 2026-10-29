@@ -9688,10 +9688,10 @@ de add-on, waar de app niet bij mag (de rol *manager*, eerder afgewezen).
   tijd die het geluid duurt, dan hoort Home Assistant het weer, tot de dienst
   herstart; Functies zegt dat. Zonder de modellen, of als de gekozen
   spraakassistent een ander wekwoord heeft, ook.
-- **De modellen** staan in `addon/wekwoord/` en gaan mee in de add-on en het
-  image van de NAS; alleen de `.tflite` gaat naar `/share/openwakeword`. De
-  twee voorstappen zijn van openWakeWord (CC BY-NC-SA 4.0), ongewijzigd; zie
-  de LEESMIJ daar.
+- **De modellen** staan in `backend/wekwoord/` (de NAS checkt `addon/` niet
+  uit) en gaan mee in de add-on en het image van de NAS; alleen de `.tflite`
+  uit `addon/wekwoord/` gaat naar `/share/openwakeword`. De twee voorstappen
+  zijn van openWakeWord (CC BY-NC-SA 4.0), ongewijzigd; zie de LEESMIJ daar.
 - **Versie 0.80.0.**
 
 ---

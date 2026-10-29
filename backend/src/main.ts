@@ -545,14 +545,14 @@ async function spraakBij(): Promise<void> {
 client.on('ready', () => void spraakBij());
 setInterval(() => void spraakBij(), 5 * 60_000).unref();
 /*
- * Het wekwoord in de dienst (besluit 208): naast `dist` in de add-on en op de
- * NAS, of uit de map van de add-on in de repository. Zonder de modellen hoort
+ * Het wekwoord in de dienst (besluit 208): `wekwoord/` naast `dist`, in de
+ * add-on, op de NAS en in de repository. Zonder de modellen hoort
  * Home Assistant het wekwoord, zoals eerst.
  */
 const wekmodellen: Wekmodellen | null = (() => {
   // Via fileURLToPath: `packageRoot` houdt op Windows de %20 van een spatie.
   const wortel = fileURLToPath(new URL('..', import.meta.url));
-  const mappen = [process.env['HEMS_WEKWOORD_DIR'], join(wortel, 'wekwoord'), join(wortel, '..', 'addon', 'wekwoord')].filter((m): m is string => !!m);
+  const mappen = [process.env['HEMS_WEKWOORD_DIR'], join(wortel, 'wekwoord')].filter((m): m is string => !!m);
   for (const map of mappen) {
     if (!existsSync(join(map, 'he_huis.onnx'))) continue;
     try {

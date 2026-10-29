@@ -71,6 +71,8 @@ COPY backend/package.json ./
 
 # Het wekwoord "Hé huis" (besluit 177): run.sh zet het in /share/openwakeword.
 COPY wekwoord /app/wekwoord
+# En wat de dienst zelf hoort (besluit 208), naast de .tflite; run.sh neemt alleen die mee.
+COPY backend/wekwoord/*.onnx /app/wekwoord/
 
 # De integratie voor Home Assistant (besluit 184): de app zet hem neer voor wie geen HACS heeft.
 COPY integratie /app/integratie

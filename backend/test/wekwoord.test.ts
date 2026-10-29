@@ -16,7 +16,7 @@ import { BEGIN_MS, Spraakeinde, WACHTTIJD, db } from '../src/web/spraakeinde.js'
 import { GEVOELIGHEID, gevoeligheidVan, laadWekmodellen, Wekluisteraar, Wekmelder } from '../src/web/wekwoord.js';
 import { isHalf } from '../src/web/woordzoeker.js';
 
-const MODELLEN = fileURLToPath(new URL('../../addon/wekwoord', import.meta.url));
+const MODELLEN = fileURLToPath(new URL('../wekwoord', import.meta.url));
 
 /* ------------------------------------------------- een ONNX-bestand maken */
 
