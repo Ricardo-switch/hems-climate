@@ -1,5 +1,19 @@
 # Wat is er nieuw · What is new
 
+## 0.79.3
+
+*29 oktober 2026*
+
+**Nieuw**
+
+- Het always-on display toont overdag de baan van de zon rond het huis, met een stip per uur
+
+*English*
+
+**New**
+
+- The always-on display shows the path of the sun around the house during the day, with a dot for each hour
+
 ## 0.79.2
 
 *29 oktober 2026*

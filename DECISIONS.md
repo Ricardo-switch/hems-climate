@@ -9621,6 +9621,12 @@ en de app hoort het zo zonder omweg).
   12:36 ging er zo'n 2,7 kW uit terwijl de zon doorbrak. De regeling kijkt naar
   de slimme meter.
 
+*Nagekomen, versie 0.79.3:* de ring van de zon (besluit 205) staat ook op het
+always-on display overdag. Daar staan geen labels, stromen of kop op het huis,
+en het huis staat rechts van de klok en de tekst; de reden om hem op Thuis weg
+te laten geldt hier niet. 's Avonds niet (de zon is onder), en uit bij
+Weergave zoals overal.
+
 ---
 
 ## Wat nog een besluit wacht

@@ -266,6 +266,8 @@
       etages: model.etages.map((et) => ({ ...et, kamers: et.kamers.map((k) => ({ ...k, stil: true, ...(nacht ? { stand: undefined } : {}) })) })),
       // 's Nachts zoals de schets: donker, zonder zon, wolken of stromen.
       ...(nacht ? { beschrijving: t('niemand.beschrijving'), tijd: 'nacht', wolken: 0, zon: { ...model.zon, aandeel: 0, stand: undefined, hoogte: undefined }, stromen: [] } : {}),
+      // Overdag de ring van de zon rond het huis (29 oktober 2026, besluit 205): hier staan geen labels of kop op het huis.
+      ...(!nacht && model.zon ? { zon: { ...model.zon, ...(global.huismodel?.zonNu?.(bron?.zon?.()) ?? {}) } } : {}),
     };
     const breed = nacht ? 600 : 720;
     const hoog = nacht ? 480 : 700;
