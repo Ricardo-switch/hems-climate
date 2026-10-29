@@ -217,6 +217,8 @@ describe('bijna goed verstaan (besluit 211)', () => {
     expect(verbeter('Hoe warm is het op zoldeer?', namen)).toBe('hoe warm is het op zolder');
     expect(verbeter('Zet de Ziethoek aan', namen)).toBe('zet de zithoek aan');
     expect(verbeter('Zette woonkamer op 21 graden.', namen)).toBe('zet de woonkamer op 21 graden');
+    // Met het grotere model (small-int8): s en z klinken aan het begin hetzelfde.
+    expect(verbeter('Hoe warm is het op solder?', namen)).toBe('hoe warm is het op zolder');
   });
 
   it('laat gewone woorden en korte woorden met rust', () => {

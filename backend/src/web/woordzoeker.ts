@@ -411,6 +411,9 @@ export function afstand(a: string, b: string): number {
   return d[b.length]!;
 }
 
+/** De eerste letter zoals je hem hoort: s en z, f en v klinken aan het begin hetzelfde. */
+const beginKlank = (w: string): string => ({ z: 's', v: 'f' })[w[0] ?? ''] ?? w[0] ?? '';
+
 /** Woorden die er altijd bij horen, naast de namen uit het huis. */
 const VASTE_WOORDEN = ['woonkamer', 'slaapkamer', 'keuken', 'zolder', 'badkamer', 'zithoek', 'screens', 'verwarming', 'lampen', 'verlichting', 'sfeerverlichting', 'thuis', 'vanavond', 'warmer', 'kouder'];
 
@@ -437,7 +440,8 @@ export function verbeter(ruw: string, namen: readonly string[]): string {
       let beste: { w: string; d: number } | null = null;
       for (const k of lijst) {
         // Dezelfde eerste letter: "wandkamer" mag geen badkamer worden (dan liever niet begrepen).
-        if (k[0] !== w[0] || Math.abs(k.length - w.length) > mag) continue;
+        // Een s of z en een f of v tellen als dezelfde: Whisper hoort "solder" voor zolder.
+        if (beginKlank(k) !== beginKlank(w) || Math.abs(k.length - w.length) > mag) continue;
         const d = afstand(w, k);
         if (d <= mag && (beste == null || d < beste.d)) beste = { w: k, d };
       }

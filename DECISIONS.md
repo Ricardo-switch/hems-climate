@@ -9840,7 +9840,11 @@ app; en na een opdracht bleef het venster luisteren zonder iets te doen.
   letter vanaf zes letters, twee vanaf negen, dezelfde eerste letter, zodat
   "wandkamer" nooit de badkamer wordt). Daarmee 15 van 30 foutloos, en een
   deel van de rest doet toch het goede. Een groter Whisper-model kiest de
-  bewoner in de add-on; de app verandert geen andere add-ons.
+  bewoner in de add-on; de app verandert geen andere add-ons. Met
+  `small-int8` (dezelfde avond door de bewoner gezet): 20 van 30 foutloos, 8%
+  woordfouten, 7 s per zin; na rechtzetten 25 van 30. Dat is beter dan Google
+  AI, en bijna vier keer zo snel. Een s of z en een f of v tellen bij het
+  rechtzetten als dezelfde beginletter ("solder" is de zolder).
 - **Meer screens tegelijk.** Meervoud of "allebei" ("de screens", "alle
   screens", "beide") doet ze allemaal: de eerste als opdracht, de rest erachter
   (`meer`), elk door dezelfde deur. Bij één screen zonder kamer vraagt het huis
