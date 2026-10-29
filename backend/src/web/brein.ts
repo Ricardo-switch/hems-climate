@@ -410,6 +410,10 @@ export interface Dagtelling {
 export const TELLER_BESTAND = 'taalmodel-teller.json';
 /** Zoveel dagen bewaard. */
 const DAGEN = 14;
+/** Over zoveel van de laatste antwoorden kijkt de teller of het model te traag is. */
+const LAATSTE = 5;
+/** Is het model te traag, dan toch eens per zoveel tijd eigen woorden proberen, om opnieuw te meten. */
+export const OPNIEUW_MS = 10 * 60_000;
 
 /**
  * Hoeveel vragen er naar het model gaan en hoe snel het antwoordt (besluit
@@ -423,6 +427,10 @@ export class Teller {
   readonly #map: string | null;
   readonly #dag: () => string;
   readonly #nu: () => number;
+  /** Hoe lang de laatste antwoorden duurden, ook als de assistent niet zo lang wachtte. */
+  #laatste: number[] = [];
+  /** Wanneer er voor het laatst een vraag naar het model ging. */
+  #gevraagd = -Infinity;
 
   constructor(o: { readonly map: string | null; readonly dag: () => string; readonly nu?: () => number }) {
     this.#map = o.map;
@@ -434,15 +442,33 @@ export class Teller {
   om(vraag: Vraag): Vraag {
     return async (opdracht, velden) => {
       const t0 = this.#nu();
+      this.#gevraagd = t0;
       try {
         const uit = await vraag(opdracht, velden);
-        void this.#tel(this.#nu() - t0, false);
+        const ms = this.#nu() - t0;
+        this.#laatste = [...this.#laatste, ms].slice(-LAATSTE);
+        void this.#tel(ms, false);
         return uit;
       } catch (e) {
         void this.#tel(null, true);
         throw e;
       }
     };
+  }
+
+  /**
+   * Of eigen woorden nu de moeite waard zijn (29 oktober 2026). Antwoordt het
+   * model meestal later dan de assistent wacht, dan wacht elk antwoord voor
+   * niets en komt daarna toch het vaste antwoord. Dan even niet, behalve eens
+   * per tien minuten één keer, om te meten of het weer sneller is. Het brein
+   * meet ook mee: wordt het model sneller, dan komen de eigen woorden terug.
+   */
+  eigenWoordenNu(wachtMs: number): boolean {
+    if (this.#laatste.length < 3) return true;
+    const rij = [...this.#laatste].sort((a, b) => a - b);
+    const midden = rij[Math.floor(rij.length / 2)]!;
+    if (midden <= wachtMs) return true;
+    return this.#nu() - this.#gevraagd >= OPNIEUW_MS;
   }
 
   /** De dagen, nieuwste eerst. */

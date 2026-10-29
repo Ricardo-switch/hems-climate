@@ -40,6 +40,7 @@
 **Beter**
 
 - Een getal met een komma klinkt nu goed: "21 komma 5 graden"
+- Is het taalmodel te traag, dan hoor je meteen het vaste antwoord in plaats van eerst vijf seconden te wachten; eens in de tien minuten probeert de assistent het opnieuw
 
 **Opgelost**
 
@@ -57,6 +58,7 @@
 **Improved**
 
 - A number with a decimal comma now sounds right in Dutch
+- If the language model is too slow, you hear the fixed answer straight away instead of waiting five seconds first; every ten minutes the assistant tries again
 
 **Fixed**
 

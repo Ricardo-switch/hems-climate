@@ -77,6 +77,7 @@ export const NIEUW: readonly Nieuw[] = [
     ],
     beter: [
       'Een getal met een komma klinkt nu goed: "21 komma 5 graden"',
+      'Is het taalmodel te traag, dan hoor je meteen het vaste antwoord in plaats van eerst vijf seconden te wachten; eens in de tien minuten probeert de assistent het opnieuw',
     ],
     opgelost: [
       'Bij "Dit apparaat" hoor je het voorbeeld nu ook echt; aan de wand spreekt Fully Kiosk als het scherm zelf geen stem heeft',
@@ -90,6 +91,7 @@ export const NIEUW: readonly Nieuw[] = [
       ],
       beter: [
         'A number with a decimal comma now sounds right in Dutch',
+        'If the language model is too slow, you hear the fixed answer straight away instead of waiting five seconds first; every ten minutes the assistant tries again',
       ],
       opgelost: [
         'With "This device" you now really hear the example; on the wall Fully Kiosk speaks when the screen itself has no voice',

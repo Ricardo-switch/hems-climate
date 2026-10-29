@@ -1820,6 +1820,7 @@
   'functies.praten.teller.geen': 'Vandaag nog geen vragen aan het taalmodel.',
   'functies.praten.teller.fouten': 'Fouten: {n}, zoals gebruik op of te druk.',
   'functies.praten.teller.week': 'De afgelopen zeven dagen: {n}.',
+  'functies.praten.teller.overslaan': 'Eigen woorden staan even uit: het model antwoordt nu te laat, dus je hoort meteen het vaste antwoord. Eens in de tien minuten probeert de assistent het opnieuw. Het brein werkt wel.',
   'functies.praten.teller.traag': 'Te traag voor een gesprek: de assistent wacht hooguit {w} seconden. Zet bij de AI-taak in Home Assistant het nadenken (Thinking level) op het laagste, of kies een sneller model.',
   'functies.praten.nogEens': 'Nog een keer proberen',
   'functies.praten.probeer': 'Proberen',

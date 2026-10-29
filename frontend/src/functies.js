@@ -403,7 +403,9 @@ function tellerHtml() {
   const week = teller.dagen.reduce((n, x) => n + x.vragen, 0);
   if (week > (d?.vragen ?? 0)) regels.push(t('functies.praten.teller.week', { n: week }));
   const traag = d?.gemiddeldMs != null && d.gemiddeldMs > teller.wachtMs;
-  return `<p class="mini">${regels.map(esc).join(' ')}</p>${traag ? `<p class="uitleg" style="color: var(--zon-t)">${esc(t('functies.praten.teller.traag', { w: s(teller.wachtMs) }))}</p>` : ''}`;
+  // Te traag voor eigen woorden: dan meteen het vaste antwoord (29 oktober 2026).
+  const uit = teller.eigenWoorden === false ? `<p class="mini">${esc(t('functies.praten.teller.overslaan'))}</p>` : '';
+  return `<p class="mini">${regels.map(esc).join(' ')}</p>${traag ? `<p class="uitleg" style="color: var(--zon-t)">${esc(t('functies.praten.teller.traag', { w: s(teller.wachtMs) }))}</p>` : ''}${uit}`;
 }
 
 const SPEEL = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';

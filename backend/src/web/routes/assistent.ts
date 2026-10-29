@@ -149,6 +149,8 @@ export async function assistentRoutes(d: Diensten, v: Verzoek): Promise<boolean>
     }
     // Het taalmodel (besluit 148), als de bewoner er een koos; anders null.
     const model = d.options.praten?.model() ?? null;
+    // Voor eigen woorden alleen als het model snel genoeg is (29 oktober 2026); het brein vraagt het altijd.
+    const woorden = model && d.options.praten?.eigenWoorden?.() !== false ? model : null;
     // De assistent van Home Assistant (147) bedient niets: die schakelt zelf.
     const viaSleutel = d.metSleutel(req, url, path);
     // Een vraag in eigen woorden (besluit 115): de woordzoeker maakt er een
@@ -207,9 +209,9 @@ export async function assistentRoutes(d: Diensten, v: Verzoek): Promise<boolean>
       }
       // Meer in één zin (besluit 213): "screens dicht en de lamp aan", elk deel apart.
       const delen = lijst ? herkenDelen(tekst, lijst, lang, url.searchParams.get('scherm')) : null;
-      if (delen && lijst) return stuur(await bedienAntwoord(samen(delen.map(deelVan)), tekst, lang, model, lijst));
+      if (delen && lijst) return stuur(await bedienAntwoord(samen(delen.map(deelVan)), tekst, lang, woorden, lijst));
       const herkend = lijst ? herkenOpdracht(tekst, lijst, lang, url.searchParams.get('scherm')) : null;
-      if (herkend && lijst) return stuur(await opdrachtAntwoord(d, herkend, tekst, lang, model, lijst));
+      if (herkend && lijst) return stuur(await opdrachtAntwoord(d, herkend, tekst, lang, woorden, lijst));
       let b = begrijp(tekst, config, lang);
       if (b.soort === 'onbekend' && model != null) {
         // Het brein (besluit 213): een plan van meer stappen, een vaste vraag, of een antwoord uit de feiten.
@@ -220,7 +222,7 @@ export async function assistentRoutes(d: Diensten, v: Verzoek): Promise<boolean>
         if (plan.soort === 'doen') {
           // Eén opdracht met een vraag terug (de sfeerverlichting?) gaat zoals bij de woordzoeker.
           const enig = plan.stappen.length === 1 ? plan.stappen[0]! : null;
-          if (enig?.soort === 'opdracht' && !enig.herkend.ok) return stuur(await opdrachtAntwoord(d, enig.herkend, tekst, lang, model, leeg));
+          if (enig?.soort === 'opdracht' && !enig.herkend.ok) return stuur(await opdrachtAntwoord(d, enig.herkend, tekst, lang, woorden, leeg));
           const stukken: Deel[] = [];
           const nee: string[] = [];
           const brug = klimaatBrugVoor(d, config, tekst);
@@ -234,7 +236,7 @@ export async function assistentRoutes(d: Diensten, v: Verzoek): Promise<boolean>
             if (r?.ok) stukken.push({ antwoord: r.antwoord, feiten: r.feiten, stappen: [r.opdracht], gedaan: r.gedaan, ruimte: null });
             else nee.push(r?.antwoord ?? (lang === 'nl' ? 'Het klimaat bedien ik niet: de klimaatbrug staat uit.' : 'I do not operate the climate: the climate bridge is off.'));
           }
-          if (stukken.length) return stuur(await bedienAntwoord(samen(stukken), tekst, lang, model, leeg, nee.length ? null : plan.zin, nee));
+          if (stukken.length) return stuur(await bedienAntwoord(samen(stukken), tekst, lang, woorden, leeg, nee.length ? null : plan.zin, nee));
           const antwoord = nee[0]!;
           return stuur({ body: { vraag: 'bedien', taal: lang, kamer: null, antwoord, feiten: [], gesproken: uitspraak(antwoord, lang) }, terug: null });
         }
@@ -301,7 +303,7 @@ export async function assistentRoutes(d: Diensten, v: Verzoek): Promise<boolean>
       lang: parsed.lang,
     });
     // In eigen woorden (besluit 148), met het vaste antwoord als vangnet.
-    const eigen = model && !antwoord.letterlijk ? await inEigenWoorden(model, vrijeTekst, antwoord, parsed.lang) : { antwoord: antwoord.antwoord, eigen: false };
+    const eigen = woorden && !antwoord.letterlijk ? await inEigenWoorden(woorden, vrijeTekst, antwoord, parsed.lang) : { antwoord: antwoord.antwoord, eigen: false };
     // Onthouden voor de volgende zin (besluit 213), en een opdracht van de klimaatbrug kan terug.
     if (gesprekId != null && vrijeTekst != null) {
       d.gesprekken.voeg(gesprekId, { vraag: vrijeTekst, antwoord: eigen.antwoord, terug: antwoord.opdracht ? terugVan([antwoord.opdracht], d.bedienbaar()) : null });
@@ -322,6 +324,8 @@ export async function assistentRoutes(d: Diensten, v: Verzoek): Promise<boolean>
     sendJson(res, 200, {
       dagen: dagen.slice(0, 7).map((x) => ({ dag: x.dag, vragen: x.vragen, fouten: x.fouten, gemiddeldMs: x.vragen > x.fouten ? Math.round(x.totaalMs / (x.vragen - x.fouten)) : null, langsteMs: x.langsteMs || null })),
       wachtMs: WACHT_MS,
+      // Eigen woorden staan even uit omdat het model te traag is (29 oktober 2026).
+      eigenWoorden: d.options.praten?.eigenWoorden?.() ?? true,
       // De dag in het huis, zodat de pagina vandaag vindt.
       vandaag: new Intl.DateTimeFormat('en-CA', { timeZone: d.config()?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone }).format(new Date()),
     });
