@@ -301,15 +301,34 @@ const MACHINES = ['wasmachine', 'vaatwasser', 'vaatwasmachine', 'droger', 'wasdr
 
 const WAAROM = ['waarom', 'hoe komt', 'warm', 'warmer', 'koud', 'kouder', 'heet', 'temperatuur', 'graden', 'wacht', 'why', 'how come', 'hot', 'cold', 'colder', 'temperature', 'degrees', 'waiting'];
 
+/**
+ * Een gevoel over de warmte (besluit 209): "het is koud in de woonkamer", "ik
+ * heb het warm", "het mag wat warmer". Geen vraag: "waarom is het koud?" en
+ * "is het koud op zolder?" blijven vragen.
+ */
+const KOUD = /\b(koud|kil|fris|frisjes|koukleum\w*|ijskoud|bevries\w*|brr+|cold|chilly|freezing)\b/;
+const WARM_GEVOEL = /\b(heet|benauwd|broeierig|plakkerig|bloedheet|snikheet|warm|hot|stuffy|sweltering|too warm)\b/;
+const WARMER = /\b(warmer|opwarmen|warm maken|warm zetten|maak het warm|maak het wat warm|warm it up)\b/;
+const KOELER = /\b(koeler|kouder|afkoelen|cooler|colder)\b/;
+export function gevoelWens(tekst: string): Wish | null {
+  if (/^(waarom|hoe|wat|welke|is|zijn|wordt|why|how|what|which|is|are|will)\b/.test(tekst)) return null;
+  if (WARMER.test(tekst)) return 'verwarmen';
+  if (KOELER.test(tekst)) return 'koelen';
+  if (KOUD.test(tekst)) return 'verwarmen';
+  if (WARM_GEVOEL.test(tekst)) return 'koelen';
+  return null;
+}
+
 /** Koel, verwarm of zet uit; null als er geen wens in staat. */
 function wensIn(los: readonly string[], tekst: string): Wish | null {
   if (los.some((t) => t.startsWith('koel') || t === 'cool' || t === 'cooling')) return 'koelen';
-  if (los.some((t) => t.startsWith('verwarm') || t === 'heat' || t === 'heating') || ` ${tekst} `.includes(' warm op ') || ` ${tekst} `.includes(' warm up ')) return 'verwarmen';
+  // "Warm de zolder op", niet "ik heb het warm op zolder" (besluit 209): dan staat "op" aan het eind.
+  if (los.some((t) => t.startsWith('verwarm') || t === 'heat' || t === 'heating') || /\bwarm\b.* op$/.test(tekst) || ` ${tekst} `.includes(' warm up ')) return 'verwarmen';
   const zet = los.includes('zet') || los.includes('doe') || los.includes('turn') || los.includes('switch');
   if (zet && (los.includes('uit') || los.includes('off'))) return 'uit';
   // "Zet de airco aan" (29 oktober 2026): aan zonder meer.
   if (zet && (los.includes('aan') || los.includes('on'))) return 'aan';
-  return null;
+  return gevoelWens(tekst);
 }
 
 /** Een getal met hooguit een decimaal, zoals 22 of 21,5. */
@@ -457,8 +476,10 @@ export function begrijp(ruw: string, config: SiteConfig, lang: Lang): Begrepen {
   // Zonder kamer zoekt de assistent zelf de kamer die het kan, of vraagt welke (29 oktober 2026).
   const klimaat = telt(KLIMAAT, tekst, los) > 0;
   const nietKlimaat = telt(NIET_KLIMAAT, tekst, los) > 0;
-  if (wens != null && !los.includes('waarom') && !los.includes('why') && !((wens === 'aan' || wens === 'uit') && nietKlimaat) && (kamer != null || klimaat)) {
-    huis.push({ vraag: { kind: 'doe', kamer: kamer ?? '', wens, temperatuurC: getalIn(los) }, score: kamer != null ? 4 : 3 });
+  const gevoel = gevoelWens(tekst) != null && !nietKlimaat;
+  if (wens != null && !los.includes('waarom') && !los.includes('why') && !((wens === 'aan' || wens === 'uit') && nietKlimaat) && (kamer != null || klimaat || gevoel)) {
+    // Een gevoel wint van de vraag waarom (besluit 209): "het is koud in de woonkamer" is een wens.
+    huis.push({ vraag: { kind: 'doe', kamer: kamer ?? '', wens, temperatuurC: getalIn(los) }, score: kamer != null ? 4 + (gevoel ? 2 : 0) : gevoel ? 6 : 3 });
   }
   if (kamer != null) huis.push({ vraag: { kind: 'waarom', kamer }, score: 2 + waarom });
   const straks = telt(STRAKS, tekst, los);

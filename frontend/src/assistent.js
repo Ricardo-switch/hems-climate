@@ -178,8 +178,13 @@ function vervolg(item) {
   return lijst.slice(0, 3);
 }
 
+/** Een vraag terug met keuzes (besluit 209): gaat mee met de volgende zin, zodat "de grote" of "ja" begrepen wordt. */
+let openKeuze = null;
+
 async function vraag(v) {
   stopPraten();
+  const opties = v.soort === 'vrij' && openKeuze ? JSON.stringify(openKeuze) : null;
+  openKeuze = null;
   if (nu) {
     eerder.unshift(nu);
     eerder.splice(4);
@@ -190,7 +195,7 @@ async function vraag(v) {
   try {
     const scherm = beweegtNog()?.id;
     // In de taal van de app (besluit 185): de assistent antwoordt in die taal.
-    const q = new URLSearchParams(v.soort === 'vrij' ? { v: 'vrij', tekst: v.tekst, taal: taal.code, ...(scherm ? { scherm } : {}) } : { v: v.soort, taal: taal.code, ...(v.kamer ? { kamer: v.kamer } : {}) });
+    const q = new URLSearchParams(v.soort === 'vrij' ? { v: 'vrij', tekst: v.tekst, taal: taal.code, ...(scherm ? { scherm } : {}), ...(opties ? { opties } : {}) } : { v: v.soort, taal: taal.code, ...(v.kamer ? { kamer: v.kamer } : {}) });
     const res = await fetch(`api/vraag?${q}`);
     const body = await res.json();
     nu.antwoord = res.ok ? body.antwoord : body.fout ?? body.wachten ?? taal.t('assistent.geenAntwoord');
@@ -202,7 +207,8 @@ async function vraag(v) {
     // Zoals het klinkt (besluit 142): eenheden voluit, tijden in woorden.
     nu.gesproken = body.gesproken ?? null;
     nu.ruimte = body.ruimte ?? null;
-    nu.vervolg = body.vervolg ?? [];
+    nu.vervolg = body.keuze ?? body.vervolg ?? [];
+    openKeuze = res.ok && body.keuze?.length ? body.keuze : null;
     // Een opdracht (besluit 148): meteen naar dezelfde deur als de knoppen.
     if (res.ok && body.opdracht) await voerUit(body);
     // Alleen geluid: niets gezegd, niets te antwoorden (21 oktober 2026).

@@ -470,9 +470,10 @@ describe('doe (fase 1: alleen zeggen wat hij zou doen)', () => {
   });
 
   it('vraagt welke kamer zonder kamer, en kiest bij aan wat de kamer nodig heeft (29 oktober 2026)', () => {
-    expect(askNl({ kind: 'doe', kamer: '', wens: 'koelen', temperatuurC: null }).antwoord).toBe(
-      'Welke kamer bedoel je: de woonkamer of de zolder? Schakelen mag ik nog niet, dus zet het nu even zelf.',
-    );
+    // Met keuzes om op te tikken of te zeggen (besluit 209); wat hij zou doen, zegt hij na de keuze.
+    const welke = askNl({ kind: 'doe', kamer: '', wens: 'koelen', temperatuurC: null });
+    expect(welke.antwoord).toBe('Welke kamer bedoel je: de woonkamer of de zolder?');
+    expect(welke.keuze?.map((k) => k.tekst)).toEqual(['koel Woonkamer', 'koel Zolder']);
     // De zolder is warmer dan het doel: aan is koelen.
     expect(askNl({ kind: 'doe', kamer: 'zolder', wens: 'aan', temperatuurC: null }).antwoord).toContain('de airco zolder op koelen zetten');
     const koud = view({ explanation: explanation({ perZone: [{ zoneId: 'zolder', temperatureC: 18, humidityPct: null, targetC: 21, demand: 'heat', reason: 'zone_below_setpoint' }] }) });

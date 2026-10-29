@@ -108,6 +108,8 @@ export interface Answer {
    * "Laten we het gezellig houden in huis".
    */
   readonly letterlijk?: true;
+  /** Een vraag terug met keuzes om op te tikken of te zeggen (besluit 209). */
+  readonly keuze?: readonly { readonly label: string; readonly tekst: string }[];
 }
 
 export interface AskContext {
@@ -1297,7 +1299,11 @@ export function ask(question: Question, ctx: AskContext): Answer {
         if (kan.length !== 1) {
           const plekken = kan.map((z) => zoneName(z, lang));
           const welke = plekken.length > 1 ? `${plekken.slice(0, -1).join(', ')} ${nl ? 'of' : 'or'} ${plekken.at(-1)}` : plekken.join('');
-          return letterlijk(kan.length === 0 ? wait : nl ? `Welke kamer bedoel je: ${welke}? ${wait}` : `Which room do you mean: ${welke}? ${wait}`);
+          if (kan.length === 0) return letterlijk(wait);
+          // Als keuzes (besluit 209): de zin die de woordzoeker dan zelf verstaat.
+          const werkwoord = question.wens === 'verwarmen' ? (nl ? 'verwarm' : 'heat') : question.wens === 'koelen' ? (nl ? 'koel' : 'cool') : null;
+          const keuze = werkwoord && kan.length <= 4 ? kan.map((z) => ({ label: cap(z.name), tekst: `${werkwoord} ${z.name}` })) : undefined;
+          return { ...letterlijk(nl ? `Welke kamer bedoel je: ${welke}?` : `Which room do you mean: ${welke}?`), ...(keuze ? { keuze } : {}) };
         }
         zone = kan[0];
       } else zone = findZone(config, question.kamer);

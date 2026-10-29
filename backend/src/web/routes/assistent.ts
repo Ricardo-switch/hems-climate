@@ -11,7 +11,7 @@ import { ask, LANGS, parseQuestion } from '../assistant.js';
 import type { Lang, Question } from '../assistant.js';
 import { uitspraak } from '../uitspraak.js';
 import { afsluiter, begrijp, isHalf, isRuis, MAX_TEKST } from '../woordzoeker.js';
-import { bedienbaar, herkenOpdracht, type Herkend } from '../opdracht.js';
+import { bedienbaar, herkenOpdracht, kiesUit, type Herkend, type Optie } from '../opdracht.js';
 import { inEigenWoorden, kies, PROEF_MS, WACHT_MS, type Vraag } from '../taalmodel.js';
 import { sunReport } from '../sun.js';
 import { weatherInLang } from '../weather.js';
@@ -118,11 +118,15 @@ export async function assistentRoutes(d: Diensten, v: Verzoek): Promise<boolean>
     if ((url.searchParams.get('v') ?? '').toLowerCase() === 'vrij') {
       const taal = (url.searchParams.get('taal') ?? 'nl').toLowerCase();
       const lang: Lang = (LANGS as readonly string[]).includes(taal) ? (taal as Lang) : 'nl';
-      const tekst = (url.searchParams.get('tekst') ?? '').trim();
+      let tekst = (url.searchParams.get('tekst') ?? '').trim();
       if (tekst === '' || tekst.length > MAX_TEKST) {
         sendJson(res, 400, { fout: `tekst moet 1 tot ${MAX_TEKST} tekens zijn` });
         return true;
       }
+      // Het antwoord op een vraag terug (besluit 209): "de grote", "ja", of een tik op een keuze.
+      // De pagina stuurt de keuzes mee; de gekozen zin gaat daarna gewoon door de woordzoeker.
+      const gekozen = kiesUit(tekst, optiesUit(url.searchParams.get('opties')));
+      if (gekozen) tekst = gekozen.tekst;
       vrijeTekst = tekst;
       // Alleen geluid, of het gesprek is klaar (21 oktober 2026): geen vraag.
       if (isRuis(tekst)) {
@@ -278,8 +282,23 @@ export async function assistentRoutes(d: Diensten, v: Verzoek): Promise<boolean>
 }
 
 /** Een opdracht als antwoord: de zin, in eigen woorden als dat kan, en wat de pagina moet sturen. */
+/** De keuzes die de pagina meestuurt: hooguit vier, elk een label en een zin, en anders geen. */
+export function optiesUit(ruw: string | null): Optie[] {
+  if (ruw == null || ruw.length > 1200) return [];
+  try {
+    const lijst: unknown = JSON.parse(ruw);
+    if (!Array.isArray(lijst)) return [];
+    return lijst
+      .slice(0, 4)
+      .filter((o): o is Optie => typeof o === 'object' && o != null && typeof (o as Optie).label === 'string' && typeof (o as Optie).tekst === 'string')
+      .map((o) => ({ label: o.label.slice(0, 60), tekst: o.tekst.slice(0, MAX_TEKST) }));
+  } catch {
+    return [];
+  }
+}
+
 export async function opdrachtAntwoord(d: Diensten, h: Herkend, tekst: string, lang: Lang, model: Vraag | null): Promise<Record<string, unknown>> {
-  if (!h.ok) return { vraag: 'bedien', taal: lang, kamer: null, antwoord: h.antwoord, feiten: [], gesproken: uitspraak(h.antwoord, lang) };
+  if (!h.ok) return { vraag: 'bedien', taal: lang, kamer: null, antwoord: h.antwoord, feiten: [], gesproken: uitspraak(h.antwoord, lang), ...(h.keuze ? { keuze: h.keuze } : {}) };
   const o = h.opdracht;
   const eigen = model ? await inEigenWoorden(model, tekst, o, lang) : { antwoord: o.antwoord, eigen: false };
   return {

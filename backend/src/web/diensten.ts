@@ -24,6 +24,7 @@ import { kindOfCode } from './open-meteo.js';
 import { SESSION_COOKIE, cookieValue, ingressVisitor, type Access, type Visitor } from './auth.js';
 import type { Wie } from './bewoners.js';
 import { LiveStroom } from './live.js';
+import { lichtRecept, type Lichtrecept } from './lichtrecept.js';
 import { Luisterpost } from './luisterpost.js';
 import type { WebOptions } from './server-opties.js';
 
@@ -217,7 +218,16 @@ export class Diensten {
   /** Wat de assistent nu mag bedienen (besluit 148): dezelfde grenzen als de knoppen. */
   bedienbaar(): Bedienbaar {
     const licht = this.lichtMag();
-    return bedienbaar(this.options.house?.() ?? null, { licht, scenes: licht && this.options.lights?.scenesEnabled === true, schermen: this.schermMag() });
+    return bedienbaar(this.options.house?.() ?? null, { licht, scenes: licht && this.options.lights?.scenesEnabled === true, schermen: this.schermMag() }, this.lichtRecept());
+  }
+
+  /** Licht dat bij het moment past (besluit 209): de klok, de zon, en het weer dat de dienst al had. */
+  lichtRecept(nuMs = Date.now()): Lichtrecept | null {
+    const config = this.config();
+    if (config == null) return null;
+    const loc = this.options.location?.() ?? null;
+    const zon = loc ? sunPosition(nuMs, loc.latDeg, loc.lonDeg) : null;
+    return lichtRecept({ nuMs, tijdzone: config.timezone, zonHoogteDeg: zon?.elevationDeg ?? null, weer: this.weather?.report.vandaag.soort ?? null });
   }
 
   /** Schermen bedienen: de installatie staat het toe, en het staat aan bij Functies (besluit 121). */

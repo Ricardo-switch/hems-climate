@@ -252,6 +252,10 @@ export function opdrachtKiezen(tekst: string, b: Bedienbaar, zones: readonly Kam
     for (const l of b.lampen) regels.push(`- ${l.id} | ${l.naam} | ${l.kamer}${l.dimbaar ? ' | dimbaar' : ''}${l.aan ? ` | nu aan${l.helderheidPct != null ? ` op ${l.helderheidPct}%` : ''}` : ' | nu uit'}`);
     regels.push('Kamers met licht (soort licht, alle lampen in de kamer samen):');
     for (const k of b.kamers) regels.push(`- kamer:${k.id} | ${k.naam}`);
+    if (b.zones.length) {
+      regels.push('Delen van een kamer met licht (soort licht, alle lampen in dat deel samen):');
+      for (const z of b.zones) regels.push(`- zone:${z.id} | ${z.naam} | ${z.kamer}`);
+    }
   }
   if (b.scenes.length) {
     regels.push('Scènes (soort scene):');
@@ -303,8 +307,12 @@ export function vanKeuze(ruw: unknown, b: Bedienbaar, zones: readonly Kamerlijst
     if (actie === 'helderheid' && (waarde == null || waarde < 1)) return { soort: 'niets' };
     const lamp = b.lampen.find((l) => l.id === id);
     const kamer = id.startsWith('kamer:') ? b.kamers.find((k) => k.id === id.slice(6)) : undefined;
-    if (!lamp && !kamer) return { soort: 'niets' };
-    return { soort: 'opdracht', herkend: lichtOpdracht(lamp ? { soort: 'lamp', lamp } : { soort: 'kamer', kamer: kamer! }, actie as LichtActie, waarde, b, lang) };
+    // Een deel van een kamer, zoals de zithoek (besluit 209).
+    const zone = id.startsWith('zone:') ? b.zones.find((z) => z.id === id.slice(5)) : undefined;
+    if (lamp) return { soort: 'opdracht', herkend: lichtOpdracht({ soort: 'lamp', lamp }, actie as LichtActie, waarde, b, lang) };
+    if (zone) return { soort: 'opdracht', herkend: lichtOpdracht({ soort: 'zone', zone }, actie as LichtActie, waarde, b, lang) };
+    if (!kamer) return { soort: 'niets' };
+    return { soort: 'opdracht', herkend: lichtOpdracht({ soort: 'kamer', kamer }, actie as LichtActie, waarde, b, lang) };
   }
   if (soort === 'scene') {
     const scene = b.scenes.find((s) => s.id === id);

@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.80.0';
+export const VERSIE = '0.81.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,30 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.81.0',
+    datum: '2026-10-29',
+    nieuw: [
+      'Zeg wat je voelt: "het is donker in de keuken" doet het licht aan, "het is hier zo fel" dimt het, en "het is koud in de woonkamer" begrijpt het huis als verwarmen',
+      'Licht dat bij het moment past: overdag helder, \'s avonds warm, \'s nachts zacht',
+      '\'s Avonds vraagt het huis of je de sfeerverlichting wilt',
+    ],
+    beter: [
+      'Zijn er twee screens of meer kamers, dan vraagt het huis welke ("klein of groot?") en begrijpt het "de grote"; tikken op een keuze kan ook',
+      'De assistent kent de delen van een kamer, zoals de zithoek',
+    ],
+    en: {
+      nieuw: [
+        'Say how it feels: "it is dark in the kitchen" turns the light on, "it is too bright here" dims it, and "it is cold in the living room" is understood as heating',
+        'Light that suits the moment: bright during the day, warm in the evening, soft at night',
+        'In the evening the house asks whether you would like the mood lighting',
+      ],
+      beter: [
+        'With two screens or several rooms, the house asks which one ("small or large?") and understands "the large one"; you can also tap a choice',
+        'The assistant knows the parts of a room, such as the seating area',
+      ],
+    },
+  },
   {
     versie: '0.80.0',
     datum: '2026-10-29',
