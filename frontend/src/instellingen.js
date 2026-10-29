@@ -9,10 +9,10 @@
 const { $$, nl, esc, haal } = app;
 
 /** Alles wat de pagina leest, per deur; null zolang die niets gaf. */
-const d = { energie: null, aansluiting: null, huis: null, functies: null, comfort: null, site: null, sessie: null, export: null, health: null, zon: null, bewoners: null };
+const d = { energie: null, aansluiting: null, huis: null, functies: null, comfort: null, site: null, sessie: null, export: null, health: null, zon: null, bewoners: null, divergence: null, sluip: null };
 
 async function laadAlles() {
-  const deuren = { energie: 'api/energie', aansluiting: 'api/aansluiting', huis: 'api/huis', functies: 'api/functies', comfort: 'api/comfort', site: 'api/site', sessie: 'api/sessie', export: 'api/export/info', health: 'api/health', zon: 'api/zon', bewoners: 'api/bewoners' };
+  const deuren = { energie: 'api/energie', aansluiting: 'api/aansluiting', huis: 'api/huis', functies: 'api/functies', comfort: 'api/comfort', site: 'api/site', sessie: 'api/sessie', export: 'api/export/info', health: 'api/health', zon: 'api/zon', bewoners: 'api/bewoners', divergence: 'api/divergence', sluip: 'api/sluipverbruik' };
   const r = await Promise.allSettled(Object.values(deuren).map((p) => haal(p)));
   Object.keys(deuren).forEach((k, i) => {
     if (r[i].status === 'fulfilled') d[k] = r[i].value;
@@ -39,7 +39,10 @@ function kan() {
         .map((s) => (tel(s) ? `<span class="stand ${s}">${esc(t(`instellingen.telt.${s}`, { n: tel(s) }))}</span>` : ''))
         .join('')
     : '';
-  return `<h2 class="kop-3">${esc(t('instellingen.kan'))}</h2><p class="mini" style="margin: 4px 0 0">${esc(t('instellingen.kanZin'))}</p><div class="standen">${standen}</div>`;
+  // De kleine zonnewaaier: een tik erop opent meteen Hoe ver je huis is.
+  const v = k && window.waaier ? stand.voortgang(d) : null;
+  const mini = v?.onderwerpen.length ? `<span class="kanwaaier" data-naar="voortgang.html" title="${esc(t('voortgang.open'))}"><svg viewBox="0 0 190 110" aria-hidden="true" data-mini></svg></span>` : '';
+  return `<div><h2 class="kop-3">${esc(t('instellingen.kan'))}</h2><p class="mini" style="margin: 4px 0 0">${esc(t('instellingen.kanZin'))}</p><div class="standen">${standen}</div></div>${mini}`;
 }
 
 /* --------------------------------------------------------- de groepen */
@@ -174,6 +177,8 @@ function tekenNu() {
     el.classList.toggle('klaar', m.klaar);
   });
   $$('[data-kan]').forEach((el) => (el.innerHTML = kan()));
+  const v = $$('[data-mini]').length ? stand.voortgang(d) : null;
+  $$('[data-mini]').forEach((svg) => waaier.teken(svg, { groepen: v.groepen, cx: 95, cy: 104, r0: 32, R: 92, getal: `${v.totaal}%`, groei: false, knoppen: false }));
   $$('[data-groepen]').forEach((el) => (el.innerHTML = groepen()));
   // Jij (besluit 181): je profiel; een gast heeft er geen, een scherm alleen hoe de app eruitziet.
   const ik = d.bewoners?.ik ?? null;
@@ -213,6 +218,12 @@ document.addEventListener('keydown', (e) => {
     e.target.value = '';
     toonGevonden(e.target);
   }
+});
+document.addEventListener('click', (e) => {
+  const naar = e.target.closest('[data-naar]');
+  if (!naar) return;
+  e.preventDefault();
+  location.href = naar.dataset.naar;
 });
 document.addEventListener('pointerdown', (e) => {
   if (!e.target.closest('[data-zoekvak]')) $$('[data-gevonden]').forEach((el) => (el.hidden = true));

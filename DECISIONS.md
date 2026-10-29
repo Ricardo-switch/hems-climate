@@ -215,6 +215,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [211. Sneller verstaan, de screens samen, en het venster dicht na een opdracht](#211-sneller-verstaan-de-screens-samen-en-het-venster-dicht-na-een-opdracht)
 - [212. De stem kiezen, en stem en luisteren op één plek](#212-de-stem-kiezen-en-stem-en-luisteren-op-één-plek)
 - [213. Het brein: een gesprek, meer in één zin, en doe maar terug](#213-het-brein-een-gesprek-meer-in-één-zin-en-doe-maar-terug)
+- [214. Hoe ver je huis is: de zonnewaaier](#214-hoe-ver-je-huis-is-de-zonnewaaier)
 
 **Veiligheid**
 
@@ -9952,6 +9953,50 @@ hooguit één ding, en kon niets terug.
   (`uitspraak`), en "Dit apparaat" spreekt ook in Fully Kiosk, dat in de
   webweergave geen spraak heeft (`app.zegMetApparaat`).
 - **Versie 0.85.0.**
+
+---
+
+## 214. Hoe ver je huis is: de zonnewaaier
+
+*Onderwerp: weergave · Status: geldig*
+
+De bewoner vroeg op 29 oktober 2026 om een totale voortgangsmeter achter Wat
+je huis kan: wat het huis kan, wat het al doet en hoe ver het leren is. Alleen
+wat er uit Home Assistant komt; de ideeën en wat er nog bij kan blijven op Wat
+je huis kan. Uit de schetsen `Wand-Voortgang` (met de visgraat ernaast) en
+`Tel-Voortgang` koos hij de zonnewaaier.
+
+*Besluit:*
+
+- **Een eigen pagina** (`voortgang.html`): het huis komt op als een zon boven
+  de horizon. Elke straal is een onderwerp uit `stand.kan`, in zes groepen;
+  hoe verder hij reikt, hoe verder het is. Vier ringen: gevonden, geleerd,
+  kijkt mee, werkt. De tekening staat in de kit (`kit/waaier.js`, stijl in
+  `kit.css`), zodat de schetsen en de app dezelfde code gebruiken (besluit
+  104).
+- **Het getal in de zon telt alles mee** (`stand.voortgang`): werkt is 100%,
+  kijkt mee 75% plus een kwart van de datasetmeter (`gereedheid.totaal`,
+  besluit 64), leert 25 tot 50%. Op tijd warm leert met de seizoenen
+  (`gereedheid.tijd`). Wat meekijkt groeit gestreept naar de buitenste ring.
+- **Wat er nog bij kan staat er niet in** (stand `nodig`); wat uit staat of een
+  instelling mist, krijgt een korte grijze straal op de eerste ring.
+- **Rechts** wat er samen werkt en wanneer het klimaat zelf regelt: seizoenen,
+  elke stand, de winterdagen en samen. **Onderaan** de weg erheen op schaal
+  van de tijd; het moment met genoeg winterdagen is een schatting vanaf 1
+  december en heet "op zijn vroegst". Zonder slimme regeling of zonder
+  meekijken staan die twee er niet.
+- **Een tik** op een straal opent het blad: de vier treden, wat het al weet en
+  wat nog komt, met de knop naar de instelling. Op de telefoon staan de namen
+  niet bij de stralen maar in de lijst eronder, met vier streepjes per
+  onderwerp.
+- **Twee ingangen:** de kleine waaier op de kaart Wat je huis kan bij
+  Instellingen, en een knop op Wat je huis kan naast In Home Assistant. Zoeken
+  op "voortgang" vindt hem ook. Een gast mag hem zien.
+- **Leert nog is violet**, ook op Wat je huis kan en Instellingen, zodat het
+  te onderscheiden is van kijkt mee.
+- **De stralen groeien alleen de eerste keer**; een tik of nieuwe cijfers
+  tekenen ze meteen, en een kleine waaier groeit nooit.
+- **Versie 0.86.0.**
 
 ---
 

@@ -26,7 +26,7 @@ async function laadAlles() {
 /** Zes groepen (besluit 187): wat het huis eerst leert staat apart, en de kosten ook. */
 const GROEPEN = ['comfort', 'leert', 'zon', 'kosten', 'gemak', 'overzicht'].map((g) => [g, t(`kan.groep.${g}`)]);
 const STANDEN = ['werkt', 'kijkt', 'leert', 'mis', 'uit', 'nodig'].map((s) => [s, t(`kan.stand.${s}`)]);
-const STIP = { werkt: 'var(--mint)', kijkt: 'var(--ijs)', leert: 'var(--ijs)', mis: 'var(--gloed)', uit: 'var(--gedempt)', nodig: 'transparent; box-shadow: inset 0 0 0 1.5px var(--zon)' };
+const STIP = { werkt: 'var(--mint)', kijkt: 'var(--ijs)', leert: 'var(--violet)', mis: 'var(--gloed)', uit: 'var(--gedempt)', nodig: 'transparent; box-shadow: inset 0 0 0 1.5px var(--zon)' };
 const gekozen = () => decodeURIComponent(location.hash.slice(1));
 
 /* ------------------------------------------------------------ tekenen */
@@ -105,6 +105,13 @@ function klaarBlad() {
     ${groepen}`;
 }
 
+/** Hoe ver je huis is: de kleine zonnewaaier als knop naar die pagina. */
+function voortgangKnop() {
+  const v = stand.voortgang(d);
+  if (!v.onderwerpen.length) return '';
+  return `<a class="voortgangknop" href="voortgang.html"><svg viewBox="0 0 190 110" aria-hidden="true" data-mini></svg><span><b>${esc(t('voortgang.knop'))}</b><span class="zin">${esc(t('voortgang.knopZin', { pct: v.totaal, n: v.tel('werkt'), totaal: v.onderwerpen.length }))}</span></span><span class="pct">${v.totaal}%</span><span class="pijl" aria-hidden="true">›</span></a>`;
+}
+
 /** Het huis, met aanwijzers naar wat het doet en wat erbij kan. */
 function huisModel(lijst) {
   const per = (id) => lijst.find((x) => x.id === id);
@@ -114,7 +121,7 @@ function huisModel(lijst) {
   const piekW = tek.piekW;
   const label = (bij, id, dx, dy) => {
     const x = per(id);
-    return x ? { bij, titel: t(`kan.kort.${id}`), toon: { werkt: 'mint', kijkt: 'ijs', leert: 'ijs', mis: 'gloed', uit: 'zacht', nodig: 'zon' }[x.stand], regels: [x.label.toLowerCase()], dx, dy } : null;
+    return x ? { bij, titel: t(`kan.kort.${id}`), toon: { werkt: 'mint', kijkt: 'ijs', leert: 'violet', mis: 'gloed', uit: 'zacht', nodig: 'zon' }[x.stand], regels: [x.label.toLowerCase()], dx, dy } : null;
   };
   const kamer = etages[0]?.kamers?.[0]?.naam;
   return {
@@ -145,6 +152,9 @@ function tekenNu() {
   $$('[data-vakken]').forEach((el) => (el.innerHTML = vakken(lijst)));
   $$('[data-meer]').forEach((el) => (el.innerHTML = meer()));
   $$('[data-klaarknop]').forEach((el) => (el.innerHTML = klaarKnop()));
+  $$('[data-voortgangknop]').forEach((el) => (el.innerHTML = voortgangKnop()));
+  const v = stand.voortgang(d);
+  $$('[data-mini]').forEach((svg) => waaier.teken(svg, { groepen: v.groepen, cx: 95, cy: 104, r0: 32, R: 92, groei: false, knoppen: false }));
   const klaarOpen = gekozen() === 'klaarzetten' && klaarPunten().length > 0;
   const x = klaarOpen ? null : lijst.find((y) => y.id === gekozen());
   $$('[data-blad]').forEach((el) => {

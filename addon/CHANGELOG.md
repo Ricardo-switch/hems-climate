@@ -1,5 +1,31 @@
 # Wat is er nieuw · What is new
 
+## 0.86.0
+
+*29 oktober 2026*
+
+**Nieuw**
+
+- Hoe ver je huis is: alles wat je huis met Home Assistant doet als zonnewaaier, met hoe ver het is en wanneer het klimaat zelf regelt
+- Tik op een straal voor wat het huis al weet en wat nog komt
+- Open het met de kleine waaier op de kaart Wat je huis kan bij Instellingen, of met de knop op Wat je huis kan
+
+**Beter**
+
+- Leert nog heeft een eigen kleur, zodat je het onderscheidt van Kijkt mee
+
+*English*
+
+**New**
+
+- How far your house is: everything your house does with Home Assistant as a sun fan, with how far along it is and when the climate takes over
+- Tap a ray to see what the house already knows and what is still to come
+- Open it with the small fan on the What your house can do card in Settings, or with the button on What your house can do
+
+**Improved**
+
+- Still learning has its own colour, so you can tell it apart from Watching
+
 ## 0.85.0
 
 *29 oktober 2026*

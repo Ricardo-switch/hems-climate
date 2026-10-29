@@ -665,7 +665,7 @@
    */
   async function gastGrens() {
     const pagina = location.pathname.split('/').pop() || '';
-    if (['instellingen.html', 'toegang.html', 'huis-kan.html'].includes(pagina)) return;
+    if (['instellingen.html', 'toegang.html', 'huis-kan.html', 'voortgang.html'].includes(pagina)) return;
     const ik = await haal('api/bewoners').then((b) => b.ik, () => null);
     if (ik?.soort === 'gast') location.replace('instellingen.html');
   }
