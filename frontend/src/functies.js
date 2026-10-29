@@ -23,6 +23,8 @@ let concept = null;
 let zon = null;
 /** Het laatste proefantwoord van het taalmodel (besluit 148): vast naast eigen woorden. */
 let proef = null;
+/** Hoeveel vragen er naar het taalmodel gingen en hoe snel (besluit 213); null tot hij geladen is. */
+let teller = null;
 /** De voorkeuren (besluit 164): wat de wand doet als niemand kijkt, en of jij dat mag veranderen. */
 let voorkeur = null;
 /** Het huis en de indeling: de lampen, scènes en screens per kamer, en de bewegingsmelders. */
@@ -366,11 +368,19 @@ function praten() {
           ${proef.snel && proef.ms != null ? `<p class="mini">${esc(t('functies.praten.na', { s: taal.getal(proef.ms / 1000, 1) }))}</p>` : ''}
           ${proef.reden ? `<p class="uitleg" style="color: var(--zon-t)">${esc(proef.reden)}</p>` : ''}`
         : '';
+  if (p.taalmodel && teller == null) {
+    teller = 'bezig';
+    void haal('api/praten/teller').then(
+      (r) => ((teller = r), teken()),
+      () => (teller = { dagen: [] }),
+    );
+  }
   return `<h2 class="kop-2">${esc(t('functies.praten.kop'))}</h2>
     ${modellen.length ? keuzes(t('functies.praten.taalmodel'), 'taalmodel', [[null, t('functies.uit')], ...modellen.map((m) => [m.id, m.naam])], p.taalmodel) : `<p class="uitleg">${esc(t('functies.praten.geenAI'))}</p>`}
     <p class="mini">${esc(t('functies.praten.uitleg'))}</p>
     ${p.taalmodel ? `<div><button type="button" class="knop knop-licht" data-proef>${esc(t(proef && proef !== 'bezig' ? 'functies.praten.nogEens' : 'functies.praten.probeer'))}</button></div>` : ''}
     ${proefHtml}
+    ${p.taalmodel ? tellerHtml() : ''}
     <div class="buiten"><div><b class="wel">${esc(t('functies.praten.gaatNaar'))}</b><span>${esc(t('functies.praten.gaatNaarZin'))}</span></div><div><b class="niet">${esc(t('functies.praten.blijft'))}</b><span>${esc(t('functies.praten.blijftZin'))}</span></div></div>
     ${bedienKan ? `<h2 class="kop-2" style="margin-top: 8px">${esc(t('functies.praten.bedienen'))}</h2>
     ${keuzes(t('functies.praten.bedienen'), 'pratenBedienen', aanUit(), p.bedienen)}
@@ -378,6 +388,22 @@ function praten() {
     ${info.gevonden.klimaatBrug ? `<h2 class="kop-2" style="margin-top: 8px">${esc(t('functies.praten.klimaat'))}</h2>
     ${keuzes(t('functies.praten.klimaat'), 'pratenKlimaat', aanUit(), p.klimaat === true)}
     <p class="mini">${esc(t('functies.praten.klimaatZin'))}</p>` : ''}`;
+}
+
+/** Het gebruik van het taalmodel (besluit 213): vandaag, de week, en of het te traag is. */
+function tellerHtml() {
+  if (!teller || teller === 'bezig') return '';
+  const vandaag = teller.vandaag ?? new Intl.DateTimeFormat('en-CA').format(new Date());
+  const d = teller.dagen.find((x) => x.dag === vandaag);
+  const s = (ms) => taal.getal(ms / 1000, 1);
+  const regels = [
+    d ? t('functies.praten.teller.vandaag', { n: d.vragen, s: d.gemiddeldMs != null ? s(d.gemiddeldMs) : '–', l: d.langsteMs != null ? s(d.langsteMs) : '–' }) : t('functies.praten.teller.geen'),
+  ];
+  if (d?.fouten) regels.push(t('functies.praten.teller.fouten', { n: d.fouten }));
+  const week = teller.dagen.reduce((n, x) => n + x.vragen, 0);
+  if (week > (d?.vragen ?? 0)) regels.push(t('functies.praten.teller.week', { n: week }));
+  const traag = d?.gemiddeldMs != null && d.gemiddeldMs > teller.wachtMs;
+  return `<p class="mini">${regels.map(esc).join(' ')}</p>${traag ? `<p class="uitleg" style="color: var(--zon-t)">${esc(t('functies.praten.teller.traag', { w: s(teller.wachtMs) }))}</p>` : ''}`;
 }
 
 const SPEEL = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
@@ -641,7 +667,7 @@ document.addEventListener('click', (e) => {
     proef = 'bezig';
     teken();
     void haal(`api/praten/proef?model=${encodeURIComponent(concept.praten.taalmodel)}`).then(
-      (r) => ((proef = r), teken()),
+      (r) => ((proef = r), (teller = null), teken()),
       () => ((proef = { vast: t('functies.praten.geenAntwoord'), eigen: null }), teken()),
     );
     return;
@@ -705,11 +731,16 @@ function speelStem(id, knop) {
   const klaar = () => knop.classList.remove('speelt');
   knop.classList.add('speelt');
   if (id === 'apparaat') {
-    const u = new SpeechSynthesisUtterance(zin.replace(/(\d+),(\d)/g, '$1 komma $2'));
-    u.lang = taal.code === 'en' ? 'en-GB' : 'nl-NL';
-    u.onend = klaar;
-    u.onerror = klaar;
-    window.speechSynthesis?.speak(u);
+    // De stem van dit scherm zelf, of Fully Kiosk aan de wand; zonder stem zeggen we dat, in plaats van stilte.
+    if (!app.kanApparaatSpreken()) {
+      klaar();
+      groep.zegBewaard('fout', t('functies.stem.geenApparaat'));
+      return;
+    }
+    void app.zegMetApparaat(zin.replace(/(\d+),(\d)/g, '$1 komma $2'), taal.code).then((gelukt) => {
+      klaar();
+      if (!gelukt) groep.zegBewaard('fout', t('functies.stem.geenApparaat'));
+    });
     return;
   }
   speler = new Audio(`api/stem?tekst=${encodeURIComponent(zin)}&taal=${taal.code}&keuze=${encodeURIComponent(id)}`);

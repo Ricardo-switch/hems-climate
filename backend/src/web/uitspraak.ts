@@ -73,6 +73,8 @@ export function uitspraak(tekst: string, lang: 'nl' | 'en' = 'nl'): string {
     if (euro === 0) return `${cent} cent`;
     return cent === 0 ? `${euro} euro` : `${euro} euro ${cent}`;
   });
+  // De komma in een getal hardop (29 oktober 2026): "21,5" klonk als "eenentwintig vijf".
+  s = s.replace(/(\d),(\d)/g, '$1 komma $2');
   // Eenheden achter een getal; de langste eerst.
   s = s
     .replace(/(\d)\s?kWh\b/g, '$1 kilowattuur')

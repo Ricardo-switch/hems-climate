@@ -26,6 +26,7 @@ import type { Wie } from './bewoners.js';
 import { LiveStroom } from './live.js';
 import { lichtRecept, type Lichtrecept } from './lichtrecept.js';
 import { Luisterpost } from './luisterpost.js';
+import { Gesprekken } from './brein.js';
 import type { WebOptions } from './server-opties.js';
 
 export interface Verzoek {
@@ -58,6 +59,8 @@ export class Diensten {
   /** Het weerrapport, tien minuten vastgehouden: vijf dagen zon uitrekenen kost wat. */
   weather: { atMs: number; report: WeatherReport; geometry: Geometry } | null = null;
   solar: SolarHistory | null = null;
+  /** Het gespreksgeheugen van de assistent (besluit 213): per scherm de laatste beurten. */
+  readonly gesprekken = new Gesprekken();
 
   constructor(options: WebOptions) {
     this.options = {

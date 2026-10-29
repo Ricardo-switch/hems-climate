@@ -1305,6 +1305,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
         ['bewoners.html', /Who lives here, in order/],
         // Deel 4: Wat je huis kan, Indeling, Inrichten en het begin.
         ['huis-kan.html', /What your house can do[\s\S]*Comfort[\s\S]*What the house learns first[\s\S]*On sun/],
+        ['voortgang.html', /How far your house is[\s\S]*Fully working/],
         ['indeling.html', /Rooms and layout[\s\S]*(Add a floor|Name of the floor)/],
         ['inrichten.html', /Welcome[\s\S]*home\.[\s\S]*Always says why/],
         ['inrichten.html#warmte', /What heats and cools\?/],
@@ -3073,7 +3074,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       expect((await slecht()).some((x) => x.includes('"proef"'))).toBe(true);
       const huisNu = (await (await fetch(`${baseUrl}/api/huis`)).json()) as { etages: { ruimtes: { id: string; apparaten: unknown[] }[] }[] };
       const vol = huisNu.etages.flatMap((e) => e.ruimtes).sort((x, y) => y.apparaten.length - x.apparaten.length)[0]!;
-      const paginas = ['thuis.html', 'vandaag.html', 'apparaten.html', 'opbrengst.html', 'assistent.html', `kamer.html#${encodeURIComponent(vol.id)}`, 'instellingen.html', 'jij.html', 'comfort.html', 'energie.html', 'functies.html', 'regeling.html', 'huis-kan.html', 'toegang.html', 'bewoners.html', 'indeling.html', 'inrichten.html'];
+      const paginas = ['thuis.html', 'vandaag.html', 'apparaten.html', 'opbrengst.html', 'assistent.html', `kamer.html#${encodeURIComponent(vol.id)}`, 'instellingen.html', 'jij.html', 'comfort.html', 'energie.html', 'functies.html', 'regeling.html', 'huis-kan.html', 'voortgang.html', 'toegang.html', 'bewoners.html', 'indeling.html', 'inrichten.html'];
       const weg: string[] = [];
       for (const pagina of paginas) {
         await p.goto(`${baseUrl}/${pagina}`);
@@ -3712,7 +3713,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     const cdp = await context.newCDPSession(p);
     const huisNu = (await (await fetch(`${baseUrl}/api/huis`)).json()) as { etages: { ruimtes: { id: string; apparaten: unknown[] }[] }[] };
     const vol = huisNu.etages.flatMap((e) => e.ruimtes).sort((x, y) => y.apparaten.length - x.apparaten.length)[0]!;
-    const paginas = ['thuis.html', 'vandaag.html', 'apparaten.html', 'opbrengst.html', `kamer.html#${encodeURIComponent(vol.id)}`, `indeling.html#${encodeURIComponent(vol.id)}`, 'instellingen.html', 'comfort.html', 'energie.html', 'functies.html', 'regeling.html', 'huis-kan.html', 'toegang.html', 'inrichten.html#warmte'];
+    const paginas = ['thuis.html', 'vandaag.html', 'apparaten.html', 'opbrengst.html', `kamer.html#${encodeURIComponent(vol.id)}`, `indeling.html#${encodeURIComponent(vol.id)}`, 'instellingen.html', 'comfort.html', 'energie.html', 'functies.html', 'regeling.html', 'huis-kan.html', 'voortgang.html', 'toegang.html', 'inrichten.html#warmte'];
     const vast: string[] = [];
     let geveegd = 0;
     for (const pagina of paginas) {
@@ -3788,7 +3789,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     const cdp = await context.newCDPSession(p);
     const huisNu = (await (await fetch(`${baseUrl}/api/huis`)).json()) as { etages: { ruimtes: { id: string; apparaten: unknown[] }[] }[] };
     const vol = huisNu.etages.flatMap((e) => e.ruimtes).sort((x, y) => y.apparaten.length - x.apparaten.length)[0]!;
-    const paginas = ['thuis.html', 'vandaag.html', 'apparaten.html', 'opbrengst.html', 'assistent.html', `kamer.html#${encodeURIComponent(vol.id)}`, `indeling.html#${encodeURIComponent(vol.id)}`, 'instellingen.html', 'comfort.html', 'energie.html', 'functies.html', 'regeling.html', 'huis-kan.html', 'toegang.html', 'bewoners.html', 'inrichten.html#warmte', 'inrichten.html#welkom'];
+    const paginas = ['thuis.html', 'vandaag.html', 'apparaten.html', 'opbrengst.html', 'assistent.html', `kamer.html#${encodeURIComponent(vol.id)}`, `indeling.html#${encodeURIComponent(vol.id)}`, 'instellingen.html', 'comfort.html', 'energie.html', 'functies.html', 'regeling.html', 'huis-kan.html', 'voortgang.html', 'toegang.html', 'bewoners.html', 'inrichten.html#warmte', 'inrichten.html#welkom'];
     // Een lange titel bij Volgende breekt af, en valt er niet links af (21 oktober 2026: "leutel voor de assistent").
     await p.goto(`${baseUrl}/toegang.html#bewoners`);
     const volgendeTitel = p.locator('#tel .verder a.volgende b');
@@ -3910,6 +3911,69 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     expect(fouten).toEqual([]);
     await context.close();
   }, 20_000);
+
+  /*
+   * Hoe ver je huis is (schets Wand-Voortgang): de zonnewaaier met een straal
+   * voor alles wat er in Home Assistant is, zonder wat er nog bij kan. Open
+   * vanaf de kaart bij Instellingen en vanaf Wat je huis kan.
+   */
+  it('toont Hoe ver je huis is als zonnewaaier, met een blad per straal', async () => {
+    // Zonder beweging: dan staan de stralen meteen, ook op de schermafdrukken.
+    const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL', reducedMotion: 'reduce' });
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+    await context.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    const shot = (naam: string, vol = false) => (process.env.HEMS_PAGE_SHOT ? p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', `-${naam}.png`), fullPage: vol }) : null);
+    // Bij Instellingen opent de kleine waaier op de kaart meteen de pagina.
+    await p.goto(`${baseUrl}/instellingen.html`);
+    await p.locator('#wand a.kan .kanwaaier .straal').first().waitFor();
+    await shot('voortgang-instellingen');
+    await p.locator('#wand a.kan .kanwaaier').click();
+    await p.waitForURL(/voortgang\.html$/);
+    await p.locator('#wand h1', { hasText: 'Hoe ver je huis is' }).waitFor();
+    await p.locator('#wand [data-waaier] .straal').first().waitFor();
+    // Een straal per onderwerp, net zoveel als regels in de lijst op de telefoon; wat er nog bij kan, staat er niet.
+    const stralen = await p.locator('#wand [data-waaier] .straal').count();
+    expect(stralen).toBeGreaterThan(0);
+    expect(await p.locator('#tel [data-lijst] .rij').count()).toBe(stralen);
+    expect(await p.locator('#tel [data-lijst]').textContent()).not.toContain('Thuisbatterij');
+    expect(await p.locator('#wand [data-waaier] .zongetal').textContent()).toMatch(/^\d+%$/);
+    expect(await p.locator('#wand [data-legenda]').textContent()).toContain('Werkt');
+    expect(await p.evaluate('document.scrollingElement.scrollHeight <= innerHeight')).toBe(true);
+    await shot('voortgang');
+    // Een tik op een straal opent het blad met de vier treden; Escape sluit het.
+    await p.locator('#wand [data-waaier] .straal').first().click();
+    const blad = p.locator('#wand [data-blad]');
+    await blad.locator('h4', { hasText: 'Hoe ver' }).waitFor();
+    expect(await blad.locator('.trede').count()).toBe(4);
+    expect(await p.locator('#wand [data-samen]').isHidden()).toBe(true);
+    await shot('voortgang-blad');
+    await p.keyboard.press('Escape');
+    await expect.poll(() => p.locator('#wand [data-paneel-blad]').isHidden()).toBe(true);
+    // Op de telefoon: de waaier zonder namen, de lijst eronder, en het blad van onderen.
+    await p.setViewportSize({ width: 390, height: 844 });
+    await p.locator('#tel [data-waaier] .straal').first().waitFor();
+    expect(await p.locator('#tel [data-waaier] .straal text').count()).toBe(0);
+    await shot('voortgang-tel', true);
+    await p.locator('#tel [data-lijst] .rij').first().click();
+    await p.locator('#tel [data-blad] .trede').first().waitFor();
+    await shot('voortgang-tel-blad');
+    await p.locator('#tel [data-blad] [data-sluit]').click();
+    await expect.poll(() => p.locator('#tel [data-blad]').isHidden()).toBe(true);
+    // Op Wat je huis kan staat de knop ernaartoe, met de kleine waaier.
+    await p.setViewportSize({ width: 1340, height: 800 });
+    await p.goto(`${baseUrl}/huis-kan.html`);
+    const knop = p.locator('#wand [data-voortgangknop] a.voortgangknop');
+    await knop.locator('.straal').first().waitFor();
+    expect(await knop.getAttribute('href')).toBe('voortgang.html');
+    expect(await knop.textContent()).toContain('Hoe ver je huis is');
+    await shot('voortgang-huiskan');
+    expect(fouten).toEqual([]);
+    await context.close();
+  }, 30_000);
 
   it('is als app te installeren: een manifest met iconen, en een service worker', async () => {
     const res = await fetch(`${baseUrl}/manifest.webmanifest`);

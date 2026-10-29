@@ -46,7 +46,7 @@
   .vakken { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-auto-rows: minmax(0, 1fr); gap: 12px; min-height: 0; }
   .vak { padding: 10px 14px 4px; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
   .vak h3 { margin: 0 0 1px; font-family: var(--kop); font-size: 15px; font-weight: 600; }
-  .vak.leren { border-color: rgba(111, 211, 255, 0.28); background: linear-gradient(160deg, rgba(111, 211, 255, 0.08), rgba(255, 255, 255, 0.03)); }
+  .vak.leren { border-color: rgba(143, 134, 255, 0.3); background: linear-gradient(160deg, rgba(143, 134, 255, 0.09), rgba(255, 255, 255, 0.03)); }
   .regel { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 10px; align-items: center; padding: 4px 0; border: 0; border-top: 1px solid rgb(var(--wit) / 0.06); background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; width: 100%; }
   .regel:first-of-type { border-top: 0; }
   .regel b { display: block; font-size: 14px; font-weight: 600; }
@@ -60,7 +60,8 @@
   .stand { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
   .stand::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
   .stand.werkt { color: var(--mint-t); background: rgba(110, 231, 183, 0.1); }
-  .stand.kijkt, .stand.leert { color: var(--ijs-t); background: rgba(111, 211, 255, 0.1); }
+  .stand.kijkt { color: var(--ijs-t); background: rgba(111, 211, 255, 0.1); }
+  .stand.leert { color: var(--violet-t); background: rgba(143, 134, 255, 0.14); }
   .stand.uit { color: var(--gedempt); background: rgb(var(--wit) / 0.06); }
   .stand.mis { color: var(--gloed-t); background: rgba(255, 122, 77, 0.12); }
   .stand.nodig { color: var(--zon-t); background: transparent; box-shadow: inset 0 0 0 1px rgba(247, 181, 72, 0.45); }
@@ -105,6 +106,21 @@
   .klaarregel small { color: var(--gedempt); }
   .klaarregel .knop { height: 34px; padding: 0 14px; font-size: 13px; }
   #tel .kopknoppen, #tel [data-klaarknop] { align-items: flex-start; }
+  /* Hoe ver je huis is: de kleine zonnewaaier als knop (schets Wand-Voortgang #ingang). */
+  .knoprij { display: flex; gap: 8px; align-items: center; }
+  .voortgangknop { display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px 0 6px; border-radius: 999px; border: 1px solid var(--glas-rand); background: rgb(var(--wit) / 0.08); color: inherit; text-decoration: none; font-size: 13px; font-weight: 600; }
+  .voortgangknop svg { width: 50px; height: 29px; flex: none; margin-top: 2px; }
+  .voortgangknop .zin { display: none; }
+  .voortgangknop .pct { font-family: var(--kop); font-size: 14px; font-weight: 700; color: var(--zon-t); }
+  .voortgangknop .pijl { font-size: 16px; color: var(--gedempt); }
+  .voortgangknop:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
+  #tel .knoprij { flex-direction: column; align-items: stretch; }
+  #tel .voortgangknop { height: 62px; padding: 0 14px 0 8px; border-radius: 18px; gap: 12px; }
+  #tel .voortgangknop svg { width: 96px; height: 54px; }
+  #tel .voortgangknop b { display: block; font-size: 14px; }
+  #tel .voortgangknop .zin { display: block; font-size: 12px; font-weight: 500; color: var(--gedempt); }
+  #tel .voortgangknop .pct { display: none; }
+  #tel .voortgangknop .pijl { margin-left: auto; font-size: 20px; }
 
   /* De telefoon. */
   #tel .inhoud { padding: 18px 16px 110px; display: flex; flex-direction: column; gap: 14px; }
@@ -122,7 +138,7 @@
       <a class="terugje" href="instellingen.html" data-t="jij.terugInstellingen"></a>
       <div class="kopregel">
         <div><h1 class="kop-1" data-t="instellingen.kan"></h1><p class="lead" data-t="kan.lead"></p></div>
-        <div class="kopknoppen"><div data-klaarknop></div><div class="legenda" role="group" data-t-aria-label="kan.alleen" data-legenda></div></div>
+        <div class="kopknoppen"><div class="knoprij"><div data-voortgangknop></div><div data-klaarknop></div></div><div class="legenda" role="group" data-t-aria-label="kan.alleen" data-legenda></div></div>
       </div>
       <div class="veld">
         <section class="links"><div class="podium" id="podium-wand"></div><div data-meer></div></section>
@@ -136,6 +152,7 @@
     <div class="inhoud">
       <a class="terugje" href="instellingen.html" data-t="jij.terugInstellingen"></a>
       <h1 class="kop-1" style="font-size: 32px" data-t="instellingen.kan"></h1>
+      <div data-voortgangknop></div>
       <div data-klaarknop></div>
       <div class="legenda" role="group" data-t-aria-label="kan.alleen" data-legenda></div>
       <div class="podium" id="podium-tel"></div>
@@ -151,6 +168,7 @@
   <script src="kit/taal.js"></script>
   <script src="kit/nav.js"></script>
   <script src="kit/huis.js"></script>
+  <script src="kit/waaier.js"></script>
   <script src="basis.js"></script>
   <script src="huismodel.js"></script>
   <script src="stand.js"></script>

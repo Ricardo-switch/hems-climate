@@ -27,6 +27,7 @@ import type { Punt } from './kaart.js';
 import type { UpdateView } from './bijwerken.js';
 import type { KlaarPunt } from './klaarzetten.js';
 import type { Vraag } from './taalmodel.js';
+import type { Dagtelling } from './brein.js';
 import type { LuisterDeur } from './luisterpost.js';
 import type { Location } from './sun.js';
 import type { ForecastDay, HourColumns, WeatherLog } from './weather.js';
@@ -297,6 +298,8 @@ export interface WebOptions {
     /** De pauze na een fout van deze AI-taak, zoals een op gebruik: tot wanneer, en waarom. */
     readonly pauze?: (entityId: string) => { readonly tot: number; readonly reden: string } | null;
     readonly bedienen: () => boolean;
+    /** Hoeveel vragen er per dag naar het model gingen en hoe snel (besluit 213), nieuwste dag eerst. */
+    readonly teller?: () => Promise<readonly Dagtelling[]>;
   };
   /**
    * Praten met je stem (besluit 150): geluid van de pagina via `/api/luister`

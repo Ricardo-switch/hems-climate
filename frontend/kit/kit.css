@@ -628,3 +628,29 @@ a.knop:not(.knop-licht) {
     animation: none;
   }
 }
+
+/* De zonnewaaier (kit/waaier.js, schets Wand-Voortgang): hoe ver het huis is. */
+.waaier { display: block; overflow: visible; }
+.waaier .straal { cursor: pointer; outline: none; }
+.waaier .straal .spoor { fill: rgb(var(--wit) / 0.045); transition: fill 0.2s; }
+.waaier .straal:hover .spoor, .waaier .straal:focus-visible .spoor { fill: rgb(var(--wit) / 0.1); }
+.waaier .straal .vul { transform-box: view-box; animation: waaier-groei 1s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.waaier .straal .tip { fill: none; stroke: #fff; stroke-opacity: 0.7; }
+.waaier .straal text { font-family: var(--romp); font-size: 12.5px; font-weight: 600; fill: var(--zacht); transition: fill 0.2s; }
+.waaier .straal:hover text, .waaier .straal:focus-visible text { fill: var(--tekst); }
+.waaier.gekozen-iets .straal { opacity: 0.35; transition: opacity 0.25s; }
+.waaier.gekozen-iets .straal.gekozen { opacity: 1; }
+.waaier .straal.gekozen text { fill: var(--tekst); font-weight: 700; }
+.waaier .straal.gekozen .spoor { fill: rgb(var(--wit) / 0.12); }
+.waaier .ring { fill: none; stroke: rgb(var(--wit) / 0.11); stroke-width: 1; stroke-dasharray: 2 5; }
+.waaier .ring.buiten { stroke: rgba(110, 231, 183, 0.32); stroke-dasharray: none; }
+.waaier .ringstreep { stroke: rgb(var(--wit) / 0.18); }
+.waaier .horizon { stroke: rgb(var(--wit) / 0.22); }
+.waaier .groepnaam { font-family: var(--romp); font-size: 10px; font-weight: 700; letter-spacing: 0.14em; fill: var(--gedempt); text-transform: uppercase; }
+.waaier .ringnaam { font-family: var(--romp); font-size: 11px; font-weight: 600; fill: var(--gedempt); }
+.waaier .ringnaam.buiten { fill: var(--mint-t); }
+.waaier .zongetal { font-family: var(--kop); font-weight: 700; fill: #2a1a05; }
+.waaier .zononder { font-family: var(--romp); font-weight: 700; fill: #4a3008; }
+@keyframes waaier-groei { from { transform: scale(0.42); opacity: 0; } }
+.waaier.stil .straal .vul { animation: none; }
+@media (prefers-reduced-motion: reduce) { .waaier .straal .vul { animation: none; } }

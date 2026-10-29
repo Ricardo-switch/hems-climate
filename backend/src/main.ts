@@ -64,6 +64,7 @@ import { verwachtingVan, weerNaamVan } from './web/weerbron.js';
 import { OPEN_METEO, OpenMeteo } from './web/open-meteo.js';
 import { httpBase } from './web/camera.js';
 import { Pauze } from './web/taalmodel.js';
+import { Teller } from './web/brein.js';
 import { spraakKeuzes, type SpraakKeuze } from './web/functies.js';
 import { cameraMelders, camerasNu, laatsteAanUitHistorie } from './web/cameras.js';
 import { FunctiesStore, aangebeld, functiesGevonden, functiesVoorstel, getoondeCameras, volledig, type Functies, type FunctiesGevonden } from './web/functies.js';
@@ -508,6 +509,14 @@ function pauzeVan(id: string): Pauze {
   if (!p) pauzes.set(id, (p = new Pauze()));
   return p;
 }
+/**
+ * Hoeveel vragen er per dag naar het model gaan en hoe snel het antwoordt
+ * (besluit 213). De dag in de tijdzone van het huis.
+ */
+const modelTeller = new Teller({
+  map: logDir !== '' ? logDir : null,
+  dag: () => new Intl.DateTimeFormat('en-CA', { timeZone: siteConfig?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone }).format(new Date()),
+});
 let houseRegisters: HouseRegisters | null = null;
 /** De stroommeter bij hetzelfde apparaat in Home Assistant, zoals bij een airco (besluit 138). */
 function vermogenSensor(entityId: string): string | null {
@@ -1810,9 +1819,11 @@ if (webPort != null) {
       model: () => {
         const f = functiesNu();
         const id = f ? volledig(f, functiesKeuzes()).praten.taalmodel : null;
-        return id && allStates.has(id) ? pauzeVan(id).om((opdracht, velden) => client.generateData(id, opdracht, velden)) : null;
+        return id && allStates.has(id) ? pauzeVan(id).om(modelTeller.om((opdracht, velden) => client.generateData(id, opdracht, velden))) : null;
       },
-      proef: (id) => pauzeVan(id).om((opdracht, velden) => client.generateData(id, opdracht, velden)),
+      proef: (id) => pauzeVan(id).om(modelTeller.om((opdracht, velden) => client.generateData(id, opdracht, velden))),
+      // Hoeveel vragen en hoe snel (besluit 213), voor Functies.
+      teller: () => modelTeller.stand(),
       // Na "gebruik op" of "te druk" even niet vragen, per AI-taak (besluit 148).
       pauze: (id) => pauzeVan(id).stand,
       bedienen: () => {

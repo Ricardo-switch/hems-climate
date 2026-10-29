@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="only dark">
+<title>Hoe ver je huis is · Smart Climate</title>
+<link rel="stylesheet" href="kit/kit.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0b1424">
+<link rel="icon" href="icoon-192.png">
+<link rel="apple-touch-icon" href="icoon-192.png">
+<script>(function () { var d = document.documentElement, w0 = 0, h0 = 0, t = {}, m = matchMedia('(prefers-color-scheme: light)'); try { t = JSON.parse(localStorage.getItem('sc-thema')) || {}; } catch (e) {} function k() { var eigen = d.classList.contains('tel-stand') || !t.scherm, c = eigen ? t.kleur : t.wandKleur; var licht = eigen && (t.thema === 'licht' || (t.thema === 'systeem' && m.matches)), tc = document.querySelector('meta[name="theme-color"]'); d.classList.toggle('sc-licht', licht); if (tc) tc.setAttribute('content', licht ? '#e9eff6' : '#0b1424'); if (c && c !== 'lucht') d.setAttribute('data-kleur', c); else d.removeAttribute('data-kleur'); } window.scThema = function (n) { if (n) { t = n; try { localStorage.setItem('sc-thema', JSON.stringify(n)); } catch (e) {} } k(); }; function s() { var a = document.activeElement; if (w0 === innerWidth && innerHeight < h0 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; w0 = innerWidth; h0 = innerHeight; var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); k(); } s(); addEventListener('resize', s); m.addEventListener('change', k); })();</script>
+<style>
+  /*
+   * Hoe ver je huis is (schets Wand-Voortgang en Tel-Voortgang): de
+   * zonnewaaier met alles wat het huis uit Home Assistant doet, wanneer het
+   * klimaat zelf regelt, en de weg erheen op schaal van de tijd. Een tik op een
+   * straal opent het blad.
+   */
+  #wand main { position: relative; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 12px; height: 100%; min-height: 0; }
+  .terugje { font-size: 14px; font-weight: 600; color: var(--zacht); text-decoration: none; }
+  .kopregel { display: flex; justify-content: space-between; align-items: end; gap: 24px; }
+  .kopregel .lead { max-width: 60ch; margin-top: 6px; }
+  .legenda { display: flex; flex-wrap: wrap; gap: 8px; }
+  .legenda > span { display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px; border-radius: 999px; background: rgb(var(--wit) / 0.06); font-size: 13px; font-weight: 600; }
+  .legenda > span b { font-family: var(--kop); font-size: 15px; }
+
+  .veld { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 16px; min-height: 0; }
+  .beeld { position: relative; min-height: 0; display: flex; align-items: end; justify-content: center; }
+  .beeld svg { width: 100%; height: 100%; max-height: 470px; }
+  .paneel { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+  .paneel[hidden] { display: none; }
+  .samen { padding: 14px 18px 10px; }
+  .samen h3, .zelf h3 { margin: 0 0 6px; font-family: var(--kop); font-size: 16px; font-weight: 600; }
+  .telrij { display: grid; grid-template-columns: 46px minmax(0, 1fr); gap: 0 12px; align-items: center; padding: 8px 0; border-top: 1px solid rgb(var(--wit) / 0.06); }
+  .telrij:first-of-type { border-top: 0; }
+  .telrij .getal { font-family: var(--kop); font-size: 30px; font-weight: 600; line-height: 1; text-align: right; }
+  .telrij b { display: block; font-size: 14.5px; }
+  .telrij span { display: block; font-size: 12.5px; color: var(--gedempt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .zelf { padding: 14px 18px; border-color: rgba(111, 211, 255, 0.28); background: linear-gradient(160deg, rgba(111, 211, 255, 0.09), rgb(var(--wit) / 0.03)); }
+  .zelf p { margin: 0 0 10px; font-size: 13.5px; line-height: 1.45; color: var(--zacht); }
+  .as { display: grid; grid-template-columns: 150px minmax(0, 1fr) 44px; gap: 10px; align-items: center; font-size: 13px; color: var(--zacht); padding: 4px 0; }
+  .as .getal { text-align: right; font-weight: 700; color: var(--tekst); }
+  .balkje { height: 7px; border-radius: 4px; background: rgb(var(--wit) / 0.09); overflow: hidden; }
+  .balkje i { display: block; height: 100%; border-radius: 4px; background: var(--ijs); }
+  .as.samen-as { margin-top: 4px; padding-top: 8px; border-top: 1px solid rgb(var(--wit) / 0.08); }
+  .as.samen-as b { color: var(--tekst); }
+
+  /* Het blad. */
+  .blad { padding: 16px 20px; flex: 1; display: flex; flex-direction: column; gap: 12px; min-height: 0; overflow: auto; }
+  .blad .bovenaan { display: flex; justify-content: space-between; align-items: start; gap: 12px; }
+  .blad .sluit { width: 34px; height: 34px; border-radius: 50%; border: 0; background: rgb(var(--wit) / 0.08); color: var(--tekst); font-size: 18px; flex: none; cursor: pointer; }
+  .blad h2 { margin: 8px 0 0; font-family: var(--kop); font-size: 24px; font-weight: 600; }
+  .blad .wat { margin: 4px 0 0; font-size: 13.5px; line-height: 1.45; color: var(--zacht); }
+  .blad h4 { margin: 0 0 6px; font-size: 12.5px; font-weight: 700; color: var(--gedempt); }
+  .stand { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+  .stand::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .stand.werkt { color: var(--mint-t); background: rgba(110, 231, 183, 0.1); }
+  .stand.kijkt { color: var(--ijs-t); background: rgba(111, 211, 255, 0.1); }
+  .stand.leert { color: var(--violet-t); background: rgba(143, 134, 255, 0.14); }
+  .stand.uit, .stand.mis { color: var(--gedempt); background: rgb(var(--wit) / 0.06); }
+  .ladder { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+  .trede { position: relative; padding: 8px 8px 7px; border-radius: 10px; background: rgb(var(--wit) / 0.05); font-size: 12px; font-weight: 600; color: var(--gedempt); overflow: hidden; }
+  .trede i { position: absolute; left: 0; bottom: 0; height: 3px; background: currentColor; }
+  .trede span { color: inherit; }
+  .trede.bezig span, .trede.klaar span { color: var(--tekst); }
+  .trede.bezig { background: rgb(var(--wit) / 0.1); }
+  .lijstje { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; font-size: 13.5px; color: var(--zacht); }
+  .lijstje li { display: flex; gap: 8px; }
+  .lijstje li::before { content: ''; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--mint); margin-top: 7px; }
+  .lijstje.komt li::before { background: transparent; box-shadow: inset 0 0 0 1.5px var(--violet-t); }
+  .blad .onder { margin-top: auto; display: flex; flex-wrap: wrap; gap: 10px; }
+  .blad .onder a { height: 40px; padding: 0 16px; border-radius: 13px; background: rgb(var(--wit) / 0.08); color: var(--tekst); font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; text-decoration: none; }
+  .blad .onder a.hoofd { background: var(--accent); color: var(--op-accent); }
+
+  /* De weg naar zelf regelen, op schaal van de tijd. */
+  .weg { padding: 12px 22px; display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 18px; align-items: center; }
+  .weg[hidden] { display: none; }
+  .weg h3 { margin: 0; font-family: var(--kop); font-size: 16px; font-weight: 600; line-height: 1.2; }
+  .weg .mini { margin: 4px 0 0; }
+  .tijdlijn { position: relative; height: 88px; margin: 0 60px; }
+  .tijdlijn .lijn { position: absolute; left: 0; right: 0; top: 38px; height: 3px; border-radius: 2px; background: repeating-linear-gradient(90deg, rgb(var(--wit) / 0.22) 0 6px, transparent 6px 11px); }
+  .tijdlijn .gedaan { position: absolute; left: 0; top: 38px; height: 3px; border-radius: 2px; background: linear-gradient(90deg, var(--mint), var(--ijs)); }
+  .tijdlijn .winterband { position: absolute; top: 30px; height: 19px; border-radius: 10px; background: rgba(207, 233, 255, 0.08); border: 1px solid rgba(207, 233, 255, 0.18); }
+  .mijl { position: absolute; top: 30px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; width: 160px; text-align: center; }
+  .mijl.boven { top: auto; bottom: 39px; }
+  .mijl.boven .pin { order: 3; }
+  .mijl.boven b { order: 1; margin: 0; }
+  .mijl.boven small { order: 2; margin-bottom: 6px; }
+  .pin { width: 19px; height: 19px; border-radius: 50%; background: var(--inkt); box-shadow: inset 0 0 0 2px rgb(var(--wit) / 0.35); display: grid; place-items: center; font-size: 10px; font-weight: 800; color: var(--inkt); flex: none; }
+  .klaar > .pin { background: var(--mint); box-shadow: none; color: #0b1424; }
+  .nu > .pin { background: var(--tekst); box-shadow: 0 0 0 5px rgb(var(--wit) / 0.14), 0 0 18px rgb(var(--wit) / 0.5); }
+  .winter > .pin { box-shadow: inset 0 0 0 2px #cfe9ff; }
+  .doel > .pin { background: radial-gradient(circle at 40% 40%, #ffe3a3, var(--zon)); box-shadow: 0 0 18px rgba(247, 181, 72, 0.6); }
+  .mijl b { margin-top: 6px; font-size: 12.5px; font-weight: 700; line-height: 1.2; }
+  .mijl small { font-size: 11.5px; color: var(--gedempt); line-height: 1.25; }
+  .doel b { color: var(--zon-t); }
+
+  /* De telefoon. */
+  #tel .inhoud { padding: 18px 16px 110px; display: flex; flex-direction: column; gap: 14px; }
+  #tel .lead { margin: -6px 0 0; font-size: 15px; }
+  #tel .waaierveld { margin: 4px -16px 0; }
+  #tel .waaierveld svg { width: 100%; height: auto; aspect-ratio: 390 / 214; }
+  #tel .legenda { justify-content: center; gap: 6px; margin-top: -2px; }
+  #tel .legenda > span { height: 30px; padding: 0 10px; font-size: 12.5px; gap: 6px; }
+  #tel .tik { text-align: center; font-size: 12.5px; color: var(--gedempt); margin: -4px 0 0; }
+  #tel .kaart { padding: 14px 16px; border-radius: 22px; }
+  #tel .as { grid-template-columns: 128px minmax(0, 1fr) 40px; }
+  #tel .stappen { display: flex; flex-direction: column; margin-top: 4px; }
+  .stap { position: relative; display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 12px; padding-bottom: 14px; }
+  .stap::before { content: ''; position: absolute; left: 10px; top: 20px; bottom: -2px; width: 2px; background: repeating-linear-gradient(180deg, rgb(var(--wit) / 0.25) 0 4px, transparent 4px 8px); }
+  .stap.klaar::before { background: var(--mint); }
+  .stap:last-child { padding-bottom: 0; }
+  .stap:last-child::before { display: none; }
+  .stap > .pin { width: 20px; height: 20px; margin-top: 1px; }
+  .stap b { display: block; font-size: 14.5px; }
+  .stap small { display: block; font-size: 12.5px; color: var(--gedempt); }
+  #tel .lijst { padding: 4px; border-radius: 22px; }
+  #tel .lijst h4 { margin: 12px 14px 4px; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gedempt); }
+  .rij { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 1px 12px; align-items: center; width: 100%; min-height: 58px; padding: 8px 12px; border: 0; border-top: 1px solid rgb(var(--wit) / 0.07); background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+  .lijst h4 + .rij { border-top: 0; }
+  .rij .stip { grid-row: 1 / 3; width: 10px; height: 10px; border-radius: 50%; }
+  .rij b { font-size: 15.5px; font-weight: 600; align-self: end; }
+  .rij small { grid-column: 2; font-size: 12.5px; color: var(--gedempt); align-self: start; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rij .vier { grid-row: 1 / 3; grid-column: 3; display: flex; gap: 3px; }
+  .rij .vier i { position: relative; width: 14px; height: 5px; border-radius: 3px; background: rgb(var(--wit) / 0.12); overflow: hidden; }
+  .rij .vier u { position: absolute; inset: 0 auto 0 0; border-radius: 3px; }
+  .rij.gekozen { background: rgb(var(--wit) / 0.07); border-radius: 14px; }
+  .achter { position: fixed; inset: 0; background: rgba(4, 8, 16, 0.55); z-index: 29; }
+  .achter[hidden] { display: none; }
+  #tel .blad { position: fixed; left: 8px; right: 8px; top: auto; bottom: 8px; max-height: 80vh; border-radius: 26px; z-index: 30; background: rgb(var(--nacht) / 0.97); }
+  #tel .blad[hidden] { display: none; }
+  #tel .trede { padding: 8px 6px 7px; font-size: 11.5px; text-align: center; }
+</style>
+</head>
+<body class="lucht lucht-avond">
+  <div id="wand" class="wand">
+    <nav class="balk" id="balk" data-t-aria-label="nav.hoofdmenu"></nav>
+    <main>
+      <div>
+        <a class="terugje" href="huis-kan.html" data-t="voortgang.terug"></a>
+        <div class="kopregel">
+          <div><h1 class="kop-1" data-t="voortgang.titel"></h1><p class="lead" data-t="voortgang.lead"></p></div>
+          <div class="legenda" data-legenda></div>
+        </div>
+      </div>
+      <div class="veld">
+        <div class="beeld"><svg viewBox="0 0 740 440" data-waaier="groot"></svg></div>
+        <div class="paneel" data-samen>
+          <section class="glas samen"><h3 data-t="voortgang.samen"></h3><div data-tellers></div></section>
+          <section class="glas zelf" data-zelf></section>
+        </div>
+        <div class="paneel" data-paneel-blad hidden><section class="glas blad" role="dialog" data-t-aria-label="kan.uitleg" data-blad></section></div>
+      </div>
+      <section class="glas weg" data-weg hidden>
+        <div><h3 data-t="voortgang.weg.kop"></h3><p class="mini" data-t="voortgang.weg.zin"></p></div>
+        <div class="tijdlijn" data-tijdlijn></div>
+      </section>
+    </main>
+  </div>
+
+  <div id="tel" class="tel">
+    <div class="inhoud">
+      <a class="terugje" href="huis-kan.html" data-t="voortgang.terug"></a>
+      <h1 class="kop-1" style="font-size: 32px" data-t="voortgang.titel"></h1>
+      <p class="lead" data-t="voortgang.leadTel"></p>
+      <div class="waaierveld"><svg viewBox="0 0 390 214" data-waaier="tel"></svg></div>
+      <div class="legenda" data-legenda></div>
+      <p class="tik" data-t="voortgang.tik"></p>
+      <section class="glas kaart zelf" data-zelf></section>
+      <section class="glas kaart" data-weg hidden><h3 class="kop-3" data-t="voortgang.weg.kop"></h3><div class="stappen" data-stappen></div></section>
+      <section class="glas lijst" data-lijst></section>
+    </div>
+    <div class="achter" data-achter hidden></div>
+    <aside class="glas blad" role="dialog" data-t-aria-label="kan.uitleg" data-blad hidden></aside>
+    <nav class="tabs" id="tabs" data-t-aria-label="nav.hoofdmenu"></nav>
+  </div>
+  <script src="kit/teksten.nl.js"></script>
+  <script src="kit/teksten.en.js"></script>
+  <script src="kit/taal.js"></script>
+  <script src="kit/nav.js"></script>
+  <script src="kit/waaier.js"></script>
+  <script src="basis.js"></script>
+  <script src="huismodel.js"></script>
+  <script src="stand.js"></script>
+  <script src="voortgang.js"></script>
+</body>
+</html>

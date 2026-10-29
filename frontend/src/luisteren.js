@@ -174,11 +174,13 @@
   /** Wat je zei, als vraag aan het huis; een opdracht gaat meteen naar zijn deur (besluit 148). */
   /** Een vraag terug met keuzes (besluit 209): mee met je volgende zin, voor "de grote" of "ja". */
   let openKeuze = null;
+  /** Het gesprek van dit scherm (besluit 213): zo weet het huis wat er net gezegd en gedaan is. */
+  const gesprekId = global.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
   async function vraag(tekst, halfMag = false) {
     const opties = openKeuze ? JSON.stringify(openKeuze) : null;
     openKeuze = null;
-    const q = new URLSearchParams({ v: 'vrij', tekst, taal: global.taal.code, ...(halfMag ? { half: '1' } : {}), ...(opties ? { opties } : {}), ...(scherm && Date.now() - scherm.sinds < 60_000 ? { scherm: scherm.id } : {}) });
+    const q = new URLSearchParams({ v: 'vrij', tekst, taal: global.taal.code, gesprek: gesprekId, ...(halfMag ? { half: '1' } : {}), ...(opties ? { opties } : {}), ...(scherm && Date.now() - scherm.sinds < 60_000 ? { scherm: scherm.id } : {}) });
     const res = await fetch(`api/vraag?${q}`);
     const body = await res.json().catch(() => ({}));
     const uit = { antwoord: res.ok ? body.antwoord : body.fout ?? body.wachten ?? tk('assistent.geenAntwoord'), gesproken: res.ok ? body.gesproken ?? null : null, onbekend: res.ok && body.vraag === 'onbekend', klaar: res.ok && body.vraag === 'klaar', ruis: res.ok && body.vraag === 'ruis', half: res.ok && body.vraag === 'half', keuze: res.ok ? body.keuze ?? [] : [], voorbeelden: body.voorbeelden ?? [], gedaan: [] };
@@ -200,17 +202,10 @@
 
   let stemNaam;
   /** De stem van dit apparaat zelf; zonder stem alleen even wachten, zodat de tekst te lezen is. */
-  function zegMetApparaat(tekst) {
-    const wacht = () => new Promise((ok) => setTimeout(ok, Math.max(1500, tekst.length * 55)));
-    if (!global.speechSynthesis || typeof SpeechSynthesisUtterance === 'undefined') return wacht();
-    return new Promise((ok) => {
-      const u = new SpeechSynthesisUtterance(tekst);
-      u.lang = global.taal?.code === 'en' ? 'en-GB' : 'nl-NL';
-      u.onend = () => ok();
-      u.onerror = () => ok();
-      global.speechSynthesis.cancel();
-      global.speechSynthesis.speak(u);
-    });
+  async function zegMetApparaat(tekst) {
+    // De browser, of Fully Kiosk aan de wand (basis.js); zonder stem even wachten, zodat de tekst te lezen is.
+    const gelukt = global.app?.zegMetApparaat ? await global.app.zegMetApparaat(tekst) : false;
+    if (!gelukt) await new Promise((ok) => setTimeout(ok, Math.max(1500, tekst.length * 55)));
   }
   /** Zegt het antwoord met Piper in Home Assistant, als die er is; anders alleen tekst. */
   async function zeg(tekst) {

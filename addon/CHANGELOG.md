@@ -1,5 +1,67 @@
 # Wat is er nieuw · What is new
 
+## 0.86.0
+
+*29 oktober 2026*
+
+**Nieuw**
+
+- Hoe ver je huis is: alles wat je huis met Home Assistant doet als zonnewaaier, met hoe ver het is en wanneer het klimaat zelf regelt
+- Tik op een straal voor wat het huis al weet en wat nog komt
+- Open het met de kleine waaier op de kaart Wat je huis kan bij Instellingen, of met de knop op Wat je huis kan
+
+**Beter**
+
+- Leert nog heeft een eigen kleur, zodat je het onderscheidt van Kijkt mee
+
+*English*
+
+**New**
+
+- How far your house is: everything your house does with Home Assistant as a sun fan, with how far along it is and when the climate takes over
+- Tap a ray to see what the house already knows and what is still to come
+- Open it with the small fan on the What your house can do card in Settings, or with the button on What your house can do
+
+**Improved**
+
+- Still learning has its own colour, so you can tell it apart from Watching
+
+## 0.85.0
+
+*29 oktober 2026*
+
+**Nieuw**
+
+- De assistent onthoudt het gesprek: zeg "doe maar terug" en het licht, de screens of de verwarming staan weer zoals ze waren
+- Meer in één zin: "screens dicht en de lamp in de zithoek aan" doet allebei
+- Met een taalmodel maakt de assistent een plan ("het is hier zo donker en ik ga film kijken") en beantwoordt hij vragen over vandaag en gisteren
+- Bij Functies › Praten zie je hoeveel vragen er vandaag naar het taalmodel gingen en hoe snel het antwoordde
+
+**Beter**
+
+- Een getal met een komma klinkt nu goed: "21 komma 5 graden"
+
+**Opgelost**
+
+- Bij "Dit apparaat" hoor je het voorbeeld nu ook echt; aan de wand spreekt Fully Kiosk als het scherm zelf geen stem heeft
+
+*English*
+
+**New**
+
+- The assistant remembers the conversation: say "undo" and the lights, the screens or the heating are back the way they were
+- More in one sentence: "screens down and the lamp in the sitting area on" does both
+- With a language model the assistant makes a plan ("it is so dark here and I am going to watch a film") and answers questions about today and yesterday
+- Under Features › Talking you see how many questions went to the language model today and how fast it answered
+
+**Improved**
+
+- A number with a decimal comma now sounds right in Dutch
+
+**Fixed**
+
+- With "This device" you now really hear the example; on the wall Fully Kiosk speaks when the screen itself has no voice
+
 ## 0.84.0
 
 *29 oktober 2026*

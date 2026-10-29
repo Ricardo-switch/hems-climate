@@ -89,6 +89,7 @@
     ['warmte', 'huis', 'indeling.html'],
     ['naam', 'huis', 'indeling.html'],
     ['kan', 'zoek.waar.instellingen', 'huis-kan.html'],
+    ['voortgang', 'zoek.waar.instellingen', 'voortgang.html'],
     ['versie', 'toegang', 'toegang.html#versie'],
   ];
   const zoekLijst = () => {
@@ -326,5 +327,32 @@
     ];
     return lijst.map((x) => ({ ...x, label: x.label ?? LABEL(x.stand) ?? x.stand }));
   }
-  global.stand = { GROEPEN, nogTeDoen, zoek, kan, batterijSom, ideeen };
+
+  /** De groepen op de zonnewaaier, van links naar rechts: wat nog leert staat bovenin. */
+  const WAAIER = ['gemak', 'overzicht', 'comfort', 'leert', 'zon', 'kosten'];
+  /**
+   * Hoe ver je huis is (schets Wand-Voortgang): alles uit kan() wat er in Home
+   * Assistant is, met hoe ver het is van gevonden tot werkt (kit/waaier.js).
+   * Wat er nog bij kan ("nodig") blijft op Wat je huis kan; wat uit staat of
+   * een instelling mist, staat op de eerste ring. Het klimaat kijkt mee tot de
+   * datasetmeter vol is (besluit 64); zo ver groeit zijn straal naar buiten.
+   */
+  function voortgang(d) {
+    const t = global.taal.t;
+    const dataset = d.divergence?.dataset ?? null;
+    const gereedheid = dataset?.gereedheid ?? null;
+    const klaar = gereedheid ? gereedheid.totaal / 100 : 0;
+    const onderwerpen = kan(d)
+      .filter((x) => x.stand !== 'nodig')
+      .map((x) => {
+        // Op tijd warm leert de seizoenen; van de ligging weten we alleen of er een heldere dag was.
+        const deel = x.id === 'optijd' && gereedheid ? gereedheid.tijd / 100 : 0;
+        return { ...x, kort: t(`voortgang.kort.${x.id}`), p: global.waaier.voortgang(x.stand, deel, klaar) };
+      });
+    const groepen = WAAIER.map((id) => ({ id, naam: t(id === 'leert' ? 'voortgang.groep.leert' : `kan.groep.${id}`), onderwerpen: onderwerpen.filter((x) => x.groep === id) }));
+    const totaal = onderwerpen.length ? Math.round((onderwerpen.reduce((s, x) => s + x.p, 0) / onderwerpen.length) * 100) : 0;
+    const winter = dataset?.seizoenen?.find((s) => s.seizoen === 'winter') ?? null;
+    return { groepen, onderwerpen, totaal, klaar, gereedheid, dataset, winter, tel: (s) => onderwerpen.filter((x) => x.stand === s).length };
+  }
+  global.stand = { GROEPEN, nogTeDoen, zoek, kan, batterijSom, ideeen, voortgang };
 })(window);

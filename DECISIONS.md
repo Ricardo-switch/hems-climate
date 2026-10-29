@@ -214,6 +214,8 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [209. Een assistent die meedenkt: een gevoel wordt een opdracht, licht dat bij het moment past, en doorvragen](#209-een-assistent-die-meedenkt-een-gevoel-wordt-een-opdracht-licht-dat-bij-het-moment-past-en-doorvragen)
 - [211. Sneller verstaan, de screens samen, en het venster dicht na een opdracht](#211-sneller-verstaan-de-screens-samen-en-het-venster-dicht-na-een-opdracht)
 - [212. De stem kiezen, en stem en luisteren op één plek](#212-de-stem-kiezen-en-stem-en-luisteren-op-één-plek)
+- [213. Het brein: een gesprek, meer in één zin, en doe maar terug](#213-het-brein-een-gesprek-meer-in-één-zin-en-doe-maar-terug)
+- [214. Hoe ver je huis is: de zonnewaaier](#214-hoe-ver-je-huis-is-de-zonnewaaier)
 
 **Veiligheid**
 
@@ -9898,6 +9900,103 @@ Nederlands.
   van hoe hij luistert (`bron`). Kiest de bewoner het apparaat, dan spreekt
   ook de wand met de stem van de tablet; eerst bleef die dan stil.
 - **Versie 0.84.0.**
+
+---
+
+## 213. Het brein: een gesprek, meer in één zin, en doe maar terug
+
+*Onderwerp: weergave · Status: geldig*
+
+Stap 3 van het plan voor een J.A.R.V.I.S.-gevoel (29 oktober 2026). De
+bewoner koos eerst het gratis Gemini Flash-Lite via de AI-taak van Home
+Assistant, met een teller bij Functies; het model mag alles zien wat het
+nodig heeft, ook wie er thuis is. Tot nu toe was elke zin los, koos het model
+hooguit één ding, en kon niets terug.
+
+*Besluit:*
+
+- **Een gesprek per scherm** (`web/brein.ts`, `Gesprekken`): de pagina stuurt
+  een eigen id mee (`gesprek`), de dienst onthoudt de laatste zes beurten tien
+  minuten lang. Het model ziet ze, zodat "en in de keuken ook" of "nog wat
+  zachter" weet waar het over gaat.
+- **Doe maar terug, zonder model.** Bij elke opdracht onthoudt de dienst hoe
+  het was, uit de stand vóór de opdracht (`terugVan`): elke lamp zoals hij
+  stond, een scherm naar zijn stand (of de andere kant op als hij die niet
+  meldt), en bij de klimaatbrug de knop terug naar de standaard
+  (`/api/klimaat` met `terug`, `KlimaatBrug.terugNu`). "Doe maar terug",
+  "maak dat ongedaan" of "zet het terug zoals het was" stuurt dat door
+  dezelfde deuren, één keer.
+- **Meer in één zin:** "screens dicht en de lamp aan" leest de woordzoeker per
+  deel (`herkenDelen`), alleen als hij álle delen begrijpt; anders de hele
+  zin de gewone weg.
+- **Het plan van het model** (`denk`): wat de woordzoeker niet begrijpt, gaat
+  naar het model met de situatie: de klok, wat het huis doet, hoe warm het
+  is, wie er thuis is, wat er draait, het weer, en vandaag en gisteren uit het
+  logboek (`dagRegels`). Het model kiest een plan van hooguit vier stappen
+  (licht, scène, scherm, klimaat via de brug), een vaste vraag, of een
+  antwoord uit alleen die feiten. Elke stap gaat door dezelfde bouwers als de
+  woordzoeker; elk getal in een zin moet een feit zijn (besluit 88). Woorden
+  als "sluiten" of "dimmen 30%" vertaalt de dienst naar zijn eigen acties,
+  want zo antwoordde Flash-Lite in de proef. Het model raakt zelf niets aan.
+- **Wachten:** tien seconden op een plan (`DENK_MS`), vijf op eigen woorden.
+  Een proef op 29 oktober: Flash-Lite deed er 8 tot 10 seconden over, ook een
+  kale "zeg hallo" 13 tot 18; de AI-taak staat in Home Assistant op
+  "Thinking level: auto". De opdracht mag nu 12.000 tekens zijn (was 6.000).
+- **De teller** (`Teller`, `taalmodel-teller.json`, `/api/praten/teller`):
+  per dag hoeveel vragen er naar het model gingen, de fouten, de gemiddelde en
+  langste tijd, veertien dagen bewaard. Bij Functies › Praten, met een
+  waarschuwing als het gemiddeld langer duurt dan de assistent wacht.
+- **Wat naar het model gaat** staat bij Functies: je vraag als tekst, de
+  laatste zinnen van het gesprek, hoe het huis ervoor staat (ook of er iemand
+  thuis is) en de namen. Je stem en camerabeelden niet.
+- Erbij, uit de wandtest: een getal met een komma klinkt als "21 komma 5"
+  (`uitspraak`), en "Dit apparaat" spreekt ook in Fully Kiosk, dat in de
+  webweergave geen spraak heeft (`app.zegMetApparaat`).
+- **Versie 0.85.0.**
+
+---
+
+## 214. Hoe ver je huis is: de zonnewaaier
+
+*Onderwerp: weergave · Status: geldig*
+
+De bewoner vroeg op 29 oktober 2026 om een totale voortgangsmeter achter Wat
+je huis kan: wat het huis kan, wat het al doet en hoe ver het leren is. Alleen
+wat er uit Home Assistant komt; de ideeën en wat er nog bij kan blijven op Wat
+je huis kan. Uit de schetsen `Wand-Voortgang` (met de visgraat ernaast) en
+`Tel-Voortgang` koos hij de zonnewaaier.
+
+*Besluit:*
+
+- **Een eigen pagina** (`voortgang.html`): het huis komt op als een zon boven
+  de horizon. Elke straal is een onderwerp uit `stand.kan`, in zes groepen;
+  hoe verder hij reikt, hoe verder het is. Vier ringen: gevonden, geleerd,
+  kijkt mee, werkt. De tekening staat in de kit (`kit/waaier.js`, stijl in
+  `kit.css`), zodat de schetsen en de app dezelfde code gebruiken (besluit
+  104).
+- **Het getal in de zon telt alles mee** (`stand.voortgang`): werkt is 100%,
+  kijkt mee 75% plus een kwart van de datasetmeter (`gereedheid.totaal`,
+  besluit 64), leert 25 tot 50%. Op tijd warm leert met de seizoenen
+  (`gereedheid.tijd`). Wat meekijkt groeit gestreept naar de buitenste ring.
+- **Wat er nog bij kan staat er niet in** (stand `nodig`); wat uit staat of een
+  instelling mist, krijgt een korte grijze straal op de eerste ring.
+- **Rechts** wat er samen werkt en wanneer het klimaat zelf regelt: seizoenen,
+  elke stand, de winterdagen en samen. **Onderaan** de weg erheen op schaal
+  van de tijd; het moment met genoeg winterdagen is een schatting vanaf 1
+  december en heet "op zijn vroegst". Zonder slimme regeling of zonder
+  meekijken staan die twee er niet.
+- **Een tik** op een straal opent het blad: de vier treden, wat het al weet en
+  wat nog komt, met de knop naar de instelling. Op de telefoon staan de namen
+  niet bij de stralen maar in de lijst eronder, met vier streepjes per
+  onderwerp.
+- **Twee ingangen:** de kleine waaier op de kaart Wat je huis kan bij
+  Instellingen, en een knop op Wat je huis kan naast In Home Assistant. Zoeken
+  op "voortgang" vindt hem ook. Een gast mag hem zien.
+- **Leert nog is violet**, ook op Wat je huis kan en Instellingen, zodat het
+  te onderscheiden is van kijkt mee.
+- **De stralen groeien alleen de eerste keer**; een tik of nieuwe cijfers
+  tekenen ze meteen, en een kleine waaier groeit nooit.
+- **Versie 0.86.0.**
 
 ---
 

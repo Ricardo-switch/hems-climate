@@ -257,7 +257,9 @@ verwijzing bestaat.
   licht is te zien in het huis ([129]).
 - **Instellingen** staan in zes groepen met één opbouw, en wat mist staat
   bovenaan; **Comfort** zet je in de app, en de regeling neemt het meteen over;
-  **Wat je huis kan** toont per functie hoe het ervoor staat ([130]). Een nieuw
+  **Wat je huis kan** toont per functie hoe het ervoor staat ([130]), en
+  **Hoe ver je huis is** laat het als zonnewaaier zien, met de weg naar zelf
+  regelen ([214]). Een nieuw
   huis begint zuinig (20° overdag, 16° 's nachts, de dag vanaf 7:00), binnen
   wat de apparaten kunnen, en bij Comfort, Functies en Jij kun je terug naar
   die standaard ([204]).
@@ -420,7 +422,9 @@ verwijzing bestaat.
   De dienst verstaat zelf met Whisper in huis, rechtstreeks; meer screens gaan
   samen, en het venster sluit na een opdracht ([211]). De stem kies je bij
   Functies › Stem en luisteren, vrouw of man, Google HD of in huis, met een
-  voorbeeld om te horen ([212]).
+  voorbeeld om te horen ([212]). De assistent onthoudt het gesprek, doet meer
+  in één zin, maakt met een taalmodel een plan of beantwoordt vragen over
+  vandaag en gisteren, en "doe maar terug" zet het weer zoals het was ([213]).
 - **Een kamer doet mee** met de regeling van een andere kamer, zoals een
   slaapkamer met de airco in de wasruimte ([142]).
 - **Comfort per bewoner:** wie hier woont staat op volgorde; de eerste die
@@ -704,4 +708,6 @@ verwijzing bestaat.
 [210]: DECISIONS.md#210-de-klimaatbrug-tot-stap-b-via-de-knoppen-van-het-oude-systeem
 [211]: DECISIONS.md#211-sneller-verstaan-de-screens-samen-en-het-venster-dicht-na-een-opdracht
 [212]: DECISIONS.md#212-de-stem-kiezen-en-stem-en-luisteren-op-één-plek
+[213]: DECISIONS.md#213-het-brein-een-gesprek-meer-in-één-zin-en-doe-maar-terug
+[214]: DECISIONS.md#214-hoe-ver-je-huis-is-de-zonnewaaier
 <!-- links:einde -->

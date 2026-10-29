@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Hoe ver je huis is</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Hoe ver je huis is (schets, 29 oktober 2026): de voortgang van alles wat
+   * het huis uit Home Assistant doet, in één beeld. Achter Wat je huis kan, en
+   * vanaf de kaart Wat je huis kan bij Instellingen.
+   *
+   * De zonnewaaier: het huis komt op als een zon boven de horizon. Elke straal
+   * is iets dat het huis doet; hoe verder hij reikt, hoe verder het is. Vier
+   * ringen: gevonden in Home Assistant, geleerd, kijkt mee, werkt. Wat nog
+   * meekijkt, groeit gestreept naar de buitenste ring, zo ver als de
+   * datasetmeter is (besluit 64). Alleen wat er is: de ideeën en wat er nog
+   * bij kan blijven op Wat je huis kan.
+   *
+   * #graat de visgraat om te vergelijken, #ingang waar je het opent,
+   * #optijd (of een ander onderwerp) met het blad open.
+   *
+   * Voorbeeldgetallen van dit huis op 28 oktober: 54 dagen meegekeken,
+   * seizoenen 25%, alle standen 100%, winter 0 van 30.
+   */
+  main { position: relative; padding: 20px 26px 20px 22px; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 12px; min-height: 0; }
+  .terugje { font-size: 14px; font-weight: 600; color: var(--zacht); }
+  .kopregel { display: flex; justify-content: space-between; align-items: end; gap: 24px; }
+  .kopregel .lead { max-width: 60ch; margin-top: 6px; }
+  .rechtsboven { display: flex; flex-direction: column; align-items: end; gap: 10px; }
+  .schets { display: inline-flex; gap: 2px; padding: 3px; border-radius: 12px; background: rgba(255, 255, 255, 0.06); font-size: 12px; font-weight: 700; }
+  .schets span { padding: 0 8px; color: var(--gedempt); align-self: center; }
+  .schets a { padding: 5px 10px; border-radius: 9px; color: var(--zacht); text-decoration: none; }
+  .schets a.aan { background: rgba(255, 255, 255, 0.12); color: var(--tekst); }
+  .legenda { display: flex; gap: 8px; }
+  .legenda[hidden] { display: none; }
+  .legenda .pil { height: 34px; font-size: 13px; gap: 8px; }
+  .legenda .pil b { font-family: var(--kop); font-size: 15px; }
+
+  .veld { display: grid; grid-template-columns: 740px minmax(0, 1fr); gap: 16px; min-height: 0; }
+  .beeld { position: relative; min-height: 0; }
+  .beeld svg { display: block; width: 740px; height: 100%; overflow: visible; }
+
+  /* De visgraat; de zonnewaaier zelf staat in kit.css. */
+  .straal { cursor: pointer; }
+  .straal .spoor { fill: rgba(255, 255, 255, 0.045); transition: fill .2s; }
+  .straal:hover .spoor { fill: rgba(255, 255, 255, 0.09); }
+  .straal text { font-family: var(--romp); font-size: 12.5px; font-weight: 600; fill: var(--zacht); transition: fill .2s; }
+  .straal:hover text { fill: var(--tekst); }
+  .gekozen-iets .straal { opacity: 0.35; transition: opacity .25s; }
+  .gekozen-iets .straal.gekozen { opacity: 1; }
+  .straal.gekozen text { fill: var(--tekst); font-weight: 700; }
+  .straal.gekozen .spoor { fill: rgba(255, 255, 255, 0.12); }
+  .groepnaam { font-family: var(--romp); font-size: 10px; font-weight: 700; letter-spacing: 0.14em; fill: var(--gedempt); text-transform: uppercase; }
+
+  /* Rechts: samen, of het blad van één onderwerp. */
+  .paneel { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+  .paneel[hidden] { display: none; }
+  .samen { padding: 14px 18px 10px; }
+  .samen h3, .zelf h3 { margin: 0 0 6px; font-family: var(--kop); font-size: 16px; font-weight: 600; }
+  .telrij { display: grid; grid-template-columns: 46px minmax(0, 1fr); gap: 0 12px; align-items: center; padding: 8px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+  .telrij:first-of-type { border-top: 0; }
+  .telrij .getal { font-family: var(--kop); font-size: 30px; font-weight: 600; line-height: 1; text-align: right; }
+  .telrij b { display: block; font-size: 14.5px; }
+  .telrij span { display: block; font-size: 12.5px; color: var(--gedempt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .zelf { padding: 14px 18px; border-color: rgba(111, 211, 255, 0.28); background: linear-gradient(160deg, rgba(111, 211, 255, 0.09), rgba(255, 255, 255, 0.03)); }
+  .zelf p { margin: 0 0 10px; font-size: 13.5px; line-height: 1.45; color: var(--zacht); }
+  .as { display: grid; grid-template-columns: 150px minmax(0, 1fr) 44px; gap: 10px; align-items: center; font-size: 13px; color: var(--zacht); padding: 4px 0; }
+  .as .getal { text-align: right; font-weight: 700; color: var(--tekst); }
+  .balkje { height: 7px; border-radius: 4px; background: rgba(255, 255, 255, 0.09); overflow: hidden; }
+  .balkje i { display: block; height: 100%; border-radius: 4px; background: var(--ijs); }
+  .balkje.winter i { background: #cfe9ff; }
+  .as.samen-as { margin-top: 4px; padding-top: 8px; border-top: 1px solid rgba(255, 255, 255, 0.08); }
+  .as.samen-as b { color: var(--tekst); }
+
+  /* Het blad. */
+  .blad { padding: 16px 20px; flex: 1; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+  .blad .bovenaan { display: flex; justify-content: space-between; align-items: start; gap: 12px; }
+  .blad .sluit { width: 34px; height: 34px; border-radius: 50%; border: 0; background: rgba(255, 255, 255, 0.08); color: var(--tekst); font-size: 18px; flex: none; cursor: pointer; }
+  .blad h2 { margin: 8px 0 0; font-family: var(--kop); font-size: 24px; font-weight: 600; }
+  .blad .wat { margin: 4px 0 0; font-size: 13.5px; line-height: 1.45; color: var(--zacht); }
+  .blad h4 { margin: 0 0 6px; font-size: 12.5px; font-weight: 700; color: var(--gedempt); }
+  .stand { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+  .stand::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .stand.werkt { color: var(--mint); background: rgba(110, 231, 183, 0.1); }
+  .stand.kijkt { color: var(--ijs); background: rgba(111, 211, 255, 0.1); }
+  .stand.leert { color: var(--violet-t); background: rgba(143, 134, 255, 0.14); }
+
+  /* De ladder: vier treden, de tree waar het staat licht op. */
+  .ladder { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+  .trede { position: relative; padding: 8px 8px 7px; border-radius: 10px; background: rgba(255, 255, 255, 0.05); font-size: 12px; font-weight: 600; color: var(--gedempt); overflow: hidden; }
+  .trede i { position: absolute; left: 0; bottom: 0; height: 3px; background: currentColor; }
+  .trede.klaar { color: var(--zacht); }
+  .trede.klaar::after { content: '✓'; position: absolute; right: 8px; top: 7px; font-size: 11px; }
+  .trede.nu { background: rgba(255, 255, 255, 0.1); color: var(--tekst); }
+  .lijst { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; font-size: 13.5px; color: var(--zacht); }
+  .lijst li { display: flex; gap: 8px; }
+  .lijst li::before { content: ''; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--mint); margin-top: 7px; }
+  .lijst.komt li::before { background: transparent; box-shadow: inset 0 0 0 1.5px var(--violet-t); }
+  .blad .onder { margin-top: auto; display: flex; gap: 10px; }
+  .blad .onder .knop { height: 40px; padding: 0 16px; border-radius: 13px; border: 0; background: rgba(255, 255, 255, 0.08); color: var(--tekst); font: inherit; font-weight: 700; font-size: 14px; }
+
+  /* Onderaan: de weg naar zelf regelen, op schaal van de tijd. */
+  .weg { padding: 12px 22px 12px; display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 18px; align-items: center; }
+  .weg h3 { margin: 0; font-family: var(--kop); font-size: 16px; font-weight: 600; line-height: 1.2; }
+  .weg .mini { margin: 4px 0 0; }
+  .tijdlijn { position: relative; height: 88px; }
+  .tijdlijn .lijn { position: absolute; left: 0; right: 0; top: 38px; height: 3px; border-radius: 2px; background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.22) 0 6px, transparent 6px 11px); }
+  .tijdlijn .gedaan { position: absolute; left: 0; top: 38px; height: 3px; border-radius: 2px; background: linear-gradient(90deg, var(--mint), var(--ijs)); }
+  .tijdlijn .winterband { position: absolute; top: 30px; height: 19px; border-radius: 10px; background: rgba(207, 233, 255, 0.08); border: 1px solid rgba(207, 233, 255, 0.18); }
+  .tijdlijn .winterband span { position: absolute; left: 10px; top: -17px; font-size: 11px; font-weight: 700; color: #cfe9ff; white-space: nowrap; }
+  .mijl.boven { top: auto; bottom: 39px; }
+  .mijl.boven .pin { order: 3; }
+  .mijl.boven b { order: 1; margin: 0; }
+  .mijl.boven small { order: 2; margin-bottom: 6px; }
+  .mijl { position: absolute; top: 30px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; width: 150px; text-align: center; }
+  .mijl .pin { width: 19px; height: 19px; border-radius: 50%; background: var(--inkt); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.35); display: grid; place-items: center; font-size: 10px; font-weight: 800; color: var(--inkt); }
+  .mijl.klaar .pin { background: var(--mint); box-shadow: none; }
+  .mijl.nu .pin { background: var(--tekst); box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.14), 0 0 18px rgba(255, 255, 255, 0.5); }
+  .mijl.doel .pin { width: 23px; height: 23px; margin-top: -2px; background: radial-gradient(circle at 40% 40%, #ffe3a3, var(--zon)); box-shadow: 0 0 18px rgba(247, 181, 72, 0.6); }
+  .mijl b { margin-top: 6px; font-size: 12.5px; font-weight: 700; line-height: 1.2; }
+  .mijl small { font-size: 11.5px; color: var(--gedempt); line-height: 1.25; }
+  .mijl.nu b { color: var(--tekst); }
+  .mijl.doel b { color: var(--zon); }
+
+  /* #ingang: waar je het opent. */
+  .ingang { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 22px; align-content: start; }
+  .ingang[hidden], .veld[hidden], .weg[hidden] { display: none; }
+  .ingang .waar { font-size: 12.5px; font-weight: 700; color: var(--gedempt); margin: 0 0 8px; }
+  .ingang .uitleg { margin: 10px 0 0; font-size: 13.5px; line-height: 1.5; color: var(--zacht); }
+  .kaartkan { padding: 16px 20px; display: grid; grid-template-columns: minmax(0, 1fr) 190px; gap: 8px; align-items: center; }
+  .kaartkan .standen { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .kaartkan .meterknop { position: relative; height: 110px; }
+  .kaartkan .meterknop svg { width: 190px; height: 110px; display: block; overflow: visible; }
+  .kaartkan .meterknop .tik { position: absolute; right: 0; bottom: -2px; font-size: 12px; font-weight: 700; color: var(--zacht); }
+  .kopkan { padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; gap: 18px; }
+  .voortgangknop { display: inline-flex; align-items: center; gap: 12px; height: 62px; padding: 0 16px 0 8px; border-radius: 18px; background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.1); }
+  .voortgangknop svg { width: 96px; height: 54px; overflow: visible; }
+  .voortgangknop b { display: block; font-size: 14px; }
+  .voortgangknop > span > span { display: block; font-size: 12px; color: var(--gedempt); }
+  .voortgangknop .pijl { font-size: 20px; color: var(--gedempt); }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-avond">
+  <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+  <main>
+    <div>
+      <span class="terugje" id="terug">‹ Wat je huis kan</span>
+      <div class="kopregel">
+        <div>
+          <h1 class="kop-1" id="titel">Hoe ver je huis is</h1>
+          <p class="lead" id="lead">Alles wat je huis met Home Assistant doet, en hoe ver het is. Hoe verder een straal reikt, hoe meer het zelf doet. Tik op een straal.</p>
+        </div>
+        <div class="rechtsboven">
+          <nav class="schets" aria-label="Schets"><span>Schets</span><a href="#" data-v="">Zonnewaaier</a><a href="#graat" data-v="graat">Visgraat</a><a href="#ingang" data-v="ingang">Waar je het opent</a></nav>
+          <div class="legenda" id="legenda"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="veld" id="veld">
+      <div class="beeld"><svg id="svg" viewBox="0 0 740 440" role="img" aria-label="Hoe ver je huis is"></svg></div>
+      <div class="paneel" id="paneelSamen">
+        <section class="glas samen">
+          <h3>Samen</h3>
+          <div id="tellers"></div>
+        </section>
+        <section class="glas zelf">
+          <h3>Wanneer het klimaat zelf regelt</h3>
+          <p>Verwarmen en koelen kijken nu mee: het huis beslist al, het oude systeem stuurt nog. Het neemt het over na een hele winter meekijken.</p>
+          <div class="as"><span>Seizoenen gezien</span><div class="balkje"><i style="width: 25%"></i></div><span class="getal">25%</span></div>
+          <div class="as"><span>Elke stand gezien</span><div class="balkje"><i style="width: 100%; background: var(--mint)"></i></div><span class="getal">100%</span></div>
+          <div class="as"><span>Winterdagen</span><div class="balkje winter"><i style="width: 0%"></i></div><span class="getal">0/30</span></div>
+          <div class="as samen-as"><b>Klaar om over te nemen</b><div class="balkje"><i style="width: 50%; background: linear-gradient(90deg, var(--ijs), var(--mint))"></i></div><span class="getal">50%</span></div>
+        </section>
+      </div>
+      <div class="paneel" id="paneelBlad" hidden>
+        <section class="glas blad" id="blad"></section>
+      </div>
+    </div>
+
+    <section class="glas weg" id="weg">
+      <div>
+        <h3>De weg naar zelf regelen</h3>
+        <p class="mini">Op schaal van de tijd, sinds de koppeling met Home Assistant.</p>
+      </div>
+      <div class="tijdlijn" id="tijdlijn"></div>
+    </section>
+
+    <section class="ingang" id="ingang" hidden>
+      <div>
+        <p class="waar">Bij Instellingen: de kaart Wat je huis kan</p>
+        <div class="glas kaartkan">
+          <div>
+            <h2 class="kop-3">Wat je huis kan</h2>
+            <p class="mini" style="margin: 4px 0 0">Alles wat Smart Climate voor je doet, en hoe het ervoor staat.</p>
+            <div class="standen"><span class="stand werkt">9 werken</span><span class="stand kijkt">8 kijken mee</span><span class="stand leert">2 leren nog</span></div>
+          </div>
+          <div class="meterknop"><svg id="mini1" viewBox="0 0 190 110"></svg></div>
+        </div>
+        <p class="uitleg">De kleine waaier vervangt het huisje op de kaart. Tik je op de kaart, dan opent Wat je huis kan; tik je op de waaier, dan opent meteen Hoe ver je huis is.</p>
+      </div>
+      <div>
+        <p class="waar">Op Wat je huis kan: rechtsboven</p>
+        <div class="glas kopkan">
+          <div>
+            <h2 class="kop-2" style="margin: 0">Wat je huis kan</h2>
+            <p class="mini" style="margin: 4px 0 0">Alles wat Smart Climate voor je doet, en waar.</p>
+          </div>
+          <span class="voortgangknop"><svg id="mini2" viewBox="0 0 190 110"></svg><span><b>Hoe ver je huis is</b><span>88%, klimaat neemt het over na de winter</span></span><span class="pijl">›</span></span>
+        </div>
+        <p class="uitleg">De knop staat waar nu de vier tellers staan. De tellers gaan mee naar Hoe ver je huis is, als legenda. De ideeën en Haal er meer uit blijven op Wat je huis kan.</p>
+      </div>
+    </section>
+  </main>
+</div>
+<script src="../../frontend/kit/teksten.nl.js"></script>
+<script src="../../frontend/kit/teksten.en.js"></script>
+<script src="../../frontend/kit/taal.js"></script>
+<script src="../../frontend/kit/nav.js"></script>
+<script src="../../frontend/kit/waaier.js"></script>
+<script src="voortgang-voorbeeld.js"></script>
+<script>
+  nav.balk(document.getElementById('balk'), 'instellingen');
+
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (naam, attr = {}, ouder) => {
+    const e = document.createElementNS(NS, naam);
+    for (const [k, v] of Object.entries(attr)) e.setAttribute(k, v);
+    if (ouder) ouder.appendChild(e);
+    return e;
+  };
+  /** De zonnewaaier staat in de kit (waaier.js), net als in de app. */
+  const groot = (svg, gekozen) => window.waaier.teken(svg, { groepen: W_GROEPEN, cx: 370, cy: 392, r0: 88, R: 238, namen: true, groepnamen: true, horizon: 140, ringen: TREDEN.map((x) => x.toLowerCase()), getal: `${TOTAAL}%`, onder: 'zo ver is je huis', gekozen });
+  const klein = (svg) => window.waaier.teken(svg, { groepen: W_GROEPEN, cx: 95, cy: 104, r0: 32, R: 92, getal: `${TOTAAL}%`, groei: false, knoppen: false });
+
+  /** De visgraat: dezelfde onderwerpen langs zes graten naar de kop. */
+  function graat(svg, gekozen) {
+    svg.innerHTML = '';
+    svg.classList.remove('waaier', 'gekozen-iets');
+    const y0 = 215, kop = 652;
+    el('path', { d: `M40 ${y0}L${kop - 70} ${y0}`, stroke: 'rgba(255,255,255,0.35)', 'stroke-width': 3, 'stroke-linecap': 'round' }, svg);
+    el('path', { d: `M40 ${y0}L14 ${y0 - 26}M40 ${y0}L14 ${y0 + 26}`, stroke: 'rgba(255,255,255,0.25)', 'stroke-width': 3, 'stroke-linecap': 'round' }, svg);
+    const defs = el('defs', {}, svg);
+    const zon = el('radialGradient', { id: 'zongraat', cx: '40%', cy: '40%', r: '70%' }, defs);
+    el('stop', { offset: '0', 'stop-color': '#ffe7ad' }, zon);
+    el('stop', { offset: '1', 'stop-color': '#f0a040' }, zon);
+    el('circle', { cx: kop, cy: y0, r: 66, fill: 'url(#zongraat)' }, svg);
+    const t1 = el('text', { x: kop, y: y0 + 6, 'text-anchor': 'middle', fill: '#2a1a05', 'font-family': 'Bricolage Grotesque, sans-serif', 'font-size': 40, 'font-weight': 700 }, svg);
+    t1.textContent = `${TOTAAL}%`;
+    const t2 = el('text', { x: kop, y: y0 + 26, 'text-anchor': 'middle', fill: '#4a3008', 'font-family': 'Figtree, sans-serif', 'font-size': 11, 'font-weight': 700 }, svg);
+    t2.textContent = 'werkt helemaal';
+    const plek = [[150, -1], [330, -1], [510, -1], [150, 1], [330, 1], [510, 1]];
+    const volgorde = ['gemak', 'comfort', 'zon', 'overzicht', 'leert', 'kosten'];
+    volgorde.forEach((g, i) => {
+      const [, gnaam, lijst] = GROEPEN.find((x) => x[0] === g);
+      const [xj, kant] = plek[i];
+      const xe = xj - 92, ye = y0 + kant * 190;
+      el('path', { d: `M${xj} ${y0}L${xe} ${ye}`, stroke: 'rgba(255,255,255,0.22)', 'stroke-width': 2, 'stroke-linecap': 'round' }, svg);
+      const t = el('text', { x: xe - 6, y: ye + kant * 4 + (kant < 0 ? -6 : 12), class: 'groepnaam', 'text-anchor': 'start' }, svg);
+      t.textContent = gnaam;
+      lijst.forEach((x, j) => {
+        const f = (j + 0.8) / (lijst.length + 0.4);
+        const px = xj - 92 * f, py = y0 + kant * 190 * f;
+        const p = ALLES.find((y) => y.id === x.id).p;
+        const gr = el('g', { class: `straal${x.id === gekozen ? ' gekozen' : ''}`, 'data-id': x.id, role: 'button' }, svg);
+        el('rect', { x: px - 10, y: py - 16, width: 150, height: 32, rx: 10, class: 'spoor' }, gr);
+        el('circle', { cx: px, cy: py, r: 7, fill: KLEUR[x.stand] }, gr);
+        const lt = el('text', { x: px + 14, y: py - 2 }, gr);
+        lt.textContent = x.kort;
+        // Vier streepjes: gevonden, geleerd, kijkt mee, werkt.
+        for (let k = 0; k < 4; k++) {
+          const vol = Math.max(0, Math.min(1, p * 4 - k));
+          el('rect', { x: px + 14 + k * 24, y: py + 6, width: 21, height: 4, rx: 2, fill: 'rgba(255,255,255,0.12)' }, gr);
+          if (vol) el('rect', { x: px + 14 + k * 24, y: py + 6, width: 21 * vol, height: 4, rx: 2, fill: KLEUR[x.stand] }, gr);
+        }
+      });
+    });
+  }
+
+  /** De tijdlijn onderaan, op schaal van de tijd. */
+  function tijdlijn() {
+    const dag = (s) => new Date(`${s}T12:00:00`).getTime();
+    const van = dag('2026-08-28'), tot = dag('2027-01-18');
+    const x = (s) => `${((dag(s) - van) / (tot - van) * 100).toFixed(2)}%`;
+    const mijlen = [
+      ['2026-09-05', 'klaar', 'Meekijken begint', '5 september'],
+      ['2026-10-26', 'klaar boven', 'Elke stand gezien', 'ook verwarmen, 26 okt'],
+      ['2026-10-29', 'nu', 'Nu', '54 dagen meegekeken'],
+      ['2026-12-30', '', '30 winterdagen', 'op zijn vroegst eind dec'],
+      ['2027-01-10', 'doel boven', 'Zelf regelen', 'na jouw ja'],
+    ];
+    document.getElementById('tijdlijn').innerHTML = `
+      <div class="lijn"></div>
+      <div class="winterband" style="left: ${x('2026-12-01')}; width: calc(${x('2027-01-18')} - ${x('2026-12-01')})"><span>Winter</span></div>
+      <div class="gedaan" style="width: ${x('2026-10-29')}"></div>
+      ${mijlen.map(([d, soort, titel, sub]) => `<div class="mijl ${soort}" style="left: ${x(d)}"><span class="pin">${soort.startsWith('klaar') ? '✓' : ''}</span><b>${titel}</b><small>${sub}</small></div>`).join('')}`;
+  }
+
+  function legenda() {
+    document.getElementById('legenda').innerHTML = ['werkt', 'kijkt', 'leert'].map((s) => `<span class="pil"><span class="stip" style="background: ${KLEUR[s]}"></span>${LABEL[s]} <b>${tel(s)}</b></span>`).join('');
+    const namen = (s) => ALLES.filter((x) => x.stand === s).map((x) => x.kort.toLowerCase()).join(', ');
+    const rij = (s, titel, zin) => `<div class="telrij"><span class="getal" style="color: ${KLEUR[s]}">${tel(s)}</span><div><b>${titel}</b><span>${zin}</span></div></div>`;
+    document.getElementById('tellers').innerHTML =
+      rij('werkt', 'Werkt helemaal', namen('werkt')) +
+      rij('kijkt', 'Kijkt mee', 'beslist al, het oude systeem stuurt nog') +
+      rij('leert', 'Leert nog', namen('leert'));
+  }
+
+  function blad(x) {
+    const ladder = TREDEN.map((naam, i) => {
+      const vol = Math.max(0, Math.min(1, x.p * 4 - i));
+      const soort = vol >= 1 ? 'klaar' : vol > 0 ? 'nu' : '';
+      return `<div class="trede ${soort}" style="color: ${vol > 0 ? KLEUR[x.stand] : ''}"><span style="color: ${vol > 0 ? 'var(--tekst)' : 'inherit'}">${naam}</span><i style="width: ${vol * 100}%"></i></div>`;
+    }).join('');
+    const balk = x.balk ? `<div class="as" style="margin-top: 6px"><span>${x.balk.tekst}</span><div class="balkje"><i style="width: ${x.balk.van / x.balk.tot * 100}%; background: ${KLEUR[x.stand]}"></i></div><span class="getal">${x.balk.van}/${x.balk.tot}</span></div>` : '';
+    document.getElementById('blad').innerHTML = `
+      <div class="bovenaan">
+        <div><span class="stand ${x.stand}">${LABEL[x.stand]}</span><h2>${x.titel}</h2><p class="wat">${x.wat}</p></div>
+        <button type="button" class="sluit" data-sluit aria-label="Sluiten">×</button>
+      </div>
+      <div><h4>Hoe ver</h4><div class="ladder">${ladder}</div></div>
+      <div><h4>Wat het al weet</h4><ul class="lijst">${x.weet.map((w) => `<li>${w}</li>`).join('')}</ul></div>
+      ${x.komt ? `<div><h4>Wat nog komt</h4><ul class="lijst komt">${x.komt.map((w) => `<li>${w}</li>`).join('')}</ul>${balk}</div>` : ''}
+      <div class="onder"><button class="knop" type="button">Naar ${x.titel.toLowerCase().startsWith('de ') ? 'Apparaten' : 'Wat je huis kan'}</button></div>`;
+  }
+
+  function teken() {
+    const h = location.hash.slice(1);
+    const versie = h === 'graat' || h === 'ingang' ? h : '';
+    const gekozen = ALLES.find((x) => x.id === h) ? h : null;
+    document.querySelectorAll('.schets a').forEach((a) => a.classList.toggle('aan', a.dataset.v === versie));
+    document.getElementById('veld').hidden = versie === 'ingang';
+    document.getElementById('weg').hidden = versie === 'ingang';
+    document.getElementById('ingang').hidden = versie !== 'ingang';
+    document.getElementById('terug').textContent = versie === 'ingang' ? '‹ Instellingen' : '‹ Wat je huis kan';
+    document.getElementById('titel').textContent = versie === 'ingang' ? 'Waar je het opent' : 'Hoe ver je huis is';
+    document.getElementById('lead').textContent = versie === 'ingang'
+      ? 'Twee plekken: de kaart bij Instellingen, en een knop op Wat je huis kan. Beide met de kleine waaier.'
+      : versie === 'graat'
+        ? 'Dezelfde onderwerpen langs zes graten naar de kop. Vier streepjes per onderwerp: gevonden, geleerd, kijkt mee, werkt.'
+        : 'Alles wat je huis met Home Assistant doet, en hoe ver het is. Hoe verder een straal reikt, hoe meer het zelf doet. Tik op een straal.';
+    const svg = document.getElementById('svg');
+    svg.classList.toggle('gekozen-iets', !!gekozen);
+    if (versie === 'graat') graat(svg, gekozen);
+    else groot(svg, gekozen);
+    klein(document.getElementById('mini1'));
+    klein(document.getElementById('mini2'));
+    document.getElementById('legenda').hidden = versie === 'ingang';
+    document.getElementById('paneelSamen').hidden = !!gekozen;
+    document.getElementById('paneelBlad').hidden = !gekozen;
+    if (gekozen) blad(ALLES.find((x) => x.id === gekozen));
+  }
+
+  document.addEventListener('click', (e) => {
+    const s = e.target.closest('.straal');
+    const id = s?.dataset.id ?? s?.dataset.straal;
+    if (s) { location.hash = id === location.hash.slice(1) ? '' : id; return; }
+    if (e.target.closest('[data-sluit]')) location.hash = '';
+  });
+  addEventListener('hashchange', teken);
+  legenda();
+  tijdlijn();
+  teken();
+</script>
+</body>
+</html>

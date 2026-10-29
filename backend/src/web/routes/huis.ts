@@ -123,6 +123,15 @@ export async function huisRoutes(d: Diensten, v: Verzoek): Promise<boolean> {
       sendJson(res, 400, { fout: (error as Error).message });
       return true;
     }
+    // "Doe maar terug" (besluit 213): wat de brug zette, meteen terug.
+    if (typeof body === 'object' && body != null && (body as Record<string, unknown>)['terug'] === true) {
+      try {
+        sendJson(res, 200, { ok: true, terug: await k.brug.terugNu() });
+      } catch (error) {
+        sendJson(res, 502, { fout: `Home Assistant weigerde: ${(error as Error).message}` });
+      }
+      return true;
+    }
     const uit = brugVerzoek(body, config, Date.now());
     if (!uit.ok) {
       sendJson(res, 400, { fout: uit.reden });

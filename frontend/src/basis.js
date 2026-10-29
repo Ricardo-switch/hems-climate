@@ -665,7 +665,7 @@
    */
   async function gastGrens() {
     const pagina = location.pathname.split('/').pop() || '';
-    if (['instellingen.html', 'toegang.html', 'huis-kan.html'].includes(pagina)) return;
+    if (['instellingen.html', 'toegang.html', 'huis-kan.html', 'voortgang.html'].includes(pagina)) return;
     const ik = await haal('api/bewoners').then((b) => b.ik, () => null);
     if (ik?.soort === 'gast') location.replace('instellingen.html');
   }
@@ -1637,5 +1637,55 @@
     return lw ? `${lw} ${naam.charAt(0).toLowerCase()}${naam.slice(1)}` : naam;
   }
 
-  global.app = { huisSoort, persoonlijk, $$, metLidwoord, nl, zet, esc, bijnaOp, klokVan, wanneer, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting, gebundeld, zicht, aanbellen, offline, online, inHA, volledigGekozen, zetVolledig, naarHA, zetWeergave, weergave: () => weergaveNu, zetThema, kleurVan, tekstKleur, houToegang, updateKlaar, bijwerkVenster, bijVerandering, kanInstalleren, geinstalleerd, installeer, naarHAScherm };
+  /**
+   * De stem van dit apparaat zelf (besluit 212, 29 oktober 2026). De browser
+   * als die kan spreken; anders Fully Kiosk, want de webweergave aan de wand
+   * heeft geen eigen spraak. Chrome slaat een zin over die vlak na "stop"
+   * begint, dus even wachten. Geeft false als dit scherm geen stem heeft.
+   */
+  let uiting = null;
+  function kanApparaatSpreken() {
+    return (!!global.speechSynthesis && typeof global.SpeechSynthesisUtterance !== 'undefined') || typeof global.fully?.textToSpeech === 'function';
+  }
+  function zegMetApparaat(tekst, taalCode = global.taal?.code) {
+    const lang = taalCode === 'en' ? 'en-GB' : 'nl-NL';
+    const duur = Math.max(1500, String(tekst).length * 70);
+    if (global.speechSynthesis && typeof global.SpeechSynthesisUtterance !== 'undefined') {
+      return new Promise((ok) => {
+        let klaar = false;
+        const einde = (gelukt) => {
+          if (klaar) return;
+          klaar = true;
+          clearTimeout(vangnet);
+          ok(gelukt);
+        };
+        // Zonder einde (een stem die niet start): na de tijd die de zin zou duren.
+        const vangnet = setTimeout(() => einde(true), duur + 4000);
+        global.speechSynthesis.cancel();
+        setTimeout(() => {
+          // Vastgehouden, anders ruimt Chrome hem op en komt er geen einde.
+          uiting = new global.SpeechSynthesisUtterance(tekst);
+          uiting.lang = lang;
+          const stem = global.speechSynthesis.getVoices().find((v) => v.lang.replace('_', '-').toLowerCase().startsWith(lang.slice(0, 2).toLowerCase()));
+          if (stem) uiting.voice = stem;
+          uiting.onend = () => einde(true);
+          uiting.onerror = (e) => einde(e?.error === 'interrupted' || e?.error === 'canceled');
+          global.speechSynthesis.resume?.();
+          global.speechSynthesis.speak(uiting);
+        }, 120);
+      });
+    }
+    if (typeof global.fully?.textToSpeech === 'function') {
+      try {
+        global.fully.stopTextToSpeech?.();
+        global.fully.textToSpeech(tekst, lang.replace('-', '_'));
+      } catch {
+        return Promise.resolve(false);
+      }
+      return new Promise((ok) => setTimeout(() => ok(true), duur));
+    }
+    return Promise.resolve(false);
+  }
+
+  global.app = { kanApparaatSpreken, zegMetApparaat, huisSoort, persoonlijk, $$, metLidwoord, nl, zet, esc, bijnaOp, klokVan, wanneer, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting, gebundeld, zicht, aanbellen, offline, online, inHA, volledigGekozen, zetVolledig, naarHA, zetWeergave, weergave: () => weergaveNu, zetThema, kleurVan, tekstKleur, houToegang, updateKlaar, bijwerkVenster, bijVerandering, kanInstalleren, geinstalleerd, installeer, naarHAScherm };
 })(window);
