@@ -9579,6 +9579,26 @@ extra van de helft van de nachten gewoon, en zegt de app er niets meer over); de
 camera alleen via de Fully-integratie van Home Assistant (die staat hier niet,
 en de app hoort het zo zonder omweg).
 
+*Nagekomen, versie 0.79.1* (dezelfde dag, de rest van de QA-ronde):
+
+- **De film:** de kaarten bij Je apparaten gaven de temperatuur onder een
+  andere naam door dan het rondje las, dus het rondje bleef leeg. En in het
+  lichte thema waren de namen donker op een donkere kaart: de film heeft nu
+  zijn eigen donkere kleuren.
+- **De assistent** kent een kamer ook bij een gewone andere naam ("living
+  room", "huiskamer", "attic"), als er maar één kamer bij past; eerst ging het
+  antwoord dan over een andere kamer. Een onbekende kamer of nog geen besluit
+  zegt hij letterlijk (`letterlijk` in het antwoord), zonder het
+  sfeerzinnetje dat het model erachter zette.
+- **Een kamer met alleen een airco op zon** wacht op zon, en zo zegt de
+  assistent het ook (al in 0.79.0).
+- **Nagelopen zonder fout:** alle stappen van Inrichten, de overige pagina's in
+  het Nederlands en het Engels, het lichte thema, en opslaan met de hand. De
+  regeling naast de oude YAML over drie dagen: de airco in de woonkamer was
+  het altijd eens; die op de zolder zou vijf keer, hooguit een kwartier, zon
+  gebruiken die de oude regeling liet liggen; de failsafe ging op 28 oktober
+  twee uur aan door de temperatuursensor van de Hue-bewegingsmelder op zolder.
+
 ---
 
 ## Wat nog een besluit wacht

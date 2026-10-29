@@ -146,6 +146,12 @@ describe('waarom', () => {
     expect(a.antwoord).toContain('Er gaat nu 300 W terug naar het net.');
   });
 
+  it('zegt een onbekende kamer en geen besluit letterlijk, zonder sfeerzinnetje van het model (29 oktober 2026)', () => {
+    expect(askNl({ kind: 'waarom', kamer: 'beneden' }).letterlijk).toBe(true);
+    expect(askNl({ kind: 'waarom', kamer: 'zolder' }, null).letterlijk).toBe(true);
+    expect(askNl({ kind: 'waarom', kamer: 'zolder' }).letterlijk).toBeUndefined();
+  });
+
   it('zegt bij een kamer met alleen een airco op zon dat hij op zon wacht, niet dat het er te warm is (29 oktober 2026)', () => {
     const a = askNl({ kind: 'waarom', kamer: 'zolder' }, view({ observed: { nest: 'heat@20', badkamer: 'off@18', 'ac-woonkamer': 'off', 'ac-zolder': 'off' } }));
     expect(a.antwoord).toContain('De zolder wil koelen: het is er 24,3° en het doel is 23°. Dat wacht nog even, omdat hier alleen met zon over gekoeld wordt.');

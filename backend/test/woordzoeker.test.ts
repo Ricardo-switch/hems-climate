@@ -30,6 +30,10 @@ describe('woordzoeker in het Engels (besluit 185, stap 9 deel 6)', () => {
   it('verstaat vragen over het huis', () => {
     expect(en('What are you doing right now?')).toEqual({ kind: 'nu' });
     expect(en('Why is it so hot in the zolder?')).toEqual({ kind: 'waarom', kamer: 'zolder' });
+    // Een kamer met een andere naam (29 oktober 2026): de woonkamer als living room, de zolder als attic.
+    expect(en('How warm is the living room?')).toEqual({ kind: 'waarom', kamer: 'woonkamer' });
+    expect(en('Why is it so cold in the attic?')).toEqual({ kind: 'waarom', kamer: 'zolder' });
+    expect(en('Cool the bathroom')).toEqual({ kind: 'doe', kamer: 'badkamer', wens: 'koelen', temperatuurC: null });
     expect(en('Cool the zolder to 22 degrees')).toEqual({ kind: 'doe', kamer: 'zolder', wens: 'koelen', temperatuurC: 22 });
     expect(en('Please warm up the badkamer')).toEqual({ kind: 'doe', kamer: 'badkamer', wens: 'verwarmen', temperatuurC: null });
     expect(en('Switch off the woonkamer')).toEqual({ kind: 'doe', kamer: 'woonkamer', wens: 'uit', temperatuurC: null });

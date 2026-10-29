@@ -96,6 +96,12 @@ export interface Answer {
   readonly kamer: string | null;
   readonly antwoord: string;
   readonly feiten: readonly Fact[];
+  /**
+   * Zo zeggen, niet in eigen woorden (29 oktober 2026): een kamer die er niet
+   * is of nog geen besluit. Het model zette er een sfeerzinnetje achter, zoals
+   * "Laten we het gezellig houden in huis".
+   */
+  readonly letterlijk?: true;
 }
 
 export interface AskContext {
@@ -848,10 +854,11 @@ export function ask(question: Question, ctx: AskContext): Answer {
     antwoord: antwoord.replace(/\s+/g, ' ').trim(),
     feiten: f.list,
   });
+  const letterlijk = (antwoord: string, kamer: string | null = null): Answer => ({ ...done(antwoord, kamer), letterlijk: true });
 
   switch (question.kind) {
     case 'nu': {
-      if (snapshot == null) return done(noDecision(lang));
+      if (snapshot == null) return letterlijk(noDecision(lang));
       const e = snapshot.explanation;
       const out: string[] = [];
       if (isHandsOff(e.mode)) {
@@ -893,8 +900,8 @@ export function ask(question: Question, ctx: AskContext): Answer {
 
     case 'waarom': {
       const zone = findZone(config, question.kamer);
-      if (zone == null) return done(unknownRoom(config, question.kamer, lang));
-      if (snapshot == null) return done(noDecision(lang), zone.id);
+      if (zone == null) return letterlijk(unknownRoom(config, question.kamer, lang));
+      if (snapshot == null) return letterlijk(noDecision(lang), zone.id);
       const status = statusOf(config, snapshot, zone, lang, shadow, f);
       const real = shadow ? realSentence(f, config, snapshot, zone, lang) : '';
       return done(`${status.zin} ${real}`, zone.id);
@@ -1031,7 +1038,7 @@ export function ask(question: Question, ctx: AskContext): Answer {
     }
 
     case 'warm': {
-      if (snapshot == null) return done(noDecision(lang));
+      if (snapshot == null) return letterlijk(noDecision(lang));
       const e = snapshot.explanation;
       const delen = config.zones
         .map((z) => ({ z, c: e.perZone.find((p) => p.zoneId === z.id)?.temperatureC ?? null }))
@@ -1167,7 +1174,7 @@ export function ask(question: Question, ctx: AskContext): Answer {
 
     case 'doe': {
       const zone = findZone(config, question.kamer);
-      if (zone == null) return done(unknownRoom(config, question.kamer, lang));
+      if (zone == null) return letterlijk(unknownRoom(config, question.kamer, lang));
       const w = WORDS[lang];
       const devices = actuatorsOf(config, zone);
       const zn = zoneName(zone, lang);

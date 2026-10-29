@@ -209,7 +209,7 @@ export async function assistentRoutes(d: Diensten, v: Verzoek): Promise<boolean>
       lang: parsed.lang,
     });
     // In eigen woorden (besluit 148), met het vaste antwoord als vangnet.
-    const eigen = model ? await inEigenWoorden(model, vrijeTekst, antwoord, parsed.lang) : { antwoord: antwoord.antwoord, eigen: false };
+    const eigen = model && !antwoord.letterlijk ? await inEigenWoorden(model, vrijeTekst, antwoord, parsed.lang) : { antwoord: antwoord.antwoord, eigen: false };
     // Hoe het klinkt (besluit 142), voor de stem van het apparaat zelf.
     sendJson(res, 200, { ...antwoord, antwoord: eigen.antwoord, eigen: eigen.eigen, gesproken: uitspraak(eigen.antwoord, parsed.lang) });
     return true;
