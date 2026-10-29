@@ -455,7 +455,8 @@ describe('schrijfbeveiliging', () => {
     const events: string[] = [];
     const gesprek = await client.listen({ start: 'wake_word', pipeline: 'smart_climate', onEvent: (e) => events.push(e.type) });
     const run = ha.received.find((m) => m['type'] === 'assist_pipeline/run')!;
-    expect(run).toMatchObject({ start_stage: 'wake_word', end_stage: 'stt', pipeline: 'smart_climate', input: { sample_rate: 16000 } });
+    // Het einde van de spraak bepaalt de dienst (besluit 208).
+    expect(run).toMatchObject({ start_stage: 'wake_word', end_stage: 'stt', pipeline: 'smart_climate', input: { sample_rate: 16000, no_vad: true } });
     await expect.poll(() => events).toContain('run-start');
     gesprek.send(new Uint8Array([1, 2, 3, 4]));
     gesprek.end();

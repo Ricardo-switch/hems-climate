@@ -65,6 +65,8 @@ $mappen = @(
   @{ Van = 'backend/src';   Naar = 'backend/src' }
   @{ Van = 'backend/test';  Naar = 'backend/test' }
   @{ Van = 'backend/tools'; Naar = 'backend/tools' }
+  # Het wekwoord dat de dienst zelf hoort (besluit 208).
+  @{ Van = 'backend/wekwoord'; Naar = 'backend/wekwoord' }
   @{ Van = 'frontend/src';  Naar = 'frontend/src' }
   @{ Van = 'frontend/kit';  Naar = 'frontend/kit' }
   # Het wekwoord "Hé huis" (besluit 177): run.sh zet het klaar voor openWakeWord.

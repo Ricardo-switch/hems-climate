@@ -30,9 +30,11 @@ let huisData = null;
 let indeling = null;
 /** Op je startscherm: of de eigen poort in Tailscale openstaat, en op welk adres. */
 let startscherm = null;
+/** Hoe de schermen luisteren (besluit 208): wie het wekwoord hoort, en hoe vaak het huis vandaag wakker werd. */
+let luisterStand = null;
 
 async function laad() {
-  const [f, z, v, h, i, st] = await Promise.allSettled([haal('api/functies'), haal('api/zon'), haal('api/voorkeuren'), haal('api/huis'), haal('api/indeling'), haal('api/startscherm')]);
+  const [f, z, v, h, i, st] = await Promise.allSettled([haal('api/functies'), haal('api/zon'), haal('api/voorkeuren'), haal('api/huis'), haal('api/indeling'), haal('api/startscherm'), haal('api/luister-stand').then((x) => (luisterStand = x))]);
   if (st.status === 'fulfilled') startscherm = st.value;
   if (z.status === 'fulfilled') zon = z.value;
   if (v.status === 'fulfilled') voorkeur = v.value;
@@ -389,11 +391,13 @@ function luisteren() {
   }
   const https = window.isSecureContext;
   const opties = [[null, gekozen && !p.spraak ? t('functies.luister.vanHANaam', { naam: gekozen.naam }) : t('functies.luister.vanHA')], ...lijst.map((x) => [x.id, x.wekwoord ? `${x.naam} · ${wekwoordNaam(x.wekwoord)}` : x.naam])];
+  // Hoort de dienst "Hé huis" zelf (besluit 208), dan hoeft de spraakassistent geen wekwoord.
+  const zelf = luisterStand?.zelf === true;
   const melding = !lijst.length
     ? t('functies.luister.geen')
     : !gekozen?.spraakNaarTekst
       ? t('functies.luister.geenSpraak')
-      : !gekozen.wekwoord
+      : !gekozen.wekwoord && !zelf
         ? t('functies.luister.geenWekwoord')
         : '';
   // Waar de stem vandaan komt (besluit 203): het apparaat zelf, met verstaan via de browser;
@@ -411,11 +415,39 @@ function luisteren() {
   return `${kop}
     <span class="veldnaam">${esc(t('functies.luister.assistent'))}</span>
     ${lijst.length ? keuzes(t('functies.luister.assistentLabel'), 'spraak', opties, p.spraak) : ''}
-    ${gekozen?.wekwoord ? `<p class="mini">${metHtml('functies.luister.wekwoord', { woord: wekwoordNaam(gekozen.wekwoord) })}</p>` : ''}
+    ${zelf ? `<p class="mini">${metHtml('functies.luister.zelf')}</p>` : gekozen?.wekwoord ? `<p class="mini">${metHtml('functies.luister.wekwoord', { woord: wekwoordNaam(gekozen.wekwoord) })}</p>` : ''}
+    ${luisterStand?.traag ? `<p class="uitleg" style="color: var(--zon-t)">${esc(t('functies.luister.traag'))}</p>` : ''}
     ${melding ? `<p class="uitleg" style="color: var(--zon-t)">${esc(melding)}</p>` : ''}
     <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px"><span class="veldnaam">${esc(t('functies.luister.hier'))}</span>
     <div class="keuzes" role="group" aria-label="${esc(t('functies.luister.hierLabel'))}"><button type="button" data-hier="aan" aria-pressed="${hier}" ${https ? '' : 'disabled'}>${esc(t('functies.aan'))}</button><button type="button" data-hier="uit" aria-pressed="${!hier}">${esc(t('functies.uit'))}</button></div></div>
-    ${https ? '' : `<p class="uitleg" style="color: var(--zon-t)">${esc(t('functies.luister.https'))}</p>`}`;
+    ${https ? '' : `<p class="uitleg" style="color: var(--zon-t)">${esc(t('functies.luister.https'))}</p>`}
+    ${hier && https ? schuiven(zelf) : ''}`;
+}
+
+/** Hoe dit scherm luistert (besluit 208): de gevoeligheid van "Hé huis" en de wachttijd na je laatste woord. */
+function schuiven(zelf) {
+  const lees = (k, std) => {
+    try {
+      return localStorage.getItem(k) ?? std;
+    } catch {
+      return std;
+    }
+  };
+  const g = Number(lees('sc-gevoeligheid', '3'));
+  const w = lees('sc-wachttijd', 'normaal');
+  const v = luisterStand?.vandaag;
+  // Vaak wakker zonder vraag: dan is hij waarschijnlijk te gevoelig.
+  const vaakVals = v && v.zonderVraag >= 3 && v.zonderVraag * 2 >= v.wakker;
+  const gevoel = zelf
+    ? `<label class="schuif">${esc(t('functies.luister.gevoelig'))}<b data-gevoelig-naam>${esc(t(`functies.luister.stand${g}`))}</b><input type="range" min="1" max="5" step="1" value="${g}" data-gevoelig aria-label="${esc(t('functies.luister.gevoelig'))}"></label>
+    <div style="display: flex; justify-content: space-between" class="mini"><span>${esc(t('functies.luister.strenger'))}</span><span>${esc(t('functies.luister.gevoeliger'))}</span></div>
+    ${v ? `<p class="mini">${esc(t(v.wakker === 1 ? 'functies.luister.vandaagEen' : 'functies.luister.vandaag', { n: v.wakker, vals: v.zonderVraag }))}</p>` : ''}
+    ${vaakVals && g > 1 ? `<p class="uitleg" style="color: var(--zon-t)">${esc(t('functies.luister.teVaak'))}</p>` : ''}`
+    : '';
+  return `${gevoel}
+    <span class="veldnaam">${esc(t('functies.luister.wachttijd'))}</span>
+    ${keuzes(t('functies.luister.wachttijd'), 'wachttijd', [['vlot', t('functies.luister.vlot')], ['normaal', t('functies.luister.normaal')], ['rustig', t('functies.luister.rustig')]], w)}
+    <p class="mini">${esc(t('functies.luister.wachttijdZin'))}</p>`;
 }
 
 function weer() {
@@ -602,6 +634,8 @@ document.addEventListener('click', (e) => {
   if (knop.dataset.kies) {
     const w = JSON.parse(knop.dataset.waarde);
     const s = knop.dataset.kies;
+    // De wachttijd hoort bij dit scherm (besluit 208), niet bij de dienst.
+    if (s === 'wachttijd') return bewaarHier('sc-wachttijd', w, t('functies.luister.bewaard'));
     if (s === 'camerasAan') concept.cameras.aan = w;
     else if (s === 'belAan') {
       concept.deurbel.aan = w;
@@ -644,10 +678,24 @@ document.addEventListener('click', (e) => {
 document.addEventListener('input', (e) => {
   const el = e.target;
   if (el.matches?.('.nk-schuif')) el.parentElement.querySelector('[data-nk-pct]').textContent = `${el.value}%`;
+  if (el.matches?.('[data-gevoelig]')) el.parentElement.querySelector('[data-gevoelig-naam]').textContent = t(`functies.luister.stand${el.value}`);
 });
+
+/** Een schuif van dit scherm (besluit 208): alleen in deze browser, en meteen in gebruik. */
+function bewaarHier(sleutel, waarde, zin) {
+  try {
+    localStorage.setItem(sleutel, waarde);
+  } catch {
+    // Dan alleen voor nu.
+  }
+  window.luisteren?.opnieuw?.();
+  teken();
+  groep.zegBewaard('ok', zin);
+}
 
 document.addEventListener('change', (e) => {
   const el = e.target;
+  if (el.matches?.('[data-gevoelig]')) return bewaarHier('sc-gevoeligheid', String(el.value), t('functies.luister.bewaard'));
   if (el.matches?.('[data-nk-helder-dag]')) return bewaarNiemand({ helderDag: Math.round(Number(el.value)) });
   if (el.matches?.('[data-nk-helder-avond]')) return bewaarNiemand({ helderAvond: Math.round(Number(el.value)) });
   if (el.matches?.('[data-nk-melder]')) return bewaarNiemand({ melder: el.value });

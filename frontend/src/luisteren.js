@@ -26,6 +26,19 @@
   const tk = (k, p) => global.taal.t(k, p);
 
   const HIER = 'sc-luisteren';
+  // De twee schuiven van dit scherm (besluit 208): hoe gevoelig het wekwoord is, en hoe
+  // lang het huis wacht na je laatste woord. Ook alleen in deze browser.
+  const GEVOELIG = 'sc-gevoeligheid';
+  const WACHTTIJD = 'sc-wachttijd';
+  const lees = (k, standaard) => {
+    try {
+      return localStorage.getItem(k) ?? standaard;
+    } catch {
+      return standaard;
+    }
+  };
+  const gevoeligheid = () => lees(GEVOELIG, '3');
+  const wachttijd = () => lees(WACHTTIJD, 'normaal');
   const DOORPRATEN_MS = 5000;
   const SLUITEN_MS = 8000;
 
@@ -100,7 +113,8 @@
   function ronde(start, op) {
     // Naast deze pagina, net als `api/…` elders: in Home Assistant staat de app onder
     // /api/hassio_ingress/…, en /api/luister ging naar Home Assistant zelf, dat hem meteen sloot.
-    const adres = new URL(`api/luister?start=${start}`, location.href);
+    const q = new URLSearchParams({ start, gevoeligheid: gevoeligheid(), wachttijd: wachttijd() });
+    const adres = new URL(`api/luister?${q}`, location.href);
     adres.protocol = adres.protocol === 'https:' ? 'wss:' : 'ws:';
     const ws = new WebSocket(adres);
     ws.binaryType = 'arraybuffer';
@@ -156,11 +170,11 @@
   let scherm = null;
 
   /** Wat je zei, als vraag aan het huis; een opdracht gaat meteen naar zijn deur (besluit 148). */
-  async function vraag(tekst) {
-    const q = new URLSearchParams({ v: 'vrij', tekst, taal: global.taal.code, ...(scherm && Date.now() - scherm.sinds < 60_000 ? { scherm: scherm.id } : {}) });
+  async function vraag(tekst, halfMag = false) {
+    const q = new URLSearchParams({ v: 'vrij', tekst, taal: global.taal.code, ...(halfMag ? { half: '1' } : {}), ...(scherm && Date.now() - scherm.sinds < 60_000 ? { scherm: scherm.id } : {}) });
     const res = await fetch(`api/vraag?${q}`);
     const body = await res.json().catch(() => ({}));
-    const uit = { antwoord: res.ok ? body.antwoord : body.fout ?? body.wachten ?? tk('assistent.geenAntwoord'), gesproken: res.ok ? body.gesproken ?? null : null, onbekend: res.ok && body.vraag === 'onbekend', klaar: res.ok && body.vraag === 'klaar', ruis: res.ok && body.vraag === 'ruis', voorbeelden: body.voorbeelden ?? [], gedaan: [] };
+    const uit = { antwoord: res.ok ? body.antwoord : body.fout ?? body.wachten ?? tk('assistent.geenAntwoord'), gesproken: res.ok ? body.gesproken ?? null : null, onbekend: res.ok && body.vraag === 'onbekend', klaar: res.ok && body.vraag === 'klaar', ruis: res.ok && body.vraag === 'ruis', half: res.ok && body.vraag === 'half', voorbeelden: body.voorbeelden ?? [], gedaan: [] };
     if (res.ok && body.opdracht) {
       const r = await fetch(body.opdracht.pad, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body.opdracht.body) }).catch(() => null);
       if (!r?.ok) {
@@ -272,6 +286,9 @@
   let pauze = 1000;
   /** Hoe vaak het huis in dit gesprek al zei dat het je niet begreep (besluit 166). */
   let nietBegrepen = 0;
+  /** Een zin die nog niet af was (besluit 208), en hoe vaak er al doorgeluisterd is. */
+  let half = '';
+  let halfKeer = 0;
 
   /** De bol leeft mee met je stem, zolang het huis luistert. */
   function leefMee() {
@@ -290,6 +307,8 @@
     huidig?.stop();
     huidig = null;
     gesprek = false;
+    half = '';
+    halfKeer = 0;
     cancelAnimationFrame(niveauRaf);
     laag?.classList.remove('open');
     if (aan) setTimeout(wacht, 300);
@@ -312,6 +331,10 @@
       } else if (b.soort === 'tekst') {
         huidig = null;
         void verwerk(b.tekst);
+      } else if (b.soort === 'niets') {
+        // Na "Hé huis" geen woord (besluit 208): waarschijnlijk niet voor het huis. Stil dicht.
+        huidig = null;
+        sluit();
       } else if (b.soort === 'fout') {
         document.body.classList.remove('sc-luistert');
         if (gesprek) toon('antwoord', { groot: b.reden, hint: '' });
@@ -334,13 +357,25 @@
       toon('nietverstaan', { groot: tk('luisteren.nietVerstaan'), klein: tk('luisteren.nogEens') });
       return doorpraten();
     }
+    // Het vervolg van een halve zin erachter (besluit 208).
+    if (half) tekst = `${half} ${tekst}`;
     toon('denkt', { jij: tekst, groot: tk('kamer.kijken') });
     let uit;
     try {
-      uit = await vraag(tekst);
+      uit = await vraag(tekst, halfKeer < 2);
     } catch {
       uit = { antwoord: tk('assistent.nietBereikbaar'), gedaan: [] };
     }
+    // Nog niet af ("zet de lamp in de"): doorluisteren, zonder wekwoord.
+    if (uit.half) {
+      half = tekst;
+      halfKeer += 1;
+      toon('luistert', { jij: `${tekst} …`, groot: tk('luisteren.zegHet'), hint: tk('luisteren.totStop') });
+      leefMee();
+      return doorpraten();
+    }
+    half = '';
+    halfKeer = 0;
     // Alleen geluid: zoals niets gezegd (21 oktober 2026).
     if (uit.ruis) return verwerk('');
     // "Oké bedankt" of "dat was het": iets terug zeggen en niet verder luisteren.
@@ -416,7 +451,12 @@
     if (!loopt()) await mic.ctx.resume().catch(() => {});
     // Zonder tik (de microfoon op Thuis) houdt een browser het geluid soms tegen: dan zelf tikken.
     if (!loopt()) throw new Error('tik');
-    return ronde('spraak', op);
+    return ronde('spraak', (b) => op(b.soort === 'niets' ? { soort: 'tekst', tekst: '' } : b));
+  }
+
+  /** Een schuif bij Functies veranderde (besluit 208): wie nu op het wekwoord wacht, begint opnieuw. */
+  function opnieuw() {
+    if (huidig && !gesprek) huidig.stop();
   }
 
   /* ------------------------------------------ verstaan via de browser (besluit 203) */
@@ -466,7 +506,7 @@
     return { klaar: () => r.stop(), stop: () => r.abort() };
   }
 
-  global.luisteren = { kan, aanHier, zetHier, start, eenmaal, kanBrowser, viaBrowser, niveau: () => mic?.niveau ?? browserNiveau };
+  global.luisteren = { kan, aanHier, zetHier, start, eenmaal, opnieuw, kanBrowser, viaBrowser, niveau: () => mic?.niveau ?? browserNiveau };
   // De wand: meteen beginnen als het hier aan staat.
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
   else start();

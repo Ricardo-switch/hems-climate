@@ -10,7 +10,7 @@ import { TodayCache } from '../today.js';
 import { ask, LANGS, parseQuestion } from '../assistant.js';
 import type { Lang, Question } from '../assistant.js';
 import { uitspraak } from '../uitspraak.js';
-import { afsluiter, begrijp, isRuis, MAX_TEKST } from '../woordzoeker.js';
+import { afsluiter, begrijp, isHalf, isRuis, MAX_TEKST } from '../woordzoeker.js';
 import { bedienbaar, herkenOpdracht, type Herkend } from '../opdracht.js';
 import { inEigenWoorden, kies, PROEF_MS, WACHT_MS, type Vraag } from '../taalmodel.js';
 import { sunReport } from '../sun.js';
@@ -80,6 +80,27 @@ export async function assistentRoutes(d: Diensten, v: Verzoek): Promise<boolean>
     return true;
   }
 
+  // Hoe de schermen luisteren (besluit 208): wie het wekwoord hoort, en hoe vaak het huis vandaag wakker werd.
+  if (path === '/api/luister-stand') {
+    const post = d.luisterpost;
+    if (post == null) {
+      sendJson(res, 200, { kan: false });
+      return true;
+    }
+    const s = post.stand;
+    const vandaag = startOfLocalDay(Date.now(), (d.options.configNow?.() ?? d.options.config)?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone);
+    const boek = s.boek.filter((m) => m.ms >= vandaag);
+    sendJson(res, 200, {
+      kan: true,
+      zelf: s.zelf,
+      traag: s.traag,
+      rekentijdPct: s.rekentijd == null ? null : Math.round(s.rekentijd * 100),
+      vandaag: { wakker: boek.length, zonderVraag: boek.filter((m) => m.vraag === false).length },
+      laatste: boek.slice(-10).reverse().map((m) => ({ ms: m.ms, kans: m.kans == null ? null : Math.round(m.kans * 100) / 100, gevoeligheid: m.gevoeligheid, vraag: m.vraag })),
+    });
+    return true;
+  }
+
   if (path === '/api/vraag') {
     const config = d.config();
     if (config == null) {
@@ -106,6 +127,11 @@ export async function assistentRoutes(d: Diensten, v: Verzoek): Promise<boolean>
       // Alleen geluid, of het gesprek is klaar (21 oktober 2026): geen vraag.
       if (isRuis(tekst)) {
         sendJson(res, 200, { vraag: 'ruis', taal: lang, kamer: null, antwoord: '', feiten: [], gesproken: '' });
+        return true;
+      }
+      // Een gesproken zin die niet af is (besluit 208): de pagina luistert door.
+      if (url.searchParams.get('half') === '1' && isHalf(tekst)) {
+        sendJson(res, 200, { vraag: 'half', taal: lang, kamer: null, antwoord: '', feiten: [], gesproken: '' });
         return true;
       }
       const klaar = afsluiter(tekst, lang);

@@ -408,7 +408,10 @@ verwijzing bestaat.
   deuren als de knoppen; een garagedeur is geen scherm meer ([148]).
   Met je stem: de wand luistert naar "Hé huis" (een eigen getraind wekwoord),
   de telefoon met een microfoonknop; Home Assistant hoort en schrijft uit, in
-  huis, en de tekst gaat daarna als een getypte zin verder ([150]).
+  huis, en de tekst gaat daarna als een getypte zin verder ([150]). Sinds
+  0.80.0 hoort de dienst het wekwoord zelf, met een gevoeligheid per scherm,
+  en wacht hij tot je klaar bent met praten (Vlot, Normaal of Rustig);
+  wakker zonder vraag sluit stil, en een halve zin wacht op de rest ([208]).
 - **Een kamer doet mee** met de regeling van een andere kamer, zoals een
   slaapkamer met de airco in de wasruimte ([142]).
 - **Comfort per bewoner:** wie hier woont staat op volgorde; de eerste die
@@ -687,4 +690,5 @@ verwijzing bestaat.
 [205]: DECISIONS.md#205-het-dak-volgt-het-huis-en-de-ring-van-de-zon
 [206]: DECISIONS.md#206-buiten-op-thuis-de-tuin-in-zones-een-blad-per-deel-en-alles-buiten-uit
 [207]: DECISIONS.md#207-sluipverbruik-dat-vaak-terugkomt-de-wand-in-fully-kiosk-en-een-qa-ronde
+[208]: DECISIONS.md#208-luisteren-in-de-dienst-het-wekwoord-met-een-schuif-en-wachten-tot-je-klaar-bent
 <!-- links:einde -->

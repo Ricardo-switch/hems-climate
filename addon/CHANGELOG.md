@@ -1,5 +1,39 @@
 # Wat is er nieuw · What is new
 
+## 0.80.0
+
+*29 oktober 2026*
+
+**Nieuw**
+
+- Stel per scherm in hoe gevoelig "Hé huis" is: de app hoort het wekwoord nu zelf, en Functies › Praten zegt hoe vaak het huis vandaag wakker werd
+- Kies hoe lang het huis wacht na je laatste woord: Vlot, Normaal of Rustig
+
+**Beter**
+
+- Hoort het huis "Hé huis" maar komt er geen vraag, dan sluit het stil, zonder "niet verstaan"
+- Een halve zin ("zet de lamp in de …") wacht op de rest, in plaats van meteen te antwoorden
+
+**Opgelost**
+
+- Het huis antwoordde soms al voordat je uitgesproken was
+
+*English*
+
+**New**
+
+- Set per screen how sensitive "Hé huis" is: the app now hears the wake word itself, and Features › Talking to your house shows how often the house woke up today
+- Choose how long the house waits after your last word: Quick, Normal or Relaxed
+
+**Improved**
+
+- If the house hears "Hé huis" but no question follows, it closes quietly instead of saying it did not understand
+- Half a sentence ("turn on the …") waits for the rest instead of being answered straight away
+
+**Fixed**
+
+- The house sometimes answered before you had finished speaking
+
 ## 0.79.3
 
 *29 oktober 2026*

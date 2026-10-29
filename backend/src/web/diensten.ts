@@ -24,6 +24,7 @@ import { kindOfCode } from './open-meteo.js';
 import { SESSION_COOKIE, cookieValue, ingressVisitor, type Access, type Visitor } from './auth.js';
 import type { Wie } from './bewoners.js';
 import { LiveStroom } from './live.js';
+import { Luisterpost } from './luisterpost.js';
 import type { WebOptions } from './server-opties.js';
 
 export interface Verzoek {
@@ -71,6 +72,15 @@ export class Diensten {
   }
 
   /** De toegang voor dit verzoek: die van de eigen poort, of anders die van de dienst. */
+  #luisterpost: Luisterpost | null = null;
+  /** De microfoon via de dienst (besluit 150), één voor alle schermen; null als luisteren niet kan. */
+  get luisterpost(): Luisterpost | null {
+    const deur = this.options.luisteren;
+    if (deur == null) return null;
+    this.#luisterpost ??= new Luisterpost(deur);
+    return this.#luisterpost;
+  }
+
   access(req: IncomingMessage): Access {
     return this.toegang.get(req) ?? this.options.access;
   }

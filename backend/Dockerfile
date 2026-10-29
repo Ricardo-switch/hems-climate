@@ -50,6 +50,8 @@ COPY backend/src ./src
 COPY backend/test ./test
 # De tests importeren gereedschap uit tools/, en de typecheck neemt het mee.
 COPY backend/tools ./tools
+# De tests van het wekwoord (besluit 208) rekenen met de echte modellen.
+COPY backend/wekwoord ./wekwoord
 
 # Typecontrole en compilatie. Beide hebben alleen de TypeScript-compiler nodig
 # en geen platformspecifieke binaries.
@@ -81,6 +83,10 @@ COPY backend/package.json ./
 # De gebouwde weergave. `defaultWebDir` zoekt hem naast `dist`, dus dit pad
 # hoort bij die functie — verplaats je er één, verplaats dan allebei.
 COPY --from=web /web/dist ./web
+
+# Het wekwoord "Hé huis", dat de dienst zelf hoort (besluit 208). Uit backend/:
+# de NAS checkt alleen backend, frontend, config en deploy uit (SPARSE_MAPPEN).
+COPY backend/wekwoord ./wekwoord
 
 # Waar de gemonteerde mappen terechtkomen. `config/sites` zit onder /app zodat
 # het opzoeken vanaf de werkmap hem vindt zonder extra instelling.
