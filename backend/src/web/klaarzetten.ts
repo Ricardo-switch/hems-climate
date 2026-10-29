@@ -14,15 +14,6 @@ import type { HouseRegisters } from './house.js';
 import type { SpraakKeuze } from './functies.js';
 
 export type KlaarGroep = 'basis' | 'klimaat' | 'energie' | 'bewoners' | 'gemak' | 'praten' | 'wand';
-export const KLAAR_GROEPEN: readonly [KlaarGroep, string][] = [
-  ['basis', 'De basis'],
-  ['klimaat', 'Klimaat'],
-  ['energie', 'Zon en energie'],
-  ['bewoners', 'Bewoners'],
-  ['gemak', 'Gemak'],
-  ['praten', 'Praten met je huis'],
-  ['wand', 'De wand en je telefoon'],
-];
 
 export interface KlaarPunt {
   readonly id: string;

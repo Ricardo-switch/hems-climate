@@ -106,11 +106,14 @@ function ga(kamerId, apparaatId) {
 function vind() {
   const etages = huisData?.etages ?? [];
   const { kamer: wie, apparaat } = adres();
-  for (const etage of etages) {
-    for (const kamer of etage.ruimtes ?? []) if (kamer.id === wie) return { etage, kamer, apparaat: kamer.apparaten.find((d) => d.id === apparaat) ?? null };
+  // Op de naam van de kamer, of van zijn regeling (#woonkamer, terwijl de kamer `beneden` heet).
+  for (const soort of ['id', 'zoneId']) {
+    for (const etage of etages) {
+      for (const kamer of etage.ruimtes ?? []) if (wie && kamer[soort] === wie) return { etage, kamer, apparaat: kamer.apparaten.find((d) => d.id === apparaat) ?? null };
+    }
   }
-  // Geen of een onbekende kamer: de eerste met een regeling.
-  const eerste = etages.flatMap((e) => (e.ruimtes ?? []).map((k) => ({ etage: e, kamer: k }))).sort((a, b) => Number(!!b.kamer.zoneId) - Number(!!a.kamer.zoneId))[0];
+  // Geen of een onbekende kamer: de eerste met een regeling, van beneden af (eerst was dat de zolder).
+  const eerste = [...etages].reverse().flatMap((e) => (e.ruimtes ?? []).map((k) => ({ etage: e, kamer: k }))).sort((a, b) => Number(!!b.kamer.zoneId) - Number(!!a.kamer.zoneId) || Number(a.etage.id === 'buiten') - Number(b.etage.id === 'buiten'))[0];
   return eerste ? { ...eerste, apparaat: null } : null;
 }
 
@@ -351,7 +354,7 @@ function scenesVan(d, alles) {
       : sc.kleuren?.length
         ? `background: linear-gradient(160deg, ${sc.kleuren.map(esc).join(', ')}, #3a2a18)`
         : 'background: linear-gradient(160deg, #3a4656, #1d2633)';
-    return `<button type="button" class="scene" data-scene="${esc(sc.id)}" aria-pressed="${!!sc.actief}" style="${achter}" ${huisData.lichtBedienen ? '' : 'disabled'}><span>${esc(sc.naam)}</span></button>`;
+    return `<button type="button" class="scene" data-scene="${esc(sc.id)}" aria-pressed="${!!sc.actief && d.aan !== false}" style="${achter}" ${huisData.lichtBedienen ? '' : 'disabled'}><span>${esc(sc.naam)}</span></button>`;
   };
   const meer = alles.length > 6 ? `<button type="button" class="pil" data-meer-scenes style="border: 0; color: inherit; cursor: pointer; margin-top: 8px">${esc(open ? t('kamer.minderScenes') : t('kamer.alleScenes', { n: alles.length }))}</button>` : '';
   return `<div><div class="groepkop"><h3 class="kop-3">${esc(t('eigen.filter.scenes'))}</h3><span class="mini">${esc(t('kamer.uitHue'))}</span></div><div class="scenes">${lijst.map(knop).join('')}</div>${meer}</div>`;
@@ -659,7 +662,7 @@ function lampBlad(k, d) {
   const delen = [
     kopVan(d, d.aan ? 'zon-t' : '', `<button type="button" class="schakel" role="switch" aria-checked="${d.aan}" aria-label="${esc(d.naam)}" data-schakel="${esc(d.id)}" ${bedienen ? '' : 'disabled'}></button>`),
   ];
-  if (d.dimbaar) delen.push(`<div><div class="feit" style="margin-bottom: 8px"><b>${esc(t('kamer.lamp.helderheid'))}</b><span data-helder-tekst>${d.aan ? `${d.helderheidPct ?? 100}%` : esc(t('eigen.lamp.uit'))}</span></div><input class="schuif" type="range" min="1" max="100" step="1" value="${d.helderheidPct ?? 100}" aria-label="${esc(t('kamer.lamp.helderheidVan', { naam: d.naam }))}" data-helder="${esc(d.id)}" ${bedienen ? '' : 'disabled'}></div>`);
+  if (d.dimbaar) delen.push(`<div><div class="feit" style="margin-bottom: 8px"><b>${esc(t('kamer.lamp.helderheid'))}</b><span data-helder-tekst>${d.aan ? `${d.helderheidPct ?? 100}%` : esc(t('eigen.lamp.uit'))}</span></div><input class="schuif${d.aan ? '' : ' uit'}" type="range" min="1" max="100" step="1" value="${d.aan ? (d.helderheidPct ?? 100) : 1}" aria-label="${esc(t('kamer.lamp.helderheidVan', { naam: d.naam }))}" data-helder="${esc(d.id)}" ${bedienen ? '' : 'disabled'}></div>`);
   if (wit && l.kleur) delen.push(`<div class="keuze" role="group" aria-label="${esc(t('kamer.lamp.witOfKleur'))}" style="grid-template-columns: 1fr 1fr"><button type="button" data-modus="wit" aria-pressed="${modus === 'wit'}">${esc(t('kamer.lamp.wit'))}</button><button type="button" data-modus="kleur" aria-pressed="${modus === 'kleur'}">${esc(t('kamer.lamp.kleur'))}</button></div>`);
   if (wit && (modus === 'wit' || !l.kleur)) {
     delen.push(`<div><div class="feit" style="margin-bottom: 8px"><b>${esc(t('kamer.lamp.wit'))}</b><span>${esc(t('kamer.lamp.warmKoel'))}</span></div><input class="schuif wit" type="range" min="${wit.minK}" max="${wit.maxK}" step="50" value="${l.kelvin ?? Math.max(wit.minK, Math.min(wit.maxK, 2700))}" aria-label="${esc(t('kamer.lamp.witVan', { naam: d.naam }))}" data-kelvin="${esc(d.id)}" ${bedienen ? '' : 'disabled'}></div>`);
@@ -773,7 +776,10 @@ function koppel(blad) {
     }
   });
   blad.addEventListener('input', (e) => {
-    if (e.target.dataset.helder != null) $$('[data-helder-tekst]').forEach((el) => (el.textContent = `${e.target.value}%`));
+    if (e.target.dataset.helder != null) {
+      $$('[data-helder-tekst]').forEach((el) => (el.textContent = `${e.target.value}%`));
+      e.target.classList.remove('uit');
+    }
   });
   blad.addEventListener('change', (e) => {
     const t = e.target;

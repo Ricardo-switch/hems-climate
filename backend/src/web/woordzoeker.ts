@@ -309,11 +309,30 @@ function getalIn(los: readonly string[]): number | null {
   return null;
 }
 
+/**
+ * Andere namen voor een kamer (29 oktober 2026): "living room" en "attic"
+ * vonden de woonkamer en de zolder niet, en dan ging het antwoord over iets
+ * anders. Alleen als er precies één kamer bij past: bij twee slaapkamers raadt
+ * hij niet.
+ */
+const OOK: readonly (readonly [RegExp, readonly string[]])[] = [
+  [/woon|living|lounge/, ['woonkamer', 'huiskamer', 'zitkamer', 'living room', 'living', 'lounge', 'sitting room']],
+  [/zolder|attic|loft/, ['zolder', 'attic', 'loft']],
+  [/slaap|bedroom/, ['slaapkamer', 'bedroom']],
+  [/badkamer|bathroom/, ['badkamer', 'bathroom']],
+  [/keuken|kitchen/, ['keuken', 'kitchen']],
+  [/^(hal|gang)$|hallway/, ['hal', 'gang', 'hall', 'hallway']],
+];
+function ookNamen(config: SiteConfig, z: SiteConfig['zones'][number]): string[] {
+  const past = (re: RegExp, x: SiteConfig['zones'][number]) => re.test(gewoon(x.name)) || re.test(x.id);
+  return OOK.filter(([re]) => past(re, z) && config.zones.filter((x) => past(re, x)).length === 1).flatMap(([, w]) => w);
+}
+
 /** De kamer die in de tekst staat; bij twee de langste naam. */
 function kamerIn(config: SiteConfig, tekst: string): string | null {
   let beste: { id: string; lengte: number } | null = null;
   for (const z of config.zones) {
-    for (const naam of [z.name, z.id]) {
+    for (const naam of [z.name, z.id, ...ookNamen(config, z)]) {
       const n = gewoon(naam.replace(/[-_]+/g, ' '));
       if (n !== '' && ` ${tekst} `.includes(` ${n} `) && (beste == null || n.length > beste.lengte)) {
         beste = { id: z.id, lengte: n.length };

@@ -57,6 +57,9 @@ describe('weergave en de wand als niemand kijkt (besluit 164)', () => {
     expect(leesNiemand({ melder: 'binary_sensor.hal_beweging' }, STANDAARD_NIEMAND).ok).toBe(true);
     expect(leesNiemand({ melder: null }, STANDAARD_NIEMAND).ok).toBe(true);
     expect(leesNiemand({ melder: 'light.hal' }, STANDAARD_NIEMAND).ok).toBe(false);
+    // De camera van de wand zelf, via Fully Kiosk (29 oktober 2026).
+    expect(leesNiemand({ melder: 'fully' }, STANDAARD_NIEMAND).ok).toBe(true);
+    expect(leesNiemand({ melder: 'fullyx' }, STANDAARD_NIEMAND).ok).toBe(false);
     // De dagstand en de avondstand, elk aan of uit (besluit 168).
     expect(leesNiemand({ avond: false }, STANDAARD_NIEMAND)).toEqual({ ok: true, niemand: { ...STANDAARD_NIEMAND, avond: false } });
     expect(leesNiemand({ dag: 'ja' }, STANDAARD_NIEMAND).ok).toBe(false);

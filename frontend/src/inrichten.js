@@ -409,7 +409,6 @@ function tekenWelkom(m) {
   const labels = getallen.filter((x) => waar[x.soort]);
   const laag = box.querySelector('[data-wk-labels]');
   laag.innerHTML = labels.map((x, i) => {
-    const w = waar[x.soort];
     const attr = `class="glas wk-label" style="animation-delay: ${(i * 0.12).toFixed(2)}s"`;
     return x.vast ? `<span ${attr}>${vak(x)}</span>` : `<button type="button" ${attr} data-lijst="${x.soort}">${vak(x)}</button>`;
   }).join('');

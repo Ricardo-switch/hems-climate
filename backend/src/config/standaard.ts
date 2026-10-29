@@ -23,12 +23,3 @@ export const STANDAARD_DAGDELEN = { voorverwarmen: 6, dag: 7, nacht: 22 } as con
 /** "Nooit warmer dan", als je dat aanzet: zoveel graden boven koelen overdag. */
 export const STANDAARD_PLAFOND_BOVEN = 2;
 
-/** Wat een kamer krijgt die verwarmt, koelt of allebei. */
-export function standaardKamer(warm: boolean, koel: boolean): Record<'dag' | 'nacht' | 'afwezig' | 'vakantie', { heat: number | null; cool: number | null }> {
-  return {
-    dag: { heat: warm ? STANDAARD_WARM.dag : null, cool: koel ? STANDAARD_KOEL.dag : null },
-    nacht: { heat: warm ? STANDAARD_WARM.nacht : null, cool: null },
-    afwezig: { heat: warm ? STANDAARD_WARM.afwezig : null, cool: null },
-    vakantie: { heat: warm ? STANDAARD_WARM.vakantie : null, cool: null },
-  };
-}

@@ -208,6 +208,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [201. De kaart Camera's: zoveel camera's als je wilt, met wat ze zien](#201-de-kaart-cameras-zoveel-cameras-als-je-wilt-met-wat-ze-zien)
 - [205. Het dak volgt het huis, en de ring van de zon](#205-het-dak-volgt-het-huis-en-de-ring-van-de-zon)
 - [206. Buiten op Thuis: de tuin in zones, een blad per deel, en alles buiten uit](#206-buiten-op-thuis-de-tuin-in-zones-een-blad-per-deel-en-alles-buiten-uit)
+- [207. Sluipverbruik dat vaak terugkomt, de wand in Fully Kiosk, en een QA-ronde](#207-sluipverbruik-dat-vaak-terugkomt-de-wand-in-fully-kiosk-en-een-qa-ronde)
 
 **Veiligheid**
 
@@ -9532,6 +9533,71 @@ aantikken; de oprit en de garage openden de kamer, en je ging weg van Thuis.
 *Wat afviel:* een eigen pagina Buiten (je verlaat Thuis, en de schets liet het
 blad ernaast zien); de knop Buiten ook op de telefoon (de bovenbalk liep vol;
 een tik op een deel buiten opent het blad ook); de garagedeur bedienen.
+
+---
+
+## 207. Sluipverbruik dat vaak terugkomt, de wand in Fully Kiosk, en een QA-ronde
+
+*Onderwerp: weergave · Status: geldig*
+
+Op 29 oktober 2026, na een QA-ronde op het eigen huis. Drie dingen vielen op:
+de wand bleef 's nachts licht en leeg, bij Sluipverbruik stond "Vannacht
+gewoon" terwijl 16 van de 30 nachten opvielen, en buiten stonden nog knoppen
+voor links en rechts die sinds besluit 206 niets meer doen.
+
+*Besluit:*
+
+- **Vaak meer dan gewoon.** Valt een op de vier van de laatste 30 nachten op,
+  niet per se op rij, dan zegt `api/sluipverbruik` dat in `vaak`: hoeveel
+  nachten, hoeveel watt de middelste hoge nacht erboven ligt (een uitschieter
+  telt dan niet zwaar), en sinds wanneer (de maanden terug zolang er een op de
+  vier opviel). Hier wisselde het huis sinds augustus tussen 190 en 340 W. De
+  app zet er een eigen kaart voor neer, met dezelfde vraag wat het is. Het
+  antwoord geldt voor het patroon, over de reeksen heen; daarna geeft de bel er
+  niet elke ochtend opnieuw een melding over. Je gewone nacht blijft het
+  gemiddelde van de vijf laagste: die klopt als het huis zonder het extra.
+- **Een staaf aantikken** bij Sluipverbruik toont die nacht of maand: hoeveel
+  watt, en hoeveel boven of onder je gewone nacht, of tegen dezelfde maand een
+  jaar eerder. Alles uit wat de dienst al geeft.
+- **De wand in Fully Kiosk.** De melder `fully` is de camera van de wand zelf.
+  Fully voert zijn gebeurtenissen (`onMotion`, `screenOn`) uit in de bovenste
+  pagina, en in Home Assistant is dat niet de app (Ingress); een
+  BroadcastChannel brengt ze erheen. Zet Fully het scherm zelf aan, dan toont de
+  app de klok in plaats van een zwarte pagina. Bij Functies › Scherm uit zegt
+  de wand of hij Fully ziet en of de camera meekijkt. Zonder melder staat er
+  niet meer dat beweging het scherm aanzet.
+- **Buiten een vaste plek, ook in het blad.** Geen Naar links en Naar rechts
+  voor een deel buiten, geen pijltjes bij de zones van de tuin, en Weghalen in
+  plaats van Kamer weghalen.
+- **Opgeruimd.** Wat de app nergens gebruikte (teksten, CSS, drie stukken in
+  de dienst) is weg; pagina's halen niets meer op wat ze niet gebruiken, en
+  hetzelfde verzoek tegelijk gaat één keer.
+- **Versie 0.79.0.**
+
+*Wat afviel:* je gewone nacht als mediaan van de 30 nachten (dan wordt het
+extra van de helft van de nachten gewoon, en zegt de app er niets meer over); de
+camera alleen via de Fully-integratie van Home Assistant (die staat hier niet,
+en de app hoort het zo zonder omweg).
+
+*Nagekomen, versie 0.79.1* (dezelfde dag, de rest van de QA-ronde):
+
+- **De film:** de kaarten bij Je apparaten gaven de temperatuur onder een
+  andere naam door dan het rondje las, dus het rondje bleef leeg. En in het
+  lichte thema waren de namen donker op een donkere kaart: de film heeft nu
+  zijn eigen donkere kleuren.
+- **De assistent** kent een kamer ook bij een gewone andere naam ("living
+  room", "huiskamer", "attic"), als er maar één kamer bij past; eerst ging het
+  antwoord dan over een andere kamer. Een onbekende kamer of nog geen besluit
+  zegt hij letterlijk (`letterlijk` in het antwoord), zonder het
+  sfeerzinnetje dat het model erachter zette.
+- **Een kamer met alleen een airco op zon** wacht op zon, en zo zegt de
+  assistent het ook (al in 0.79.0).
+- **Nagelopen zonder fout:** alle stappen van Inrichten, de overige pagina's in
+  het Nederlands en het Engels, het lichte thema, en opslaan met de hand. De
+  regeling naast de oude YAML over drie dagen: de airco in de woonkamer was
+  het altijd eens; die op de zolder zou vijf keer, hooguit een kwartier, zon
+  gebruiken die de oude regeling liet liggen; de failsafe ging op 28 oktober
+  twee uur aan door de temperatuursensor van de Hue-bewegingsmelder op zolder.
 
 ---
 

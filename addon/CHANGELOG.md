@@ -1,5 +1,65 @@
 # Wat is er nieuw · What is new
 
+## 0.79.1
+
+*29 oktober 2026*
+
+**Opgelost**
+
+- De film toont bij Je apparaten weer de temperatuur in het rondje, en is ook in het lichte thema goed te lezen
+- De assistent kent de woonkamer ook als huiskamer of living room en de zolder als attic, en zegt een onbekende kamer zonder sfeerzinnetje erachter
+
+*English*
+
+**Fixed**
+
+- The film shows the temperature in the ring at Your devices again, and is easy to read in the light theme too
+- The assistant also knows the living room and the attic by those names, and says an unknown room without a friendly sentence after it
+
+## 0.79.0
+
+*29 oktober 2026*
+
+**Nieuw**
+
+- Sluipverbruik: tik op een staaf voor die nacht of maand, met hoeveel het boven of onder je gewone nacht lag
+- Sluipverbruik ziet het ook als het vaak meer is maar niet elke nacht, zoals hier sinds augustus; wat je zegt dat het is, blijft gelden
+- De wand in Fully Kiosk: de camera van de wand wekt het scherm, en bij Functies › Scherm uit zie je of het werkt
+
+**Beter**
+
+- Buiten heeft elk deel en elke zone een vaste plek: geen Naar links en Naar rechts meer, en Weghalen in plaats van Kamer weghalen
+- Een lamp die uit is, toont de helderheid niet meer vol, en geen scène als gekozen
+- Apparaten zegt het niet meer twee keer: geen "Verwarmen naar 20°" onder "Verwarmen naar 20°"
+- Hoe voelt het nu? begint bij de kamer beneden, en de pagina’s laden sneller doordat ze niets dubbel ophalen
+
+**Opgelost**
+
+- Zet Fully Kiosk het scherm aan, dan staat de klok erop in plaats van een zwarte pagina; zonder bewegingsmelder staat er niet meer dat beweging het scherm aanzet
+- Waarom een kamer met alleen een airco op zon wacht: omdat die alleen op zon verwarmt of koelt, niet "omdat het er kouder is dan het doel"
+- Een kamer opent ook op de naam van zijn regeling, en anders de kamer beneden in plaats van de zolder
+
+*English*
+
+**New**
+
+- Standby use: tap a bar for that night or month, with how far it was above or below your usual night
+- Standby use also notices when it is often higher but not every night, as here since August; what you say it is keeps counting
+- The wall screen in Fully Kiosk: the camera of the wall screen wakes it, and Features › Screen off shows whether it works
+
+**Improved**
+
+- Outside, each part and each zone has a fixed place: no more To the left and To the right, and Remove instead of Remove room
+- A light that is off no longer shows full brightness, nor a scene as chosen
+- Devices no longer says things twice: no "Heating to 20°" under "Heating to 20°"
+- How does it feel? starts with the room downstairs, and pages load faster because nothing is fetched twice
+
+**Fixed**
+
+- When Fully Kiosk turns the screen on, the clock shows instead of a black page; without a motion sensor it no longer says movement turns the screen on
+- Why a room with only an air conditioner on sun waits: because it only heats or cools on sun, not "because it is colder than the target"
+- A room also opens by the name of its zone, and otherwise the room downstairs instead of the attic
+
 ## 0.78.1
 
 *28 oktober 2026*

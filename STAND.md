@@ -193,7 +193,9 @@ verwijzing bestaat.
   Zonnepanelen staat de echte zon met een ring van de dag, uit te zetten bij
   Weergave ([205]). Buiten opent een tik een blad naast het huis: de tuin in
   zones met de lampen op hun plek, de oprit met de auto en de garagedeur (alleen
-  bekijken), en alles buiten uit in één keer ([206]).
+  bekijken), en alles buiten uit in één keer ([206]). Sluipverbruik ziet ook
+  een patroon dat niet op rij komt, en een staaf aantikken toont die nacht; de
+  wand in Fully Kiosk wordt gewekt door zijn eigen camera ([207]).
 - **Gebouwd met Tailwind,** met een bouwstap ([24]). De terugblik is een andere
   waarheid dan de live stand ([26]) en gaat verder waar hij was ([63]).
 - **Voor de bewoner:** nooit een entity-ID ([45]); alleen een oorzaak die
@@ -684,4 +686,5 @@ verwijzing bestaat.
 [204]: DECISIONS.md#204-de-standaard-voor-een-nieuw-huis-en-terug-naar-standaard
 [205]: DECISIONS.md#205-het-dak-volgt-het-huis-en-de-ring-van-de-zon
 [206]: DECISIONS.md#206-buiten-op-thuis-de-tuin-in-zones-een-blad-per-deel-en-alles-buiten-uit
+[207]: DECISIONS.md#207-sluipverbruik-dat-vaak-terugkomt-de-wand-in-fully-kiosk-en-een-qa-ronde
 <!-- links:einde -->

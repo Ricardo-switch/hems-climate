@@ -28,7 +28,6 @@ let state = null;
 let huisData = null;
 let zon = null;
 let weer = null;
-let vandaag = null;
 let stemNaam = null;
 /** Waar de stem vandaan komt (besluit 203): 'apparaat' of 'huis'; en of de browser mag verstaan. */
 let stemBron = 'apparaat';
@@ -45,13 +44,12 @@ const BEWEEGT_MS = 60_000;
 const beweegtNog = () => (beweegt && Date.now() - beweegt.sinds < BEWEEGT_MS ? beweegt : null);
 
 async function laadAlles() {
-  const [s, h, z, w, v, st, b] = await Promise.allSettled([haal('api/state'), haal('api/huis'), haal('api/zon'), haal('api/weer'), haal('api/vandaag'), haal('api/stem'), haal('api/bewoners')]);
+  const [s, h, z, w, st, b] = await Promise.allSettled([haal('api/state'), haal('api/huis'), haal('api/zon'), haal('api/weer'), haal('api/stem'), haal('api/bewoners')]);
   if (b.status === 'fulfilled') bewoners = b.value;
   if (s.status === 'fulfilled') state = s.value;
   if (h.status === 'fulfilled') huisData = h.value;
   if (z.status === 'fulfilled') zon = z.value;
   if (w.status === 'fulfilled' && w.value?.vandaag) weer = w.value;
-  if (v.status === 'fulfilled') vandaag = v.value;
   // Piper alleen als die de taal van de app kan (opgelost 15 oktober; per taal sinds besluit 185);
   // anders de stem van het apparaat. De dienst zoekt de stem bij de taal die de app meestuurt.
   if (st.status === 'fulfilled') zetStem(st.value);

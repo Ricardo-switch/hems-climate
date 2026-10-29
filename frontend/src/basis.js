@@ -119,7 +119,22 @@
     d.style.setProperty('--wandmiddenY', `${(t - b) / 2}px`);
   }
 
-  async function haal(pad, opnieuw = false) {
+  /**
+   * Wat nu onderweg is, per pad (29 oktober 2026): Thuis vroeg bij het openen
+   * vier keer tegelijk om api/voorkeuren en drie keer om api/bewoners. Wie
+   * hetzelfde vraagt terwijl het onderweg is, wacht op dat antwoord en krijgt
+   * een eigen kopie; daarna vraagt de volgende weer vers.
+   */
+  const onderweg = new Map();
+  function haal(pad) {
+    let p = onderweg.get(pad);
+    if (!p) {
+      p = haalVers(pad).finally(() => onderweg.delete(pad));
+      onderweg.set(pad, p);
+    }
+    return p.then((x) => structuredClone(x));
+  }
+  async function haalVers(pad, opnieuw = false) {
     let res;
     try {
       // De taal van de app (besluit 185): de dienst zet zijn uitleg in die taal.
@@ -132,7 +147,7 @@
     online();
     // De toegang van Home Assistant verliep (21 oktober 2026): vernieuwen en nog eens.
     if (ingressDicht(res)) {
-      if (!opnieuw && (await verseToegang())) return haal(pad, true);
+      if (!opnieuw && (await verseToegang())) return haalVers(pad, true);
       throw new Error(`${pad}: Home Assistant laat even niet door`);
     }
     // Niet (meer) ingelogd (besluit 147): naar het inloggen, met de weg terug naar deze pagina.

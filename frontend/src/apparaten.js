@@ -21,15 +21,13 @@ let state = null;
 let vandaag = null;
 let zon = null;
 let aansluiting = null;
-let weer = null;
 let huisData = null;
 let opbrengst = null;
 /** Het antwoord op de laatste keuze per apparaat, tot het volgende besluit het overneemt. */
 const gezegd = new Map();
 
 async function laadAlles() {
-  const [s, v, z, a, w, h, o] = await Promise.allSettled([haal('api/state'), haal('api/vandaag'), haal('api/zon'), haal('api/aansluiting'), haal('api/weer'), haal('api/huis'), haal('api/opbrengst?soort=dag')]);
-  if (w.status === 'fulfilled') weer = w.value;
+  const [s, v, z, a, h, o] = await Promise.allSettled([haal('api/state'), haal('api/vandaag'), haal('api/zon'), haal('api/aansluiting'), haal('api/huis'), haal('api/opbrengst?soort=dag')]);
   if (h.status === 'fulfilled') huisData = h.value;
   if (o.status === 'fulfilled') opbrengst = o.value;
   if (s.status === 'fulfilled') state = s.value;
@@ -251,10 +249,14 @@ function klimaatKaart({ a, r }) {
   const code = a.klimaat?.actieCode ?? '';
   const doet = /^(koelt|verwarmt|verwarmt-voor|droogt|ventileert)$/.test(code);
   const stand = bew?.soort === 'wait' ? [t('apparaten.wachtZon'), 'var(--zon)'] : doet ? [huismodel.metHoofdletter(a.klimaat.actie), code === 'koelt' ? 'var(--ijs)' : 'var(--gloed)'] : [huismodel.metHoofdletter(a.stand ?? t('apparaten.onbekend')), 'var(--mint)'];
-  // Een radiatorknop noemt zijn doel al in de stand ("verwarmt, doel 20°").
+  // Niet twee keer hetzelfde (29 oktober 2026): de zin begon met de stand ("Verwarmen naar 20° · onder het doel"),
+  // en een stand die het doel al noemt ("Automatisch naar 18°") kreeg "Doel 18°." eronder. Een radiatorknop noemt het ook al.
+  const doel = a.klimaat?.doelC != null ? `${nl(a.klimaat.doelC, Number.isInteger(a.klimaat.doelC) ? 0 : 1)}°` : null;
+  const standLaag = stand[0].toLowerCase();
+  const rest = bew?.tekst?.toLowerCase().startsWith(standLaag) ? bew.tekst.slice(standLaag.length).replace(/^[\s·,.;:–-]+/, '') : bew?.tekst;
   const zin = bew?.tekst
-    ? `${huismodel.metHoofdletter(bew.tekst)}.${wacht ? ` ${t('apparaten.begintBij', { kw: nl(wacht.intent.budgetW / 1000) })}` : ''}`
-    : a.klimaat?.doelC != null && !(a.radiatorknop && a.standCode !== 'uit' && a.standCode !== 'geen-verbinding') ? t('vandaag.doel', { doel: `${nl(a.klimaat.doelC, Number.isInteger(a.klimaat.doelC) ? 0 : 1)}°` }) : '';
+    ? [rest ? `${huismodel.metHoofdletter(rest)}.` : '', wacht ? t('apparaten.begintBij', { kw: nl(wacht.intent.budgetW / 1000) }) : ''].filter(Boolean).join(' ')
+    : doel && !standLaag.includes(doel) && !(a.radiatorknop && a.standCode !== 'uit' && a.standCode !== 'geen-verbinding') ? t('vandaag.doel', { doel }) : '';
   const kw = a.klimaat?.vermogenW != null ? `${nl(a.klimaat.vermogenW / 1000)}<span>${esc(t('apparaten.kwNu'))}</span>` : `–<span>${esc(t('apparaten.geenMeter'))}</span>`;
   // Vandaag: uit de kWh-meter van het apparaat (Opbrengst), anders hoe lang het aan stond.
   const meter = (opbrengst?.apparaten ?? []).find((m) => m.id === a.klimaat?.energieMeter);

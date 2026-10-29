@@ -121,7 +121,11 @@ export interface Niemand {
    */
   readonly helderDag: number;
   readonly helderAvond: number;
-  /** De bewegingsmelder die het display aanzet, of null. */
+  /**
+   * De bewegingsmelder die het display aanzet, of null. `fully` is de camera
+   * van de wand zelf, via Fully Kiosk (29 oktober 2026): die ziet de dienst
+   * niet, de pagina op de wand hoort het van Fully.
+   */
   readonly melder: string | null;
 }
 export const STANDAARD_NIEMAND: Niemand = { nacht: true, van: '23:00', tot: '07:00', rustMin: 5, aanMin: 5, weg: true, dag: true, avond: true, helderDag: 75, helderAvond: 25, melder: null };
@@ -315,7 +319,7 @@ export function leesWeergave(x: unknown, nu: Weergave): { ok: true; weergave: We
 }
 
 const TIJD = /^([01]\d|2[0-3]):[0-5]\d$/;
-const MELDER = /^binary_sensor\.[a-z0-9_]+$/;
+const MELDER = /^(binary_sensor\.[a-z0-9_]+|fully)$/;
 
 /** Een deel van wat de wand doet als niemand kijkt, bovenop wat er al stond. */
 export function leesNiemand(x: unknown, nu: Niemand): { ok: true; niemand: Niemand } | { ok: false; reden: string } {
@@ -333,7 +337,7 @@ export function leesNiemand(x: unknown, nu: Niemand): { ok: true; niemand: Niema
     } else if (k === 'helderDag' || k === 'helderAvond') {
       if (!Number.isInteger(w) || (w as number) < 0 || (w as number) > 100) return { ok: false, reden: `${k === 'helderDag' ? 'helderheid overdag' : 'helderheid in de avondstand'} is een geheel getal van 0 tot en met 100 procent` };
     } else if (k === 'melder') {
-      if (w !== null && (typeof w !== 'string' || w.length > 160 || !MELDER.test(w))) return { ok: false, reden: 'de melder is een binary_sensor uit Home Assistant' };
+      if (w !== null && (typeof w !== 'string' || w.length > 160 || !MELDER.test(w))) return { ok: false, reden: 'de melder is een binary_sensor uit Home Assistant, of fully voor de camera van de wand' };
     } else return { ok: false, reden: `die keuze bestaat niet: ${k}` };
     uit[k] = w;
   }

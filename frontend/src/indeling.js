@@ -512,7 +512,7 @@ function kamerBlad(d, k) {
     ${erbij.length ? `<div><label class="label" for="erbij-${esc(k.id)}">${esc(t('indeling.apparaatErbij'))}</label><select class="veld" id="erbij-${esc(k.id)}" data-actie="erbij"><option value="">${esc(t('indeling.kiesApparaat'))}</option>${opties(erbij, '')}</select></div>` : ''}
     <div><label class="label" for="etage-${esc(k.id)}">${esc(t('indeling.etageLabel'))}</label><select class="veld" id="etage-${esc(k.id)}" data-actie="kameretage">${opties(etages, k.etage)}</select></div>
     ${plekKeuze(d, k)}
-    <button type="button" class="knop gevaar" data-naar-weghalen style="margin-top: auto">${esc(t('indeling.kamerWeg'))}</button>`;
+    <button type="button" class="knop gevaar" data-naar-weghalen style="margin-top: auto">${esc(t(k.etage === 'buiten' ? 'indeling.deelWeg' : 'indeling.kamerWeg'))}</button>`;
 }
 
 /* ------------------------------------------------- verwarmen en koelen (besluit 132) */
@@ -835,18 +835,18 @@ function zonesKeuze(k) {
     return `<div class="zonerij${k.zones.length > 1 ? '' : ' enkel'}">
       <input class="veld" data-zone-naam="${esc(z.id)}" value="${esc(z.naam)}" maxlength="40" aria-label="${esc(t('indeling.zone.naam', { naam: z.naam }))}">
       <select class="veld" data-zone-soort="${esc(z.id)}" aria-label="${esc(t('indeling.zone.soort', { naam: z.naam }))}">${opties.map(([v, x]) => `<option value="${esc(v)}" ${v === (z.soort ?? '') ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>
-      ${k.zones.length > 1 ? pijl(z, i, -1, '‹', 'links') + pijl(z, i, 1, '›', 'rechts') : ''}
+      ${k.zones.length > 1 && !buiten ? pijl(z, i, -1, '‹', 'links') + pijl(z, i, 1, '›', 'rechts') : ''}
       <button type="button" class="knop klein-knop" data-zone-weg="${esc(z.id)}" aria-label="${esc(t('indeling.zone.weg', { naam: z.naam }))}">×</button>
     </div>`;
   });
   // Hoe een lamp in een zone komt (28 oktober 2026): dat was niet te vinden.
   const uitleg = k.zones.length ? `<p class="mini" style="margin: 6px 0 0">${esc(t('indeling.zoneLampUitleg'))}</p>` : '';
-  return `<div><span class="label">${esc(t('indeling.zones'))}</span>${rijen.join('')}<div class="chips"><input class="chip plus" data-nieuwe-zone placeholder="${esc(t('indeling.plusZone'))}" aria-label="${esc(t('indeling.nieuweZone'))}" maxlength="40" style="width: 110px"></div>${uitleg}</div>`;
+  return `<div><span class="label">${esc(t(buiten ? 'indeling.zonesBuiten' : 'indeling.zones'))}</span>${rijen.join('')}<div class="chips"><input class="chip plus" data-nieuwe-zone placeholder="${esc(t('indeling.plusZone'))}" aria-label="${esc(t('indeling.nieuweZone'))}" maxlength="40" style="width: 110px"></div>${uitleg}</div>`;
 }
-/* De plek van een kamer op zijn etage, van links naar rechts zoals in de tekening. */
+/* De plek van een kamer op zijn etage, van links naar rechts zoals in de tekening. Buiten heeft elk deel een vaste plek (besluit 206). */
 function plekKeuze(d, k) {
   const buren = d.kamers.filter((x) => x.etage === k.etage);
-  if (buren.length < 2) return '';
+  if (buren.length < 2 || k.etage === 'buiten') return '';
   const i = buren.findIndex((x) => x.id === k.id);
   return `<div><span class="label">${esc(t('indeling.plek', { i: i + 1, n: buren.length }))}</span><div class="knoppenrij">
     <button type="button" class="knop" data-kamer-schuif="-1" ${i <= 0 ? 'disabled' : ''}>${esc(t('indeling.naarLinks'))}</button>
@@ -855,7 +855,7 @@ function plekKeuze(d, k) {
 }
 
 const SOORTEN = ['licht', 'klimaat', 'screen', 'meter', 'apparaat', 'camera', 'rookmelder'];
-const soortTekst = (a) => (a.soort === 'meter' && a.meting?.beweging ? t('indeling.soort.beweging') : SOORTEN.includes(a.soort) ? t(`indeling.soort.${a.soort}`) : a.soort);
+const soortTekst = (a) => (a.soort === 'meter' && a.meting?.beweging ? t('indeling.soort.beweging') : a.soort === 'screen' && a.scherm?.zonnescherm ? t('indeling.soort.zonnescherm') : SOORTEN.includes(a.soort) ? t(`indeling.soort.${a.soort}`) : a.soort);
 
 function apparaatBlad(d, dev, inLijst = false) {
   if (!dev) return etageBlad(d);

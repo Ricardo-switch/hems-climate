@@ -48,7 +48,7 @@
   #wand .rechts > .smal.morgen svg { width: 36px; height: 36px; }
   #wand .rechts > .smal.morgen .graden { grid-row: auto; grid-column: 1 / -1; font-size: 22px; }
   #wand .rechts > .smal.morgen .mini { grid-column: 1 / -1; }
-  #wand .rechts > .smal [data-gevoel-knoppen], #wand .rechts > .smal .gevoelknoppen { flex-wrap: wrap; }
+  #wand .rechts > .smal [data-gevoel-knoppen] { flex-wrap: wrap; }
   /*
    * De kolom schuift zelf, zoveel kaarten als je wilt (besluit 167). Staat er
    * meer onder de rand, dan loopt de onderste kaart zacht weg.
@@ -134,7 +134,6 @@
   #tel .kopregel > span:last-child { flex-wrap: wrap; justify-content: flex-end; row-gap: 6px; min-width: 0; }
   #tel .meldbel b { position: absolute; top: -4px; right: -4px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--gloed); color: #2a1206; font-size: 10.5px; line-height: 16px; text-align: center; }
   /* Een lange naam bij een lege batterij past binnen het scherm. */
-  #tel .batterijpil { max-width: 100%; }
   #tel .tijd { font-size: 40px; }
   #tel .titel { position: static; width: auto; margin-top: 14px; }
   /*
@@ -260,9 +259,6 @@
   #wand .weer .rij { padding: 7px 0; }
   /* Een batterij bijna leeg (besluit 122): een rustige maar duidelijke pil. */
   /* Een knop (besluit 127): button.pil zet de kleur anders terug naar wit. */
-  button.pil.batterijpil, .batterijpil { color: var(--gloed-t); text-decoration: none; gap: 6px; min-width: 0; max-width: 400px; }
-  .batterijpil span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .batterijpil svg { flex: none; }
   /* De lijst van batterijen (besluit 127), in hetzelfde blad als het weer. */
   .weer .accu { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; align-items: center; padding: 10px 0; border-top: 1px solid rgb(var(--wit) / 0.06); color: inherit; text-decoration: none; }
   .weer .accu:first-of-type { border-top: 0; }
@@ -384,9 +380,6 @@
   .ktegel.foto .camstip i.nu { background: var(--gloed); }
   @media (prefers-reduced-motion: reduce) { .cambeeld.nu .camzin i { animation: none; } .ktegel.foto .camtegel { transition: none; } }
   html.sc-stil .cambeeld.nu .camzin i { animation: none; }
-  .deurbelbeeld { margin-top: 12px; aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden; position: relative; background: linear-gradient(160deg, #3b4a5c, #1b2533); }
-  .deurbelbeeld img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .deurbelbeeld .wanneer { position: absolute; left: 10px; bottom: 10px; padding: 5px 10px; border-radius: 999px; background: rgba(9, 15, 28, 0.72); color: #eef3f7; font-size: 12.5px; font-weight: 700; }
   .morgen { display: grid; grid-template-columns: 44px 1fr auto; gap: 2px 12px; align-items: center; cursor: pointer; }
   .morgenkaart { cursor: pointer; }
   .morgen svg { grid-row: 1 / 3; width: 44px; height: 44px; }

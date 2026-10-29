@@ -31,7 +31,7 @@ const KLEUREN = ['#6FD3FF', '#8FD9FF', '#FFB088', '#C4BCFF', '#9EE6FF', '#FFD08A
 /** Het sluipverbruik (besluit 192): een kaart naar zijn eigen scherm, met vannacht erop. */
 let sluip = null;
 const sluipIngang = () => (sluip
-  ? `<a class="glas kaart sluipingang" href="sluipverbruik.html"><div style="display: flex; justify-content: space-between; align-items: baseline; gap: 10px"><h2 class="kop-3">${esc(t('sluip.titel'))}</h2><span class="getal" style="font-size: 22px${sluip.hoog ? '; color: var(--gloed-t)' : ''}">${nl(sluip.vannacht.w, 0)} W</span></div><p class="klein" style="margin: 6px 0 0">${esc(sluip.hoog ? t('sluip.ingangHoog', { boven: nl(sluip.bovenW, 0) }) : t('sluip.ingangGewoon', { gewoon: nl(sluip.gewoonW, 0) }))} ›</p></a>`
+  ? `<a class="glas kaart sluipingang" href="sluipverbruik.html"><div style="display: flex; justify-content: space-between; align-items: baseline; gap: 10px"><h2 class="kop-3">${esc(t('sluip.titel'))}</h2><span class="getal" style="font-size: 22px${sluip.hoog ? '; color: var(--gloed-t)' : ''}">${nl(sluip.vannacht.w, 0)} W</span></div><p class="klein" style="margin: 6px 0 0">${esc(sluip.hoog ? t('sluip.ingangHoog', { boven: nl(sluip.bovenW, 0) }) : sluip.vaak ? t('sluip.ingangVaak', { n: sluip.vaak.nachten, meer: nl(sluip.vaak.meerW, 0) }) : t('sluip.ingangGewoon', { gewoon: nl(sluip.gewoonW, 0) }))} ›</p></a>`
   : '');
 
 async function laad() {

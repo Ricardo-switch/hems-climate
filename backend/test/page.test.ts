@@ -2239,9 +2239,16 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await wand.locator('h1', { hasText: 'gebruikt je huis' }).waitFor({ timeout: 10_000 });
     // Dertig nachten als staafjes, en de hoge in oranje; hoeveel hangt af van hoe laat het is (de nacht van vandaag telt pas na 05:00).
     const sluip = (await (await fetch(`${baseUrl}/api/sluipverbruik`)).json()) as { nachten: { hoog: boolean }[] };
-    expect(await wand.locator('[data-midden] svg rect').count()).toBe(30);
+    expect(await wand.locator('[data-midden] svg rect:not(.raak)').count()).toBe(30);
     expect(await wand.locator('[data-midden] svg rect[fill="#ff7a4d"]').count()).toBe(sluip.nachten.slice(-30).filter((n) => n.hoog).length);
     expect(sluip.nachten.slice(-30).filter((n) => n.hoog).length).toBeGreaterThanOrEqual(4);
+    // Een staaf aantikken (29 oktober 2026): onderaan die nacht, met hoeveel boven of onder je gewone nacht; nog eens tikken haalt het weg.
+    const staaf = wand.locator('[data-midden] [data-staaf]').last();
+    await staaf.click();
+    await wand.locator('.onderregel .staafinfo', { hasText: /W.*je gewone nacht/ }).waitFor({ timeout: 5000 });
+    expect(await wand.locator('[data-midden] [data-staaf][aria-pressed="true"]').count()).toBe(1);
+    await wand.locator('[data-midden] [data-staaf]').last().click();
+    await wand.locator('.onderregel .staafinfo').waitFor({ state: 'detached', timeout: 5000 });
     await wand.locator('.opgevallen', { hasText: 'Opgevallen' }).waitFor();
     // Wat de bewoner zegt (besluit 88): het weet het niet, en de app houdt het in de gaten.
     await wand.locator('[data-weet-niet]').click();
@@ -2832,6 +2839,79 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await context.close();
     }
   }, 120_000);
+
+  /*
+   * De wand in Fully Kiosk (29 oktober 2026): 's nachts het scherm echt uit,
+   * de camera van de wand als bewegingsmelder, en het scherm dat Fully zelf
+   * aanzet toont de klok in plaats van een zwarte pagina. Fully voert zijn
+   * gebeurtenissen uit in de bovenste pagina; die bereiken de app via een
+   * BroadcastChannel.
+   */
+  it('wekt de wand met de camera van Fully Kiosk, en zet het scherm echt uit', async () => {
+    const zet = (body: Record<string, unknown>) => fetch(`${baseUrl}/api/voorkeuren`, { method: 'POST', headers: { 'content-type': 'application/json', origin: baseUrl }, body: JSON.stringify({ plek: 'wand', niemand: body }) });
+    await zet({ nacht: true, van: '23:00', tot: '07:00', rustMin: 5, aanMin: 1, weg: false, melder: 'fully' });
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    await context.addInitScript(() => {
+      localStorage.setItem('sc-rondleiding-gezien', '1');
+      const w = globalThis as unknown as { fully: Record<string, unknown> };
+      const f = { log: [] as string[], binds: {} as Record<string, string> };
+      w.fully = Object.assign(f, {
+        turnScreenOff: () => f.log.push('uit'),
+        turnScreenOn: () => f.log.push('aan'),
+        setScreenBrightness: (b: number) => f.log.push(`helder ${b}`),
+        bind: (e: string, code: string) => void (f.binds[e] = code),
+        isMotionDetectionRunning: () => true,
+      });
+    });
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    const stand = () => p.evaluate<string | null>("(() => { const el = document.querySelector('#wand [data-niemand]'); return !el || el.hidden ? null : el.dataset.stand ?? null; })()").catch(() => null);
+    const log = () => p.evaluate<string[]>('window.fully.log');
+    // Wat Fully doet bij een gebeurtenis: de code van bind() uitvoeren, in de bovenste pagina.
+    const fully = (e: string) => p.evaluate(`(0, eval)(window.fully.binds[${JSON.stringify(e)}])`);
+    try {
+      await p.clock.setFixedTime(new Date('2026-10-19T23:48:00Z'));
+      await p.goto(`${baseUrl}/thuis.html`);
+      await p.locator('#wand [data-kop]').filter({ hasNotText: 'Even laden' }).waitFor();
+      await expect.poll(() => p.evaluate<string[]>('Object.keys(window.fully.binds)')).toEqual(expect.arrayContaining(['onMotion', 'screenOn']));
+      // Na een minuut zonder beweging: het scherm echt uit, met de tekst dat beweging het weer aanzet.
+      await p.clock.setFixedTime(new Date('2026-10-19T23:49:30Z'));
+      await expect.poll(stand, { timeout: 10_000 }).toBe('uit');
+      expect(await log()).toContain('uit');
+      expect(await p.locator('#wand [data-niemand] .nk-uit').textContent()).toContain('Beweging');
+      // De camera ziet iemand: het scherm aan, met de klok van de avond.
+      await fully('onMotion');
+      await expect.poll(stand).toBe('avond');
+      expect((await log()).at(-2)).toBe('aan');
+      await p.clock.setFixedTime(new Date('2026-10-19T23:51:00Z'));
+      await expect.poll(stand, { timeout: 10_000 }).toBe('uit');
+      // Een melder uit het huis gekozen: de camera wekt niet meer, maar zet Fully het scherm zelf aan, dan de klok.
+      await zet({ melder: 'binary_sensor.bewegingssensor_hal_beweging' });
+      await p.reload();
+      await p.locator('#wand [data-kop]').filter({ hasNotText: 'Even laden' }).waitFor();
+      await p.clock.setFixedTime(new Date('2026-10-19T23:53:00Z'));
+      await expect.poll(stand, { timeout: 10_000 }).toBe('uit');
+      await fully('onMotion');
+      await p.waitForTimeout(300);
+      expect(await stand()).toBe('uit');
+      await fully('screenOn');
+      await expect.poll(stand).toBe('avond');
+      // Bij Functies › Scherm uit: de camera als keuze, en wat Fully op dit scherm doet.
+      await p.clock.setFixedTime(new Date('2026-10-20T14:00:00Z'));
+      await p.goto(`${baseUrl}/functies.html#uit`);
+      const blad = p.locator('#wand [data-vorm]');
+      await blad.locator('h2', { hasText: 'Scherm uit' }).waitFor();
+      await blad.locator('[data-nk-melder]').selectOption('fully');
+      await expect.poll(async () => ((await (await fetch(`${baseUrl}/api/voorkeuren`)).json()) as { wand: { niemand: { melder: string | null } } }).wand.niemand.melder).toBe('fully');
+      await blad.locator('.uitleg', { hasText: 'de camera kijkt mee' }).waitFor();
+      expect(fouten).toEqual([]);
+    } finally {
+      await zet({ nacht: false, van: '23:00', tot: '07:00', rustMin: 0, aanMin: 5, weg: false, melder: null });
+      await context.close();
+    }
+  }, 60_000);
 
   /*
    * Weergave per account (besluit 164, schets Thuis-Tel-Eigen #weergave en

@@ -20,6 +20,8 @@ let voork = null;
 const keuze = { blik: 'nachten', terug: 0 };
 /** De bewoner typt wat het is (besluit 88). */
 let zeggen = false;
+/** De aangetikte staaf: de dag van een nacht of de maand, of null. */
+let gekozen = null;
 
 const VENSTER = 30;
 const GRENS = 50;
@@ -67,7 +69,12 @@ function staven(rijen, { breedte, hoogte, label, lijnen = true, klein = false })
   for (let v = 0; v <= max; v += stap) s += `<line x1="${l}" x2="${breedte - rand}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" stroke="rgba(255,255,255,0.07)"/><text x="${l - 7}" y="${(y(v) + 4).toFixed(1)}" text-anchor="end" font-size="11" fill="#8291a6">${nl(v, 0)}</text>`;
   rijen.forEach((x, i) => {
     const xs = l + i * w + w * 0.16;
-    s += `<rect x="${xs.toFixed(1)}" y="${y(x.w).toFixed(1)}" width="${(w * 0.68).toFixed(1)}" height="${Math.max(0, y(0) - y(x.w)).toFixed(1)}" rx="3" fill="${x.hoog ? '#ff7a4d' : 'rgba(111,211,255,0.55)'}"><title>${esc(x.titel)}</title></rect>`;
+    const aan = x.sleutel === gekozen;
+    // Een andere staaf aangetikt: deze wat zachter, zodat de gekozen opvalt.
+    const zacht = gekozen && !aan ? ' opacity="0.45"' : '';
+    s += `<rect x="${xs.toFixed(1)}" y="${y(x.w).toFixed(1)}" width="${(w * 0.68).toFixed(1)}" height="${Math.max(0, y(0) - y(x.w)).toFixed(1)}" rx="3" fill="${x.hoog ? '#ff7a4d' : aan ? 'rgb(111,211,255)' : 'rgba(111,211,255,0.55)'}"${aan ? ' stroke="#fff" stroke-width="1.5"' : zacht}/>`;
+    // Over de hele hoogte aan te tikken, ook een lage staaf op de telefoon.
+    s += `<rect class="raak" data-staaf="${esc(x.sleutel)}" x="${(l + i * w).toFixed(1)}" y="${top}" width="${w.toFixed(1)}" height="${(hoogte - top - b).toFixed(1)}" fill="transparent" role="button" tabindex="0" aria-pressed="${aan}" aria-label="${esc(x.titel)}"><title>${esc(x.titel)}</title></rect>`;
     const tekst = label(x, i);
     if (tekst) {
       const anker = i === 0 ? 'start' : i === rijen.length - 1 ? 'end' : 'middle';
@@ -79,20 +86,52 @@ function staven(rijen, { breedte, hoogte, label, lijnen = true, klein = false })
     s += `<line x1="${l}" x2="${breedte - rand}" y1="${y(r.gewoonW).toFixed(1)}" y2="${y(r.gewoonW).toFixed(1)}" stroke="#6ee7b7" stroke-width="1.6" stroke-dasharray="5 4"/>`;
     s += `<line x1="${l}" x2="${breedte - rand}" y1="${y(r.gewoonW + GRENS).toFixed(1)}" y2="${y(r.gewoonW + GRENS).toFixed(1)}" stroke="#ff7a4d" stroke-width="1.2" stroke-dasharray="2 4" opacity="0.8"/>`;
   }
-  return `<svg viewBox="0 0 ${breedte} ${hoogte}" role="img" aria-label="${esc(t(keuze.blik === 'nachten' ? 'sluip.perNacht' : 'sluip.perMaand'))}">${s}</svg>`;
+  return `<svg viewBox="0 0 ${breedte} ${hoogte}" role="group" aria-label="${esc(t(keuze.blik === 'nachten' ? 'sluip.perNacht' : 'sluip.perMaand'))}">${s}</svg>`;
 }
 
 /** De nachten of de maanden als staafjes, met de titel van elk staafje. */
 function grafiek(breedte, hoogte, klein = false) {
   if (keuze.blik === 'maanden') {
-    const rijen = r.maanden.map((m) => ({ ...m, titel: `${maandNaam(m.maand)}: ${W(m.w)} W` }));
+    const rijen = r.maanden.map((m) => ({ ...m, sleutel: m.maand, titel: `${maandNaam(m.maand)}: ${W(m.w)} W` }));
     const elke = Math.max(1, Math.ceil(rijen.length / (klein ? 4 : 7)));
     return staven(rijen, { breedte, hoogte, klein, label: (m, i) => (i % elke === 0 || i === rijen.length - 1 ? `${maandKort(m.maand)}${m.maand.endsWith('-01') || i === 0 ? ` ’${m.maand.slice(2, 4)}` : ''}` : '') });
   }
-  const rijen = venster().map((n) => ({ ...n, titel: `${datum(n.dag)}: ${W(n.w)} W` }));
+  const rijen = venster().map((n) => ({ ...n, sleutel: n.dag, titel: `${datum(n.dag)}: ${W(n.w)} W` }));
   const elke = klein ? 10 : 5;
   return staven(rijen, { breedte, hoogte, klein, label: (n, i) => (i % elke === 0 || i === rijen.length - 1 ? new Date(`${n.dag}T12:00:00Z`).toLocaleDateString(taal.locale, { day: 'numeric', month: 'short', timeZone: 'UTC' }).replace('.', '') : '') });
 }
+
+/**
+ * Wat er bij de aangetikte staaf hoort (29 oktober 2026): een nacht tegen je
+ * gewone nacht, een maand tegen dezelfde maand een jaar eerder. Zonder keuze
+ * null.
+ */
+function staafInfo() {
+  if (!gekozen) return null;
+  if (keuze.blik === 'maanden') {
+    const m = r.maanden.find((x) => x.maand === gekozen);
+    if (!m) return null;
+    const v = r.maanden.find((x) => x.maand === `${Number(m.maand.slice(0, 4)) - 1}${m.maand.slice(4)}`);
+    const verschil = v ? m.w - v.w : 0;
+    const zin = !v ? '' : Math.abs(verschil) < 10 ? t('sluip.staaf.zoals', { maand: maandNaam(v.maand) }) : t(verschil > 0 ? 'sluip.staaf.meerDan' : 'sluip.staaf.minderDan', { n: W(Math.abs(verschil)), maand: maandNaam(v.maand) });
+    return { kop: t('sluip.staaf.maand', { maand: maandNaam(m.maand), w: W(m.w) }), zin };
+  }
+  const n = r.nachten.find((x) => x.dag === gekozen);
+  if (!n) return null;
+  const verschil = n.w - r.gewoonW;
+  const gewoon = W(r.gewoonW);
+  const zin = n.hoog
+    ? t('sluip.staaf.hoog', { n: W(verschil), gewoon })
+    : verschil >= 10
+      ? t('sluip.staaf.boven', { n: W(verschil), gewoon })
+      : verschil <= -10
+        ? t('sluip.staaf.onder', { n: W(-verschil), gewoon })
+        : t('sluip.staaf.rond', { gewoon });
+  const dag = new Date(`${n.dag}T12:00:00Z`).toLocaleDateString(taal.locale, { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
+  return { kop: t('sluip.staaf.nacht', { datum: dag, w: W(n.w) }), zin: n.dag === r.laagste.dag ? `${zin}. ${t('sluip.staaf.laagste')}` : zin };
+}
+const infoHtml = (i) => `<b>${esc(i.kop.charAt(0).toUpperCase() + i.kop.slice(1))}</b>${i.zin ? ` · ${esc(i.zin)}` : ''}`;
+const tikHint = () => t(keuze.blik === 'nachten' ? 'sluip.staaf.tikNacht' : 'sluip.staaf.tikMaand');
 
 /** Sinds welke maand het steeds hoger lag dan een jaar eerder, en hoeveel; null als dat niet zo is. */
 function hogerDanVorigJaar() {
@@ -136,6 +175,7 @@ function legenda() {
     <span><i class="blok" style="background: #ff7a4d"></i>${esc(t('sluip.leg.hoog', { grens: GRENS }))}</span>
     <span><i style="color: #6ee7b7"></i>${esc(t('sluip.leg.lijn', { w: W(r.gewoonW) }))}</span>
     <span><i style="color: #ff7a4d"></i>${esc(t('sluip.leg.melding'))}</span>
+    <span class="tik">${esc(tikHint())}</span>
   </div>`;
 }
 
@@ -147,7 +187,10 @@ function midden() {
     ? `<span class="blader"><button type="button" data-terug-venster ${kanTerug ? '' : 'disabled'} aria-label="${esc(t('sluip.eerder'))}">‹</button><span class="mini">${esc(`${datum(v[0].dag)} – ${datum(v[v.length - 1].dag)}`)}</span><button type="button" data-vooruit-venster ${keuze.terug > 0 ? '' : 'disabled'} aria-label="${esc(t('sluip.later'))}">›</button></span>`
     : `<span class="mini">${esc(t('sluip.gemiddeldPerNacht'))}</span>`;
   const h = nachten ? null : hogerDanVorigJaar();
-  const onder = nachten
+  const info = staafInfo();
+  const onder = info
+    ? `<span class="klein staafinfo">${infoHtml(info)}</span>`
+    : nachten
     ? `<span class="klein">${t('sluip.laagsteOoit', { w: `<b>${W(r.laagste.w)} W</b>`, maand: esc(maandNaam(r.laagste.dag.slice(0, 7))) })}</span><span class="klein">${esc(t('sluip.opvallendIn30', { n: r.hoogIn30 }))}</span>`
     : `<span class="klein">${esc(h ? t('sluip.meerDanVorigJaar', { maand: maandNaam(h.sinds, false), min: h.min, max: h.max }) : t('sluip.laagsteMaand', { maand: maandNaam(laagsteMaand().maand), w: W(laagsteMaand().w) }))}${h ? ` ${esc(t('sluip.laagsteMaandKort', { maand: maandNaam(laagsteMaand().maand), w: W(laagsteMaand().w) }))}` : ''}</span>`;
   return `<section class="glas kaart grafiekkaart">
@@ -161,12 +204,21 @@ const laagsteMaand = () => r.maanden.reduce((a, b) => (b.w < a.w ? b : a));
 
 /** Wat opviel (besluit 88): het wat en het hoeveel, en wat de bewoner zelf zegt. */
 function opvallend() {
+  // Vaak meer dan gewoon, niet op rij (29 oktober 2026): een eigen kaart; bij een hoge nacht staat het in de zin.
+  if (!r.reeks && r.vaak) {
+    const kop = t('sluip.vaakTitel', { n: r.vaak.nachten, meer: r.vaak.meerW });
+    return `<section class="glas kaart opvallend opgevallen"><div class="mini">${esc(t('sluip.vaakKop'))}</div><h3>${esc(kop)}</h3><p class="klein" style="margin: 0">${esc(t('sluip.vaakZin', { maand: maandNaam(r.vaak.sinds.slice(0, 7), false) }))}</p>${zegDeel(r.toelichting)}</section>`;
+  }
   if (!r.reeks) {
     return `<section class="glas kaart opvallend gewoon"><div class="mini">${esc(t('sluip.gewoonKop'))}</div><h3>${esc(t('sluip.gewoonTitel'))}</h3><p class="klein" style="margin: 0">${esc(t(r.hoogIn30 ? 'sluip.gewoonZin' : 'sluip.gewoonRustig', { n: r.hoogIn30 }))}</p></section>`;
   }
   const sinds = r.reeks.nachten > 1 ? t('sluip.sindsTitel', { datum: datum(r.reeks.sinds), boven: Math.round(r.bovenW / 10) * 10 }) : t('sluip.vannachtMeer', { boven: W(r.bovenW) });
-  const zin = r.reeks.nachten > 1 ? t('sluip.opRij', { n: r.reeks.nachten }) : t('sluip.staatIetsAan');
-  const tl = r.toelichting;
+  const zin = r.vaak ? t('sluip.ookVaak', { n: r.vaak.nachten }) : r.reeks.nachten > 1 ? t('sluip.opRij', { n: r.reeks.nachten }) : t('sluip.staatIetsAan');
+  return `<section class="glas kaart opvallend opgevallen"><div class="mini">${esc(t('sluip.opgevallen'))}</div><h3>${esc(sinds)}</h3><p class="klein" style="margin: 0">${esc(zin)}</p>${zegDeel(r.toelichting)}</section>`;
+}
+
+/** Wat de bewoner zegt (besluit 88): typen, wat hij zei, of de twee knoppen. */
+function zegDeel(tl) {
   let onder;
   if (zeggen) {
     onder = `<div class="zeg"><input data-zeg-tekst maxlength="80" placeholder="${esc(t('sluip.zegVoorbeeld'))}" aria-label="${esc(t('sluip.watIsHet'))}" value="${esc(tl?.tekst ?? '')}"><button type="button" class="knop knop-licht" data-zeg-bewaar>${esc(t('sluip.bewaar'))}</button></div>`;
@@ -177,7 +229,7 @@ function opvallend() {
   } else {
     onder = `<div class="knoppen"><button type="button" class="knop knop-licht" data-zeg>${esc(t('sluip.ikWeetHet'))}</button><button type="button" class="knop" data-weet-niet>${esc(t('sluip.weetNiet'))}</button></div>`;
   }
-  return `<section class="glas kaart opvallend opgevallen"><div class="mini">${esc(t('sluip.opgevallen'))}</div><h3>${esc(sinds)}</h3><p class="klein" style="margin: 0">${esc(zin)}</p>${onder}</section>`;
+  return onder;
 }
 
 /** De melding op je telefoon (besluit 79): per account, zoals bij Jij. */
@@ -221,7 +273,7 @@ function tekenNu() {
     </div>`;
   tel.innerHTML = `<p class="zin">${r.hoog ? t('sluip.boven', { boven: `<b>${W(r.bovenW)} W</b>`, gewoon: W(r.gewoonW) }) : esc(t('sluip.rond', { gewoon: W(r.gewoonW) }))}</p>
     ${opvallend()}
-    <section class="glas kaart"><div class="wissel" role="group" aria-label="${esc(t('sluip.weergave'))}">${['nachten', 'maanden'].map((k) => `<button type="button" data-blik="${k}" aria-pressed="${k === keuze.blik}">${esc(t(`sluip.blik.${k}`))}</button>`).join('')}</div><div class="grafiek">${grafiek(330, 200, true)}</div></section>
+    <section class="glas kaart"><div class="wissel" role="group" aria-label="${esc(t('sluip.weergave'))}">${['nachten', 'maanden'].map((k) => `<button type="button" data-blik="${k}" aria-pressed="${k === keuze.blik}">${esc(t(`sluip.blik.${k}`))}</button>`).join('')}</div><div class="grafiek">${grafiek(330, 200, true)}</div><p class="mini staafinfo">${staafInfo() ? infoHtml(staafInfo()) : esc(tikHint())}</p></section>
     ${vier}
     ${melding()}
     <p class="mini" style="margin: 4px 2px 0">${esc(t('sluip.zoMeetKort'))}</p>`;
@@ -231,23 +283,41 @@ const teken = app.gebundeld(tekenNu);
 addEventListener('standwissel', teken);
 
 async function zeg(body) {
-  const res = await deur('api/sluipverbruik', { sinds: r.reeks.sinds, ...body }).catch(() => null);
+  // Bij een patroon geldt het antwoord over de reeksen heen; anders bij deze reeks.
+  const waar = r.vaak ? { sinds: r.vaak.sinds, vaak: true } : { sinds: r.reeks.sinds };
+  const res = await deur('api/sluipverbruik', { ...waar, ...body }).catch(() => null);
   if (res?.ok) r = await res.json();
   zeggen = false;
   teken();
 }
 
+/** Een staaf aantikken toont wat erbij hoort; nog eens tikken haalt het weg. */
+function kiesStaaf(sleutel) {
+  gekozen = gekozen === sleutel ? null : sleutel;
+  tekenNu();
+  // Met het toetsenbord: de focus blijft op dezelfde staaf.
+  document.querySelector(`${app.zicht()} [data-staaf="${CSS.escape(sleutel)}"]`)?.focus({ preventScroll: true });
+}
+
 document.addEventListener('click', async (e) => {
+  const staaf = e.target.closest?.('[data-staaf]');
+  if (staaf) {
+    kiesStaaf(staaf.dataset.staaf);
+    return;
+  }
   const el = e.target.closest('button');
   if (!el) return;
   if (el.dataset.blik) {
     keuze.blik = el.dataset.blik;
+    gekozen = null;
     teken();
   } else if (el.hasAttribute('data-terug-venster')) {
     keuze.terug++;
+    gekozen = null;
     teken();
   } else if (el.hasAttribute('data-vooruit-venster')) {
     keuze.terug = Math.max(0, keuze.terug - 1);
+    gekozen = null;
     teken();
   } else if (el.hasAttribute('data-zeg')) {
     zeggen = true;
@@ -271,9 +341,17 @@ document.addEventListener('click', async (e) => {
   }
 });
 document.addEventListener('keydown', (e) => {
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.matches?.('[data-staaf]')) {
+    e.preventDefault();
+    kiesStaaf(e.target.dataset.staaf);
+    return;
+  }
   if (e.key === 'Enter' && e.target.matches?.('[data-zeg-tekst]')) document.querySelector(`${app.zicht()} [data-zeg-bewaar]`)?.click();
   if (e.key === 'Escape' && zeggen) {
     zeggen = false;
+    teken();
+  } else if (e.key === 'Escape' && gekozen) {
+    gekozen = null;
     teken();
   }
 });

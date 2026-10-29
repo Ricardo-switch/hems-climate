@@ -12,8 +12,8 @@
  *   op Nacht zet, en als niemand thuis is, gaat het scherm uit na 1, 5, 15 of
  *   30 minuten zonder beweging.
  * - Beweging (de bewegingsmelder die de hoofdgebruiker koos; de dienst stuurt
- *   `wekken`) zet het display weer aan. Een tik, "Hé huis" en aanbellen
- *   openen de app (`sc-wek`).
+ *   `wekken`, of de camera van de wand via Fully Kiosk) zet het display weer
+ *   aan. Een tik, "Hé huis" en aanbellen openen de app (`sc-wek`).
  *
  * Instellen doet de hoofdgebruiker bij Functies, onder Weergave: Always-on
  * display en Scherm uit (besluit 167; eerst bij het potlood op Thuis). De app
@@ -217,7 +217,8 @@
     el.classList.toggle('lucht-dag', toont === 'dag');
     if (toont === 'uit') {
       // Zwart: in Fully Kiosk is het scherm echt uit.
-      el.innerHTML = `<div class="nk-uit">${esc(t('niemand.uit'))}</div>`;
+      // Zonder bewegingsmelder wekt alleen een tik.
+      el.innerHTML = `<div class="nk-uit">${esc(t(instelling.melder ? 'niemand.uit' : 'niemand.uitTik'))}</div>`;
       return;
     }
     // Een nieuwe versie die klaarstaat (21 oktober 2026): ook als niemand kijkt.
@@ -320,6 +321,33 @@
     else if (!toont) fully((f) => f.turnScreenOn?.());
   }
 
+  /*
+   * Fully Kiosk (29 oktober 2026). De camera van de wand als bewegingsmelder
+   * (melder `fully`), en het scherm dat aangaat zonder de app: door de eigen
+   * bewegingsdetectie van Fully of de aan-knop. Dan de klok, geen zwarte
+   * pagina. Fully voert de code van bind() uit in de bovenste pagina; in Home
+   * Assistant is dat niet deze (Ingress). Een BroadcastChannel bereikt elke
+   * pagina van dezelfde herkomst, dus ook deze.
+   */
+  const KANAAL = 'sc-fully';
+  try {
+    new BroadcastChannel(KANAAL).onmessage = (e) => {
+      if (!scherm) return;
+      if (e.data === 'beweging' && instelling.melder === 'fully') beweging();
+      else if (e.data === 'aan' && toont === 'uit') beweging();
+    };
+  } catch {
+    // Geen BroadcastChannel: dan wekt alleen een tik of de melder uit Home Assistant.
+  }
+  function bindFully() {
+    fully((f) => {
+      if (!f.bind) return;
+      const stuur = (wat) => `try{new BroadcastChannel('${KANAAL}').postMessage('${wat}')}catch(e){}`;
+      f.bind('onMotion', stuur('beweging'));
+      f.bind('screenOn', stuur('aan'));
+    });
+  }
+
   /** Elke paar seconden: wat hoort er nu te staan? */
   function kijk() {
     if (telStand() || !scherm) {
@@ -367,6 +395,8 @@
     } catch {
       scherm = false;
     }
+    // Een telefoon of laptop doet nooit mee: dan ook niet elke minuut de stand ophalen.
+    if (!scherm) return;
     if (bron) {
       modus = bron.state()?.explanation ?? null;
       return;
@@ -411,6 +441,7 @@
     }
     // Na een nieuwe pagina de helderheid van nu, ook als er niets wisselt (21 oktober 2026).
     if (!toont) helderheid('app');
+    if (scherm) bindFully();
     kijk();
   }
   setInterval(kijk, 5_000);
