@@ -9946,6 +9946,16 @@ hooguit één ding, en kon niets terug.
   per dag hoeveel vragen er naar het model gingen, de fouten, de gemiddelde en
   langste tijd, veertien dagen bewaard. Bij Functies › Praten, met een
   waarschuwing als het gemiddeld langer duurt dan de assistent wacht.
+- **Te traag, dan geen eigen woorden** (`Teller.eigenWoordenNu`): duurden de
+  laatste antwoorden van het model meestal langer dan de assistent wacht (vijf
+  seconden), dan vraagt hij geen eigen woorden meer en zegt hij meteen het
+  vaste antwoord; anders wachtte elk antwoord voor niets. Eens per tien
+  minuten toch één keer, en het brein meet mee: wordt het model sneller, dan
+  komen de eigen woorden vanzelf terug. Functies zegt het erbij (versie
+  0.86.1). Gemeten op 29
+  oktober na het wisselen naar `gemini-flash-lite-latest`: een plan 6,6 tot
+  9,5 seconden, "zeg hallo" 8 tot 12; het netwerk (onder 0,1 s) en de Pi
+  waren het niet.
 - **Wat naar het model gaat** staat bij Functies: je vraag als tekst, de
   laatste zinnen van het gesprek, hoe het huis ervoor staat (ook of er iemand
   thuis is) en de namen. Je stem en camerabeelden niet.

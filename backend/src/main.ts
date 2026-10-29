@@ -63,7 +63,7 @@ import { Sluipverbruik, jaarPrijs, sluipVoorBel } from './web/sluipverbruik.js';
 import { verwachtingVan, weerNaamVan } from './web/weerbron.js';
 import { OPEN_METEO, OpenMeteo } from './web/open-meteo.js';
 import { httpBase } from './web/camera.js';
-import { Pauze } from './web/taalmodel.js';
+import { Pauze, WACHT_MS } from './web/taalmodel.js';
 import { Teller } from './web/brein.js';
 import { spraakKeuzes, type SpraakKeuze } from './web/functies.js';
 import { cameraMelders, camerasNu, laatsteAanUitHistorie } from './web/cameras.js';
@@ -1824,6 +1824,8 @@ if (webPort != null) {
       proef: (id) => pauzeVan(id).om(modelTeller.om((opdracht, velden) => client.generateData(id, opdracht, velden))),
       // Hoeveel vragen en hoe snel (besluit 213), voor Functies.
       teller: () => modelTeller.stand(),
+      // Te traag voor eigen woorden: dan meteen het vaste antwoord, in plaats van wachten.
+      eigenWoorden: () => modelTeller.eigenWoordenNu(WACHT_MS),
       // Na "gebruik op" of "te druk" even niet vragen, per AI-taak (besluit 148).
       pauze: (id) => pauzeVan(id).stand,
       bedienen: () => {

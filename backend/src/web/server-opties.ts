@@ -300,6 +300,8 @@ export interface WebOptions {
     readonly bedienen: () => boolean;
     /** Hoeveel vragen er per dag naar het model gingen en hoe snel (besluit 213), nieuwste dag eerst. */
     readonly teller?: () => Promise<readonly Dagtelling[]>;
+    /** Of eigen woorden nu lonen, of dat het model te traag is (29 oktober 2026); weg is altijd. */
+    readonly eigenWoorden?: () => boolean;
   };
   /**
    * Praten met je stem (besluit 150): geluid van de pagina via `/api/luister`

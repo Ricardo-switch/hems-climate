@@ -1815,6 +1815,7 @@
   'functies.praten.teller.geen': 'No questions to the language model yet today.',
   'functies.praten.teller.fouten': 'Errors: {n}, such as usage used up or too busy.',
   'functies.praten.teller.week': 'The last seven days: {n}.',
+  'functies.praten.teller.overslaan': 'Own words are off for now: the model answers too late, so you hear the fixed answer straight away. Every ten minutes the assistant tries again. The brain still works.',
   'functies.praten.teller.traag': 'Too slow for a conversation: the assistant waits at most {w} seconds. Set the thinking level of the AI task in Home Assistant to the lowest, or choose a faster model.',
   'functies.praten.nogEens': 'Try again',
   'functies.praten.probeer': 'Try',

@@ -20,6 +20,7 @@ import {
   samen,
   Teller,
   TELLER_BESTAND,
+  OPNIEUW_MS,
   terugVan,
   vanPlan,
   type Situatie,
@@ -232,6 +233,28 @@ describe('vandaag en gisteren als feiten (besluit 213)', () => {
 });
 
 describe('de teller (besluit 213)', () => {
+  it('slaat eigen woorden over zolang het model te traag is, en probeert het eens per tien minuten opnieuw', async () => {
+    let nu = 0;
+    let duur = 8000;
+    const teller = new Teller({ map: null, dag: () => '2026-10-29', nu: () => nu });
+    const vraag = teller.om(async () => ((nu += duur), 'ok'));
+    // Te weinig gemeten: gewoon proberen.
+    expect(teller.eigenWoordenNu(5000)).toBe(true);
+    for (let i = 0; i < 3; i++) await vraag('x');
+    expect(teller.eigenWoordenNu(5000)).toBe(false);
+    // Na tien minuten zonder vraag toch één keer.
+    nu += OPNIEUW_MS;
+    expect(teller.eigenWoordenNu(5000)).toBe(true);
+    // Het brein meet mee: wordt het model sneller, dan komen de eigen woorden terug.
+    duur = 1500;
+    await vraag('x');
+    expect(teller.eigenWoordenNu(5000)).toBe(false);
+    await vraag('x');
+    await vraag('x');
+    expect(teller.eigenWoordenNu(5000)).toBe(true);
+  });
+
+
   it('telt per dag de vragen, de fouten en hoe snel, en bewaart dat', async () => {
     const map = await mkdtemp(join(tmpdir(), 'teller-'));
     let nu = 0;

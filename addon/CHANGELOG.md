@@ -1,5 +1,19 @@
 # Wat is er nieuw · What is new
 
+## 0.86.1
+
+*29 oktober 2026*
+
+**Beter**
+
+- Is het taalmodel te traag, dan hoor je meteen het vaste antwoord in plaats van eerst vijf seconden te wachten; eens in de tien minuten probeert de assistent het opnieuw
+
+*English*
+
+**Improved**
+
+- If the language model is too slow, you hear the fixed answer straight away instead of waiting five seconds first; every ten minutes the assistant tries again
+
 ## 0.86.0
 
 *29 oktober 2026*

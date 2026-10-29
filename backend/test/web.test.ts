@@ -110,7 +110,7 @@ async function start(options: {
   comfort?: { view: () => ComfortView; save: (body: unknown) => Promise<{ ok: true; view: ComfortView } | { ok: false; status: number; reden: string }> };
   sleutel?: string;
   luisteren?: LuisterDeur;
-  praten?: { model: () => ((opdracht: string, velden?: unknown) => Promise<unknown>) | null; proef: (id: string) => (opdracht: string) => Promise<unknown>; bedienen: () => boolean };
+  praten?: { model: () => ((opdracht: string, velden?: unknown) => Promise<unknown>) | null; proef: (id: string) => (opdracht: string) => Promise<unknown>; bedienen: () => boolean; eigenWoorden?: () => boolean };
   herken?: (account: { userId: string; naam: string }) => Promise<'welkom' | 'vraag' | 'gast' | null>;
   gast?: (userId: string | null) => { gast: boolean; thuis: boolean | null };
   logDir?: string;
@@ -1465,6 +1465,13 @@ describe('licht bedienen (besluit 97)', () => {
     // Iets buiten de lijst wordt niets.
     antwoordModel = { soort: 'doen', stappen: [{ soort: 'scherm', id: 'cover.garagedeur', actie: 'open' }] };
     expect((await vraag('doe de garage open')).opdracht).toBeUndefined();
+    // Is het model te traag (de teller), dan meteen het vaste antwoord, zonder het te vragen.
+    let gevraagd = 0;
+    const telModel = async () => (gevraagd++, 'Klaar, het licht in de hal is uit.');
+    const traag = await start({ latest: () => snapshot(), house: () => house, lights, praten: { model: () => telModel, proef: () => telModel, bedienen: () => true, eigenWoorden: () => false } });
+    const t = (await (await fetch(`${traag.base}/api/vraag?${new URLSearchParams({ v: 'vrij', tekst: 'licht hal uit' })}`)).json()) as { antwoord: string; eigen: boolean };
+    expect(t).toMatchObject({ antwoord: 'Het licht in de hal is uit.', eigen: false });
+    expect(gevraagd).toBe(0);
     // Zonder bedienen bij Functies: alleen praten.
     const zonder = await start({ latest: () => snapshot(), house: () => house, lights, praten: { model: () => null, proef: () => model, bedienen: () => false } });
     expect(((await (await fetch(`${zonder.base}/api/vraag?${new URLSearchParams({ v: 'vrij', tekst: 'licht hal uit' })}`)).json()) as { opdracht?: unknown }).opdracht).toBeUndefined();
