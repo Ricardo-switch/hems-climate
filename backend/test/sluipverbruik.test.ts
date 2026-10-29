@@ -86,6 +86,30 @@ describe('het sluipverbruik (besluit 192)', () => {
     expect(jaarPrijs({ stroom: 0.3, stroomDal: 0.2 })).toBeCloseTo(0.3 * (80 / 168) + 0.2 * (88 / 168), 6);
   });
 
+  it('ziet vaak meer dan gewoon, ook als het niet op rij is, en onthoudt het antwoord over de reeksen heen', () => {
+    // Zoals hier sinds augustus 2026: om de andere nacht zo'n 150 W meer.
+    const w = Array.from({ length: 75 }, (_, i) => (i < 15 ? 185 : i % 2 ? 340 : 190));
+    const n = nachten('2026-08-01', w);
+    const r = sluipRapport(n, null)!;
+    expect(r.gewoonW).toBe(190);
+    expect(r.hoog).toBe(false);
+    expect(r.reeks).toBeNull();
+    expect(r.vaak).toEqual({ nachten: 15, meerW: 150, sinds: '2026-08-01' });
+    // Wat de bewoner zei, geldt bij elke volgende hoge nacht; de bel zegt het dan niet elke ochtend.
+    const t = { sinds: '2026-08-01', tekst: 'de jacuzzi', weetNiet: false, vaak: true as const };
+    expect(sluipRapport(n, null, t)!.toelichting).toEqual({ tekst: 'de jacuzzi', weetNiet: false });
+    const hoog = [...n, { dag: '2026-10-15', w: 345 }];
+    const rh = sluipRapport(hoog, null, t)!;
+    expect(rh.reeks).toEqual({ sinds: '2026-10-15', nachten: 1 });
+    expect(rh.toelichting).toEqual({ tekst: 'de jacuzzi', weetNiet: false });
+    expect(sluipVoorBel(rh, Date.parse('2026-10-15T08:00:00Z'), 'Europe/Amsterdam')).toBeNull();
+    expect(sluipVoorBel(sluipRapport(hoog, null)!, Date.parse('2026-10-15T08:00:00Z'), 'Europe/Amsterdam')).not.toBeNull();
+    // Een gewone maand ertussen: daarna is het een ander patroon.
+    expect(sluipRapport(nachten('2026-08-01', Array.from({ length: 30 }, () => 185)), null)!.vaak).toBeNull();
+    expect(leesToelichting({ sinds: '2026-08-01', tekst: 'x', vaak: true })).toEqual({ ok: true, toelichting: { sinds: '2026-08-01', tekst: 'x', weetNiet: false, vaak: true } });
+    expect(leesToelichting({ sinds: '2026-08-01', tekst: 'x', vaak: 'ja' }).ok).toBe(false);
+  });
+
   it('bewaart wat de bewoner zegt alleen bij de reeks waar het over ging (besluit 88)', () => {
     const n = nachten('2026-09-25', [...Array.from({ length: 20 }, () => 180), ...Array.from({ length: 10 }, () => 300)]);
     expect(sluipRapport(n, null, { sinds: '2026-10-15', tekst: 'de pc', weetNiet: false })!.toelichting).toEqual({ tekst: 'de pc', weetNiet: false });

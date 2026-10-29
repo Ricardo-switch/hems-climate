@@ -382,6 +382,8 @@ const WORDS = {
     wish: { koelen: 'koelen', verwarmen: 'verwarmen', drogen: 'drogen', uit: 'uit' } satisfies Record<Wish, string>,
     doing: { cool: 'koelt', heat: 'verwarmt' },
     infinitive: { cool: 'koelen', heat: 'verwarmen' },
+    // Een kamer met alleen hulpapparaten (role assist): die verwarmen of koelen alleen op zon (29 oktober 2026).
+    alleenZon: { cool: 'hier alleen met zon over gekoeld wordt', heat: 'hier alleen met zon over verwarmd wordt' },
     observed: {
       cool: 'koelen',
       heat: 'verwarmen',
@@ -432,6 +434,7 @@ const WORDS = {
     wish: { koelen: 'cool', verwarmen: 'heat', drogen: 'dry', uit: 'off' } satisfies Record<Wish, string>,
     doing: { cool: 'is cooling', heat: 'is heating' },
     infinitive: { cool: 'cool', heat: 'heat' },
+    alleenZon: { cool: 'it only cools here with spare sun', heat: 'it only heats here with spare sun' },
     observed: {
       cool: 'cooling',
       heat: 'heating',
@@ -692,7 +695,11 @@ function statusOf(
     const temps = tempClause(f, zone, e, lang);
     const a = pz.demand;
     const blocked = snap.rejected.find((r) => r.intent.zoneId === zone.id && r.intent.action === a);
-    const why = blocked ? w.block[blocked.blockedBy] : w.reason[pz.reason];
+    // Niets tegengehouden en alleen hulpapparaten: dan wacht het op zon. Eerst stond hier de reden van de vraag
+    // zelf ("omdat het er kouder is dan het doel"), en dat is geen reden om te wachten.
+    const ids = zone.actuatorIds;
+    const alleenZon = !blocked && ids.length > 0 && ids.every((id) => config.actuators.find((x) => x.id === id)?.role === 'assist');
+    const why = blocked ? w.block[blocked.blockedBy] : alleenZon ? w.alleenZon[a] : w.reason[pz.reason];
     const sunBlock =
       blocked?.blockedBy === 'insufficient_power_budget' || blocked?.blockedBy === 'start_threshold_not_met';
     const grid = sunBlock && withGrid ? gridSentence(f, e, lang) : null;

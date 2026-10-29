@@ -25,6 +25,8 @@ export const TOT_UUR = 5;
 /** Over zoveel nachten telt je gewone nacht, en de laagste zoveel daarvan. */
 export const VENSTER_NACHTEN = 30;
 export const LAAGSTE = 5;
+/** Zoveel van de laatste 30 nachten vallen op, niet per se op rij, voor "vaak meer dan gewoon" (29 oktober 2026). */
+export const VAAK_NACHTEN = 8;
 /**
  * Bij een contract met dag en nacht: zoveel van de uren valt in het daltarief
  * (doordeweeks 23:00–07:00, het weekend helemaal), om een jaar te rekenen.
@@ -63,7 +65,13 @@ export interface SluipRapport {
   readonly reeks: { readonly sinds: string; readonly nachten: number } | null;
   /** Zoveel van de laatste 30 nachten vielen op. */
   readonly hoogIn30: number;
-  /** Wat de bewoner zelf zei over deze reeks, of dat hij het niet weet (besluit 88). */
+  /**
+   * Vaak meer dan gewoon (29 oktober 2026): een op de vier van de laatste 30
+   * nachten valt op, niet per se op rij. Met hoeveel watt die nachten erboven
+   * liggen, en sinds wanneer; null als dat niet zo is.
+   */
+  readonly vaak: { readonly nachten: number; readonly meerW: number; readonly sinds: string } | null;
+  /** Wat de bewoner zelf zei over deze reeks of dit patroon, of dat hij het niet weet (besluit 88). */
   readonly toelichting: { readonly tekst: string | null; readonly weetNiet: boolean } | null;
 }
 
@@ -105,6 +113,43 @@ export function nachtenUit(rijen: readonly Rij[], timeZone: string, nuMs: number
 }
 
 const gemiddeld = (xs: readonly number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
+const DAG_MS = 86_400_000;
+
+/**
+ * Vaak meer dan gewoon. Hier wisselde het huis sinds augustus 2026 tussen
+ * 190 en 340 W, en zei de app "Vannacht gewoon": hij keek alleen naar een
+ * reeks op rij. Sinds wanneer: de maanden terug zolang er een op de vier
+ * nachten opviel; de lopende maand telt pas mee met een week erin.
+ */
+function vaakVan(nachten: readonly Nacht[], hoge: readonly Nacht[], gewoonW: number, isHoog: (w: number) => boolean): SluipRapport['vaak'] {
+  if (hoge.length < VAAK_NACHTEN) return null;
+  // De middelste hoge nacht: een enkele uitschieter (hier 1.237 W op 25 oktober) maakt het anders 50 W meer.
+  const rij = hoge.map((x) => x.w).sort((x, y) => x - y);
+  const midden = rij.length % 2 ? rij[(rij.length - 1) / 2]! : (rij[rij.length / 2 - 1]! + rij[rij.length / 2]!) / 2;
+  const meerW = Math.round((midden - gewoonW) / 10) * 10;
+  const perMaand = new Map<string, { hoog: number; alle: number }>();
+  for (const n of nachten) {
+    const m = perMaand.get(n.dag.slice(0, 7)) ?? { hoog: 0, alle: 0 };
+    m.alle++;
+    if (isHoog(n.w)) m.hoog++;
+    perMaand.set(n.dag.slice(0, 7), m);
+  }
+  let sinds = hoge[0]!.dag;
+  const lijst = [...perMaand].reverse();
+  for (const [i, [maand, m]] of lijst.entries()) {
+    if (i === 0 && m.alle < 7) continue;
+    if (m.hoog * 4 < m.alle) break;
+    sinds = `${maand}-01`;
+  }
+  return { nachten: hoge.length, meerW, sinds };
+}
+
+/** Geldt wat de bewoner zei nog: bij dezelfde reeks, of bij hetzelfde patroon (een paar maanden speling in waar het begon). */
+function geldt(t: SluipToelichting | null, reeks: SluipRapport['reeks'], vaak: SluipRapport['vaak']): boolean {
+  if (!t) return false;
+  if (vaak && t.vaak) return Math.abs(Date.parse(t.sinds) - Date.parse(vaak.sinds)) <= 92 * DAG_MS;
+  return !!reeks && !t.vaak && t.sinds === reeks.sinds;
+}
 
 /** Het verslag bij de nachten, of null met minder dan een week. */
 export function sluipRapport(nachten: readonly Nacht[], prijs: number | null, toelichting: SluipToelichting | null = null): SluipRapport | null {
@@ -131,6 +176,8 @@ export function sluipRapport(nachten: readonly Nacht[], prijs: number | null, to
     n++;
   }
   const reeks = sinds ? { sinds, nachten: n } : null;
+  const hogeIn30 = laatste30.filter((x) => isHoog(x.w));
+  const vaak = vaakVan(nachten, hogeIn30, gewoonW, isHoog);
   const kwh = (w: number) => Math.round((w * 8760) / 1000);
   const euro = (k: number) => (prijs == null ? null : Math.round(k * prijs));
   const perJaarKwh = kwh(vannacht.w);
@@ -149,8 +196,9 @@ export function sluipRapport(nachten: readonly Nacht[], prijs: number | null, to
     maanden,
     laagste: nachten.reduce((a, b) => (b.w < a.w ? b : a)),
     reeks,
-    hoogIn30: laatste30.filter((x) => isHoog(x.w)).length,
-    toelichting: reeks && toelichting && toelichting.sinds === reeks.sinds ? { tekst: toelichting.tekst, weetNiet: toelichting.weetNiet } : null,
+    hoogIn30: hogeIn30.length,
+    vaak,
+    toelichting: toelichting && geldt(toelichting, reeks, vaak) ? { tekst: toelichting.tekst, weetNiet: toelichting.weetNiet } : null,
   };
 }
 
@@ -162,12 +210,14 @@ export function jaarPrijs(prijzen: { readonly stroom: number | null; readonly st
   return dal == null ? p : p * (1 - DAL_DEEL) + dal * DAL_DEEL;
 }
 
-/** Wat de bewoner zei over een reeks hoge nachten (besluit 88). */
+/** Wat de bewoner zei over een reeks hoge nachten, of over het patroon (besluit 88). */
 export interface SluipToelichting {
-  /** De eerste nacht van de reeks. */
+  /** De eerste nacht van de reeks, of waar het patroon begon. */
   readonly sinds: string;
   readonly tekst: string | null;
   readonly weetNiet: boolean;
+  /** Over het patroon "vaak meer dan gewoon": dat geldt over de reeksen heen. */
+  readonly vaak?: true;
 }
 export const SLUIP_FILE = 'sluipverbruik.json';
 export const MAX_TOELICHTING = 80;
@@ -182,7 +232,8 @@ export function leesToelichting(x: unknown): { ok: true; toelichting: SluipToeli
   if (r['weetNiet'] !== undefined && typeof r['weetNiet'] !== 'boolean') return { ok: false, reden: 'weetNiet is ja of nee' };
   const weetNiet = r['weetNiet'] === true;
   if (!tekst && !weetNiet) return { ok: false, reden: 'geef tekst of weetNiet' };
-  return { ok: true, toelichting: { sinds: r['sinds'], tekst: tekst || null, weetNiet: weetNiet && !tekst } };
+  if (r['vaak'] !== undefined && typeof r['vaak'] !== 'boolean') return { ok: false, reden: 'vaak is ja of nee' };
+  return { ok: true, toelichting: { sinds: r['sinds'], tekst: tekst || null, weetNiet: weetNiet && !tekst, ...(r['vaak'] === true ? { vaak: true as const } : {}) } };
 }
 
 export interface SluipOpties {
@@ -277,6 +328,8 @@ export class Sluipverbruik {
  */
 export function sluipVoorBel(r: SluipRapport | null, nuMs: number, timeZone: string): SluipBel | null {
   if (!r || !r.hoog || !r.reeks) return null;
+  // Een patroon waar de bewoner al iets over zei: niet elke ochtend opnieuw (29 oktober 2026).
+  if (r.vaak && r.toelichting) return null;
   const vandaag = plaatselijk(nuMs, timeZone).dag;
   const gisteren = plaatselijk(nuMs - 86_400_000, timeZone).dag;
   if (r.vannacht.dag !== vandaag && r.vannacht.dag !== gisteren) return null;

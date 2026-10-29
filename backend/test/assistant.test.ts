@@ -146,6 +146,12 @@ describe('waarom', () => {
     expect(a.antwoord).toContain('Er gaat nu 300 W terug naar het net.');
   });
 
+  it('zegt bij een kamer met alleen een airco op zon dat hij op zon wacht, niet dat het er te warm is (29 oktober 2026)', () => {
+    const a = askNl({ kind: 'waarom', kamer: 'zolder' }, view({ observed: { nest: 'heat@20', badkamer: 'off@18', 'ac-woonkamer': 'off', 'ac-zolder': 'off' } }));
+    expect(a.antwoord).toContain('De zolder wil koelen: het is er 24,3° en het doel is 23°. Dat wacht nog even, omdat hier alleen met zon over gekoeld wordt.');
+    expect(a.antwoord).not.toContain('omdat het er warmer is dan het doel');
+  });
+
   it('zegt bij een kamer zonder vraag tussen welke doelen hij zit', () => {
     const e = explanation();
     const perZone = e.perZone.map((z) =>

@@ -812,7 +812,6 @@
     // Wat na het huis komt en ervoor ligt, zoals de verdiepingen boven een appartement.
     const burenVoor = [];
     if (lagen) bouwLagen();
-    const gewoonAantal = g.etages.filter((e) => !e.dak).length;
     /*
      * ---- een appartement (huis 3.0) ----
      * Jouw verdieping in het gebouw: de verdiepingen eronder en erboven als
@@ -2661,7 +2660,6 @@
      * niet is, laat zijn plek gewoon gras.
      */
     function bouwTuin3(t) {
-      const gx0 = W + 0.3;
       const gx1 = eiland.x1 - 0.12;
       const gy0 = eiland.y0 + 0.3;
       const gy1 = eiland.yF - 0.12;

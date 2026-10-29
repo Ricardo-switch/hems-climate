@@ -124,5 +124,3 @@ export function alarmSensoren(melders: readonly Rookmelder[]): Set<string> {
   return new Set(melders.flatMap((m) => [m.rook, m.co, m.hitte].filter((x): x is string => x != null)));
 }
 
-/** Het woord voor het gevaar, in een zin: "Rook in de keuken". */
-export const GEVAAR_WOORD: Readonly<Record<Gevaar, string>> = { rook: 'Rook', co: 'Koolmonoxide', hitte: 'Hitte' };

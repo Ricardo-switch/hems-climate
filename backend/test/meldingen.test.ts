@@ -6,7 +6,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { MeldingenStore, type MeldingenBron } from '../src/web/meldingen.js';
 
@@ -195,10 +195,12 @@ describe('meldingen (besluit 136)', () => {
     // Wat de pagina krijgt, heeft geen tweede taal erin.
     expect(en.some((m) => 'en' in m)).toBe(false);
     expect(s.lijst(T0 + 2 * UUR).actief.map((m) => m.titel).sort()).toEqual(['De droger reageert niet meer', 'De slimme meter levert niets meer', 'Rook in de keuken']);
-    // Weer goed: onder Eerder, met de tijd in het Engels.
+    // Weer goed: onder Eerder, met de tijd in het Engels; de klok in UTC, zoals in de CI.
+    vi.stubEnv('TZ', 'UTC');
     s.bij(leeg({ nu: T0 + 3 * UUR, volgen: [droger(null)] }));
     const eerder = s.lijst(T0 + 3 * UUR, 'en').eerder.find((m) => m.id.startsWith('stil:'))!;
     expect([eerder.titel, eerder.tekst]).toEqual(['De droger working again', 'After 2 hours without a connection. At 13:00.']);
+    vi.unstubAllEnvs();
   });
 
   it('noemt een nieuwe versie in het Engels als die woorden er zijn, en anders in algemene woorden', async () => {

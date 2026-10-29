@@ -357,7 +357,6 @@
   }
 
   function wandVanWie() {
-    const esc = global.app.esc;
     if (v.wand.van == null) return global.taal.html('thuis.bewerkIedereen');
     if (v.wand.eigen) return global.taal.html('eigen.bewerkJij');
     return global.taal.html('eigen.bewerkVan', { naam: v.wand.naam ?? global.t('eigen.wieGeldt') });

@@ -267,17 +267,42 @@ function schermUit() {
   const zin = wanneer
     ? [t('functies.uit.zin', { wanneer, n: n.aanMin }), n.melder ? t('functies.uit.beweging') : null, t('functies.uit.tik')].filter(Boolean).join(' ')
     : t('functies.uit.nooit');
-  const opties = melders.map((m) => `<option value="${esc(m.id)}" ${m.id === n.melder ? 'selected' : ''}>${esc(t('functies.uit.melder', { kamer: m.kamer, naam: m.naam }))}</option>`).join('');
+  // De camera van de wand zelf, via Fully Kiosk (29 oktober 2026), en de melders uit het huis.
+  const opties = `<option value="fully" ${n.melder === 'fully' ? 'selected' : ''}>${esc(t('functies.uit.camera'))}</option>${melders.map((m) => `<option value="${esc(m.id)}" ${m.id === n.melder ? 'selected' : ''}>${esc(t('functies.uit.melder', { kamer: m.kamer, naam: m.naam }))}</option>`).join('')}`;
   return `<h2 class="kop-2">${esc(t('functies.uit.kop'))}</h2>
     <p class="klein" style="margin: 0" data-nk-zin>${esc(zin)}</p>
     <div class="regelrij"><div class="l"><b>${esc(t('functies.uit.snachts'))}</b><span>${esc(t('functies.uit.snachtsZin'))}</span></div>${schakel(n.nacht, 'data-nk-nacht', t('functies.uit.snachtsLabel'), !mag)}</div>
     <div class="twee ${n.nacht ? '' : 'uitgezet'}"><label class="veldnaam">${esc(t('functies.uit.vanaf'))}<input class="invoer" type="time" step="900" value="${esc(n.van)}" data-nk-van ${mag && n.nacht ? '' : 'disabled'}></label><label class="veldnaam">${esc(t('functies.uit.tot'))}<input class="invoer" type="time" step="900" value="${esc(n.tot)}" data-nk-tot ${mag && n.nacht ? '' : 'disabled'}></label></div>
     <div class="regelrij"><div class="l"><b>${esc(t('functies.uit.niemand'))}</b><span>${esc(t('functies.uit.niemandZin'))}</span></div>${schakel(n.weg, 'data-nk-weg', t('functies.uit.niemand'), !mag)}</div>
     <div class="${ergens ? '' : 'uitgezet'}"><span class="veldnaam">${esc(t('functies.uit.na'))}</span>${nkKeuzes(t('functies.uit.naLabel'), 'nk-aan', minuten([1, 5, 15, 30]), n.aanMin, !mag || !ergens)}</div>
-    ${melders.length ? `<div class="regelrij"><div class="l"><b>${esc(t('functies.uit.wekken'))}</b><span>${esc(t('functies.uit.wekkenZin'))}</span></div>${schakel(!!n.melder, 'data-nk-beweging', t('functies.uit.wekken'), !mag)}</div>
-    ${n.melder ? `<label class="veldnaam">${esc(t('functies.uit.welke'))}<select class="invoer" data-nk-melder ${mag ? '' : 'disabled'}>${opties}</select></label>` : ''}` : ''}
+    <div class="regelrij"><div class="l"><b>${esc(t('functies.uit.wekken'))}</b><span>${esc(t('functies.uit.wekkenZin'))}</span></div>${schakel(!!n.melder, 'data-nk-beweging', t('functies.uit.wekken'), !mag)}</div>
+    ${n.melder ? `<label class="veldnaam">${esc(t('functies.uit.welke'))}<select class="invoer" data-nk-melder ${mag ? '' : 'disabled'}>${opties}</select></label>` : ''}
+    ${fullyHier(n)}
     ${alleenHoofd()}${voorDeWand()}
     <p class="mini">${esc(t('functies.uit.fully'))}</p>`;
+}
+
+/**
+ * Wat Fully Kiosk op dit scherm doet (29 oktober 2026): ziet de app Fully, en
+ * kijkt de camera mee. Alleen op het scherm zelf te zien; op een telefoon
+ * zegt het niets, behalve dat je het op de wand ziet.
+ */
+function fullyHier(n) {
+  let f = null;
+  try {
+    f = window.fully ?? null;
+  } catch {
+    // Geen Fully.
+  }
+  if (!f) return n.melder === 'fully' ? `<p class="uitleg">${esc(t('functies.uit.fullyNiet'))}</p>` : '';
+  let camera = null;
+  try {
+    camera = f.isMotionDetectionRunning?.() ?? null;
+  } catch {
+    // Een oudere Fully.
+  }
+  const sleutel = n.melder !== 'fully' ? 'functies.uit.fullyGezien' : camera === false ? 'functies.uit.fullyCameraUit' : 'functies.uit.fullyCamera';
+  return `<p class="uitleg" style="color: ${n.melder === 'fully' && camera === false ? 'var(--zon-t)' : 'var(--mint-t)'}">${esc(t(sleutel))}</p>`;
 }
 
 /** De bewegingsmelders in het huis, met hun kamer. */
@@ -545,7 +570,8 @@ document.addEventListener('click', (e) => {
   if (knop.hasAttribute('data-nk-nacht')) return bewaarNiemand({ nacht: !n.nacht });
   if (knop.hasAttribute('data-nk-weg')) return bewaarNiemand({ weg: !n.weg });
   if (knop.dataset.nkAan) return bewaarNiemand({ aanMin: Number(knop.dataset.nkAan) });
-  if (knop.hasAttribute('data-nk-beweging')) return bewaarNiemand({ melder: n.melder ? null : bewegingsmelders()[0]?.id ?? null });
+  // Aanzetten: op de wand in Fully de eigen camera, anders de eerste melder uit het huis.
+  if (knop.hasAttribute('data-nk-beweging')) return bewaarNiemand({ melder: n.melder ? null : window.fully || !bewegingsmelders().length ? 'fully' : bewegingsmelders()[0].id });
   if (knop.dataset.inApp) return void inApp(knop.dataset.inApp, knop.getAttribute('aria-pressed') !== 'true');
   // Dit scherm luistert (besluit 150): alleen in deze browser, niet bij de dienst.
   if (knop.dataset.hier) {

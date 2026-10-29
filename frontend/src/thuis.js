@@ -54,7 +54,7 @@ async function laadAlles() {
 
 /* --------------------------------------- van de dienst naar het huis */
 
-const { kleurVanLicht, zoneNaam } = huismodel;
+const { zoneNaam } = huismodel;
 const kamerModel = (r) => huismodel.kamerModel(r, state);
 
 function huisModel() {
@@ -533,11 +533,12 @@ document.addEventListener('click', async (e) => {
  * op de laagste etage, meestal waar je woont.
  */
 function tekenGevoel() {
-  const zones = huisData.etages.flatMap((e) => e.ruimtes).filter((r) => r.zoneId && r.temperatuurC != null);
+  // Van beneden naar boven (29 oktober 2026): de gekozen kamer vooraan, niet half buiten beeld.
+  const zones = [...huisData.etages].reverse().flatMap((e) => e.ruimtes).filter((r) => r.zoneId && r.temperatuurC != null);
   // Op de telefoon geen lege kaart zonder kamers.
   $$('#tel [data-gevoel-kaart]').forEach((el) => (el.hidden = !zones.length));
   if (!zones.length) return;
-  gekozenZone ??= ([...huisData.etages].reverse().flatMap((e) => e.ruimtes).find((r) => r.zoneId && r.temperatuurC != null) ?? zones[0]).zoneId;
+  gekozenZone ??= zones[0].zoneId;
   const kamer = zones.find((r) => r.zoneId === gekozenZone) ?? zones[0];
   zet('[data-gevoel-kop]', t('thuis.gevoel.kop'));
   $$('[data-gevoel-uitleg]').forEach((el) => (el.hidden = true));
