@@ -183,6 +183,8 @@ function vervolg(item) {
 
 /** Een vraag terug met keuzes (besluit 209): gaat mee met de volgende zin, zodat "de grote" of "ja" begrepen wordt. */
 let openKeuze = null;
+/** Het gesprek van dit scherm (besluit 213): zo weet het huis wat er net gezegd en gedaan is. */
+const gesprekId = window.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 async function vraag(v) {
   stopPraten();
@@ -198,7 +200,7 @@ async function vraag(v) {
   try {
     const scherm = beweegtNog()?.id;
     // In de taal van de app (besluit 185): de assistent antwoordt in die taal.
-    const q = new URLSearchParams(v.soort === 'vrij' ? { v: 'vrij', tekst: v.tekst, taal: taal.code, ...(scherm ? { scherm } : {}), ...(opties ? { opties } : {}) } : { v: v.soort, taal: taal.code, ...(v.kamer ? { kamer: v.kamer } : {}) });
+    const q = new URLSearchParams(v.soort === 'vrij' ? { v: 'vrij', tekst: v.tekst, taal: taal.code, gesprek: gesprekId, ...(scherm ? { scherm } : {}), ...(opties ? { opties } : {}) } : { v: v.soort, taal: taal.code, ...(v.kamer ? { kamer: v.kamer } : {}) });
     const res = await fetch(`api/vraag?${q}`);
     const body = await res.json();
     nu.antwoord = res.ok ? body.antwoord : body.fout ?? body.wachten ?? taal.t('assistent.geenAntwoord');
@@ -302,6 +304,7 @@ function stopPraten() {
     el.src = '';
   }
   if ('speechSynthesis' in window) speechSynthesis.cancel();
+  window.fully?.stopTextToSpeech?.();
   if (klaar) {
     const k = klaar;
     klaar = null;
@@ -484,7 +487,11 @@ async function zegMetPiper(tekst, totLetter, apparaat, geweigerd) {
 /** De stem van het apparaat, of alleen de woorden als die er niet is. Hoort bij zeg(). */
 function zegMetApparaat(tekst, gesproken, totLetter, lezen, geweigerd) {
   const v = apparaatStem();
-  if (!v) return lezen();
+  if (!v) {
+    // Fully Kiosk aan de wand heeft geen spraak in de browser, wel een eigen stem (29 oktober 2026).
+    if (typeof window.fully?.textToSpeech === 'function') void app.zegMetApparaat(gesproken, taal.code);
+    return lezen();
+  }
   const u = new SpeechSynthesisUtterance(gesproken);
   u.voice = v;
   u.lang = v.lang;

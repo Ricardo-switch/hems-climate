@@ -145,6 +145,19 @@ describe('doen en terugzetten', () => {
     expect(s.gedaan).toEqual(['input_number.temp_nest_dag=21']);
   });
 
+  it('"doe maar terug" zet de knop meteen terug, ook als Home Assistant de nieuwe stand nog niet meldde (besluit 213)', async () => {
+    const s = systeem();
+    const brug = new KlimaatBrug(s.deur());
+    const p = brug.plan('verwarmen', null, null, TZ);
+    if (!p.ok) throw new Error(p.reden);
+    await brug.voerUit(p.plan);
+    expect(await brug.terugNu()).toBe(1);
+    expect(s.gedaan).toEqual(['input_number.temp_nest_dag=21', 'input_number.temp_nest_dag=20']);
+    expect(brug.terugzetten).toEqual([]);
+    // Niets meer om terug te zetten.
+    expect(await brug.terugNu()).toBe(0);
+  });
+
   it("'s nachts de modus en de knop, en twee keer warmer houdt de oude standaard", async () => {
     const s = systeem({ actief: 'nacht' });
     s.zetNu(om(23));

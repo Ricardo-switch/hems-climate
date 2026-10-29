@@ -406,7 +406,7 @@ describe('schrijfbeveiliging', () => {
     await expect(client.generateData('conversation.google_ai', 'Zeg hallo.')).rejects.toThrow(/geen AI-taak/);
     await expect(client.generateData('ai_task.x, light.hal', 'Zeg hallo.')).rejects.toThrow(/geen AI-taak/);
     await expect(client.generateData('ai_task.google_ai_task', '')).rejects.toThrow(/opdracht/);
-    await expect(client.generateData('ai_task.google_ai_task', 'x'.repeat(7000))).rejects.toThrow(/opdracht/);
+    await expect(client.generateData('ai_task.google_ai_task', 'x'.repeat(13_000))).rejects.toThrow(/opdracht/);
     await expect(client.generateData('ai_task.google_ai_task', 'Zeg hallo.', { 'Verkeerd veld': { description: 'x' } })).rejects.toThrow(/veld/);
   });
 

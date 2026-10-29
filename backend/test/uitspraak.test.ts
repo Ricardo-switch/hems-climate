@@ -21,11 +21,13 @@ describe('de uitspraak (besluit 142)', () => {
   });
 
   it('zegt eenheden voluit, en airco zoals het klinkt', () => {
-    expect(uitspraak('Je dak leverde 9,3 kWh, het meeste om 13:45.')).toBe('Je dak leverde 9,3 kilowattuur, het meeste om kwart voor twee.');
-    expect(uitspraak('Het huis haalt 2,6 kW van het net, de airco zolder 300 W.')).toBe('Het huis haalt 2,6 kilowatt van het net, de erko zolder 300 watt.');
-    expect(uitspraak('Het is 22,3° in de wasruimte, en 55% kwam van je dak.')).toBe('Het is 22,3 graden in de wasruimte, en 55 procent kwam van je dak.');
+    expect(uitspraak('Je dak leverde 9,3 kWh, het meeste om 13:45.')).toBe('Je dak leverde 9 komma 3 kilowattuur, het meeste om kwart voor twee.');
+    expect(uitspraak('Het huis haalt 2,6 kW van het net, de airco zolder 300 W.')).toBe('Het huis haalt 2 komma 6 kilowatt van het net, de erko zolder 300 watt.');
+    expect(uitspraak('Het is 22,3° in de wasruimte, en 55% kwam van je dak.')).toBe('Het is 22 komma 3 graden in de wasruimte, en 55 procent kwam van je dak.');
     expect(uitspraak('De airco’s kostten € 0,45 en € 62,18, en € 3.')).toBe('De erko’s kostten 45 cent en 62 euro 18, en 3 euro.');
-    expect(uitspraak("Airco's en de cv: 13,5 m³ gas.")).toBe("erko's en de cee vee: 13,5 kuub gas.");
+    expect(uitspraak("Airco's en de cv: 13,5 m³ gas.")).toBe("erko's en de cee vee: 13 komma 5 kuub gas.");
+    // Een komma tussen woorden blijft een pauze; een getal met een komma krijgt hem hardop.
+    expect(uitspraak('Boven 19,5°, beneden 21,25°, en 3, 4 of 5.')).toBe('Boven 19 komma 5 graden, beneden 21 komma 25 graden, en 3, 4 of 5.');
   });
 
   it('zegt gevel met een lange e', () => {

@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.84.0';
+export const VERSIE = '0.85.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,36 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.85.0',
+    datum: '2026-10-29',
+    nieuw: [
+      'De assistent onthoudt het gesprek: zeg "doe maar terug" en het licht, de screens of de verwarming staan weer zoals ze waren',
+      'Meer in één zin: "screens dicht en de lamp in de zithoek aan" doet allebei',
+      'Met een taalmodel maakt de assistent een plan ("het is hier zo donker en ik ga film kijken") en beantwoordt hij vragen over vandaag en gisteren',
+      'Bij Functies › Praten zie je hoeveel vragen er vandaag naar het taalmodel gingen en hoe snel het antwoordde',
+    ],
+    beter: [
+      'Een getal met een komma klinkt nu goed: "21 komma 5 graden"',
+    ],
+    opgelost: [
+      'Bij "Dit apparaat" hoor je het voorbeeld nu ook echt; aan de wand spreekt Fully Kiosk als het scherm zelf geen stem heeft',
+    ],
+    en: {
+      nieuw: [
+        'The assistant remembers the conversation: say "undo" and the lights, the screens or the heating are back the way they were',
+        'More in one sentence: "screens down and the lamp in the sitting area on" does both',
+        'With a language model the assistant makes a plan ("it is so dark here and I am going to watch a film") and answers questions about today and yesterday',
+        'Under Features › Talking you see how many questions went to the language model today and how fast it answered',
+      ],
+      beter: [
+        'A number with a decimal comma now sounds right in Dutch',
+      ],
+      opgelost: [
+        'With "This device" you now really hear the example; on the wall Fully Kiosk speaks when the screen itself has no voice',
+      ],
+    },
+  },
   {
     versie: '0.84.0',
     datum: '2026-10-29',

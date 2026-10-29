@@ -212,6 +212,24 @@ export class KlimaatBrug {
     return gedaan;
   }
 
+  /**
+   * "Doe maar terug" (besluit 213): wat de brug zette, nu meteen terug naar de
+   * standaard. Ook als Home Assistant de nieuwe stand nog niet meldde: de
+   * bewoner vraagt het zelf. Geeft terug hoeveel knoppen er terug gingen.
+   */
+  async terugNu(): Promise<number> {
+    await this.#laad();
+    let n = 0;
+    for (const t of this.#terug) {
+      if (getal(this.#d.state(t.knop)) === t.terug) continue;
+      await this.#d.zet(t.knop, t.terug);
+      n++;
+    }
+    this.#terug = [];
+    await this.#bewaar();
+    return n;
+  }
+
   async #laad(): Promise<void> {
     if (this.#geladen) return;
     this.#geladen = true;

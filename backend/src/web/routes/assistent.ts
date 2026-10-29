@@ -9,12 +9,17 @@ import { assistKamers } from '../assist.js';
 import { TodayCache } from '../today.js';
 import { ask, LANGS, parseQuestion } from '../assistant.js';
 import type { BrugVraag, Lang, Question } from '../assistant.js';
-import { brugVraag } from '../klimaatbrug.js';
+import { brugVraag, brugZone, klok } from '../klimaatbrug.js';
 import type { SiteConfig } from '../../core/model.js';
 import { uitspraak } from '../uitspraak.js';
 import { afsluiter, begrijp, isHalf, isRuis, MAX_TEKST, verbeter } from '../woordzoeker.js';
-import { bedienbaar, herkenOpdracht, kiesUit, type Herkend, type Optie } from '../opdracht.js';
-import { inEigenWoorden, kies, PROEF_MS, WACHT_MS, type Vraag } from '../taalmodel.js';
+import { bedienbaar, herkenOpdracht, kiesUit, type Bedienbaar, type Herkend, type Optie } from '../opdracht.js';
+import { controleerZin, inEigenWoorden, PROEF_MS, WACHT_MS, type Vraag } from '../taalmodel.js';
+import { dagRegels, deelVan, denk, herkenDelen, isTerug, samen, terugVan, type Deel, type Situatie, type Stap } from '../brein.js';
+import type { Fact } from '../assistant.js';
+import type { IncomingMessage } from 'node:http';
+import type { URL } from 'node:url';
+import { momentWoorden } from '../lichtrecept.js';
 import { sunReport } from '../sun.js';
 import { weatherInLang } from '../weather.js';
 import { startOfLocalDay } from '../today.js';
@@ -150,6 +155,8 @@ export async function assistentRoutes(d: Diensten, v: Verzoek): Promise<boolean>
     // vaste vraag van, of antwoordt zelf over de app.
     let parsed: { question: Question; lang: Lang };
     let vrijeTekst: string | null = null;
+    // Het gesprek van dit scherm (besluit 213), om te onthouden wat er gezegd en gedaan is.
+    let gesprekId: string | null = null;
     if ((url.searchParams.get('v') ?? '').toLowerCase() === 'vrij') {
       const taal = (url.searchParams.get('taal') ?? 'nl').toLowerCase();
       const lang: Lang = (LANGS as readonly string[]).includes(taal) ? (taal as Lang) : 'nl';
@@ -180,27 +187,65 @@ export async function assistentRoutes(d: Diensten, v: Verzoek): Promise<boolean>
         sendJson(res, 200, { vraag: 'klaar', taal: lang, kamer: null, antwoord: klaar, feiten: [], gesproken: uitspraak(klaar, lang) });
         return true;
       }
+      const id = (gesprekId = gesprekVan(req, url));
+      // Stuurt het antwoord, en onthoudt het voor de volgende zin (besluit 213).
+      const stuur = (r: { readonly body: Record<string, unknown>; readonly terug: readonly Stap[] | null }) => {
+        sendJson(res, 200, r.body);
+        d.gesprekken.voeg(id, { vraag: tekst, antwoord: String(r.body['antwoord'] ?? ''), terug: r.terug });
+        return true;
+      };
       // Bedienen met een zin (besluit 148): eerst de woordzoeker, en wat die
       // niet begrijpt het taalmodel. De pagina stuurt de opdracht naar de deur.
       const lijst = viaSleutel || d.options.praten?.bedienen() === false ? null : d.bedienbaar();
-      const herkend = lijst ? herkenOpdracht(tekst, lijst, lang, url.searchParams.get('scherm')) : null;
-      if (herkend) {
-        sendJson(res, 200, await opdrachtAntwoord(d, herkend, tekst, lang, model));
-        return true;
+      // "Doe maar terug" (besluit 213): hoe het was vóór de laatste opdracht, zonder model.
+      if (lijst && isTerug(tekst)) {
+        const terug = d.gesprekken.neemTerug(id);
+        const nl = lang === 'nl';
+        const antwoord = terug ? (nl ? 'Ik heb het teruggezet zoals het was.' : 'I put it back the way it was.') : nl ? 'Er is niets om terug te zetten.' : 'There is nothing to undo.';
+        const body = { vraag: 'bedien', taal: lang, kamer: null, antwoord, feiten: [], gesproken: uitspraak(antwoord, lang), ...(terug ? { opdracht: terug[0], meer: terug.slice(1), gedaan: [], beweegt: null, vervolg: [] } : {}) };
+        return stuur({ body, terug: null });
       }
+      // Meer in één zin (besluit 213): "screens dicht en de lamp aan", elk deel apart.
+      const delen = lijst ? herkenDelen(tekst, lijst, lang, url.searchParams.get('scherm')) : null;
+      if (delen && lijst) return stuur(await bedienAntwoord(samen(delen.map(deelVan)), tekst, lang, model, lijst));
+      const herkend = lijst ? herkenOpdracht(tekst, lijst, lang, url.searchParams.get('scherm')) : null;
+      if (herkend && lijst) return stuur(await opdrachtAntwoord(d, herkend, tekst, lang, model, lijst));
       let b = begrijp(tekst, config, lang);
       if (b.soort === 'onbekend' && model != null) {
+        // Het brein (besluit 213): een plan van meer stappen, een vaste vraag, of een antwoord uit de feiten.
         const zones = config.zones.map((z) => ({ id: z.id, naam: z.name }));
-        const keuze = await kies(model, tekst, lijst ?? bedienbaar(null, { licht: false, scenes: false, schermen: false }), zones, lang);
-        if (keuze.soort === 'opdracht') {
-          sendJson(res, 200, await opdrachtAntwoord(d, keuze.herkend, tekst, lang, model));
-          return true;
+        const situatie = await situatieVoor(d, config, lang);
+        const leeg = lijst ?? bedienbaar(null, { licht: false, scenes: false, schermen: false });
+        const plan = await denk(model, tekst, leeg, zones, situatie, d.gesprekken.van(id), klimaatKamers(d, config), lang);
+        if (plan.soort === 'doen') {
+          // Eén opdracht met een vraag terug (de sfeerverlichting?) gaat zoals bij de woordzoeker.
+          const enig = plan.stappen.length === 1 ? plan.stappen[0]! : null;
+          if (enig?.soort === 'opdracht' && !enig.herkend.ok) return stuur(await opdrachtAntwoord(d, enig.herkend, tekst, lang, model, leeg));
+          const stukken: Deel[] = [];
+          const nee: string[] = [];
+          const brug = klimaatBrugVoor(d, config, tekst);
+          for (const s of plan.stappen) {
+            if (s.soort === 'opdracht') {
+              if (s.herkend.ok) stukken.push(deelVan(s.herkend.opdracht));
+              else nee.push(s.herkend.antwoord);
+              continue;
+            }
+            const r = brug?.(s.wens, s.kamer, s.temperatuurC, lang) ?? null;
+            if (r?.ok) stukken.push({ antwoord: r.antwoord, feiten: r.feiten, stappen: [r.opdracht], gedaan: r.gedaan, ruimte: null });
+            else nee.push(r?.antwoord ?? (lang === 'nl' ? 'Het klimaat bedien ik niet: de klimaatbrug staat uit.' : 'I do not operate the climate: the climate bridge is off.'));
+          }
+          if (stukken.length) return stuur(await bedienAntwoord(samen(stukken), tekst, lang, model, leeg, nee.length ? null : plan.zin, nee));
+          const antwoord = nee[0]!;
+          return stuur({ body: { vraag: 'bedien', taal: lang, kamer: null, antwoord, feiten: [], gesproken: uitspraak(antwoord, lang) }, terug: null });
         }
-        if (keuze.soort === 'vraag') b = { soort: 'huis', vraag: keuze.vraag };
+        if (plan.soort === 'antwoord') {
+          const feiten = situatie.feiten.filter((f) => plan.zin.includes(f.tekst));
+          return stuur({ body: { vraag: 'brein', taal: lang, kamer: null, antwoord: plan.zin, eigen: true, feiten, gesproken: uitspraak(plan.zin, lang) }, terug: null });
+        }
+        if (plan.soort === 'vraag') b = { soort: 'huis', vraag: plan.vraag };
       }
       if (b.soort === 'app') {
-        sendJson(res, 200, { vraag: 'app', taal: lang, kamer: null, antwoord: b.antwoord, feiten: [], link: b.link, gesproken: uitspraak(b.antwoord, lang) });
-        return true;
+        return stuur({ body: { vraag: 'app', taal: lang, kamer: null, antwoord: b.antwoord, feiten: [], link: b.link, gesproken: uitspraak(b.antwoord, lang) }, terug: null });
       }
       if (b.soort === 'onbekend') {
         // Hardop staan de voorbeelden er zelf in (besluit 166); op het scherm zijn het knoppen.
@@ -234,30 +279,8 @@ export async function assistentRoutes(d: Diensten, v: Verzoek): Promise<boolean>
       zoninval = { boven: r.zon.boven, gevels: r.gevels.filter((g) => g.inDeZon).map((g) => g.naam) };
     }
     // De weersverwachting bij de zon, straks en morgen (besluit 141, 142); uit dezelfde bron als Vandaag.
-    let weer = null;
     const kind = parsed.question.kind;
-    if (kind === 'zon' || kind === 'straks' || kind === 'weer' || kind === 'morgen') {
-      const ruw = await d.weatherNow().catch(() => null);
-      // Het weer in woorden in de taal van de vraag (besluit 185).
-      const w = ruw && 'vandaag' in ruw ? weatherInLang(ruw, parsed.lang) : null;
-      if (w) {
-        const m = w.dagen[0];
-        const morgen = m ? { tekst: m.tekst, minC: m.minC, maxC: m.maxC, regenkansPct: m.regenkansPct, verwachtKwh: m.verwachtKwh } : null;
-        // De rest van vandaag (besluit 166): uit de uren tot middernacht, anders het weer van nu.
-        const nu = Date.now();
-        const eind = startOfLocalDay(nu, config.timezone) + 24 * 3_600_000;
-        const uren = w.vandaag.uren.filter((u) => u.tMs < eind);
-        const temps = uren.map((u) => u.buitenC).filter((t): t is number => t != null);
-        const regen = uren.map((u) => u.regenkansPct).filter((r): r is number => r != null);
-        const vandaag = {
-          tekst: w.vandaag.tekst,
-          minC: temps.length ? Math.min(...temps) : w.vandaag.buitenC,
-          maxC: temps.length ? Math.max(...temps) : w.vandaag.buitenC,
-          regenkansPct: regen.length ? Math.max(...regen) : null,
-        };
-        weer = { opgewektKwh: w.vandaag.opgewektKwh, verwachtKwh: w.vandaag.verwachtKwh, voorafKwh: w.vandaag.verwachtVoorafKwh, vandaag, morgen };
-      }
-    }
+    const weer = kind === 'zon' || kind === 'straks' || kind === 'weer' || kind === 'morgen' ? await weerVoor(d, config, parsed.lang) : null;
     // Wat de apparaten met een meter deze maand kostten (besluit 142), uit Opbrengst; en het hele huis, ook voor wat er terugging.
     const kosten = kind === 'kosten' || kind === 'terug' ? await kostenDezeMaand(d, config, parsed.lang).catch(() => null) : null;
     // Het sluipverbruik (besluit 192): wat de dienst al weet, zonder te wachten.
@@ -279,6 +302,10 @@ export async function assistentRoutes(d: Diensten, v: Verzoek): Promise<boolean>
     });
     // In eigen woorden (besluit 148), met het vaste antwoord als vangnet.
     const eigen = model && !antwoord.letterlijk ? await inEigenWoorden(model, vrijeTekst, antwoord, parsed.lang) : { antwoord: antwoord.antwoord, eigen: false };
+    // Onthouden voor de volgende zin (besluit 213), en een opdracht van de klimaatbrug kan terug.
+    if (gesprekId != null && vrijeTekst != null) {
+      d.gesprekken.voeg(gesprekId, { vraag: vrijeTekst, antwoord: eigen.antwoord, terug: antwoord.opdracht ? terugVan([antwoord.opdracht], d.bedienbaar()) : null });
+    }
     // Hoe het klinkt (besluit 142), voor de stem van het apparaat zelf.
     sendJson(res, 200, { ...antwoord, antwoord: eigen.antwoord, eigen: eigen.eigen, gesproken: uitspraak(eigen.antwoord, parsed.lang) });
     return true;
@@ -289,6 +316,18 @@ export async function assistentRoutes(d: Diensten, v: Verzoek): Promise<boolean>
    * een keer proberen" bij Functies. Alleen een AI-taak die Home Assistant
    * kent; er verandert niets.
    */
+  // Hoeveel vragen er per dag naar het model gingen en hoe snel (besluit 213).
+  if (path === '/api/praten/teller') {
+    const dagen = (await d.options.praten?.teller?.().catch(() => null)) ?? [];
+    sendJson(res, 200, {
+      dagen: dagen.slice(0, 7).map((x) => ({ dag: x.dag, vragen: x.vragen, fouten: x.fouten, gemiddeldMs: x.vragen > x.fouten ? Math.round(x.totaalMs / (x.vragen - x.fouten)) : null, langsteMs: x.langsteMs || null })),
+      wachtMs: WACHT_MS,
+      // De dag in het huis, zodat de pagina vandaag vindt.
+      vandaag: new Intl.DateTimeFormat('en-CA', { timeZone: d.config()?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone }).format(new Date()),
+    });
+    return true;
+  }
+
   if (path === '/api/praten/proef') {
     const praten = d.options.praten;
     const config = d.config();
@@ -348,24 +387,132 @@ export function optiesUit(ruw: string | null): Optie[] {
   }
 }
 
-export async function opdrachtAntwoord(d: Diensten, h: Herkend, tekst: string, lang: Lang, model: Vraag | null): Promise<Record<string, unknown>> {
-  if (!h.ok) return { vraag: 'bedien', taal: lang, kamer: null, antwoord: h.antwoord, feiten: [], gesproken: uitspraak(h.antwoord, lang), ...(h.keuze ? { keuze: h.keuze } : {}) };
-  const o = h.opdracht;
-  const eigen = model ? await inEigenWoorden(model, tekst, o, lang) : { antwoord: o.antwoord, eigen: false };
+/** Een antwoord met wat er terug kan (besluit 213): de body voor de pagina, en hoe het was. */
+export interface MetTerug {
+  readonly body: Record<string, unknown>;
+  readonly terug: readonly Stap[] | null;
+}
+
+export async function opdrachtAntwoord(_d: Diensten, h: Herkend, tekst: string, lang: Lang, model: Vraag | null, lijst: Bedienbaar): Promise<MetTerug> {
+  if (!h.ok) return { body: { vraag: 'bedien', taal: lang, kamer: null, antwoord: h.antwoord, feiten: [], gesproken: uitspraak(h.antwoord, lang), ...(h.keuze ? { keuze: h.keuze } : {}) }, terug: null };
+  return bedienAntwoord(deelVan(h.opdracht), tekst, lang, model, lijst);
+}
+
+/**
+ * Een of meer opdrachten als antwoord: de zin (die van het plan als elk getal
+ * klopt, anders in eigen woorden als dat kan), de stappen voor de deuren, en
+ * hoe het was, uit de stand vóór de opdracht.
+ */
+export async function bedienAntwoord(
+  deel: Deel,
+  tekst: string,
+  lang: Lang,
+  model: Vraag | null,
+  lijst: Bedienbaar,
+  zin: string | null = null,
+  nee: readonly string[] = [],
+): Promise<MetTerug> {
+  const vast = { antwoord: [deel.antwoord, ...nee].join(' '), feiten: deel.feiten };
+  const vanPlan = zin ? controleerZin(zin, vast) : null;
+  const eigen = vanPlan ? { antwoord: vanPlan, eigen: true } : model ? await inEigenWoorden(model, tekst, vast, lang) : { antwoord: vast.antwoord, eigen: false };
+  const [eerste, ...rest] = deel.stappen;
   return {
-    vraag: 'bedien',
-    taal: lang,
-    kamer: null,
-    ruimte: o.ruimte,
-    antwoord: eigen.antwoord,
-    eigen: eigen.eigen,
-    feiten: o.feiten,
-    gesproken: uitspraak(eigen.antwoord, lang),
-    opdracht: { pad: o.pad, body: o.body },
-    // Meer opdrachten erachteraan (besluit 211), zoals allebei de screens.
-    ...(o.meer?.length ? { meer: o.meer } : {}),
-    gedaan: o.gedaan,
-    beweegt: o.beweegt,
-    vervolg: o.vervolg,
+    body: {
+      vraag: 'bedien',
+      taal: lang,
+      kamer: null,
+      ruimte: deel.ruimte ?? null,
+      antwoord: eigen.antwoord,
+      eigen: eigen.eigen,
+      feiten: deel.feiten,
+      gesproken: uitspraak(eigen.antwoord, lang),
+      opdracht: eerste,
+      // Meer opdrachten erachteraan (besluit 211, 213), zoals allebei de screens.
+      ...(rest.length ? { meer: rest } : {}),
+      gedaan: deel.gedaan,
+      beweegt: deel.beweegt ?? null,
+      vervolg: deel.vervolg ?? [],
+    },
+    terug: terugVan(deel.stappen, lijst),
   };
+}
+
+/** Het gesprek van een scherm: het id dat de pagina meestuurt, of het adres. */
+function gesprekVan(req: IncomingMessage, url: URL): string {
+  const id = url.searchParams.get('gesprek') ?? '';
+  return /^[\w-]{6,64}$/.test(id) ? id : `adres:${req.socket.remoteAddress ?? 'onbekend'}`;
+}
+
+/** De kamers die de klimaatbrug kan verwarmen of koelen, of geen als hij uit staat. */
+function klimaatKamers(d: Diensten, config: SiteConfig): { id: string; naam: string }[] {
+  const k = d.options.klimaat;
+  if (k == null || !k.aan() || !k.brug.beschikbaar) return [];
+  return config.zones.filter((z) => brugZone(config, z.id, 'verwarmen') || brugZone(config, z.id, 'koelen')).map((z) => ({ id: z.id, naam: z.name }));
+}
+
+/** Het weer voor de assistent, uit dezelfde bron als Vandaag (besluit 141, 142); null zonder weer. */
+async function weerVoor(d: Diensten, config: SiteConfig, lang: Lang) {
+  const ruw = await d.weatherNow().catch(() => null);
+  // Het weer in woorden in de taal van de vraag (besluit 185).
+  const w = ruw && 'vandaag' in ruw ? weatherInLang(ruw, lang) : null;
+  if (!w) return null;
+  const m = w.dagen[0];
+  const morgen = m ? { tekst: m.tekst, minC: m.minC, maxC: m.maxC, regenkansPct: m.regenkansPct, verwachtKwh: m.verwachtKwh } : null;
+  // De rest van vandaag (besluit 166): uit de uren tot middernacht, anders het weer van nu.
+  const nu = Date.now();
+  const eind = startOfLocalDay(nu, config.timezone) + 24 * 3_600_000;
+  const uren = w.vandaag.uren.filter((u) => u.tMs < eind);
+  const temps = uren.map((u) => u.buitenC).filter((t): t is number => t != null);
+  const regen = uren.map((u) => u.regenkansPct).filter((r): r is number => r != null);
+  const vandaag = {
+    tekst: w.vandaag.tekst,
+    minC: temps.length ? Math.min(...temps) : w.vandaag.buitenC,
+    maxC: temps.length ? Math.max(...temps) : w.vandaag.buitenC,
+    regenkansPct: regen.length ? Math.max(...regen) : null,
+  };
+  return { opgewektKwh: w.vandaag.opgewektKwh, verwachtKwh: w.vandaag.verwachtKwh, voorafKwh: w.vandaag.verwachtVoorafKwh, vandaag, morgen };
+}
+
+/**
+ * Hoe het huis ervoor staat (besluit 213), voor het brein: de klok, wat het
+ * huis doet, hoe warm het is, wie er thuis is, wat er draait, het weer, en
+ * vandaag en gisteren. Allemaal vaste antwoorden met hun feiten, zodat elk
+ * getal in een antwoord van het model na te gaan is.
+ */
+export async function situatieVoor(d: Diensten, config: SiteConfig, lang: Lang): Promise<Situatie> {
+  const nl = lang === 'nl';
+  const nu = Date.now();
+  const regels: string[] = [];
+  const feiten: Fact[] = [];
+  const tijd = klok(nu, config.timezone);
+  const datum = new Intl.DateTimeFormat(nl ? 'nl-NL' : 'en-GB', { timeZone: config.timezone, weekday: 'long', day: 'numeric', month: 'long' }).format(nu);
+  const recept = d.lichtRecept(nu);
+  regels.push(nl ? `Het is ${datum}, ${tijd}${recept ? ` (licht: ${momentWoorden(recept.moment, true)})` : ''}.` : `It is ${datum}, ${tijd}.`);
+  feiten.push({ bron: 'nu.klok', tekst: tijd }, { bron: 'nu.datum', tekst: datum });
+  const basis = { config, snapshot: d.options.latest(), today: null, nowMs: nu, shadow: true, lang } as const;
+  const weer = await weerVoor(d, config, lang).catch(() => null);
+  const vragen: Question[] = [{ kind: 'nu' }, { kind: 'warm' }, { kind: 'thuis' }, { kind: 'draait', apparaat: '' }];
+  for (const v of vragen) {
+    const a = ask(v, basis);
+    regels.push(a.antwoord);
+    feiten.push(...a.feiten);
+  }
+  if (weer) {
+    const a = ask({ kind: 'weer' }, { ...basis, weer });
+    regels.push(a.antwoord);
+    feiten.push(...a.feiten);
+  }
+  const logDir = d.options.logDir;
+  if (logDir != null) {
+    d.today ??= new TodayCache(logDir, config);
+    const vandaag = await d.today.get().catch(() => null);
+    const gisteren = await d.today.yesterday().catch(() => null);
+    for (const [r, dag] of [[vandaag, 'vandaag'], [gisteren, 'gisteren']] as const) {
+      if (r == null) continue;
+      const s = dagRegels(r, config, dag, lang);
+      regels.push(...s.regels);
+      feiten.push(...s.feiten);
+    }
+  }
+  return { regels, feiten };
 }

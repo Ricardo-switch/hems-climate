@@ -742,7 +742,8 @@ export interface Gesprek {
 }
 
 /** Hoe lang een opdracht aan een AI-taak mag zijn (besluit 148). */
-export const AI_TASK_MAX = 6000;
+/** Het brein (besluit 213) stuurt de situatie en het gesprek mee: dan is 6000 te krap. */
+export const AI_TASK_MAX = 12_000;
 
 /** Een veld in het antwoord van een AI-taak: altijd tekst. */
 export interface AiTaskField {

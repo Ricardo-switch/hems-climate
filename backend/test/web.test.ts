@@ -1185,7 +1185,7 @@ describe('de assistent die uitlegt (ONTWERP §7, fase 1)', () => {
     expect(body.kamer).toBe('zolder');
     expect(body.antwoord).toContain('24,5°');
     // Hoe het klinkt, voor de stem van het apparaat (besluit 142).
-    expect(body.gesproken).toContain('24,5 graden');
+    expect(body.gesproken).toContain('24 komma 5 graden');
     expect(body.gesproken).not.toContain('°');
   });
 
@@ -1458,16 +1458,34 @@ describe('licht bedienen (besluit 97)', () => {
     // Een getal dat er niet stond: het vaste antwoord.
     antwoordModel = 'Het licht in de hal is uit, 3 lampen.';
     expect(await vraag('licht hal uit')).toMatchObject({ antwoord: 'Het licht in de hal is uit.', eigen: false });
-    // Wat de woordzoeker niet begrijpt, kiest het model uit de lijst.
-    antwoordModel = { soort: 'licht', id: 'light.trap', actie: 'aan' };
+    // Wat de woordzoeker niet begrijpt, kiest het model uit de lijst, als plan (besluit 213).
+    antwoordModel = { soort: 'doen', stappen: JSON.stringify([{ soort: 'licht', id: 'light.trap', actie: 'aan' }]) };
     // Met licht dat bij het moment past (besluit 209), want de lamp was uit.
     expect((await vraag('het is te donker op de trap')).opdracht?.body).toMatchObject({ doel: 'lamp', id: 'light.trap', aan: true });
     // Iets buiten de lijst wordt niets.
-    antwoordModel = { soort: 'scherm', id: 'cover.garagedeur', actie: 'open' };
+    antwoordModel = { soort: 'doen', stappen: [{ soort: 'scherm', id: 'cover.garagedeur', actie: 'open' }] };
     expect((await vraag('doe de garage open')).opdracht).toBeUndefined();
     // Zonder bedienen bij Functies: alleen praten.
     const zonder = await start({ latest: () => snapshot(), house: () => house, lights, praten: { model: () => null, proef: () => model, bedienen: () => false } });
     expect(((await (await fetch(`${zonder.base}/api/vraag?${new URLSearchParams({ v: 'vrij', tekst: 'licht hal uit' })}`)).json()) as { opdracht?: unknown }).opdracht).toBeUndefined();
+  });
+
+  it('onthoudt het gesprek: "doe maar terug" zet het licht zoals het was, ook na twee opdrachten in één zin (besluit 213)', async () => {
+    const lights = new LightSwitch({ house: () => house, call: async () => {} });
+    const started = await start({ latest: () => snapshot(), house: () => house, lights, praten: { model: () => null, proef: () => async () => '', bedienen: () => true } });
+    const vraag = async (tekst: string, gesprek = 'wand-1234') =>
+      (await (await fetch(`${started.base}/api/vraag?${new URLSearchParams({ v: 'vrij', tekst, gesprek })}`)).json()) as { antwoord: string; opdracht?: { pad: string; body: Record<string, unknown> }; meer?: unknown[] };
+    // Een ander gesprek heeft niets om terug te zetten.
+    expect((await vraag('doe maar terug')).antwoord).toBe('Er is niets om terug te zetten.');
+    const b = await vraag('licht hal uit');
+    expect(b.opdracht?.body).toMatchObject({ doel: 'kamer', id: 'hal', aan: false });
+    expect((await vraag('doe maar terug', 'telefoon-99')).opdracht).toBeUndefined();
+    const terug = await vraag('doe maar terug');
+    expect(terug.antwoord).toBe('Ik heb het teruggezet zoals het was.');
+    expect(terug.opdracht?.pad).toBe('api/licht');
+    expect(terug.opdracht?.body).toMatchObject({ doel: 'lamp' });
+    // Eén keer: daarna is er niets meer.
+    expect((await vraag('doe maar terug')).opdracht).toBeUndefined();
   });
 
   it('heeft geen scènedeur zonder scènes', async () => {
