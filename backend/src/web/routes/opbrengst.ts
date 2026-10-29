@@ -250,7 +250,7 @@ export function yieldCompute(d: Diensten, key: string, soort: PeriodKind, datum:
   return job;
 }
 
-/** Wat de apparaten met een eigen meter deze maand kostten, voor de assistent (besluit 142). */
+/** Wat de apparaten met een eigen meter en het hele huis deze maand kostten, voor de assistent (besluit 142). */
 export async function kostenDezeMaand(d: Diensten, config: SiteConfig, lang: Lang = 'nl'): Promise<NonNullable<AskContext['kosten']> | null> {
   const settings = d.options.energy?.store.current;
   if (settings == null) return null;
@@ -270,7 +270,15 @@ export async function kostenDezeMaand(d: Diensten, config: SiteConfig, lang: Lan
   // Een apparaat heet zoals in de app, niet zoals zijn meter (het klimaatapparaat bij die meter).
   const apparaten = (d.options.house?.()?.etages ?? []).flatMap((e) => e.ruimtes).flatMap((r) => r.apparaten);
   const naamVan = (meter: string, terug: string) => apparaten.find((d) => d.klimaat?.energieMeter === meter)?.naam ?? terug;
-  return { maand, apparaten: report.apparaten.filter((a) => !a.rest).map((a) => ({ id: a.id, naam: naamVan(a.id, a.naam), kwh: a.kwh, zonKwh: a.zonKwh, euro: a.kosten })) };
+  // Het hele huis (29 oktober 2026): stroom met de teruglevering ervan af, en gas, uit de regels van Opbrengst.
+  const som = (soorten: readonly string[]) => {
+    const r = report.kosten.regels.filter((x) => soorten.includes(x.soort));
+    return r.length === 0 || r.some((x) => x.euro == null && x.soort !== 'terug') ? null : Math.round(r.reduce((t, x) => t + (x.euro ?? 0), 0) * 100) / 100;
+  };
+  const huis = report.heeft.net
+    ? { stroomEuro: som(['stroom', 'normaal', 'dal', 'terug', 'terug-na']), gasEuro: report.heeft.gas ? som(['gas']) : null, totaalEuro: report.kosten.totaal, vanNetKwh: report.stroom.vanNetKwh, terugKwh: report.stroom.terugKwh }
+    : undefined;
+  return { maand, apparaten: report.apparaten.filter((a) => !a.rest).map((a) => ({ id: a.id, naam: naamVan(a.id, a.naam), kwh: a.kwh, zonKwh: a.zonKwh, euro: a.kosten })), ...(huis ? { huis } : {}) };
 }
 
 /** Na een vraag: de andere periodes van vandaag alvast uitrekenen, op de achtergrond. */

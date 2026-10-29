@@ -9599,6 +9599,28 @@ en de app hoort het zo zonder omweg).
   gebruiken die de oude regeling liet liggen; de failsafe ging op 28 oktober
   twee uur aan door de temperatuursensor van de Hue-bewegingsmelder op zolder.
 
+*Nagekomen, versie 0.79.2* (dezelfde dag, wat de assistent nog niet kon):
+
+- **Aan zonder meer.** "Zet de airco aan" gaf de stand van nu, want "aan"
+  zei niet of hij moest koelen of verwarmen. Nu is `aan` een wens: koelen of
+  verwarmen naar wat de kamer nodig heeft (onder of boven het doel, anders de
+  buitentemperatuur). Zonder kamer kiest hij de enige kamer die het kan, of
+  vraagt welke. Een opdracht zonder kamer moet over klimaat gaan (airco,
+  verwarming); licht en schermen blijven van de opdrachten (besluit 148).
+- **Drie vragen erbij:** `thuis` (uit de aanwezigheid; op naam alleen met
+  bewoners, na de rust van tien minuten), `terug` (vandaag uit het
+  dagoverzicht, de maand uit Opbrengst) en `draait` (de apparaten die op zon
+  wachten; een ander apparaat zegt hij dat hij niet ziet).
+- **Wat de stroom kost** noemt eerst het hele huis deze maand, uit de regels
+  van Opbrengst: stroom met de teruglevering ervan af, gas, en met de vaste
+  kosten erbij. Daarna de apparaten met een eigen meter.
+- **De borderverlichting** gloeit alleen in de border zelf en zachter; eerst
+  straalde hij over de rand van de tuin.
+- **Nagezocht zonder fout:** de zon van 760 W tegen 1.240 W terug op 27
+  oktober. De zonnesensor meet eens per minuut, de slimme meter vaker; om
+  12:36 ging er zo'n 2,7 kW uit terwijl de zon doorbrak. De regeling kijkt naar
+  de slimme meter.
+
 ---
 
 ## Wat nog een besluit wacht

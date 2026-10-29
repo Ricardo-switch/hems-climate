@@ -1,5 +1,37 @@
 # Wat is er nieuw · What is new
 
+## 0.79.2
+
+*29 oktober 2026*
+
+**Nieuw**
+
+- Vraag de assistent of er iemand thuis is, hoeveel er vandaag terugging naar het net, of de droger nog draait
+
+**Beter**
+
+- Wat kost de stroom? noemt eerst het hele huis deze maand, met het gas en de vaste kosten, en dan de apparaten met een meter
+- De borderverlichting gloeit zachter, alleen in de border zelf
+
+**Opgelost**
+
+- Zet de airco aan zegt wat hij zou doen en dat schakelen nog niet mag, in plaats van hoe het nu staat; zonder kamer vraagt hij welke
+
+*English*
+
+**New**
+
+- Ask the assistant whether anyone is home, how much went back to the grid today, or whether the dryer is still running
+
+**Improved**
+
+- What does electricity cost? first gives the whole house this month, with gas and the fixed costs, then the devices with a meter
+- The border lights glow more softly, only in the border itself
+
+**Fixed**
+
+- Turn on the air conditioner says what it would do and that it may not switch yet, instead of how things are now; without a room it asks which
+
 ## 0.79.1
 
 *29 oktober 2026*

@@ -54,10 +54,11 @@ export function zonNuVan(elevationDeg: number, azimuthDeg: number): ZonNu {
 export const LANGS = ['nl', 'en'] as const;
 export type Lang = (typeof LANGS)[number];
 
-export const QUESTION_KINDS = ['nu', 'waarom', 'straks', 'zon', 'doe', 'vandaag', 'warm', 'weer', 'morgen', 'kosten', 'sluip'] as const;
+export const QUESTION_KINDS = ['nu', 'waarom', 'straks', 'zon', 'doe', 'vandaag', 'warm', 'weer', 'morgen', 'kosten', 'sluip', 'thuis', 'terug', 'draait'] as const;
 export type QuestionKind = (typeof QUESTION_KINDS)[number];
 
-export type Wish = 'koelen' | 'verwarmen' | 'drogen' | 'uit';
+/** `aan` zonder meer (29 oktober 2026): koelen of verwarmen, naar wat de kamer nodig heeft. */
+export type Wish = 'koelen' | 'verwarmen' | 'drogen' | 'uit' | 'aan';
 
 export type Question =
   | { readonly kind: 'nu' }
@@ -76,8 +77,13 @@ export type Question =
   | { readonly kind: 'kosten' }
   /** Het sluipverbruik: wat het huis 's nachts gebruikt (besluit 192). */
   | { readonly kind: 'sluip' }
+  /** Of er iemand thuis is, wat er terugging naar het net, en of een apparaat draait (29 oktober 2026). */
+  | { readonly kind: 'thuis' }
+  | { readonly kind: 'terug' }
+  | { readonly kind: 'draait'; readonly apparaat: string }
   | {
       readonly kind: 'doe';
+      /** Leeg als er geen kamer in de vraag stond ("zet de airco aan"). */
       readonly kamer: string;
       readonly wens: Wish;
       readonly temperatuurC: number | null;
@@ -154,6 +160,18 @@ export interface AskContext {
   readonly kosten?: {
     readonly maand: string;
     readonly apparaten: readonly { readonly id: string; readonly naam: string; readonly kwh: number; readonly zonKwh: number; readonly euro: number | null }[];
+    /**
+     * Het hele huis deze maand (29 oktober 2026), uit de slimme meter: stroom
+     * met de teruglevering ervan af, gas, en alles met de vaste kosten. Null
+     * waar een prijs ontbreekt.
+     */
+    readonly huis?: {
+      readonly stroomEuro: number | null;
+      readonly gasEuro: number | null;
+      readonly totaalEuro: number | null;
+      readonly vanNetKwh: number;
+      readonly terugKwh: number;
+    };
   } | null;
   /** Het sluipverbruik (besluit 192), uit de nachten van de slimme meter. */
   readonly sluip?: SluipRapport | null;
@@ -221,6 +239,8 @@ const WISHES: Readonly<Record<string, Wish>> = {
   drogen: 'drogen',
   droog: 'drogen',
   dry: 'drogen',
+  aan: 'aan',
+  on: 'aan',
 };
 
 export type Parsed =
@@ -251,14 +271,18 @@ export function parseQuestion(params: URLSearchParams): Parsed {
     case 'morgen':
     case 'kosten':
     case 'sluip':
+    case 'thuis':
+    case 'terug':
       return { ok: true, lang, question: { kind: v } };
+    case 'draait':
+      return { ok: true, lang, question: { kind: 'draait', apparaat: (params.get('apparaat') ?? '').trim() } };
     case 'waarom':
       if (kamer === '') return { ok: false, reden: 'waarom vraagt een kamer' };
       return { ok: true, lang, question: { kind: 'waarom', kamer } };
     case 'doe': {
       if (kamer === '') return { ok: false, reden: 'doe vraagt een kamer' };
       const wens = WISHES[(params.get('wens') ?? '').trim().toLowerCase()];
-      if (wens == null) return { ok: false, reden: 'wens moet koelen, verwarmen, drogen of uit zijn' };
+      if (wens == null) return { ok: false, reden: 'wens moet koelen, verwarmen, drogen, uit of aan zijn' };
       const raw = (params.get('temperatuur') ?? '').trim().replace(',', '.');
       let temperatuurC: number | null = null;
       if (raw !== '') {
@@ -385,7 +409,7 @@ const WORDS = {
       vakantie: 'vakantie',
       handmatig: 'handmatig',
     } satisfies Record<Mode, string>,
-    wish: { koelen: 'koelen', verwarmen: 'verwarmen', drogen: 'drogen', uit: 'uit' } satisfies Record<Wish, string>,
+    wish: { koelen: 'koelen', verwarmen: 'verwarmen', drogen: 'drogen', uit: 'uit', aan: 'aan' } satisfies Record<Wish, string>,
     doing: { cool: 'koelt', heat: 'verwarmt' },
     infinitive: { cool: 'koelen', heat: 'verwarmen' },
     // Een kamer met alleen hulpapparaten (role assist): die verwarmen of koelen alleen op zon (29 oktober 2026).
@@ -437,7 +461,7 @@ const WORDS = {
       vakantie: 'holiday',
       handmatig: 'manual',
     } satisfies Record<Mode, string>,
-    wish: { koelen: 'cool', verwarmen: 'heat', drogen: 'dry', uit: 'off' } satisfies Record<Wish, string>,
+    wish: { koelen: 'cool', verwarmen: 'heat', drogen: 'dry', uit: 'off', aan: 'on' } satisfies Record<Wish, string>,
     doing: { cool: 'is cooling', heat: 'is heating' },
     infinitive: { cool: 'cool', heat: 'heat' },
     alleenZon: { cool: 'it only cools here with spare sun', heat: 'it only heats here with spare sun' },
@@ -1147,6 +1171,23 @@ export function ask(question: Question, ctx: AskContext): Answer {
     case 'kosten': {
       const k = ctx.kosten;
       const met = (k?.apparaten ?? []).filter((a) => a.euro != null && a.kwh > 0).sort((a, b) => b.euro! - a.euro!);
+      // Eerst het hele huis (29 oktober 2026): "wat kost de stroom" noemde alleen de airco's.
+      const h = k?.huis;
+      const huis: string[] = [];
+      if (k != null && h != null && h.stroomEuro != null) {
+        const stroom = f.euro('kosten.huis.stroom', h.stroomEuro);
+        const gas = h.gasEuro != null ? f.euro('kosten.huis.gas', h.gasEuro) : null;
+        huis.push(
+          nl
+            ? `In ${k.maand} kostte de stroom tot nu toe ${stroom}${gas ? ` en het gas ${gas}` : ''}${h.terugKwh >= 0.5 ? ', met wat je terugleverde er al af' : ''}.`
+            : `In ${k.maand} electricity has cost ${stroom} so far${gas ? ` and gas ${gas}` : ''}${h.terugKwh >= 0.5 ? ', with what you fed back already taken off' : ''}.`,
+        );
+        if (h.totaalEuro != null && h.totaalEuro > h.stroomEuro + (h.gasEuro ?? 0) + 0.5) {
+          const totaal = f.euro('kosten.huis.totaal', h.totaalEuro);
+          huis.push(nl ? `Met de vaste kosten erbij is dat ${totaal}.` : `With the fixed costs that is ${totaal}.`);
+        }
+      }
+      if (huis.length > 0 && met.length === 0) return done(huis.join(' '));
       if (k == null || met.length === 0) {
         return done(
           nl
@@ -1158,47 +1199,140 @@ export function ask(question: Question, ctx: AskContext): Answer {
         const naam = nl ? `de ${inSentence(a.naam)}` : `the ${a.naam}`;
         return { id: a.id, naam, kwhRuw: a.kwh, euro: f.euro(`kosten.${a.id}.euro`, a.euro!), zonDeel: a.kwh > 0 ? a.zonKwh / a.kwh : 0 };
       });
-      const out: string[] = [];
+      const out: string[] = [...huis];
       if (delen.length === 1) {
         const d = delen[0]!;
         const kwh = f.energy(`kosten.${d.id}.kwh`, d.kwhRuw * 1000);
         out.push(nl ? `${cap(d.naam)} kostte in ${k.maand} ${d.euro}, voor ${kwh}.` : `${cap(d.naam)} cost ${d.euro} in ${k.maand}, for ${kwh}.`);
       } else {
-        out.push(nl ? `In ${k.maand} kostte ${joinList(delen.map((d) => `${d.naam} ${d.euro}`), lang)}.` : `In ${k.maand}: ${joinList(delen.map((d) => `${d.naam} ${d.euro}`), lang)}.`);
+        out.push(
+          huis.length
+            ? nl ? `Daarvan ${joinList(delen.map((d) => `${d.naam} ${d.euro}`), lang)}.` : `Of that, ${joinList(delen.map((d) => `${d.naam} ${d.euro}`), lang)}.`
+            : nl ? `In ${k.maand} kostte ${joinList(delen.map((d) => `${d.naam} ${d.euro}`), lang)}.` : `In ${k.maand}: ${joinList(delen.map((d) => `${d.naam} ${d.euro}`), lang)}.`,
+        );
       }
       const zuinig = delen.filter((d) => d.zonDeel >= 0.6).map((d) => d.naam);
       if (zuinig.length) out.push(nl ? `${cap(joinList(zuinig, lang))} draaide${zuinig.length > 1 ? 'n' : ''} vooral op je eigen zon.` : `${cap(joinList(zuinig, lang))} ran mostly on your own sun.`);
-      out.push(nl ? 'Ik reken alleen wat van het net kwam.' : 'I only count what came from the grid.');
+      if (huis.length) out.push(nl ? 'Bij de apparaten reken ik alleen wat van het net kwam.' : 'For the devices I only count what came from the grid.');
+      else out.push(nl ? 'Ik reken alleen wat van het net kwam.' : 'I only count what came from the grid.');
       return done(out.join(' '));
     }
 
+    case 'thuis': {
+      if (snapshot == null) return letterlijk(noDecision(lang));
+      if (config.occupancy.length === 0) {
+        return done(nl ? 'Dat zie ik niet: er is geen aanwezigheid gekoppeld.' : 'I cannot see that: no presence is linked.');
+      }
+      // Met bewoners op naam, na de rust van tien minuten (besluit 147); anders alleen of er iemand is.
+      const p = snapshot.explanation.profile;
+      const namen = p ? p.home.map((id) => config.profiles?.find((x) => x.id === id)?.name).filter((n): n is string => n != null) : [];
+      if (namen.length > 0) {
+        return done(nl ? `${joinList(namen, lang)} ${namen.length > 1 ? 'zijn' : 'is'} thuis.` : `${joinList(namen, lang)} ${namen.length > 1 ? 'are' : 'is'} home.`);
+      }
+      return done(
+        snapshot.explanation.occupied
+          ? nl ? 'Ja, er is iemand thuis.' : 'Yes, someone is home.'
+          : nl ? 'Er is nu niemand thuis.' : 'Nobody is home right now.',
+      );
+    }
+
+    case 'terug': {
+      const t = ctx.today;
+      const h = ctx.kosten?.huis;
+      if (t == null && h == null) return done(NO_DAY[lang]);
+      const out: string[] = [];
+      if (t != null) {
+        out.push(
+          t.netTerugWh >= 5
+            ? nl ? `Vandaag ging er ${f.energy('vandaag.netTerugWh', t.netTerugWh)} terug naar het net.` : `Today ${f.energy('vandaag.netTerugWh', t.netTerugWh)} went back to the grid.`
+            : nl ? 'Vandaag ging er nog niets terug naar het net.' : 'Nothing has gone back to the grid yet today.',
+        );
+      }
+      if (h != null && ctx.kosten != null && h.terugKwh >= 0.5) {
+        const m = f.energy('kosten.huis.terugKwh', h.terugKwh * 1000);
+        out.push(nl ? `In ${ctx.kosten.maand} tot nu toe ${m}.` : `In ${ctx.kosten.maand} so far ${m}.`);
+      }
+      return done(out.join(' '));
+    }
+
+    case 'draait': {
+      // De apparaten die op zon wachten (besluit 98): alleen die ziet het huis draaien.
+      const lijst = config.deferrables ?? [];
+      const gewoon = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      const gevraagd = question.apparaat;
+      const dit = lijst.filter((a) => gevraagd === '' || gewoon(a.name).includes(gewoon(gevraagd)) || gewoon(gevraagd).includes(gewoon(a.name)) || a.id === gevraagd);
+      if (dit.length === 0) {
+        const ken = joinList(lijst.map((a) => (nl ? `de ${inSentence(a.name)}` : `the ${a.name}`)), lang);
+        return letterlijk(
+          nl
+            ? `${gevraagd ? `De ${gevraagd}` : 'Dat apparaat'} zie ik niet${lijst.length ? `; ik volg alleen ${ken}` : ': ik volg geen apparaten die op zon wachten'}.`
+            : `I cannot see ${gevraagd ? `the ${gevraagd}` : 'that appliance'}${lijst.length ? `; I only follow ${ken}` : ': I do not follow any appliances that wait for sun'}.`,
+        );
+      }
+      if (snapshot == null) return letterlijk(noDecision(lang));
+      const zinnen = dit.map((a) => {
+        const naam = nl ? `de ${inSentence(a.name)}` : `the ${a.name}`;
+        const x = snapshot.explanation.deferrables?.find((d) => d.id === a.id);
+        if (x == null || x.state === 'unknown') return nl ? `Hoe het met ${naam} staat, kan ik nu niet lezen.` : `I cannot read how ${naam} is doing right now.`;
+        if (x.doneSinceMs != null) return nl ? `${cap(naam)} is klaar.` : `${cap(naam)} is done.`;
+        if (x.state === 'running') {
+          const min = x.remainingMin != null && x.remainingMin > 0 ? f.count(`apparaat.${a.id}.nogMin`, x.remainingMin) : null;
+          const nog = min ? (nl ? `, nog ${min} minuten` : `, ${min} more minutes`) : '';
+          return nl ? `${cap(naam)} draait${nog}.` : `${cap(naam)} is running${nog}.`;
+        }
+        if (x.state === 'waiting' || x.state === 'would_start') return nl ? `${cap(naam)} staat klaar en wacht op zon.` : `${cap(naam)} is ready and waiting for sun.`;
+        return nl ? `${cap(naam)} draait niet.` : `${cap(naam)} is not running.`;
+      });
+      return done(zinnen.join(' '));
+    }
+
     case 'doe': {
-      const zone = findZone(config, question.kamer);
+      const wait = nl
+        ? shadow ? 'Schakelen mag ik nog niet, dus zet het nu even zelf.' : 'Opdrachten neem ik nog niet aan.'
+        : shadow ? 'I may not switch anything yet, so please set it yourself for now.' : 'I do not take commands yet.';
+      // Geen kamer in de vraag (29 oktober 2026): met één kamer die het kan, die; anders vragen welke.
+      let zone: Zone | undefined;
+      if (question.kamer === '') {
+        const kan = config.zones.filter((z) => actuatorsOf(config, z).some((a) => question.wens === 'koelen' || question.wens === 'drogen' ? a.capabilities.canCool : question.wens === 'verwarmen' ? a.capabilities.canHeat : true));
+        if (kan.length !== 1) {
+          const plekken = kan.map((z) => zoneName(z, lang));
+          const welke = plekken.length > 1 ? `${plekken.slice(0, -1).join(', ')} ${nl ? 'of' : 'or'} ${plekken.at(-1)}` : plekken.join('');
+          return letterlijk(kan.length === 0 ? wait : nl ? `Welke kamer bedoel je: ${welke}? ${wait}` : `Which room do you mean: ${welke}? ${wait}`);
+        }
+        zone = kan[0];
+      } else zone = findZone(config, question.kamer);
       if (zone == null) return letterlijk(unknownRoom(config, question.kamer, lang));
       const w = WORDS[lang];
       const devices = actuatorsOf(config, zone);
       const zn = zoneName(zone, lang);
-      const wait = nl
-        ? shadow ? 'Schakelen mag ik nog niet, dus zet het nu even zelf.' : 'Opdrachten neem ik nog niet aan.'
-        : shadow ? 'I may not switch anything yet, so please set it yourself for now.' : 'I do not take commands yet.';
 
       if (question.wens === 'uit') {
         const names = joinList(devices.map((a) => deviceName(a, lang)), lang);
         return done(nl ? `Dan zou ik ${names} uitzetten. ${wait}` : `Then I would switch off ${names}. ${wait}`, zone.id);
       }
 
-      const heat = question.wens === 'verwarmen';
+      // Aan zonder meer: wat de kamer nodig heeft, of wat het apparaat alleen kan.
+      let wens = question.wens;
+      if (wens === 'aan') {
+        const pz = snapshot?.explanation.perZone.find((p) => p.zoneId === zone.id);
+        const kanWarm = devices.some((a) => a.capabilities.canHeat);
+        const kanKoel = devices.some((a) => a.capabilities.canCool);
+        const buiten = snapshot?.explanation.outdoorTemperatureC ?? null;
+        const kouder = pz?.temperatureC != null && pz.targetC != null ? pz.temperatureC < pz.targetC : buiten != null ? buiten < 15 : true;
+        wens = kanWarm && (!kanKoel || kouder) ? 'verwarmen' : 'koelen';
+      }
+      const heat = wens === 'verwarmen';
       // Drogen kan wat kan koelen: een airco.
       const able = devices.filter((a) => (heat ? a.capabilities.canHeat : a.capabilities.canCool));
       // Verwarmen eerst met wat de basiswarmte levert; koelen kan alleen een airco.
       const device = able.find((a) => a.role === 'primary') ?? able[0];
       if (device == null) {
-        return done(nl ? `${cap(zn)} heeft geen apparaat dat kan ${w.wish[question.wens]}.` : `${cap(zn)} has no unit that can ${w.wish[question.wens]}.`, zone.id);
+        return done(nl ? `${cap(zn)} heeft geen apparaat dat kan ${w.wish[wens]}.` : `${cap(zn)} has no unit that can ${w.wish[wens]}.`, zone.id);
       }
       const dn = deviceName(device, lang);
       let target = '';
       // Drogen heeft geen doel.
-      if (question.temperatuurC != null && question.wens !== 'drogen') {
+      if (question.temperatuurC != null && wens !== 'drogen') {
         const [min, max] = device.capabilities.setpointRange;
         if (question.temperatuurC < min || question.temperatuurC > max) {
           const asked = f.temp('vraag.temperatuur', question.temperatuurC);
@@ -1208,7 +1342,7 @@ export function ask(question: Question, ctx: AskContext): Answer {
         }
         target = f.temp('vraag.temperatuur', question.temperatuurC);
       }
-      const what = nl ? `${dn} op ${w.wish[question.wens]}${target ? ` naar ${target}` : ''}` : `${dn} to ${w.wish[question.wens]}${target ? ` at ${target}` : ''}`;
+      const what = nl ? `${dn} op ${w.wish[wens]}${target ? ` naar ${target}` : ''}` : `${dn} to ${w.wish[wens]}${target ? ` at ${target}` : ''}`;
       return done(nl ? `Dan zou ik ${what} zetten, tot het volgende dagdeel. ${wait}` : `Then I would set ${what}, until the next part of the day. ${wait}`, zone.id);
     }
   }

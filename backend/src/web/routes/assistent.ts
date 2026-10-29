@@ -150,7 +150,7 @@ export async function assistentRoutes(d: Diensten, v: Verzoek): Promise<boolean>
       parsed = p;
     }
     let today = null;
-    if ((parsed.question.kind === 'zon' || parsed.question.kind === 'vandaag') && logDir != null) {
+    if ((parsed.question.kind === 'zon' || parsed.question.kind === 'vandaag' || parsed.question.kind === 'terug') && logDir != null) {
       d.today ??= new TodayCache(logDir, config);
       try {
         today = await d.today.get();
@@ -191,8 +191,8 @@ export async function assistentRoutes(d: Diensten, v: Verzoek): Promise<boolean>
         weer = { opgewektKwh: w.vandaag.opgewektKwh, verwachtKwh: w.vandaag.verwachtKwh, voorafKwh: w.vandaag.verwachtVoorafKwh, vandaag, morgen };
       }
     }
-    // Wat de apparaten met een meter deze maand kostten (besluit 142), uit Opbrengst.
-    const kosten = kind === 'kosten' ? await kostenDezeMaand(d, config, parsed.lang).catch(() => null) : null;
+    // Wat de apparaten met een meter deze maand kostten (besluit 142), uit Opbrengst; en het hele huis, ook voor wat er terugging.
+    const kosten = kind === 'kosten' || kind === 'terug' ? await kostenDezeMaand(d, config, parsed.lang).catch(() => null) : null;
     // Het sluipverbruik (besluit 192): wat de dienst al weet, zonder te wachten.
     const sluip = kind === 'sluip' ? await (d.options.sluipverbruik?.rapport() ?? Promise.resolve(null)).catch(() => null) : null;
     const antwoord = ask(parsed.question, {
