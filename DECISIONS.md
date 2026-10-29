@@ -209,6 +209,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [205. Het dak volgt het huis, en de ring van de zon](#205-het-dak-volgt-het-huis-en-de-ring-van-de-zon)
 - [206. Buiten op Thuis: de tuin in zones, een blad per deel, en alles buiten uit](#206-buiten-op-thuis-de-tuin-in-zones-een-blad-per-deel-en-alles-buiten-uit)
 - [207. Sluipverbruik dat vaak terugkomt, de wand in Fully Kiosk, en een QA-ronde](#207-sluipverbruik-dat-vaak-terugkomt-de-wand-in-fully-kiosk-en-een-qa-ronde)
+- [208. Luisteren in de dienst: het wekwoord met een schuif, en wachten tot je klaar bent](#208-luisteren-in-de-dienst-het-wekwoord-met-een-schuif-en-wachten-tot-je-klaar-bent)
 
 **Veiligheid**
 
@@ -9626,6 +9627,72 @@ always-on display overdag. Daar staan geen labels, stromen of kop op het huis,
 en het huis staat rechts van de klok en de tekst; de reden om hem op Thuis weg
 te laten geldt hier niet. 's Avonds niet (de zon is onder), en uit bij
 Weergave zoals overal.
+
+---
+
+## 208. Luisteren in de dienst: het wekwoord met een schuif, en wachten tot je klaar bent
+
+*Onderwerp: weergave · Status: geldig*
+
+Gevraagd door de bewoner op 29 oktober 2026, als eerste stap van een
+assistent die echt meedenkt: de wand reageerde regelmatig uit zichzelf op
+"Hé huis", de gevoeligheid wilde hij zelf instellen, en het huis antwoordde
+soms al voordat hij uitgesproken was. Beide hadden dezelfde oorzaak: de app
+had het luisteren niet in de hand. Het wekwoord en het einde van de spraak
+bepaalde Home Assistant (besluit 150), en de drempel van openWakeWord staat in
+de add-on, waar de app niet bij mag (de rol *manager*, eerder afgewezen).
+
+*Besluit:*
+
+- **De dienst hoort het wekwoord zelf.** Het geluid van de wand liep al langs
+  de dienst (besluit 150). Nu gaat het daar eerst door hetzelfde model als in
+  de openWakeWord-add-on (`he_huis.onnx`, uit de training van besluit 150),
+  met de twee voorstappen van openWakeWord (`melspectrogram.onnx`,
+  `embedding_model.onnx`), stap voor stap zoals `openwakeword/utils.py`.
+  Pas na het wekwoord start de dienst in Home Assistant een spraakopdracht,
+  vanaf het uitschrijven (`start_stage: stt`). Zo heeft de spraakassistent
+  ook geen wekwoord meer nodig.
+- **Zonder bibliotheek** (`web/onnx.ts`). Het image houdt nul
+  runtime-afhankelijkheden (besluit 57); een ONNX-runtime is tientallen
+  megabytes en native code die op Alpine niet draait. De rekenaar kent alleen
+  de 25 bewerkingen van deze drie modellen en weigert elke andere bij het
+  laden. Elke stap van 80 ms zijn maar 8 van de 76 rijen nieuw; de lagen
+  zonder rand in de tijd rekenen alleen die (`runSchuivend`), met dezelfde
+  uitkomst (getoetst tot 1e-5). Eén stap kost op een Ryzen 7600X 7,4 ms; op
+  de Pi naar schatting drie keer zoveel, niet gemeten.
+- **Getoetst op de opnames van de training** (`tools/wekwoord-toets.ts`): van
+  40 opnames met het wekwoord 95% gehoord, van 40 die erop lijken geen enkele
+  (de training zelf: 93%). De kenmerken uit de training geven 0,97 voor een
+  duidelijk "Hé huis" en 0,001 voor iets anders; die staan in de test.
+- **De gevoeligheid per scherm**, in vijf standen bij Functies › Praten, van
+  heel streng (0,85, twee stappen achter elkaar) tot heel gevoelig (0,3).
+  Normaal is 0,5, zoals de add-on. Bewaard in die browser, net als "Dit scherm
+  luistert"; de pagina geeft het mee aan `/api/luister`.
+- **Wachten tot je klaar bent.** De dienst stuurt `no_vad` mee, zodat Home
+  Assistant niet zelf stopt na 0,7 seconde stilte, en zegt zelf wanneer het
+  geluid op is (`web/spraakeinde.ts`): luidheid per 10 ms tegen een
+  achtergrond die meeloopt, praten pas na 150 ms (een tik is geen zin), klaar
+  na de wachttijd van het scherm: Vlot 0,7 s, Normaal 1,2 s, Rustig 1,8 s.
+  Ook als Home Assistant het wekwoord hoort, en op de telefoon.
+- **Wakker zonder vraag is stil.** Komt er na het wekwoord binnen vijf
+  seconden geen woord, dan was het waarschijnlijk niet voor het huis: de laag
+  sluit zonder "niet verstaan". Functies › Praten zegt hoe vaak het huis
+  vandaag wakker werd en hoe vaak zonder vraag, en raadt bij vaak een stand
+  strenger aan. Alleen tijd, kans en of er een vraag kwam, in het geheugen;
+  nooit geluid (`/api/luister-stand`).
+- **Een halve zin wacht op de rest.** Eindigt wat Whisper uitschreef op een
+  woord waar geen zin op eindigt ("de", "en", "in", "zet"), dan luistert de
+  wand door zonder wekwoord en plakt het vervolg erachter, hooguit twee keer.
+  Niet op "aan", "uit", "het" of "dan": daar eindigt een opdracht juist op.
+- **Een veiligheidsklep.** Rekent het wekwoord gemiddeld meer dan 60% van de
+  tijd die het geluid duurt, dan hoort Home Assistant het weer, tot de dienst
+  herstart; Functies zegt dat. Zonder de modellen, of als de gekozen
+  spraakassistent een ander wekwoord heeft, ook.
+- **De modellen** staan in `addon/wekwoord/` en gaan mee in de add-on en het
+  image van de NAS; alleen de `.tflite` gaat naar `/share/openwakeword`. De
+  twee voorstappen zijn van openWakeWord (CC BY-NC-SA 4.0), ongewijzigd; zie
+  de LEESMIJ daar.
+- **Versie 0.80.0.**
 
 ---
 

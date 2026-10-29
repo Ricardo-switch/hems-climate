@@ -375,6 +375,29 @@ export function isRuis(ruw: string): boolean {
   return RUIS_WOORDEN.has(g) || RUIS_ZINNEN.some((z) => ` ${g} `.includes(` ${z} `));
 }
 
+/**
+ * Woorden waar een zin niet op eindigt (besluit 208): "zet de lamp in de".
+ * Bewust zonder "aan", "uit", "op", "open" en "dicht": daar eindigt een
+ * opdracht juist wél op; en zonder "het", "wat" en "dan" ("hoe warm is het",
+ * "doe dat dan").
+ */
+const HALF_EINDE = new Set([
+  'de', 'een', 'en', 'of', 'om', 'naar', 'van', 'met', 'bij', 'voor', 'tot', 'als', 'maar', 'in', 'zet', 'doe', 'maak',
+  'the', 'a', 'an', 'and', 'or', 'to', 'with', 'for', 'at', 'turn', 'set', 'make',
+]);
+
+/**
+ * Een gesproken zin die nog niet af is (besluit 208): je hield even je adem in
+ * en de microfoon stopte. Dan luistert het huis door en plakt het vervolg
+ * erachter, in plaats van te antwoorden op een halve vraag. Alleen bij een
+ * zin van meer dan één woord: "Hé huis, de…" is geen begin van iets.
+ */
+export function isHalf(ruw: string): boolean {
+  // Een punt zegt niets: Whisper zet er bijna altijd een achter, ook bij een halve zin.
+  const woorden = gewoon(ruw).split(' ').filter((w) => w !== '');
+  return woorden.length >= 2 && HALF_EINDE.has(woorden.at(-1)!);
+}
+
 /** Woorden die er bij het afsluiten omheen staan: "oké", "top", "hé huis". */
 const VULWOORDEN = new Set(['oke', 'ok', 'okay', 'oké', 'okee', 'prima', 'top', 'super', 'mooi', 'fijn', 'goed', 'hoor', 'huis', 'he', 'hey', 'hee', 'nou', 'heel', 'erg', 'alright', 'great', 'fine', 'perfect']);
 /** Wat het gesprek afsluit, na de vulwoorden. Leeg ("oké") ook. */

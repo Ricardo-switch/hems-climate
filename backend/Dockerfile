@@ -82,6 +82,10 @@ COPY backend/package.json ./
 # hoort bij die functie — verplaats je er één, verplaats dan allebei.
 COPY --from=web /web/dist ./web
 
+# Het wekwoord "Hé huis", dat de dienst zelf hoort (besluit 208). Alleen de
+# ONNX-bestanden: de .tflite is voor de openWakeWord-add-on van Home Assistant.
+COPY addon/wekwoord/*.onnx ./wekwoord/
+
 # Waar de gemonteerde mappen terechtkomen. `config/sites` zit onder /app zodat
 # het opzoeken vanaf de werkmap hem vindt zonder extra instelling.
 RUN mkdir -p /app/config/sites /logs

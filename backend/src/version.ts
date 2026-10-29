@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.79.3';
+export const VERSIE = '0.80.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,30 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.80.0',
+    datum: '2026-10-29',
+    nieuw: [
+      'Stel per scherm in hoe gevoelig "Hé huis" is: de app hoort het wekwoord nu zelf, en Functies › Praten zegt hoe vaak het huis vandaag wakker werd',
+      'Kies hoe lang het huis wacht na je laatste woord: Vlot, Normaal of Rustig',
+    ],
+    beter: [
+      'Hoort het huis "Hé huis" maar komt er geen vraag, dan sluit het stil, zonder "niet verstaan"',
+      'Een halve zin ("zet de lamp in de …") wacht op de rest, in plaats van meteen te antwoorden',
+    ],
+    opgelost: ['Het huis antwoordde soms al voordat je uitgesproken was'],
+    en: {
+      nieuw: [
+        'Set per screen how sensitive "Hé huis" is: the app now hears the wake word itself, and Features › Talking to your house shows how often the house woke up today',
+        'Choose how long the house waits after your last word: Quick, Normal or Relaxed',
+      ],
+      beter: [
+        'If the house hears "Hé huis" but no question follows, it closes quietly instead of saying it did not understand',
+        'Half a sentence ("turn on the …") waits for the rest instead of being answered straight away',
+      ],
+      opgelost: ['The house sometimes answered before you had finished speaking'],
+    },
+  },
   {
     versie: '0.79.3',
     datum: '2026-10-29',

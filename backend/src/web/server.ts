@@ -22,7 +22,9 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { join } from 'node:path';
 import type { LiveSnapshot } from '../adapters/homeassistant/shadow.js';
 import { PICTURE_FILE } from './scene-pictures.js';
-import { Luisterpost } from './luisterpost.js';
+import type { Luisterpost } from './luisterpost.js';
+import { wachttijdVan } from './spraakeinde.js';
+import { gevoeligheidVan } from './wekwoord.js';
 import { accepteer, isUpgrade, weiger } from './websocket.js';
 import type { Duplex } from 'node:stream';
 import type { WeatherReport } from './weather.js';
@@ -111,7 +113,6 @@ export class WebServer {
     }
   }
 
-  #luisterpost: Luisterpost | null = null;
   readonly #luistersockets = new Set<Duplex>();
 
   /**
@@ -128,11 +129,12 @@ export class WebServer {
     if (!req.headers.origin || !sameOrigin(req)) return weiger(socket, 403, 'Forbidden');
     if (access.kind === 'sessions' && (await access.store.visitor(cookieValue(req, SESSION_COOKIE))) == null) return weiger(socket, 401, 'Unauthorized');
     const begin = url.searchParams.get('start') === 'spraak' ? 'stt' : 'wake_word';
+    // De twee schuiven van dit scherm (besluit 208), bij Functies › Praten.
+    const stand = { gevoeligheid: gevoeligheidVan(url.searchParams.get('gevoeligheid')), wachttijd: wachttijdVan(url.searchParams.get('wachttijd')) };
     if (head.length > 0) socket.unshift(head);
     this.#luistersockets.add(socket);
     socket.on('close', () => this.#luistersockets.delete(socket));
-    this.#luisterpost ??= new Luisterpost(deur);
-    const post = this.#luisterpost;
+    const post = this.#d.luisterpost!;
     // Geluid dat binnenkomt voordat Home Assistant klaarstaat, wacht even (hooguit een paar seconden).
     const wacht: Buffer[] = [];
     let ronde: Awaited<ReturnType<Luisterpost['begin']>> | null = null;
@@ -145,7 +147,7 @@ export class WebServer {
         ronde?.dicht();
       },
     });
-    ronde = await post.begin(verbinding, begin);
+    ronde = await post.begin(verbinding, begin, stand);
     for (const d of wacht.splice(0)) ronde.geluid(d);
     if (dicht) ronde.dicht();
   }

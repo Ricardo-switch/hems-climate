@@ -549,7 +549,9 @@ export class HaClient extends EventEmitter {
         start_stage: opts.start,
         end_stage: 'stt',
         // Het wekwoord mag lang op zich laten wachten; daarna begint de pagina opnieuw.
-        input: opts.start === 'wake_word' ? { sample_rate: 16000, timeout: 280, noise_suppression_level: 1 } : { sample_rate: 16000, noise_suppression_level: 1 },
+        // Wanneer je klaar bent met praten, zegt de dienst (besluit 208): Home Assistant
+        // stopte na 0,7 seconde stilte, ook midden in een zin. Dus `no_vad`, en `end`.
+        input: opts.start === 'wake_word' ? { sample_rate: 16000, timeout: 280, noise_suppression_level: 1, no_vad: true } : { sample_rate: 16000, noise_suppression_level: 1, no_vad: true },
         timeout: 300,
         ...(opts.pipeline ? { pipeline: opts.pipeline } : {}),
       });
