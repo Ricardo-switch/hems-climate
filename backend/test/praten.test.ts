@@ -101,7 +101,8 @@ describe('bedienen met een zin', () => {
   it('zegt waarom het niet kan, in plaats van te gokken', () => {
     const h = (t: string) => herkenOpdracht(t, alles, 'nl') as Extract<Herkend, { ok: false }>;
     expect(h('keukenlamp zachter')).toMatchObject({ ok: false, antwoord: 'Keukenlamp kan alleen aan en uit.' });
-    expect(h('doe het licht aan')).toMatchObject({ ok: false, antwoord: expect.stringContaining('Welk licht') });
+    // Zonder kamer: vragen welke, met keuzes (besluit 209).
+    expect(h('doe het licht aan')).toMatchObject({ ok: false, antwoord: 'In welke kamer: Beneden, Keuken of Achtertuin?', keuze: [{ label: 'Beneden', tekst: 'licht Beneden aan' }, { label: 'Keuken' }, { label: 'Achtertuin' }] });
     // Alles uit kan, alles aan niet (besluit 97).
     expect(opdracht('alle lampen uit').body).toEqual({ doel: 'huis', id: null, aan: false });
     expect(h('alle lampen aan')).toMatchObject({ ok: false });
@@ -143,7 +144,7 @@ describe('bedienen met een zin', () => {
   });
 
   it('laat vragen en ander werk aan de woordzoeker', () => {
-    for (const t of ['waarom is het licht aan', 'staat het screen dicht?', 'hoeveel zon komt er nog', 'wat doe je nu', 'koel de zolder', 'het is hier zo fel']) {
+    for (const t of ['waarom is het licht aan', 'staat het screen dicht?', 'hoeveel zon komt er nog', 'wat doe je nu', 'koel de zolder']) {
       expect(herkenOpdracht(t, alles, 'nl'), t).toBeNull();
     }
   });
@@ -202,7 +203,7 @@ describe('bedienen met een zin in het Engels (besluit 185, stap 9 deel 6)', () =
     expect(en('activate scene film').body).toEqual({ id: 'scene.film' });
     expect(en('turn on film').pad).toBe('api/scene');
     for (const t of ['why is the light on', 'is the screen closed?', 'what are you doing now', 'cool the zolder']) expect(herkenOpdracht(t, alles, 'en'), t).toBeNull();
-    expect(herkenOpdracht('turn on the light', alles, 'en')).toMatchObject({ ok: false, antwoord: expect.stringContaining('Which light') });
+    expect(herkenOpdracht('turn on the light', alles, 'en')).toMatchObject({ ok: false, antwoord: 'In which room: Beneden, Keuken or Achtertuin?' });
   });
 });
 

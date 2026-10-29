@@ -1,5 +1,33 @@
 # Wat is er nieuw · What is new
 
+## 0.81.0
+
+*29 oktober 2026*
+
+**Nieuw**
+
+- Zeg wat je voelt: "het is donker in de keuken" doet het licht aan, "het is hier zo fel" dimt het, en "het is koud in de woonkamer" begrijpt het huis als verwarmen
+- Licht dat bij het moment past: overdag helder, 's avonds warm, 's nachts zacht
+- 's Avonds vraagt het huis of je de sfeerverlichting wilt
+
+**Beter**
+
+- Zijn er twee screens of meer kamers, dan vraagt het huis welke ("klein of groot?") en begrijpt het "de grote"; tikken op een keuze kan ook
+- De assistent kent de delen van een kamer, zoals de zithoek
+
+*English*
+
+**New**
+
+- Say how it feels: "it is dark in the kitchen" turns the light on, "it is too bright here" dims it, and "it is cold in the living room" is understood as heating
+- Light that suits the moment: bright during the day, warm in the evening, soft at night
+- In the evening the house asks whether you would like the mood lighting
+
+**Improved**
+
+- With two screens or several rooms, the house asks which one ("small or large?") and understands "the large one"; you can also tap a choice
+- The assistant knows the parts of a room, such as the seating area
+
 ## 0.80.0
 
 *29 oktober 2026*

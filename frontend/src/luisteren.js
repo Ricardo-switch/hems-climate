@@ -170,11 +170,17 @@
   let scherm = null;
 
   /** Wat je zei, als vraag aan het huis; een opdracht gaat meteen naar zijn deur (besluit 148). */
+  /** Een vraag terug met keuzes (besluit 209): mee met je volgende zin, voor "de grote" of "ja". */
+  let openKeuze = null;
+
   async function vraag(tekst, halfMag = false) {
-    const q = new URLSearchParams({ v: 'vrij', tekst, taal: global.taal.code, ...(halfMag ? { half: '1' } : {}), ...(scherm && Date.now() - scherm.sinds < 60_000 ? { scherm: scherm.id } : {}) });
+    const opties = openKeuze ? JSON.stringify(openKeuze) : null;
+    openKeuze = null;
+    const q = new URLSearchParams({ v: 'vrij', tekst, taal: global.taal.code, ...(halfMag ? { half: '1' } : {}), ...(opties ? { opties } : {}), ...(scherm && Date.now() - scherm.sinds < 60_000 ? { scherm: scherm.id } : {}) });
     const res = await fetch(`api/vraag?${q}`);
     const body = await res.json().catch(() => ({}));
-    const uit = { antwoord: res.ok ? body.antwoord : body.fout ?? body.wachten ?? tk('assistent.geenAntwoord'), gesproken: res.ok ? body.gesproken ?? null : null, onbekend: res.ok && body.vraag === 'onbekend', klaar: res.ok && body.vraag === 'klaar', ruis: res.ok && body.vraag === 'ruis', half: res.ok && body.vraag === 'half', voorbeelden: body.voorbeelden ?? [], gedaan: [] };
+    const uit = { antwoord: res.ok ? body.antwoord : body.fout ?? body.wachten ?? tk('assistent.geenAntwoord'), gesproken: res.ok ? body.gesproken ?? null : null, onbekend: res.ok && body.vraag === 'onbekend', klaar: res.ok && body.vraag === 'klaar', ruis: res.ok && body.vraag === 'ruis', half: res.ok && body.vraag === 'half', keuze: res.ok ? body.keuze ?? [] : [], voorbeelden: body.voorbeelden ?? [], gedaan: [] };
+    openKeuze = uit.keuze.length ? uit.keuze : null;
     if (res.ok && body.opdracht) {
       const r = await fetch(body.opdracht.pad, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body.opdracht.body) }).catch(() => null);
       if (!r?.ok) {
@@ -229,6 +235,7 @@
   .sc-laag .ding { display: inline-grid; grid-template-columns: auto; gap: 1px; margin: 26px 10px 0 0; padding: 10px 18px; border-radius: 16px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1); }
   .sc-laag .ding b { font-family: var(--kop); font-size: 21px; font-weight: 600; }
   .sc-laag .ding span { font-size: 13px; color: var(--gedempt); }
+  .sc-laag .ding.kies { color: var(--tekst); font: inherit; cursor: pointer; border-color: rgba(110, 231, 183, 0.5); }
   .sc-laag .onder { position: absolute; left: 150px; right: 120px; bottom: 56px; display: flex; align-items: center; gap: 16px; }
   .sc-laag .knopje { height: 52px; padding: 0 24px; border-radius: 999px; border: 0; background: rgba(255, 255, 255, 0.1); color: var(--tekst); font: inherit; font-weight: 700; font-size: 16px; cursor: pointer; }
   .sc-laag .hint { font-size: 14.5px; color: var(--gedempt); }
@@ -271,7 +278,17 @@
     const jij = inhoud.jij ? `<span class="jij">${esc(inhoud.jij)}</span><br>` : '';
     const wie = esc(tk({ luistert: 'luisteren.luistert', denkt: 'assistent.denkt', nietverstaan: 'luisteren.nogEven' }[stand] ?? 'assistent.jeHuis'));
     const groot = inhoud.groot ?? '';
-    l.querySelector('[data-tekst]').innerHTML = `${jij}<span class="wie"><i></i>${wie}</span><p class="groot${groot.length > 90 ? ' lang' : ''}${stand === 'denkt' ? ' nog' : ''}">${getal(groot)}</p>${inhoud.klein ? `<p class="klein">${esc(inhoud.klein)}</p>` : ''}${(inhoud.gedaan ?? []).map((k) => `<div class="ding"><b>${esc(k.waarde)}</b><span>${esc(k.uitleg)}</span></div>`).join('')}`;
+    l.querySelector('[data-tekst]').innerHTML = `${jij}<span class="wie"><i></i>${wie}</span><p class="groot${groot.length > 90 ? ' lang' : ''}${stand === 'denkt' ? ' nog' : ''}">${getal(groot)}</p>${inhoud.klein ? `<p class="klein">${esc(inhoud.klein)}</p>` : ''}${(inhoud.gedaan ?? []).map((k) => `<div class="ding"><b>${esc(k.waarde)}</b><span>${esc(k.uitleg)}</span></div>`).join('')}${(inhoud.keuze ?? []).map((k, i) => `<button type="button" class="ding kies" data-kies="${i}"><b>${esc(k.label)}</b></button>`).join('')}`;
+    // Een keuze aantikken is hetzelfde als hem zeggen (besluit 209).
+    l.querySelectorAll('[data-kies]').forEach((knop) =>
+      knop.addEventListener('click', () => {
+        const k = inhoud.keuze[Number(knop.dataset.kies)];
+        if (!k) return;
+        huidig?.stop();
+        huidig = null;
+        void verwerk(k.tekst);
+      }),
+    );
     l.querySelector('[data-sluit]').textContent = tk(stand === 'antwoord' ? 'algemeen.sluiten' : 'kamer.scherm.stop');
     l.querySelector('[data-hint]').textContent = inhoud.hint ?? '';
   }
@@ -387,7 +404,7 @@
     if (uit.onbekend && nietBegrepen++ > 0) return sluit();
     if (!uit.onbekend) nietBegrepen = 0;
     const vb = uit.onbekend ? uit.voorbeelden.slice(0, 2).map((x) => `"${x}"`).join(` ${tk('luisteren.of')} `) : '';
-    toon('antwoord', { jij: tekst, groot: uit.onbekend ? tk('luisteren.begrijpNiet') : uit.antwoord, klein: vb ? tk('luisteren.vraagBijvoorbeeld', { voorbeelden: vb }) : '', gedaan: uit.gedaan.slice(0, 2), hint: tk('luisteren.nogIets') });
+    toon('antwoord', { jij: tekst, groot: uit.onbekend ? tk('luisteren.begrijpNiet') : uit.antwoord, klein: vb ? tk('luisteren.vraagBijvoorbeeld', { voorbeelden: vb }) : '', gedaan: uit.gedaan.slice(0, 2), keuze: uit.keuze, hint: tk('luisteren.nogIets') });
     await zeg(uit.gesproken ?? uit.antwoord);
     if (!laag?.classList.contains('open')) return;
     sluitTimer = setTimeout(sluit, SLUITEN_MS);

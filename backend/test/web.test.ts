@@ -1460,7 +1460,8 @@ describe('licht bedienen (besluit 97)', () => {
     expect(await vraag('licht hal uit')).toMatchObject({ antwoord: 'Het licht in de hal is uit.', eigen: false });
     // Wat de woordzoeker niet begrijpt, kiest het model uit de lijst.
     antwoordModel = { soort: 'licht', id: 'light.trap', actie: 'aan' };
-    expect((await vraag('het is te donker op de trap')).opdracht?.body).toEqual({ doel: 'lamp', id: 'light.trap', aan: true });
+    // Met licht dat bij het moment past (besluit 209), want de lamp was uit.
+    expect((await vraag('het is te donker op de trap')).opdracht?.body).toMatchObject({ doel: 'lamp', id: 'light.trap', aan: true });
     // Iets buiten de lijst wordt niets.
     antwoordModel = { soort: 'scherm', id: 'cover.garagedeur', actie: 'open' };
     expect((await vraag('doe de garage open')).opdracht).toBeUndefined();

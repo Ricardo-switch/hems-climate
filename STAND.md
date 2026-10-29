@@ -412,6 +412,9 @@ verwijzing bestaat.
   0.80.0 hoort de dienst het wekwoord zelf, met een gevoeligheid per scherm,
   en wacht hij tot je klaar bent met praten (Vlot, Normaal of Rustig);
   wakker zonder vraag sluit stil, en een halve zin wacht op de rest ([208]).
+  Een gevoel is een opdracht ("het is donker in de keuken"), licht past bij
+  het moment, de zithoek is bij naam te bedienen, het huis vraagt door met
+  keuzes ("klein of groot?") en stelt 's avonds de sfeerverlichting voor ([209]).
 - **Een kamer doet mee** met de regeling van een andere kamer, zoals een
   slaapkamer met de airco in de wasruimte ([142]).
 - **Comfort per bewoner:** wie hier woont staat op volgorde; de eerste die
@@ -691,4 +694,5 @@ verwijzing bestaat.
 [206]: DECISIONS.md#206-buiten-op-thuis-de-tuin-in-zones-een-blad-per-deel-en-alles-buiten-uit
 [207]: DECISIONS.md#207-sluipverbruik-dat-vaak-terugkomt-de-wand-in-fully-kiosk-en-een-qa-ronde
 [208]: DECISIONS.md#208-luisteren-in-de-dienst-het-wekwoord-met-een-schuif-en-wachten-tot-je-klaar-bent
+[209]: DECISIONS.md#209-een-assistent-die-meedenkt-een-gevoel-wordt-een-opdracht-licht-dat-bij-het-moment-past-en-doorvragen
 <!-- links:einde -->

@@ -210,6 +210,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [206. Buiten op Thuis: de tuin in zones, een blad per deel, en alles buiten uit](#206-buiten-op-thuis-de-tuin-in-zones-een-blad-per-deel-en-alles-buiten-uit)
 - [207. Sluipverbruik dat vaak terugkomt, de wand in Fully Kiosk, en een QA-ronde](#207-sluipverbruik-dat-vaak-terugkomt-de-wand-in-fully-kiosk-en-een-qa-ronde)
 - [208. Luisteren in de dienst: het wekwoord met een schuif, en wachten tot je klaar bent](#208-luisteren-in-de-dienst-het-wekwoord-met-een-schuif-en-wachten-tot-je-klaar-bent)
+- [209. Een assistent die meedenkt: een gevoel wordt een opdracht, licht dat bij het moment past, en doorvragen](#209-een-assistent-die-meedenkt-een-gevoel-wordt-een-opdracht-licht-dat-bij-het-moment-past-en-doorvragen)
 
 **Veiligheid**
 
@@ -9693,6 +9694,58 @@ de add-on, waar de app niet bij mag (de rol *manager*, eerder afgewezen).
   uit `addon/wekwoord/` gaat naar `/share/openwakeword`. De twee voorstappen
   zijn van openWakeWord (CC BY-NC-SA 4.0), ongewijzigd; zie de LEESMIJ daar.
 - **Versie 0.80.0.**
+
+---
+
+## 209. Een assistent die meedenkt: een gevoel wordt een opdracht, licht dat bij het moment past, en doorvragen
+
+*Onderwerp: weergave · Status: geldig*
+
+Gevraagd door de bewoner op 29 oktober 2026, stap 1 en 2 van het plan voor
+een assistent die echt meedenkt: hij moet snappen dat "het is koud in de
+woonkamer" verwarmen betekent en "het is donker in de keuken" licht, dat
+licht meteen comfortabel is voor het dagdeel en het weer, alle kamers, zones
+en apparaten kennen, doorvragen als er twee screens zijn ("klein of groot?"),
+en 's avonds bij "zet de zithoek aan" vragen of de sfeerverlichting aan moet.
+
+*Besluit:*
+
+- **Een gevoel is een opdracht.** "Het is donker in de keuken" zet het licht
+  daar aan, of feller als het al aan was; "het is hier zo fel" dimt het, in de
+  enige kamer waar licht brandt of na de vraag welke. "Het is koud in de
+  woonkamer", "ik heb het warm op zolder" en "het mag wat warmer" worden een
+  wens om te verwarmen of te koelen (`gevoelWens`); die gaat de weg van
+  besluit 75, en tot stap B zegt het huis wat het zou doen. Een vraag blijft
+  een vraag: "waarom is het koud?" en "is het donker in de keuken?" niet. Een
+  plek die de woordzoeker niet kent ("op de trap") laat hij aan het taalmodel.
+- **Licht dat bij het moment past** (`web/lichtrecept.ts`). Gaat licht aan
+  zonder getal en was het uit, dan kiest de dienst helderheid en wit uit de
+  klok, de stand van de zon en het weer: overdag en bij grijs weer 100%
+  neutraal, in de schemer 80% warm, 's avonds 70% warm, na tienen 45%, 's
+  nachts (23:30 tot 6:00) 20%. Een lamp die al aan staat houdt zijn stand; een
+  getal of tint die je noemt gaat voor. Het getal staat bij de feiten (besluit
+  88), en de zin zegt waarom: "op 70%, warm voor de avond".
+- **De delen van een kamer.** De zones uit de Indeling (besluit 95, 206) met
+  eigen lampen zijn te bedienen bij naam ("zet de zithoek aan"), via de deur
+  die de app al had (`doel: zone`), ook voor het taalmodel.
+- **Doorvragen met korte keuzes.** Zijn er twee screens, of geen kamer
+  genoemd, dan vraagt het huis welke, met het woord dat het verschil maakt
+  ("klein of groot?", `onderscheid`), en geeft het keuzes mee: elk een label
+  en de hele zin die het huis dan zelf verstaat. Op de pagina zijn het
+  knoppen; de pagina stuurt ze mee met je volgende zin (`opties`), zodat "de
+  grote", "de eerste", "ja" of "nee" begrepen worden (`kiesUit`). De dienst
+  onthoudt niets: de gekozen zin gaat gewoon opnieuw door de woordzoeker, met
+  dezelfde deuren en regels.
+- **'s Avonds de sfeerverlichting.** Gaat het licht van een kamer of zone aan
+  terwijl het uit was, 's avonds of later, en heeft die kamer een scène met
+  sfeer, gezellig of avond in de naam, dan vraagt het huis "Wil je de
+  sfeerverlichting?", met Ja (de scène) en "Nee, gewoon licht". Eén voorstel,
+  zonder aandringen; overdag niet.
+- **Wat het taalmodel straks mag zien.** Voor het brein (stap 3 van het plan)
+  koos de bewoner: alles wat de assistent nodig heeft, ook of er iemand thuis
+  is. Dat verruimt besluit 148 zodra het brein er is; in deze versie gaat er
+  nog niets extra's naar het model, behalve de namen van de zones.
+- **Versie 0.81.0.**
 
 ---
 
