@@ -15,6 +15,7 @@ import { OnnxModel, Schuifstand, tensor } from '../src/web/onnx.js';
 import { BEGIN_MS, Spraakeinde, WACHTTIJD, db } from '../src/web/spraakeinde.js';
 import { GEVOELIGHEID, gevoeligheidVan, laadWekmodellen, Wekluisteraar, Wekmelder } from '../src/web/wekwoord.js';
 import { isHalf } from '../src/web/woordzoeker.js';
+import { kiesTaalVoor, kiesVerstaan, Verstaan } from '../src/web/verstaan.js';
 
 const MODELLEN = fileURLToPath(new URL('../wekwoord', import.meta.url));
 
@@ -282,5 +283,43 @@ describe('de luisterpost', () => {
     expect(c.berichten.at(-1)).toEqual({ soort: 'niets' });
     expect(c.dicht()).toBe(true);
     expect(post.lopend).toBe(0);
+  });
+});
+
+describe('rechtstreeks uitschrijven (besluit 211)', () => {
+  it('kiest Whisper in huis, nooit vanzelf de cloud', () => {
+    expect(kiesVerstaan(['stt.google_ai_stt', 'stt.faster_whisper', 'tts.piper'])).toBe('stt.faster_whisper');
+    expect(kiesVerstaan(['stt.google_ai_stt', 'stt.home_assistant_cloud', 'stt.vosk'])).toBe('stt.vosk');
+    expect(kiesVerstaan(['stt.google_ai_stt'])).toBeNull();
+    expect(kiesTaalVoor(['en', 'nl'], 'nl')).toBe('nl');
+    expect(kiesTaalVoor(['nl-NL', 'en-US'], 'nl')).toBe('nl-NL');
+  });
+
+  it('stuurt het geluid in één keer, met de taal die de dienst kent', async () => {
+    const vragen: { url: string; kop: string | null; bytes: number }[] = [];
+    const nep = (async (url: string, init?: RequestInit) => {
+      vragen.push({ url, kop: new Headers(init?.headers).get('X-Speech-Content'), bytes: init?.body ? (init.body as Uint8Array).length : 0 });
+      return new Response(JSON.stringify(init?.method === 'POST' ? { result: 'success', text: ' Het is koud in de woonkamer. ' } : { languages: ['nl', 'en'] }));
+    }) as typeof fetch;
+    const v = new Verstaan({ base: 'http://ha', token: 't', fetch: nep });
+    expect(await v.tekst('stt.faster_whisper', Buffer.alloc(3200), 'nl')).toBe('Het is koud in de woonkamer.');
+    expect(vragen.at(-1)).toEqual({ url: 'http://ha/api/stt/stt.faster_whisper', kop: 'format=wav; codec=pcm; sample_rate=16000; bit_rate=16; channel=1; language=nl', bytes: 3200 });
+    await expect(v.tekst('tts.piper', Buffer.alloc(2), 'nl')).rejects.toThrow(/geen spraak naar tekst/);
+  });
+
+  it('de luisterpost schrijft je zin rechtstreeks uit als je klaar bent, zonder spraakassistent', async () => {
+    const n = nepDeur({ wekwoord: false });
+    let gekregen = 0;
+    const deur: LuisterDeur = { ...n.deur, uitschrijven: () => async (pcm) => ((gekregen = pcm.length), 'licht keuken aan') };
+    const post = new Luisterpost(deur);
+    const c = nepVerbinding();
+    const r = await post.begin(c.v, 'stt', { gevoeligheid: 3, wachttijd: 'vlot', taal: 'nl' });
+    r.geluid(buf(geluid([['stil', 300], ['praat', 800], ['stil', 900]])));
+    await expect.poll(() => c.berichten.map((b) => b['soort'])).toEqual(['klaar', 'praat', 'stil', 'tekst', 'einde']);
+    expect(c.berichten[3]).toEqual({ soort: 'tekst', tekst: 'licht keuken aan' });
+    // Geen spraakopdracht in Home Assistant, en het hele geluid in één keer.
+    expect(n.starts).toEqual([]);
+    expect(gekregen).toBeGreaterThan(32_000);
+    expect(c.dicht()).toBe(true);
   });
 });

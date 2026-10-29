@@ -212,6 +212,8 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [207. Sluipverbruik dat vaak terugkomt, de wand in Fully Kiosk, en een QA-ronde](#207-sluipverbruik-dat-vaak-terugkomt-de-wand-in-fully-kiosk-en-een-qa-ronde)
 - [208. Luisteren in de dienst: het wekwoord met een schuif, en wachten tot je klaar bent](#208-luisteren-in-de-dienst-het-wekwoord-met-een-schuif-en-wachten-tot-je-klaar-bent)
 - [209. Een assistent die meedenkt: een gevoel wordt een opdracht, licht dat bij het moment past, en doorvragen](#209-een-assistent-die-meedenkt-een-gevoel-wordt-een-opdracht-licht-dat-bij-het-moment-past-en-doorvragen)
+- [211. Sneller verstaan, de screens samen, en het venster dicht na een opdracht](#211-sneller-verstaan-de-screens-samen-en-het-venster-dicht-na-een-opdracht)
+- [212. De stem kiezen, en stem en luisteren op één plek](#212-de-stem-kiezen-en-stem-en-luisteren-op-één-plek)
 
 **Veiligheid**
 
@@ -9803,6 +9805,99 @@ apparaten bedient.
   tot wanneer, met elk getal als feit: "Ik zet de woonkamer op 21°, tot 22:00.
   Daarna weer 20°."
 - **Versie 0.82.0.**
+
+---
+
+## 211. Sneller verstaan, de screens samen, en het venster dicht na een opdracht
+
+*Onderwerp: weergave · Status: geldig*
+
+Getest door de bewoner op de wand, 29 oktober 2026. Wat goed ging: "het is
+koud in de woonkamer" en "het is donker in de keuken" deden wat ze moesten,
+en "Hé huis" werkte snel. Wat niet: na je zin duurde het 20 tot 25 seconden
+voordat de tekst in beeld kwam; "kan je de screens naar beneden doen?" vroeg
+welke, "allebei" werkte niet, en een tik op "groot" werd een vraag over de
+app; en na een opdracht bleef het venster luisteren zonder iets te doen.
+
+*Besluit:*
+
+- **De app kiest zelf hoe hij verstaat** (`web/verstaan.ts`). De spraakassistent
+  die hier gekozen was, schreef uit met Google AI: in de logboeken van Home
+  Assistant 32 tot 46 seconden per ronde, en 22 seconden voor een opname van
+  2,2 seconden, waar Whisper in huis er 1,6 over deed. Nu neemt de dienst je
+  zin na het wekwoord zelf op tot je klaar bent (besluit 208) en vraagt een
+  spraak-naar-tekst in huis rechtstreeks om tekst (`/api/stt/<entiteit>`):
+  Whisper eerst, dan een andere die geen cloud is. Er verandert niets in het
+  huis. Zonder spraak-naar-tekst in huis gaat het via de spraakassistent,
+  zoals eerst. De dienst schrijft per ronde in zijn logboek hoe lang het
+  duurde.
+- **Getoetst:** tien zinnen zoals de bewoner ze zegt, uitgesproken door drie stemmen
+  (Piper en twee van Google), door beide uitgeschreven. Whisper (model "auto"
+  in de add-on, op de Pi het kleinste): 7 van 30 foutloos, 28% woordfouten,
+  1,8 s per zin. Google AI: 20 van 30, 16% woordfouten, 26 s per zin (soms 70
+  tot 96 s, drie keer een fout). Whisper maakt er vooral bijna-goede woorden
+  van ("wonkamer", "slabkamer", "zoldeer", "zette"). Daarom zet de dienst een
+  woord dat heel dicht bij een naam uit het huis ligt recht (`verbeter`: één
+  letter vanaf zes letters, twee vanaf negen, dezelfde eerste letter, zodat
+  "wandkamer" nooit de badkamer wordt). Daarmee 15 van 30 foutloos, en een
+  deel van de rest doet toch het goede. Een groter Whisper-model kiest de
+  bewoner in de add-on; de app verandert geen andere add-ons. Met
+  `small-int8` (dezelfde avond door de bewoner gezet): 20 van 30 foutloos, 8%
+  woordfouten, 7 s per zin; na rechtzetten 25 van 30. Dat is beter dan Google
+  AI, en bijna vier keer zo snel. Een s of z en een f of v tellen bij het
+  rechtzetten als dezelfde beginletter ("solder" is de zolder).
+- **Meer screens tegelijk.** Meervoud of "allebei" ("de screens", "alle
+  screens", "beide") doet ze allemaal: de eerste als opdracht, de rest erachter
+  (`meer`), elk door dezelfde deur. Bij één screen zonder kamer vraagt het huis
+  welke, met "allebei" erbij, en de keuzes houden de richting vast ("Screen
+  groot dicht"): eerst viel "naar beneden" eruit en werd het "Screen groot kan
+  je doen".
+- **Het venster sluit na een opdracht of antwoord**, twee en een halve seconde
+  nadat het huis klaar is met praten. Alleen bij een vraag terug of als het je
+  niet begreep, luistert het nog vijf seconden zonder wekwoord; "nee" of "oké
+  bedankt" sluit het, zoals eerder.
+- **Versie 0.83.0.**
+
+---
+
+## 212. De stem kiezen, en stem en luisteren op één plek
+
+*Onderwerp: weergave · Status: geldig*
+
+Gevraagd door de bewoner op 29 oktober 2026, na de schets
+`Wand-Instellingen-Stem`: de stem kiezen in de app, vrouw of man, met per stem
+een voorbeeld; weg met wat de app uit openWakeWord haalde (het wekwoord is
+altijd "Hé huis") en met "Waar de stem vandaan komt": de app regelt dat zelf,
+zodat het voor iedereen meteen werkt, tenzij je een stem uit de cloud kiest.
+Google Cloud staat in zijn Home Assistant, met de Chirp 3 HD-stemmen in het
+Nederlands.
+
+*Besluit:*
+
+- **Een eigen onderdeel bij Functies: Stem en luisteren.** Links de stem van je
+  huis, rechts het luisteren ("Hé huis", hoe gevoelig, de wachttijd, of dit
+  scherm luistert, en hoe de app verstaat). De keuze van de spraakassistent
+  en "Met dit apparaat / Helemaal in huis" staan er niet meer: de app hoort het
+  wekwoord zelf (besluit 208), verstaat met Whisper in huis als dat er is
+  (besluit 211), en luistert anders zoals eerst.
+- **De stem kies je uit een korte lijst** (`web/stemmen.ts`, `/api/stemmen`):
+  van Google Chirp 3 HD zes vrouwen- en zes mannenstemmen, met een paar woorden
+  over hoe ze klinken; van Piper de stemmen die niet brabbelen (Nathalie, Pim,
+  Ronnie, Rdh; niet mls); en altijd "Dit apparaat", dat zonder iets erbij
+  werkt. Alleen wat Home Assistant echt heeft, staat erin.
+- **Eerst horen:** ▶ speelt een voorbeeldzin met die stem
+  (`/api/stem?keuze=…`), ook vóór het kiezen; een tik op de kaart kiest hem en
+  laat hem meteen horen. Bewaard bij Functies (`praten.stemKeuze`), voor het
+  hele huis.
+- **Een stem uit de cloud alleen als de bewoner hem kiest.** Besluit 141 zei dat
+  de app nooit vanzelf een stem uit de cloud kiest; dat blijft zo. Vanzelf is
+  het Piper als die er is, anders het apparaat. Kiest de bewoner Google, dan
+  gaat alleen de tekst van het antwoord naar Google, niet zijn stem (tot een
+  miljoen tekens per maand gratis); dat staat erbij.
+- **Wie spreekt:** de dienst zegt de pagina welke stem spreekt (`spreek`), los
+  van hoe hij luistert (`bron`). Kiest de bewoner het apparaat, dan spreekt
+  ook de wand met de stem van de tablet; eerst bleef die dan stil.
+- **Versie 0.84.0.**
 
 ---
 

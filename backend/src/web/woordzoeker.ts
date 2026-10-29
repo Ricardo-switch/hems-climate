@@ -394,6 +394,62 @@ export function isRuis(ruw: string): boolean {
   return RUIS_WOORDEN.has(g) || RUIS_ZINNEN.some((z) => ` ${g} `.includes(` ${z} `));
 }
 
+/* ------------------------------------------------------- bijna goed verstaan */
+
+/** Hoeveel letters er anders zijn tussen twee woorden (Levenshtein). */
+export function afstand(a: string, b: string): number {
+  const d = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    let vorige = d[0]!;
+    d[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const nu = d[j]!;
+      d[j] = Math.min(d[j]! + 1, d[j - 1]! + 1, vorige + (a[i - 1] === b[j - 1] ? 0 : 1));
+      vorige = nu;
+    }
+  }
+  return d[b.length]!;
+}
+
+/** De eerste letter zoals je hem hoort: s en z, f en v klinken aan het begin hetzelfde. */
+const beginKlank = (w: string): string => ({ z: 's', v: 'f' })[w[0] ?? ''] ?? w[0] ?? '';
+
+/** Woorden die er altijd bij horen, naast de namen uit het huis. */
+const VASTE_WOORDEN = ['woonkamer', 'slaapkamer', 'keuken', 'zolder', 'badkamer', 'zithoek', 'screens', 'verwarming', 'lampen', 'verlichting', 'sfeerverlichting', 'thuis', 'vanavond', 'warmer', 'kouder'];
+
+/**
+ * Wat Whisper bijna goed verstond, recht gezet (besluit 211): "wonkamer" is de
+ * woonkamer, "slabkamer" de slaapkamer, "zoldeer" de zolder, "zette" is "zet
+ * de". Alleen naar een naam uit het huis of een vast woord, en alleen als het
+ * er heel dicht bij ligt: één letter bij woorden vanaf zes letters, twee vanaf
+ * negen, en met dezelfde eerste letter. Geeft de gewone tekst terug (kleine
+ * letters, zonder leestekens).
+ */
+export function verbeter(ruw: string, namen: readonly string[]): string {
+  const woordenschat = new Set<string>(VASTE_WOORDEN);
+  for (const n of namen) for (const w of gewoon(n).split(' ')) if (w.length >= 5) woordenschat.add(w);
+  const lijst = [...woordenschat];
+  const woorden = gewoon(ruw)
+    .replace(/\bzette\b/g, 'zet de')
+    .split(' ')
+    .filter((w) => w !== '');
+  return woorden
+    .map((w) => {
+      if (w.length < 6 || woordenschat.has(w) || /\d/.test(w)) return w;
+      const mag = w.length >= 9 ? 2 : 1;
+      let beste: { w: string; d: number } | null = null;
+      for (const k of lijst) {
+        // Dezelfde eerste letter: "wandkamer" mag geen badkamer worden (dan liever niet begrepen).
+        // Een s of z en een f of v tellen als dezelfde: Whisper hoort "solder" voor zolder.
+        if (beginKlank(k) !== beginKlank(w) || Math.abs(k.length - w.length) > mag) continue;
+        const d = afstand(w, k);
+        if (d <= mag && (beste == null || d < beste.d)) beste = { w: k, d };
+      }
+      return beste?.w ?? w;
+    })
+    .join(' ');
+}
+
 /**
  * Woorden waar een zin niet op eindigt (besluit 208): "zet de lamp in de".
  * Bewust zonder "aan", "uit", "op", "open" en "dicht": daar eindigt een

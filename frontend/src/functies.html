@@ -46,6 +46,34 @@
   .nk-schuif::-moz-range-thumb { width: 30px; height: 30px; border-radius: 10px; background: #fff; border: 0; cursor: pointer; }
   .nk-schuif:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
   .nk-schuif:disabled { opacity: 0.45; }
+  /* Stem en luisteren (besluit 212, schets Wand-Instellingen-Stem). */
+  .stemtwee { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 22px; align-items: start; }
+  .stemlinks, .stemrechts { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .stemrechts { padding-left: 22px; border-left: 1px solid rgb(var(--wit) / 0.08); }
+  .stemrechts h2 { margin: 0; }
+  @media (max-width: 900px) { .stemtwee { grid-template-columns: 1fr; } .stemrechts { padding-left: 0; border-left: 0; } }
+  .stemkop { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
+  .stemkop h2 { margin: 0; }
+  .stemmen { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .stemkaart { position: relative; padding: 12px 14px; border-radius: 16px; background: rgb(var(--wit) / 0.05); border: 1px solid rgb(var(--wit) / 0.08); display: grid; grid-template-columns: 1fr auto; gap: 3px 10px; align-items: center; text-align: left; color: var(--tekst); font: inherit; cursor: pointer; }
+  .stemkaart[aria-pressed='true'] { background: rgb(110 231 183 / 0.1); border-color: rgb(110 231 183 / 0.55); }
+  .stemkaart b { font-family: var(--kop); font-size: 17px; font-weight: 600; }
+  .stemkaart .soort { grid-column: 1; font-size: 12.5px; color: var(--zacht); display: flex; align-items: center; gap: 6px; }
+  .stemkaart .speel { grid-row: 1 / span 2; grid-column: 2; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: rgb(var(--wit) / 0.1); color: var(--tekst); border: 0; cursor: pointer; }
+  .stemkaart[aria-pressed='true'] .speel { background: var(--mint); color: var(--inkt); }
+  .stemkaart .speel.speelt { box-shadow: 0 0 0 4px rgb(110 231 183 / 0.3); }
+  .stemkaart .speel svg { width: 15px; height: 15px; }
+  .stemlabel { display: inline-flex; align-items: center; height: 19px; padding: 0 7px; border-radius: 999px; font-size: 10.5px; font-weight: 700; }
+  .stemlabel.hd { color: #B7B0FF; background: rgb(143 134 255 / 0.14); }
+  .stemlabel.huis { color: var(--mint); background: rgb(110 231 183 / 0.1); }
+  .stemlabel.apparaat { color: var(--zacht); background: rgb(var(--wit) / 0.07); }
+  .stemzin { padding: 11px 14px; border-radius: 14px; background: rgb(var(--wit) / 0.04); border: 1px dashed rgb(var(--wit) / 0.12); font-size: 13.5px; color: var(--zacht); }
+  .stemzin b { color: var(--tekst); font-weight: 600; }
+  .wekwoord { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: rgb(110 231 183 / 0.07); border: 1px solid rgb(110 231 183 / 0.25); }
+  .wekwoord .bol { width: 38px; height: 38px; border-radius: 50%; flex: none; background: radial-gradient(circle at 34% 28%, #fff 0%, #c9fff0 16%, #6ee7b7 42%, #2f8f8a 75%, #103a40 100%); box-shadow: 0 0 16px rgb(110 231 183 / 0.45); }
+  .wekwoord b { font-family: var(--kop); font-size: 19px; display: block; }
+  .wekwoord span { font-size: 12.5px; color: var(--zacht); }
+  @media (max-width: 700px) { .stemmen { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 </style>
 </head>
 <body class="lucht lucht-dag">

@@ -88,6 +88,7 @@ import { Onboarding } from './web/onboarding.js';
 import { FeedbackLog } from './web/feedback.js';
 import { laadWekmodellen, type Wekmodellen } from './web/wekwoord.js';
 import { BRUG_ENTITEITEN, KlimaatBrug, MODUS_OPTIES } from './web/klimaatbrug.js';
+import { kiesVerstaan, Verstaan } from './web/verstaan.js';
 
 
 const packageRoot = resolve(dirname(new URL(import.meta.url).pathname), '..');
@@ -598,6 +599,8 @@ const wekmodellen: Wekmodellen | null = (() => {
   return null;
 })();
 /** Het wekwoord van de dienst, tenzij de gekozen spraakassistent een ander wekwoord heeft. */
+/** Uitschrijven in huis (besluit 211): je zin rechtstreeks naar Whisper. */
+const verstaan = new Verstaan({ base: httpBase(url!), token: token! });
 const wekwoordNu = (): Wekmodellen | null => {
   if (!wekmodellen) return null;
   const f = functiesNu();
@@ -1601,6 +1604,7 @@ if (webPort != null) {
     ...(lightSwitch ? { lights: lightSwitch } : {}),
     ...(coverSwitch ? { covers: coverSwitch } : {}),
     ...(klimaatBrug ? { klimaat: { brug: klimaatBrug, aan: klimaatAan } } : {}),
+    verstaanInHuis: () => kiesVerstaan([...allStates.keys()]),
     ...(layoutStore && siteConfig
       ? {
           layout: {
@@ -1737,6 +1741,11 @@ if (webPort != null) {
     stem: new Stem({
       base: httpBase(url!),
       token: token!,
+      // De stem die de bewoner koos bij Functies (besluit 212); null is vanzelf.
+      keuze: () => {
+        const f = functiesNu();
+        return f ? volledig(f, functiesKeuzes()).praten.stemKeuze : null;
+      },
       stemmen: () => [...allStates.keys()].filter((id) => id.startsWith('tts.')),
       // Welke talen en stemmen Piper heeft: lezen, zoals de registers.
       talen: async (stem) => {
@@ -1790,6 +1799,11 @@ if (webPort != null) {
         return f ? volledig(f, functiesKeuzes()).praten.spraak : null;
       },
       wekwoord: wekwoordNu,
+      // Rechtstreeks uitschrijven met Whisper in huis (besluit 211); zonder spraak naar tekst in huis via de spraakassistent.
+      uitschrijven: () => {
+        const e = kiesVerstaan([...allStates.keys()]);
+        return e ? (pcm, lang) => verstaan.tekst(e, pcm, lang) : null;
+      },
     },
     // Praten met je huis (besluit 148): de AI-taak die bij Functies gekozen is, standaard uit.
     praten: {

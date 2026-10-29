@@ -31,6 +31,8 @@ let weer = null;
 let stemNaam = null;
 /** Waar de stem vandaan komt (besluit 203): 'apparaat' of 'huis'; en of de browser mag verstaan. */
 let stemBron = 'apparaat';
+/** Wie spreekt (besluit 212): een gekozen stem in huis, of het apparaat. Vanzelf: zoals stemBron. */
+let stemSpreek = 'apparaat';
 let verstaanBrowser = true;
 /** Verstaan via de browser: bij de stem van het apparaat, als het mag en de browser het kan. */
 const viaBrowser = () => stemBron === 'apparaat' && verstaanBrowser && !!window.luisteren?.kanBrowser?.();
@@ -58,6 +60,7 @@ async function laadAlles() {
 function zetStem(st) {
   stemNaam = st?.stem && st?.taal ? st.stem : null;
   stemBron = st?.bron === 'huis' ? 'huis' : 'apparaat';
+  stemSpreek = (st?.spreek ?? st?.bron) === 'huis' ? 'huis' : 'apparaat';
   verstaanBrowser = st?.verstaan !== false;
 }
 
@@ -247,6 +250,8 @@ async function voerUit(body) {
       nu.vervolg = [];
       return;
     }
+    // Meer erachteraan (besluit 211), zoals allebei de screens, door dezelfde deur.
+    for (const o of body.meer ?? []) await fetch(o.pad, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(o.body) }).catch(() => null);
   } catch {
     nu.antwoord = taal.t('assistent.nietBereikbaar');
     nu.gesproken = null;
@@ -414,7 +419,7 @@ function zeg(tekst, gesproken = tekst) {
     // Een vraag via een tik op Thuis mag meteen proberen (opgelost 15 oktober).
     if (!voorlezen || !(ontgrendeld || vanAdres)) return lezen();
     // Helemaal in huis (besluit 203): Piper eerst. Anders de stem van het apparaat, en Piper als die er niet is.
-    if (stemBron === 'huis' && stemNaam) return void zegMetPiper(tekst, totLetter, apparaat, geweigerd);
+    if (stemSpreek === 'huis' && stemNaam) return void zegMetPiper(tekst, totLetter, apparaat, geweigerd);
     if (!apparaatStem() && stemNaam) return void zegMetPiper(tekst, totLetter, lezen, geweigerd);
     apparaat();
   });
@@ -695,7 +700,7 @@ function tekenNu() {
     el.hidden = stand === 'praat';
     el.setAttribute('aria-pressed', String(voorlezen));
     el.querySelector('span').textContent = taal.t(voorlezen ? 'assistent.voorlezenAan' : 'assistent.voorlezenUit');
-    const piper = stemNaam && (stemBron === 'huis' || !apparaatStem());
+    const piper = stemNaam && (stemSpreek === 'huis' || !apparaatStem());
     el.title = taal.t(voorlezen ? (piper ? 'assistent.piper' : 'assistent.apparaatStem') : 'assistent.alleenTekst');
   });
   if (stand !== 'praat') tekenGolf([]);

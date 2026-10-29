@@ -130,7 +130,12 @@ export class WebServer {
     if (access.kind === 'sessions' && (await access.store.visitor(cookieValue(req, SESSION_COOKIE))) == null) return weiger(socket, 401, 'Unauthorized');
     const begin = url.searchParams.get('start') === 'spraak' ? 'stt' : 'wake_word';
     // De twee schuiven van dit scherm (besluit 208), bij Functies › Praten.
-    const stand = { gevoeligheid: gevoeligheidVan(url.searchParams.get('gevoeligheid')), wachttijd: wachttijdVan(url.searchParams.get('wachttijd')) };
+    const stand = {
+      gevoeligheid: gevoeligheidVan(url.searchParams.get('gevoeligheid')),
+      wachttijd: wachttijdVan(url.searchParams.get('wachttijd')),
+      // De taal van de app op dat scherm, voor het uitschrijven (besluit 211).
+      taal: url.searchParams.get('taal') === 'en' ? ('en' as const) : ('nl' as const),
+    };
     if (head.length > 0) socket.unshift(head);
     this.#luistersockets.add(socket);
     socket.on('close', () => this.#luistersockets.delete(socket));

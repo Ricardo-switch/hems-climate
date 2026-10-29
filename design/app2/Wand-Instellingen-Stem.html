@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Instellingen, stem en luisteren</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Stem en luisteren (schets, 29 oktober 2026), onder Instellingen › Functies ›
+   * Praten met je huis. In plaats van "Waar de stem vandaan komt" en de lijst met
+   * spraakassistenten uit Home Assistant (met hun "Hey Jarvis"):
+   * links de stem van je huis, vrouw of man, met per stem een voorbeeld om te horen;
+   * rechts het luisteren, dat de app zelf doet: altijd "Hé huis", hoe gevoelig, hoe
+   * lang hij wacht, en hoe hij verstaat (vanzelf: Whisper in huis).
+   * #man toont de mannenstemmen, #geenhd een huis zonder Google Cloud.
+   */
+  main { position: relative; padding: 22px 26px 22px 22px; display: flex; flex-direction: column; gap: 14px; }
+  .pad { font-size: 13px; font-weight: 600; color: var(--gedempt); }
+  .twee { flex: 1; display: grid; grid-template-columns: 1.35fr 1fr; gap: 16px; min-height: 0; }
+  .vak { padding: 18px 22px; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+  .vak h2 { margin: 0; font-family: var(--kop); font-size: 21px; font-weight: 600; }
+  .kopregel { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .vak h3 { margin: 4px 0 0; font-size: 12.5px; font-weight: 700; color: var(--gedempt); text-transform: uppercase; letter-spacing: 0.06em; }
+  .vak p { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--zacht); }
+  .keuzes { display: flex; flex-wrap: wrap; gap: 8px; }
+  .keuzes span { height: 38px; padding: 0 16px; border-radius: 12px; display: inline-flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.08); font-weight: 600; font-size: 14.5px; color: var(--zacht); }
+  .keuzes span.aan { background: rgba(110, 231, 183, 0.14); border-color: rgba(110, 231, 183, 0.5); color: var(--tekst); }
+
+  /* De stemmen: een kaart per stem, met een knop om hem te horen. */
+  .stemmen { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .stem { position: relative; padding: 12px 14px; border-radius: 16px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.08); display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center; }
+  .stem.aan { background: rgba(110, 231, 183, 0.1); border-color: rgba(110, 231, 183, 0.55); box-shadow: 0 0 0 1px rgba(110, 231, 183, 0.25) inset; }
+  .stem b { font-family: var(--kop); font-size: 18px; font-weight: 600; }
+  .stem .soort { grid-column: 1; font-size: 12.5px; color: var(--zacht); }
+  .stem .speel { grid-row: 1 / span 2; grid-column: 2; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: rgba(255, 255, 255, 0.1); }
+  .stem.aan .speel { background: var(--mint); color: var(--inkt); }
+  .stem .speel svg { width: 16px; height: 16px; }
+  .stem .golf { grid-column: 1 / span 2; display: flex; align-items: center; gap: 2px; height: 18px; margin-top: 2px; opacity: 0.55; }
+  .stem .golf i { width: 3px; border-radius: 2px; background: currentColor; }
+  .stem.aan .golf { color: var(--mint); opacity: 1; }
+  .label { display: inline-flex; align-items: center; gap: 5px; height: 20px; padding: 0 8px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+  .label.hd { color: #B7B0FF; background: rgba(143, 134, 255, 0.14); }
+  .label.huis { color: var(--mint); background: rgba(110, 231, 183, 0.1); }
+  .label.app { color: var(--zacht); background: rgba(255, 255, 255, 0.07); }
+  .zin { padding: 12px 14px; border-radius: 14px; background: rgba(255, 255, 255, 0.04); border: 1px dashed rgba(255, 255, 255, 0.12); font-size: 14px; color: var(--zacht); display: flex; gap: 10px; align-items: center; }
+  .zin b { color: var(--tekst); font-weight: 600; }
+  .zin svg { width: 18px; height: 18px; flex: none; color: var(--mint); }
+  .noot { font-size: 12.5px; color: var(--gedempt); line-height: 1.5; }
+  .noot b { color: var(--zacht); }
+
+  /* Luisteren. */
+  .woord { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 16px; background: rgba(110, 231, 183, 0.07); border: 1px solid rgba(110, 231, 183, 0.25); }
+  .woord .bol { width: 42px; height: 42px; border-radius: 50%; flex: none; background: radial-gradient(circle at 34% 28%, #fff 0%, #c9fff0 16%, #6ee7b7 42%, #2f8f8a 75%, #103a40 100%); box-shadow: 0 0 18px rgba(110, 231, 183, 0.45); }
+  .woord b { font-family: var(--kop); font-size: 20px; }
+  .woord span { font-size: 13px; color: var(--zacht); display: block; }
+  .schuif { display: grid; gap: 6px; }
+  .schuif .baan { position: relative; height: 8px; border-radius: 99px; background: rgba(255, 255, 255, 0.1); }
+  .schuif .baan i { position: absolute; left: 0; top: 0; bottom: 0; width: 50%; border-radius: 99px; background: var(--mint); }
+  .schuif .baan em { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; background: var(--tekst); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4); }
+  .schuif .einden { display: flex; justify-content: space-between; font-size: 12px; color: var(--gedempt); }
+  .schuif .naam { display: flex; justify-content: space-between; font-size: 14px; font-weight: 600; }
+  .schuif .naam b { color: var(--mint); }
+  .rij { display: grid; grid-template-columns: 1fr auto; gap: 2px 14px; align-items: center; padding: 9px 0; border-top: 1px solid rgba(255, 255, 255, 0.07); }
+  .rij:first-child { border-top: 0; }
+  .rij b { font-size: 14.5px; }
+  .rij span.uitleg { font-size: 12.5px; color: var(--zacht); grid-column: 1; }
+  .rij .rechts { grid-row: 1 / span 2; grid-column: 2; }
+  .pil { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 999px; font-size: 12.5px; font-weight: 700; color: var(--mint); background: rgba(110, 231, 183, 0.1); }
+  .pil::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .schakel { width: 52px; height: 30px; border-radius: 999px; background: var(--mint); position: relative; display: block; }
+  .schakel::after { content: ''; position: absolute; top: 3px; left: 25px; width: 24px; height: 24px; border-radius: 50%; background: var(--inkt); }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-avond">
+  <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+  <main>
+    <div>
+      <div class="pad">Instellingen › Functies › Praten met je huis</div>
+      <h1 class="kop-1" style="margin-top: 4px">Stem en luisteren</h1>
+    </div>
+    <div class="twee">
+      <section class="glas vak">
+        <div class="kopregel">
+          <h2>De stem van je huis</h2>
+          <div class="keuzes" data-stand="vrouw geenhd"><span class="aan">Vrouw</span><span>Man</span></div>
+          <div class="keuzes" data-stand="man"><span>Vrouw</span><span class="aan">Man</span></div>
+        </div>
+
+        <h3 data-stand="vrouw man">Helder, van Google</h3>
+        <div class="stemmen" data-stand="vrouw">
+          <div class="stem aan"><b>Kore</b><span class="speel"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span><span class="soort"><span class="label hd">HD</span> warm, rustig</span><span class="golf"><i style="height:5px"></i><i style="height:11px"></i><i style="height:16px"></i><i style="height:9px"></i><i style="height:13px"></i><i style="height:6px"></i><i style="height:15px"></i><i style="height:10px"></i><i style="height:4px"></i><i style="height:12px"></i><i style="height:8px"></i><i style="height:14px"></i><i style="height:6px"></i><i style="height:10px"></i></span></div>
+          <div class="stem"><b>Aoede</b><span class="speel"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span><span class="soort"><span class="label hd">HD</span> licht, vrolijk</span><span class="golf"><i style="height:8px"></i><i style="height:14px"></i><i style="height:6px"></i><i style="height:12px"></i><i style="height:16px"></i><i style="height:5px"></i><i style="height:10px"></i><i style="height:13px"></i><i style="height:7px"></i><i style="height:11px"></i></span></div>
+          <div class="stem"><b>Leda</b><span class="speel"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span><span class="soort"><span class="label hd">HD</span> zacht, jong</span><span class="golf"><i style="height:6px"></i><i style="height:9px"></i><i style="height:13px"></i><i style="height:7px"></i><i style="height:11px"></i><i style="height:15px"></i><i style="height:8px"></i><i style="height:5px"></i><i style="height:12px"></i></span></div>
+        </div>
+        <div class="stemmen" data-stand="man">
+          <div class="stem aan"><b>Charon</b><span class="speel"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span><span class="soort"><span class="label hd">HD</span> diep, rustig</span><span class="golf"><i style="height:9px"></i><i style="height:14px"></i><i style="height:7px"></i><i style="height:12px"></i><i style="height:16px"></i><i style="height:6px"></i><i style="height:11px"></i><i style="height:13px"></i><i style="height:5px"></i></span></div>
+          <div class="stem"><b>Puck</b><span class="speel"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span><span class="soort"><span class="label hd">HD</span> vlot, vrolijk</span><span class="golf"><i style="height:6px"></i><i style="height:12px"></i><i style="height:15px"></i><i style="height:8px"></i><i style="height:11px"></i><i style="height:5px"></i><i style="height:14px"></i></span></div>
+          <div class="stem"><b>Orus</b><span class="speel"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span><span class="soort"><span class="label hd">HD</span> stevig</span><span class="golf"><i style="height:10px"></i><i style="height:6px"></i><i style="height:13px"></i><i style="height:9px"></i><i style="height:15px"></i><i style="height:7px"></i><i style="height:12px"></i><i style="height:8px"></i></span></div>
+        </div>
+
+        <h3>In huis, zonder internet</h3>
+        <div class="stemmen" data-stand="vrouw geenhd">
+          <div class="stem" data-stand="vrouw"><b>Nathalie</b><span class="speel"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span><span class="soort"><span class="label huis">Piper</span> Vlaams</span></div>
+          <div class="stem aan" data-stand="geenhd"><b>Nathalie</b><span class="speel"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span><span class="soort"><span class="label huis">Piper</span> Vlaams</span><span class="golf"><i style="height:7px"></i><i style="height:12px"></i><i style="height:9px"></i><i style="height:14px"></i><i style="height:6px"></i><i style="height:11px"></i></span></div>
+          <div class="stem"><b>Dit apparaat</b><span class="speel"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span><span class="soort"><span class="label app">Altijd</span> werkt overal</span></div>
+        </div>
+        <div class="stemmen" data-stand="man">
+          <div class="stem"><b>Pim</b><span class="speel"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span><span class="soort"><span class="label huis">Piper</span> Nederlands</span></div>
+          <div class="stem"><b>Ronnie</b><span class="speel"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span><span class="soort"><span class="label huis">Piper</span> Nederlands</span></div>
+          <div class="stem"><b>Dit apparaat</b><span class="speel"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span><span class="soort"><span class="label app">Altijd</span> werkt overal</span></div>
+        </div>
+
+        <div class="zin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg><span>Voorbeeld: <b>"Goedenavond. De woonkamer is 20,5°, ik zet hem op 21° tot tien uur."</b></span></div>
+        <p class="noot" data-stand="vrouw man"><b>Google HD</b> klinkt het menselijkst. Alleen de tekst van het antwoord gaat naar Google, je stem niet; tot een miljoen tekens per maand gratis. Zonder internet spreekt het huis vanzelf met de stem in huis.</p>
+        <p class="noot" data-stand="geenhd">Met <b>Google Cloud</b> in Home Assistant krijg je stemmen die menselijker klinken. Zonder iets erbij spreekt het huis met de stem van dit apparaat.</p>
+      </section>
+
+      <section class="glas vak">
+        <h2>Luisteren</h2>
+        <div class="woord"><span class="bol"></span><div><b>"Hé huis"</b><span>De app hoort het zelf, op elk scherm dat luistert.</span></div></div>
+
+        <div class="schuif">
+          <div class="naam">Hoe gevoelig <b>Normaal</b></div>
+          <div class="baan"><i></i><em></em></div>
+          <div class="einden"><span>Minder vaak per ongeluk</span><span>Hoort je beter</span></div>
+        </div>
+        <p class="noot">Vandaag 6 keer wakker geworden, 1 keer zonder vraag.</p>
+
+        <h3>Wachten na je laatste woord</h3>
+        <div class="keuzes"><span>Vlot</span><span class="aan">Normaal</span><span>Rustig</span></div>
+
+        <div>
+          <div class="rij"><b>Dit scherm luistert</b><span class="uitleg">Wand woonkamer</span><span class="rechts"><span class="schakel"></span></span></div>
+          <div class="rij"><b>Verstaan</b><span class="uitleg">Whisper, in huis · gemiddeld 1,6 s</span><span class="rechts"><span class="pil">Werkt</span></span></div>
+        </div>
+        <p class="noot" style="margin-top: auto">Je stem gaat niet naar buiten en wordt niet bewaard.</p>
+      </section>
+    </div>
+  </main>
+</div>
+<script src="../../frontend/kit/teksten.nl.js"></script>
+<script src="../../frontend/kit/teksten.en.js"></script>
+<script src="../../frontend/kit/taal.js"></script>
+<script src="../../frontend/kit/nav.js"></script>
+<script>
+  nav.balk(document.getElementById('balk'), 'instellingen');
+  // Alleen wat bij deze stand hoort; de rest gaat weg, zodat elk blok zijn eigen indeling houdt.
+  const toon = location.hash === '#man' ? 'man' : location.hash === '#geenhd' ? 'geenhd' : 'vrouw';
+  document.querySelectorAll('[data-stand]').forEach((el) => el.dataset.stand.split(' ').includes(toon) || el.remove());
+</script>
+</body>
+</html>

@@ -10,7 +10,7 @@ import { exampleSite } from './site.js';
 import { lichtRecept, type Lichtrecept } from '../src/web/lichtrecept.js';
 import { herkenOpdracht, kiesUit, onderscheid, type BedienLamp, type Bedienbaar, type Herkend } from '../src/web/opdracht.js';
 import { optiesUit } from '../src/web/routes/assistent.js';
-import { begrijp } from '../src/web/woordzoeker.js';
+import { afstand, begrijp, verbeter } from '../src/web/woordzoeker.js';
 
 const TZ = 'Europe/Amsterdam';
 /** 29 oktober 2026 om dit uur, Nederlandse tijd (wintertijd, UTC+1). */
@@ -168,15 +168,30 @@ describe('de delen van een kamer, en de sfeerverlichting', () => {
 
 describe('doorvragen', () => {
   it('vraagt met het woord dat het verschil maakt, en begrijpt het antwoord', () => {
-    const vraag = vraagTerug(herkenOpdracht('doe het screen dicht', huis(DAG), 'nl'));
-    expect(vraag.antwoord).toBe('Welke bedoel je: klein of groot?');
+    const vraag = vraagTerug(herkenOpdracht('doe het screen naar beneden', huis(DAG), 'nl'));
+    expect(vraag.antwoord).toBe('Welke bedoel je: klein of groot, of allebei?');
+    // De richting zit in de keuze (besluit 211): op de wand werd "groot" eerst "Screen groot kan je doen".
+    expect(vraag.keuze).toEqual([
+      { label: 'klein', tekst: 'Screen klein dicht' },
+      { label: 'groot', tekst: 'Screen groot dicht' },
+      { label: 'Allebei', tekst: 'alle screens dicht' },
+    ]);
     const groot = kiesUit('de grote', vraag.keuze!)!;
-    expect(groot.label).toBe('groot');
-    const o = opdracht(herkenOpdracht(groot.tekst, huis(DAG), 'nl'));
-    expect(o.body).toMatchObject({ id: 'cover.screen_groot', actie: 'dicht' });
+    expect(opdracht(herkenOpdracht(groot.tekst, huis(DAG), 'nl')).body).toMatchObject({ id: 'cover.screen_groot', actie: 'dicht' });
     expect(kiesUit('de eerste', vraag.keuze!)?.label).toBe('klein');
+    expect(kiesUit('allebei', vraag.keuze!)?.label).toBe('Allebei');
+    expect(kiesUit('doe ze maar beide', vraag.keuze!)?.label).toBe('Allebei');
     // Iets anders zeggen is gewoon een nieuwe zin.
     expect(kiesUit('wat doe je nu', vraag.keuze!)).toBeNull();
+  });
+
+  it('"kan je de screens naar beneden doen?": meervoud doet ze allebei, zonder te vragen', () => {
+    const o = opdracht(herkenOpdracht('Kan je de screens naar beneden doen?', huis(DAG), 'nl'));
+    expect(o.antwoord).toBe('De screens gaan dicht.');
+    expect(o.body).toMatchObject({ id: 'cover.screen_klein', actie: 'dicht' });
+    expect(o.meer).toEqual([{ pad: 'api/scherm', body: expect.objectContaining({ id: 'cover.screen_groot', actie: 'dicht' }) }]);
+    expect(o.gedaan).toHaveLength(2);
+    expect(opdracht(herkenOpdracht('alle screens half', huis(DAG), 'nl')).meer?.[0]?.body).toMatchObject({ actie: 'stand', standPct: 50 });
   });
 
   it('haalt het gemeenschappelijke weg, en houdt namen zonder verschil heel', () => {
@@ -190,5 +205,27 @@ describe('doorvragen', () => {
     expect(optiesUit('geen json')).toEqual([]);
     expect(optiesUit(null)).toEqual([]);
     expect(optiesUit(JSON.stringify(Array.from({ length: 9 }, (_, i) => ({ label: `${i}`, tekst: `${i}` }))))).toHaveLength(4);
+  });
+});
+
+describe('bijna goed verstaan (besluit 211)', () => {
+  // Zoals Whisper het op de Pi verstond, in de toets van 29 oktober 2026.
+  const namen = ['Woonkamer', 'Slaapkamer', 'Zolder', 'Zithoek', 'Keuken', 'Screen groot'];
+  it('zet een woord dat er heel dicht bij ligt recht naar een naam uit het huis', () => {
+    expect(verbeter('Het is koud in de wonkamer.', namen)).toBe('het is koud in de woonkamer');
+    expect(verbeter('Doe het licht in de slabkamer uit.', namen)).toBe('doe het licht in de slaapkamer uit');
+    expect(verbeter('Hoe warm is het op zoldeer?', namen)).toBe('hoe warm is het op zolder');
+    expect(verbeter('Zet de Ziethoek aan', namen)).toBe('zet de zithoek aan');
+    expect(verbeter('Zette woonkamer op 21 graden.', namen)).toBe('zet de woonkamer op 21 graden');
+    // Met het grotere model (small-int8): s en z klinken aan het begin hetzelfde.
+    expect(verbeter('Hoe warm is het op solder?', namen)).toBe('hoe warm is het op zolder');
+  });
+
+  it('laat gewone woorden en korte woorden met rust', () => {
+    expect(verbeter('Wat doe je nu?', namen)).toBe('wat doe je nu');
+    expect(verbeter('Doe het licht aan', namen)).toBe('doe het licht aan');
+    // Nooit naar een andere kamer: "wandkamer" ligt twee letters van badkamer, maar begint anders.
+    expect(verbeter('Zet de wandkamer op 21', [...namen, 'Badkamer'])).toBe('zet de wandkamer op 21');
+    expect(afstand('wonkamer', 'woonkamer')).toBe(1);
   });
 });

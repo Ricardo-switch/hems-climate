@@ -32,9 +32,12 @@ let indeling = null;
 let startscherm = null;
 /** Hoe de schermen luisteren (besluit 208): wie het wekwoord hoort, en hoe vaak het huis vandaag wakker werd. */
 let luisterStand = null;
+/** De stemmen om uit te kiezen (besluit 212), en vrouw of man in beeld. */
+let stemmen = null;
+let geslacht = null;
 
 async function laad() {
-  const [f, z, v, h, i, st] = await Promise.allSettled([haal('api/functies'), haal('api/zon'), haal('api/voorkeuren'), haal('api/huis'), haal('api/indeling'), haal('api/startscherm'), haal('api/luister-stand').then((x) => (luisterStand = x))]);
+  const [f, z, v, h, i, st] = await Promise.allSettled([haal('api/functies'), haal('api/zon'), haal('api/voorkeuren'), haal('api/huis'), haal('api/indeling'), haal('api/startscherm'), haal('api/luister-stand').then((x) => (luisterStand = x)), haal('api/stemmen').then((x) => (stemmen = x))]);
   if (st.status === 'fulfilled') startscherm = st.value;
   if (z.status === 'fulfilled') zon = z.value;
   if (v.status === 'fulfilled') voorkeur = v.value;
@@ -374,18 +377,43 @@ function praten() {
     <p class="mini">${esc(t('functies.praten.zeg', { wat: t(info.schermMogelijk ? 'functies.praten.lampenSchermen' : 'functies.praten.lampen') }))}</p>` : ''}
     ${info.gevonden.klimaatBrug ? `<h2 class="kop-2" style="margin-top: 8px">${esc(t('functies.praten.klimaat'))}</h2>
     ${keuzes(t('functies.praten.klimaat'), 'pratenKlimaat', aanUit(), p.klimaat === true)}
-    <p class="mini">${esc(t('functies.praten.klimaatZin'))}</p>` : ''}
-    ${luisteren()}`;
+    <p class="mini">${esc(t('functies.praten.klimaatZin'))}</p>` : ''}`;
 }
 
-/** Het wekwoord zoals je het zegt: "he_huis" is "Hé huis". */
-const wekwoordNaam = (w) => (w === 'he_huis' ? t('functies.heHuis') : w.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()));
+const SPEEL = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
 
-/** Luisteren (besluit 150, schets Wand-Instellingen-Luisteren): de spraakassistent, en of dit scherm luistert. */
-function luisteren() {
-  const lijst = info.gevonden.spraakassistenten ?? [];
-  const p = concept.praten;
-  const gekozen = lijst.find((x) => x.id === p.spraak) ?? lijst.find((x) => x.voorkeur) ?? null;
+/** De stem die nu spreekt: de keuze, of vanzelf (besluit 212). */
+function stemGekozen() {
+  const opties = stemmen?.opties ?? [];
+  const keuze = concept.praten.stemKeuze ?? null;
+  if (keuze && opties.some((o) => o.id === keuze)) return keuze;
+  // Vanzelf: de stem die de dienst nu gebruikt, of het apparaat.
+  return opties.find((o) => o.id.startsWith(`${stemmen?.nu ?? '-'}|`))?.id ?? 'apparaat';
+}
+
+/** Stem en luisteren (besluit 212, schets Wand-Instellingen-Stem): links de stem van je huis. */
+function stemVorm() {
+  const opties = stemmen?.opties ?? [];
+  const gekozen = stemGekozen();
+  geslacht ??= opties.find((o) => o.id === gekozen)?.geslacht ?? 'vrouw';
+  const kaart = (o) => `<div class="stemkaart" role="button" tabindex="0" data-stem-kies="${esc(o.id)}" aria-pressed="${o.id === gekozen}">
+      <b>${esc(o.naam)}</b>
+      <button type="button" class="speel" data-stem-speel="${esc(o.id)}" aria-label="${esc(t('functies.stem.laatHoren', { naam: o.naam }))}">${SPEEL}</button>
+      <span class="soort"><span class="stemlabel ${o.soort}">${esc(t(`functies.stem.soort.${o.soort}`))}</span>${esc(o.kenmerk[taal.code] ?? o.kenmerk.nl)}</span>
+    </div>`;
+  const hd = opties.filter((o) => o.soort === 'hd' && o.geslacht === geslacht).slice(0, 6);
+  const huis = opties.filter((o) => (o.soort === 'huis' && o.geslacht === geslacht) || o.soort === 'apparaat');
+  return `<div class="stemtwee"><div class="stemlinks"><div class="stemkop"><h2 class="kop-2">${esc(t('functies.stem.titel'))}</h2>
+      ${keuzes(t('functies.stem.geslacht'), 'stemGeslacht', [['vrouw', t('functies.stem.vrouw')], ['man', t('functies.stem.man')]], geslacht)}</div>
+    ${hd.length ? `<span class="veldnaam">${esc(t('functies.stem.hd'))}</span><div class="stemmen">${hd.map(kaart).join('')}</div>` : ''}
+    <span class="veldnaam">${esc(t('functies.stem.inHuis'))}</span><div class="stemmen">${huis.map(kaart).join('')}</div>
+    <div class="stemzin">${esc(t('functies.stem.voorbeeld'))} <b>"${esc(stemmen?.voorbeeld?.[taal.code] ?? '')}"</b></div>
+    <p class="mini">${esc(t(hd.length ? 'functies.stem.hdZin' : 'functies.stem.geenHd'))}</p></div>
+    ${luisterVak()}</div>`;
+}
+
+/** Rechts ernaast: het luisteren, dat de app zelf doet (besluit 208, 211). */
+function luisterVak() {
   let hier = false;
   try {
     hier = localStorage.getItem('sc-luisteren') === 'aan';
@@ -393,39 +421,20 @@ function luisteren() {
     hier = false;
   }
   const https = window.isSecureContext;
-  const opties = [[null, gekozen && !p.spraak ? t('functies.luister.vanHANaam', { naam: gekozen.naam }) : t('functies.luister.vanHA')], ...lijst.map((x) => [x.id, x.wekwoord ? `${x.naam} · ${wekwoordNaam(x.wekwoord)}` : x.naam])];
-  // Hoort de dienst "Hé huis" zelf (besluit 208), dan hoeft de spraakassistent geen wekwoord.
-  const zelf = luisterStand?.zelf === true;
-  const melding = !lijst.length
-    ? t('functies.luister.geen')
-    : !gekozen?.spraakNaarTekst
-      ? t('functies.luister.geenSpraak')
-      : !gekozen.wekwoord && !zelf
-        ? t('functies.luister.geenWekwoord')
-        : '';
-  // Waar de stem vandaan komt (besluit 203): het apparaat zelf, met verstaan via de browser;
-  // of helemaal in huis, en alleen dan de spraakassistent en "Hé huis" op dit scherm.
-  const stemHuis = p.stem === 'huis';
-  // De kop en de keuze op één regel (op een smal scherm eronder): zo past Praten op de wand.
-  const kop = `<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; margin-top: 8px"><h2 class="kop-2" style="margin: 0">${esc(t('functies.stem.kop'))}</h2>
-    ${keuzes(t('functies.stem.kop'), 'stemBron', [['apparaat', t('inr.stem.apparaat')], ['huis', t('inr.stem.huis')]], stemHuis ? 'huis' : 'apparaat')}</div>`;
-  if (!stemHuis) {
-    return `${kop}
-    <p class="mini">${esc(t('inr.stem.apparaatZin'))}</p>
-    <span class="veldnaam">${esc(t('inr.stem.verstaanLabel'))}</span>${keuzes(t('inr.stem.verstaanLabel'), 'stemVerstaan', aanUit(), p.verstaan !== false)}
-    <p class="mini">${esc(t('functies.stem.verstaanZin'))}</p>`;
-  }
-  return `${kop}
-    <span class="veldnaam">${esc(t('functies.luister.assistent'))}</span>
-    ${lijst.length ? keuzes(t('functies.luister.assistentLabel'), 'spraak', opties, p.spraak) : ''}
-    ${zelf ? `<p class="mini">${metHtml('functies.luister.zelf')}</p>` : gekozen?.wekwoord ? `<p class="mini">${metHtml('functies.luister.wekwoord', { woord: wekwoordNaam(gekozen.wekwoord) })}</p>` : ''}
-    ${luisterStand?.traag ? `<p class="uitleg" style="color: var(--zon-t)">${esc(t('functies.luister.traag'))}</p>` : ''}
-    ${melding ? `<p class="uitleg" style="color: var(--zon-t)">${esc(melding)}</p>` : ''}
-    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px"><span class="veldnaam">${esc(t('functies.luister.hier'))}</span>
-    <div class="keuzes" role="group" aria-label="${esc(t('functies.luister.hierLabel'))}"><button type="button" data-hier="aan" aria-pressed="${hier}" ${https ? '' : 'disabled'}>${esc(t('functies.aan'))}</button><button type="button" data-hier="uit" aria-pressed="${!hier}">${esc(t('functies.uit'))}</button></div></div>
+  const verstaan = luisterStand?.verstaan;
+  return `<div class="stemrechts">
+    <h2 class="kop-2">${esc(t('functies.luister.kop'))}</h2>
+    <div class="wekwoord"><span class="bol" aria-hidden="true"></span><div><b>"Hé huis"</b><span>${esc(t('functies.luister.wekwoordZin'))}</span></div></div>
+    <span class="veldnaam" style="margin: 0">${esc(t('functies.luister.hier'))}</span>
+    <div class="keuzes" role="group" aria-label="${esc(t('functies.luister.hierLabel'))}" style="flex-wrap: nowrap"><button type="button" data-hier="aan" aria-pressed="${hier}" ${https ? '' : 'disabled'}>${esc(t('functies.aan'))}</button><button type="button" data-hier="uit" aria-pressed="${!hier}">${esc(t('functies.uit'))}</button></div>
     ${https ? '' : `<p class="uitleg" style="color: var(--zon-t)">${esc(t('functies.luister.https'))}</p>`}
-    ${hier && https ? schuiven(zelf) : ''}`;
+    ${hier && https ? schuiven(luisterStand?.zelf === true) : ''}
+    <p class="mini">${esc(verstaan ? t('functies.luister.verstaanHuis', { naam: verstaan.replace(/^stt\./, '').replace(/_/g, ' ') }) : t('functies.luister.verstaanHA'))}</p>
+    <p class="mini">${esc(t('functies.luister.privacy'))}</p>
+  </div>`;
 }
+
+/** Het wekwoord zoals je het zegt: "he_huis" is "Hé huis". */
 
 /** Hoe dit scherm luistert (besluit 208): de gevoeligheid van "Hé huis" en de wachttijd na je laatste woord. */
 function schuiven(zelf) {
@@ -491,7 +500,8 @@ const NAAST = {
   scherm: ['functies.naast.scherm', 3],
   aod: ['functies.zoWerkt', 3],
   uit: ['functies.zoWerkt', 3],
-  praten: ['functies.zoWerkt', 8],
+  praten: ['functies.zoWerkt', 4],
+  stem: ['functies.zoWerkt', 3],
   meldingen: ['functies.zoWerkt', 3],
   weer: ['functies.naast.weer', 3],
 };
@@ -510,6 +520,8 @@ function delen() {
     { id: 'weer', titel: t('functies.weer.kop'), zin: weerNaam, stand: f.weer.bron ? 'goed' : 'leeg' },
     { id: 'meldingen', titel: t('functies.meld.kop'), zin: drempelZin(f.meldingen), stand: 'goed' },
     { id: 'praten', titel: t('functies.deel.praten'), zin: f.praten.taalmodel ? (info.gevonden.taalmodellen ?? []).find((m) => m.id === f.praten.taalmodel)?.naam ?? t('functies.deel.eigen') : t('functies.deel.vast'), stand: 'goed' },
+    // Stem en luisteren (besluit 212): de stem van je huis, en "Hé huis".
+    { id: 'stem', titel: t('functies.deel.stem'), zin: (stemmen?.opties ?? []).find((o) => o.id === stemGekozen())?.naam ?? t('functies.deel.vanzelf'), stand: 'goed' },
     // Weergave (besluit 167): dit scherm, het always-on display en wanneer het scherm uitgaat.
     { kop: t('functies.deel.weergave') },
     ...(app.inHA() ? [{ id: 'scherm', titel: t('functies.ditScherm'), zin: t(app.volledigGekozen() ? 'functies.deel.volledig' : 'functies.deel.zijbalk'), stand: 'goed' }] : []),
@@ -532,7 +544,7 @@ function tekenNu() {
   app.luchtVan(zon, 0);
   if (!info || !concept) return;
   const nu = groep.tekenDelen(delen());
-  const vorm = { cameras, deurbel, licht, weer, praten, meldingen, scherm, startscherm: startschermVorm, aod, uit: schermUit }[nu]?.() ?? '';
+  const vorm = { cameras, deurbel, licht, weer, praten, stem: stemVorm, meldingen, scherm, startscherm: startschermVorm, aod, uit: schermUit }[nu]?.() ?? '';
   // Terug naar standaard (besluit 204): rechtsboven, alleen als dit deel afwijkt van wat de app voorstelt.
   const terug = afwijkend(nu) ? `<button type="button" class="knop stdknop" data-standaard-deel="${esc(nu)}">${esc(t('functies.std'))}</button>` : '';
   $$('[data-vorm]').forEach((el) => {
@@ -639,6 +651,8 @@ document.addEventListener('click', (e) => {
     const s = knop.dataset.kies;
     // De wachttijd hoort bij dit scherm (besluit 208), niet bij de dienst.
     if (s === 'wachttijd') return bewaarHier('sc-wachttijd', w, t('functies.luister.bewaard'));
+    // Vrouw of man in beeld (besluit 212): alleen de lijst, er wordt niets bewaard.
+    if (s === 'stemGeslacht') return void ((geslacht = w), teken());
     if (s === 'camerasAan') concept.cameras.aan = w;
     else if (s === 'belAan') {
       concept.deurbel.aan = w;
@@ -678,6 +692,50 @@ document.addEventListener('click', (e) => {
     bewaar();
   }
 });
+
+/* ------------------------------------------------- stem kiezen en horen (besluit 212) */
+
+let speler = null;
+/** Een stem laten horen: uit Home Assistant, of die van het apparaat zelf. */
+function speelStem(id, knop) {
+  speler?.pause();
+  window.speechSynthesis?.cancel();
+  $$('.speel.speelt').forEach((k) => k.classList.remove('speelt'));
+  const zin = stemmen?.voorbeeld?.[taal.code] ?? stemmen?.voorbeeld?.nl ?? '';
+  const klaar = () => knop.classList.remove('speelt');
+  knop.classList.add('speelt');
+  if (id === 'apparaat') {
+    const u = new SpeechSynthesisUtterance(zin.replace(/(\d+),(\d)/g, '$1 komma $2'));
+    u.lang = taal.code === 'en' ? 'en-GB' : 'nl-NL';
+    u.onend = klaar;
+    u.onerror = klaar;
+    window.speechSynthesis?.speak(u);
+    return;
+  }
+  speler = new Audio(`api/stem?tekst=${encodeURIComponent(zin)}&taal=${taal.code}&keuze=${encodeURIComponent(id)}`);
+  speler.onended = klaar;
+  speler.onerror = () => {
+    klaar();
+    groep.zegBewaard('fout', t('functies.stem.lukteNiet'));
+  };
+  speler.play().catch(klaar);
+}
+
+document.addEventListener('click', (e) => {
+  const speel = e.target.closest?.('[data-stem-speel]');
+  if (speel) {
+    e.stopPropagation();
+    return speelStem(speel.dataset.stemSpeel, speel);
+  }
+  const kies = e.target.closest?.('[data-stem-kies]');
+  if (!kies || !concept) return;
+  concept.praten.stemKeuze = kies.dataset.stemKies;
+  // Wie al luistert of praat, gebruikt meteen de nieuwe stem.
+  window.luisteren?.stemOpnieuw?.();
+  teken();
+  bewaar();
+  speelStem(kies.dataset.stemKies, kies.querySelector('[data-stem-speel]'));
+}, true);
 
 // De helderheid: het getal loopt mee met de schuif, bewaard bij loslaten (besluit 206).
 document.addEventListener('input', (e) => {

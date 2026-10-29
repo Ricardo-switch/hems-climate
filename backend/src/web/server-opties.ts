@@ -353,6 +353,8 @@ export interface WebOptions {
    * Alleen in de add-on; `aan` is de schakelaar bij Functies › Praten.
    */
   readonly klimaat?: { readonly brug: KlimaatBrug; readonly aan: () => boolean };
+  /** De spraak naar tekst in huis waarmee de dienst verstaat (besluit 211), of null. */
+  readonly verstaanInHuis?: () => string | null;
   /**
    * Wie mag bedienen (besluit 99): een eigen inlog via Home Assistant, Ingress
    * van de add-on, of open (alleen voor tests). Verplicht, zodat een nieuwe

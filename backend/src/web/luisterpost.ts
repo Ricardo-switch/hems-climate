@@ -34,12 +34,20 @@ export interface LuisterDeur {
   readonly pipeline: () => string | null;
   /** Het wekwoord in de dienst, of null: dan hoort Home Assistant het (besluit 208). */
   readonly wekwoord?: () => Wekmodellen | null;
+  /**
+   * Rechtstreeks uitschrijven in huis (besluit 211): je hele zin in één keer
+   * naar Whisper, zonder spraakassistent. Null als er geen spraak naar tekst
+   * in huis is; dan gaat het via de spraakassistent, zoals eerst.
+   */
+  readonly uitschrijven?: () => ((pcm: Buffer, lang: 'nl' | 'en') => Promise<string>) | null;
 }
 
 /** Hoe een scherm luistert: de stand van de twee schuiven bij Functies › Praten. */
 export interface Luisterstand {
   readonly gevoeligheid: Gevoeligheid;
   readonly wachttijd: Wachttijd;
+  /** De taal van de app op dat scherm, voor het uitschrijven. */
+  readonly taal?: 'nl' | 'en';
 }
 
 /** Hoeveel gesprekken er tegelijk mogen lopen: een paar schermen, geen zaal. */
@@ -175,6 +183,10 @@ export class Luisterpost {
     // Wie hoort het wekwoord: de dienst, als hij de modellen heeft en het bijhoudt.
     const modellen = begin === 'wake_word' && !this.#traag ? (this.#deur.wekwoord?.() ?? null) : null;
     let oor: { readonly l: Wekluisteraar; readonly melder: Wekmelder } | null = modellen ? { l: new Wekluisteraar(modellen), melder: new Wekmelder(stand.gevoeligheid) } : null;
+    // Rechtstreeks uitschrijven (besluit 211): als de dienst ook zelf het einde volgt.
+    const direct = modellen || begin === 'stt' ? (this.#deur.uitschrijven?.() ?? null) : null;
+    /** Je zin tot nu toe, voor het rechtstreeks uitschrijven. */
+    const opname: Buffer[] = [];
     // Het einde van je zin: na het wekwoord (of meteen, zonder wekwoord).
     let zin: Spraakeinde | null = begin === 'stt' ? new Spraakeinde({ wachttijd: stand.wachttijd }) : null;
     let moment: Wekmoment | null = null;
@@ -208,8 +220,25 @@ export class Luisterpost {
       return true;
     };
 
-    if (oor) stuur({ soort: 'klaar' });
+    if (oor || direct) stuur({ soort: 'klaar' });
     else if (!(await start(begin))) return niets;
+
+    /** Je zin is klaar: in één keer naar Whisper, en de tekst naar de pagina. */
+    const schrijfUit = async () => {
+      if (!direct || weg) return;
+      const t = performance.now();
+      try {
+        const ruw = await direct(Buffer.concat(opname), stand.taal ?? 'nl');
+        const tekst = isRuis(ruw) ? '' : ruw;
+        console.log(`[luisteren] uitgeschreven in ${((performance.now() - t) / 1000).toFixed(1)} s, ${(opname.reduce((n, b) => n + b.length, 0) / 32_000).toFixed(1)} s geluid`);
+        if (moment) moment.vraag = tekst !== '';
+        stuur({ soort: 'tekst', tekst });
+        stuur({ soort: 'einde' });
+      } catch (error) {
+        stuur({ soort: 'fout', reden: foutInWoorden('', (error as Error).message) });
+      }
+      einde();
+    };
 
     /** Volgt je zin; zegt Home Assistant dat het geluid op is als je klaar bent. */
     const volg = (pcm: Int16Array) => {
@@ -217,7 +246,8 @@ export class Luisterpost {
         if (e === 'praat') stuur({ soort: 'praat' });
         else if (e === 'stil') {
           stuur({ soort: 'stil' });
-          gesprek?.end();
+          if (direct) void schrijfUit();
+          else gesprek?.end();
         } else {
           // Na het wekwoord geen woord: waarschijnlijk was het niet voor het huis. Stil stoppen.
           if (moment) moment.vraag = false;
@@ -246,12 +276,14 @@ export class Luisterpost {
             oor = null;
             zin = new Spraakeinde({ wachttijd: stand.wachttijd, negeerMs: NA_WEKWOORD_MS });
             stuur({ soort: 'wakker' });
-            wachtend = [];
-            void start('stt').then((ok) => {
-              if (!ok) return;
-              for (const d of wachtend?.splice(0) ?? []) gesprek?.send(d);
-              wachtend = null;
-            });
+            if (!direct) {
+              wachtend = [];
+              void start('stt').then((ok) => {
+                if (!ok) return;
+                for (const d of wachtend?.splice(0) ?? []) gesprek?.send(d);
+                wachtend = null;
+              });
+            }
           } else if (this.#stappen > 100 && this.#rekentijd != null && this.#rekentijd > TE_TRAAG) {
             // Te traag: de pagina begint opnieuw, en dan hoort Home Assistant het.
             this.#traag = true;
@@ -260,13 +292,16 @@ export class Luisterpost {
           }
           return;
         }
-        if (wachtend) wachtend.push(b);
+        if (direct) opname.push(b);
+        else if (wachtend) wachtend.push(b);
         else gesprek?.send(b);
         volg(pcm);
       },
       // De pagina zegt "klaar met praten" (de telefoon, na een tik).
       tekst: (s) => {
-        if (!weg && s === 'klaar') gesprek?.end();
+        if (weg || s !== 'klaar') return;
+        if (direct) void schrijfUit();
+        else gesprek?.end();
       },
       dicht: klaar,
     };
