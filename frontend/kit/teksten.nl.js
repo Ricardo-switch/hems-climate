@@ -1821,6 +1821,8 @@
   'functies.praten.blijft': 'Blijft in huis',
   'functies.praten.blijftZin': 'Je stem, camerabeelden, en wie er thuis is',
   'functies.praten.bedienen': 'Bedienen met de assistent',
+  'functies.praten.klimaat': "Klimaat via je eigen regeling",
+  'functies.praten.klimaatZin': "Tot de app zelf regelt, verzet de assistent de knoppen van je eigen regeling in Home Assistant. \"Het is koud in de woonkamer\" zet de dagtemperatuur een graad hoger, tot 22:00; daarna zet de app hem terug. De zolder doet niet mee.",
   'functies.praten.zeg': 'Zeg wat je wilt, zoals "doe het licht beneden wat zachter" of "screen dicht". Het gebeurt meteen, en het huis zegt wat het deed. {wat}, zoals bij Licht en screens. Een garagedeur, poort of deur nooit; airco\'s en cv pas als Smart Climate mag regelen.',
   'functies.praten.lampen': 'Lampen en scènes',
   'functies.praten.lampenSchermen': 'Lampen en scènes, screens en het zonnescherm',

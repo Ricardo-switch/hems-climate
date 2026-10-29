@@ -110,7 +110,26 @@ export interface Answer {
   readonly letterlijk?: true;
   /** Een vraag terug met keuzes om op te tikken of te zeggen (besluit 209). */
   readonly keuze?: readonly { readonly label: string; readonly tekst: string }[];
+  /** Een opdracht voor een deur (besluit 210): de pagina stuurt hem, zoals bij licht. */
+  readonly opdracht?: { readonly pad: string; readonly body: Readonly<Record<string, unknown>> };
+  /** Wat er verandert, als kaartjes onder het antwoord. */
+  readonly gedaan?: readonly { readonly soort: string; readonly waarde: string; readonly uitleg: string }[];
 }
+
+/**
+ * De klimaatbrug (besluit 210), voor de assistent: voor een kamer en een wens
+ * de opdracht met zijn antwoord, een reden waarom het niet kan, of null als de
+ * brug niet over die kamer of wens gaat (dan zegt het huis wat het zou doen).
+ */
+export type BrugVraag = (
+  wens: 'verwarmen' | 'koelen',
+  zoneId: string,
+  temperatuurC: number | null,
+  lang: Lang,
+) =>
+  | { readonly ok: true; readonly antwoord: string; readonly feiten: readonly Fact[]; readonly opdracht: NonNullable<Answer['opdracht']>; readonly gedaan: NonNullable<Answer['gedaan']> }
+  | { readonly ok: false; readonly antwoord: string }
+  | null;
 
 export interface AskContext {
   readonly config: SiteConfig;
@@ -177,6 +196,8 @@ export interface AskContext {
   } | null;
   /** Het sluipverbruik (besluit 192), uit de nachten van de slimme meter. */
   readonly sluip?: SluipRapport | null;
+  /** De klimaatbrug (besluit 210): weg of null als hij uit staat. */
+  readonly brug?: BrugVraag | null;
 }
 
 /** "De zon staat nu op de voorgevel." Zonder getallen: de gevels hebben namen. */
@@ -1326,6 +1347,12 @@ export function ask(question: Question, ctx: AskContext): Answer {
         const buiten = snapshot?.explanation.outdoorTemperatureC ?? null;
         const kouder = pz?.temperatureC != null && pz.targetC != null ? pz.temperatureC < pz.targetC : buiten != null ? buiten < 15 : true;
         wens = kanWarm && (!kanKoel || kouder) ? 'verwarmen' : 'koelen';
+      }
+      // Via de knoppen van het oude systeem (besluit 210), als de brug aan staat en over deze kamer gaat.
+      if ((wens === 'verwarmen' || wens === 'koelen') && ctx.brug) {
+        const b = ctx.brug(wens, zone.id, question.temperatuurC, lang);
+        if (b?.ok) return { vraag: 'doe', taal: lang, kamer: zone.id, antwoord: b.antwoord, feiten: b.feiten, opdracht: b.opdracht, gedaan: b.gedaan };
+        if (b) return letterlijk(b.antwoord, zone.id);
       }
       const heat = wens === 'verwarmen';
       // Drogen kan wat kan koelen: een airco.

@@ -415,6 +415,8 @@ verwijzing bestaat.
   Een gevoel is een opdracht ("het is donker in de keuken"), licht past bij
   het moment, de zithoek is bij naam te bedienen, het huis vraagt door met
   keuzes ("klein of groot?") en stelt 's avonds de sfeerverlichting voor ([209]).
+  Tot stap B verwarmt de assistent via de knoppen van het oude systeem, als
+  de bewoner dat aanzet: een graad hoger tot 22:00, daarna terug ([210]).
 - **Een kamer doet mee** met de regeling van een andere kamer, zoals een
   slaapkamer met de airco in de wasruimte ([142]).
 - **Comfort per bewoner:** wie hier woont staat op volgorde; de eerste die
@@ -695,4 +697,5 @@ verwijzing bestaat.
 [207]: DECISIONS.md#207-sluipverbruik-dat-vaak-terugkomt-de-wand-in-fully-kiosk-en-een-qa-ronde
 [208]: DECISIONS.md#208-luisteren-in-de-dienst-het-wekwoord-met-een-schuif-en-wachten-tot-je-klaar-bent
 [209]: DECISIONS.md#209-een-assistent-die-meedenkt-een-gevoel-wordt-een-opdracht-licht-dat-bij-het-moment-past-en-doorvragen
+[210]: DECISIONS.md#210-de-klimaatbrug-tot-stap-b-via-de-knoppen-van-het-oude-systeem
 <!-- links:einde -->

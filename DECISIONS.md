@@ -43,6 +43,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [104. Ontwerp 2 is de maatstaf, en de schets is de code](#104-ontwerp-2-is-de-maatstaf-en-de-schets-is-de-code)
 - [172. De app is af: opruimen, wat er nog komt, en talen later](#172-de-app-is-af-opruimen-wat-er-nog-komt-en-talen-later)
 - [184. De integratie Smart Climate: Assist zonder YAML](#184-de-integratie-smart-climate-assist-zonder-yaml)
+- [210. De klimaatbrug: tot stap B via de knoppen van het oude systeem](#210-de-klimaatbrug-tot-stap-b-via-de-knoppen-van-het-oude-systeem)
 
 **Kern en regeling**
 
@@ -9752,6 +9753,56 @@ en 's avonds bij "zet de zithoek aan" vragen of de sfeerverlichting aan moet.
   is. Dat verruimt besluit 148 zodra het brein er is; in deze versie gaat er
   nog niets extra's naar het model, behalve de namen van de zones.
 - **Versie 0.81.0.**
+
+---
+
+## 210. De klimaatbrug: tot stap B via de knoppen van het oude systeem
+
+*Onderwerp: visie en principes · Status: geldig*
+
+Gevraagd door de bewoner op 29 oktober 2026: "het is koud in de woonkamer"
+moet echt warmer worden, niet alleen "dan zou ik". Klimaat bleef tot nu toe
+dicht tot stap B (besluit 15, 64), en dat blijft voor de regeling van de app
+zo. Uit drie wegen (wachten op B; een eigen deur naar de thermostaat, die het
+oude systeem binnen drie minuten terugzet; of de knoppen van het oude
+systeem) koos hij de knoppen. Voor de winterdataset maakt het niets uit: het
+is een ingreep van een bewoner, zoals een draai aan de knop in Home
+Assistant, en het oude systeem blijft de baas. Zo zie je alvast hoe de app de
+apparaten bedient.
+
+*Besluit:*
+
+- **Een achtste smalle deur** in de client (`allowKnoppen`, `isKnopCall`):
+  alleen `input_number.set_value` met een getal op
+  `input_number.temp_nest_dag` of `input_number.temp_airco_woonkamer_koelen`,
+  en `input_select.select_option` met de optie `dag` op
+  `input_select.verwarming_modus`. Een thermostaat of airco zelf (`climate.`)
+  komt hier nooit doorheen; een test bewijst dat. De deur is open als de
+  brug aan staat, of als er nog iets terug moet.
+- **Alleen in de add-on**, net als meldingen (besluit 183): de NAS kijkt mee en
+  blijft eraf, anders ging een opdracht twee keer.
+- **Standaard uit**, aan te zetten bij Functies › Praten, en alleen te zien als
+  de knoppen van het oude systeem er zijn. Alleen voor dit huis: de knoppen
+  staan in zijn YAML. Bij stap B verdwijnt de brug.
+- **Wat hij doet** (`web/klimaatbrug.ts`), met de vier standaarden van de
+  bewoner: verwarmen in de kamer van de Nest zet de dagtemperatuur een graad
+  hoger, of op de genoemde temperatuur, binnen het bereik van de knop. 's
+  Nachts, afwezig of bij voorverwarmen zet hij eerst de modus op dag; de timer
+  van het oude systeem zet die na twee uur terug op automatisch. De zolder doet
+  niet mee: daar verwarmt de airco alleen met zon of als hulp. Koelen gaat via
+  de koelknop van de woonkamer, alleen als de koelstrategie aan staat. Bij
+  vakantie of koelen in de regeling verwarmt hij niet.
+- **Tot hoe laat** (besluit 75): wat je zegt ("een uur", "twee uur"), anders het
+  eind van het dagdeel, 22:00, of 's nachts twee uur. Dan zet de brug de knop
+  terug op zijn standaard (`…_standaard`), maar alleen als hij nog staat waar
+  de brug hem zette: wie hem intussen zelf verzette, wint. Wat terug moet staat
+  in `klimaatbrug.json` in de logmap, zodat een herstart het niet vergeet.
+- **Via dezelfde weg als licht** (besluit 148): de assistent geeft een opdracht
+  terug, de pagina stuurt die naar `/api/klimaat`, en de deur rekent opnieuw
+  en toetst alles. Een gast mag het niet. Het antwoord zegt wat er gebeurt en
+  tot wanneer, met elk getal als feit: "Ik zet de woonkamer op 21°, tot 22:00.
+  Daarna weer 20°."
+- **Versie 0.82.0.**
 
 ---
 

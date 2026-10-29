@@ -82,6 +82,11 @@ export interface Functies {
     readonly stem?: StemBron;
     /** Of het apparaat ook mag verstaan via de browser (besluit 203); Chrome stuurt dat naar Google. Weg is aan. */
     readonly verstaan?: boolean;
+    /**
+     * De klimaatbrug (besluit 210): of de assistent tot stap B de knoppen van
+     * het oude systeem mag verzetten. Weg is uit.
+     */
+    readonly klimaat?: boolean;
   };
   /**
    * Wanneer een batterij of een airco-filter een melding geeft (besluit 149):
@@ -152,6 +157,8 @@ export interface FunctiesGevonden {
   readonly taalmodellen?: readonly { readonly id: string; readonly naam: string }[];
   /** De spraakassistenten in Home Assistant (besluit 150). */
   readonly spraakassistenten?: readonly SpraakKeuze[];
+  /** Of de knoppen van het oude klimaatsysteem er zijn, voor de klimaatbrug (besluit 210). */
+  readonly klimaatBrug?: boolean;
 }
 
 /** Een spraakassistent uit Home Assistant (besluit 150): met welk wekwoord en welke spraak naar tekst. */
@@ -293,14 +300,14 @@ export function functiesVoorstel(g: FunctiesGevonden): Functies {
 export function volledig(
   f: Functies,
   g: FunctiesGevonden | null,
-): Functies & { weer: { bron: string | null; uren: boolean }; licht: { bedienen: boolean }; schermen: { bedienen: boolean }; praten: { taalmodel: string | null; bedienen: boolean; spraak: string | null; stem: StemBron; verstaan: boolean }; meldingen: Drempels } {
+): Functies & { weer: { bron: string | null; uren: boolean }; licht: { bedienen: boolean }; schermen: { bedienen: boolean }; praten: { taalmodel: string | null; bedienen: boolean; spraak: string | null; stem: StemBron; verstaan: boolean; klimaat: boolean }; meldingen: Drempels } {
   const weer = f.weer ?? { bron: g?.weerbronnen?.[0]?.id ?? null };
   return {
     ...f,
     weer: { bron: weer.bron, uren: weer.uren ?? true },
     licht: f.licht ?? { bedienen: true },
     schermen: f.schermen ?? { bedienen: true },
-    praten: { taalmodel: f.praten?.taalmodel ?? null, bedienen: f.praten?.bedienen ?? true, spraak: f.praten?.spraak ?? null, stem: f.praten?.stem ?? standaardStem(g), verstaan: f.praten?.verstaan ?? true },
+    praten: { taalmodel: f.praten?.taalmodel ?? null, bedienen: f.praten?.bedienen ?? true, spraak: f.praten?.spraak ?? null, stem: f.praten?.stem ?? standaardStem(g), verstaan: f.praten?.verstaan ?? true, klimaat: f.praten?.klimaat ?? false },
     meldingen: f.meldingen ?? STANDAARD_DREMPELS,
   };
 }
@@ -359,7 +366,7 @@ export function controleer(body: unknown, g: FunctiesGevonden): FunctiesUitkomst
   }
   // Praten met je huis (besluit 148): alleen een AI-taak die Home Assistant kent.
   const pratenIn = b['praten'];
-  let praten = { taalmodel: null as string | null, bedienen: true, spraak: null as string | null, stem: 'apparaat' as StemBron, verstaan: true };
+  let praten: NonNullable<Functies['praten']> = { taalmodel: null, bedienen: true, spraak: null, stem: 'apparaat', verstaan: true };
   if (pratenIn !== undefined) {
     const pr = (typeof pratenIn === 'object' && pratenIn != null ? pratenIn : {}) as Record<string, unknown>;
     const model = pr['taalmodel'] ?? null;
@@ -373,7 +380,10 @@ export function controleer(body: unknown, g: FunctiesGevonden): FunctiesUitkomst
     if (stem !== 'apparaat' && stem !== 'huis') return { ok: false, reden: 'praten.stem is apparaat of huis' };
     const verstaan = pr['verstaan'] ?? true;
     if (typeof verstaan !== 'boolean') return { ok: false, reden: 'praten.verstaan is ja of nee' };
-    praten = { taalmodel: model as string | null, bedienen: pr['bedienen'], spraak: spraak as string | null, stem, verstaan };
+    // De klimaatbrug (besluit 210); weg is uit.
+    const klimaat = pr['klimaat'] ?? false;
+    if (typeof klimaat !== 'boolean') return { ok: false, reden: 'praten.klimaat is ja of nee' };
+    praten = { taalmodel: model as string | null, bedienen: pr['bedienen'], spraak: spraak as string | null, stem, verstaan, ...(pr['klimaat'] !== undefined ? { klimaat } : {}) };
   }
   // Wanneer een batterij of filter een melding geeft (besluit 149): een van de keuzes, of nooit.
   const meldingenIn = b['meldingen'];

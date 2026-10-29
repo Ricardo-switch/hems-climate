@@ -123,6 +123,14 @@ export interface HaClientOptions {
    */
   readonly allowNotify?: boolean;
   /**
+   * De klimaatbrug (besluit 210): de knoppen van het oude systeem die de
+   * assistent tot stap B mag verzetten. Precies `input_number.set_value` met
+   * alleen een getal, of `input_select.select_option` met een van de opties
+   * hieronder, op één entiteit uit deze lijst. Een thermostaat of airco zelf
+   * (`climate.`) komt hier nooit doorheen. Leeg of weg: dicht.
+   */
+  readonly allowKnoppen?: () => { readonly entiteiten: readonly string[]; readonly opties: readonly string[] };
+  /**
    * Of deze client een AI-taak van Home Assistant om een tekst mag vragen
    * (besluit 148): precies `ai_task.generate_data`, via `generateData`, met
    * alleen een taaknaam, een opdracht, één `ai_task.`-entiteit en eventueel
@@ -219,6 +227,32 @@ export function isNotifyCall(domain: string, service: string, data: Record<strin
   return true;
 }
 
+/**
+ * De klimaatbrug (besluit 210): een getal op een toegestane `input_number`, of
+ * een toegestane optie op een toegestane `input_select`. Verder niets.
+ */
+export function isKnopCall(
+  domain: string,
+  service: string,
+  data: Record<string, unknown>,
+  target: Record<string, unknown>,
+  mag: { readonly entiteiten: readonly string[]; readonly opties: readonly string[] },
+): boolean {
+  if (Object.keys(target).some((k) => k !== 'entity_id')) return false;
+  const id = target['entity_id'];
+  if (typeof id !== 'string' || !mag.entiteiten.includes(id) || !id.startsWith(`${domain}.`)) return false;
+  const keys = Object.keys(data);
+  if (domain === 'input_number' && service === 'set_value') {
+    const v = data['value'];
+    return keys.length === 1 && keys[0] === 'value' && typeof v === 'number' && Number.isFinite(v);
+  }
+  if (domain === 'input_select' && service === 'select_option') {
+    const o = data['option'];
+    return keys.length === 1 && keys[0] === 'option' && typeof o === 'string' && mag.opties.includes(o);
+  }
+  return false;
+}
+
 /** Een scène aanzetten (besluit 100): één `scene.`-entiteit, verder niets. */
 function isSceneCall(domain: string, service: string, data: Record<string, unknown>, target: Record<string, unknown>): boolean {
   if (domain !== 'scene' || service !== 'turn_on') return false;
@@ -260,8 +294,9 @@ export declare interface HaClient {
 }
 
 export class HaClient extends EventEmitter {
-  readonly #options: Required<Omit<HaClientOptions, 'allowWrites' | 'allowLights' | 'allowScenes' | 'allowCovers' | 'allowAiTask' | 'allowListen' | 'allowUpdate' | 'allowNotify'>> & {
+  readonly #options: Required<Omit<HaClientOptions, 'allowWrites' | 'allowLights' | 'allowScenes' | 'allowCovers' | 'allowAiTask' | 'allowListen' | 'allowUpdate' | 'allowNotify' | 'allowKnoppen'>> & {
     allowUpdate: () => string | null;
+    allowKnoppen: () => { readonly entiteiten: readonly string[]; readonly opties: readonly string[] };
     allowNotify: boolean;
     allowWrites: boolean;
     allowLights: boolean;
@@ -288,6 +323,7 @@ export class HaClient extends EventEmitter {
       allowCovers: options.allowCovers ?? false,
       allowUpdate: options.allowUpdate ?? (() => null),
       allowNotify: options.allowNotify ?? false,
+      allowKnoppen: options.allowKnoppen ?? (() => ({ entiteiten: [], opties: [] })),
       allowAiTask: options.allowAiTask ?? false,
       allowListen: options.allowListen ?? false,
       reconnectBaseMs: options.reconnectBaseMs ?? 1_000,
@@ -647,7 +683,8 @@ export class HaClient extends EventEmitter {
       (this.#options.allowScenes && isSceneCall(domain, service, data, target)) ||
       (this.#options.allowCovers && isCoverCall(domain, service, data, target)) ||
       isUpdateCall(domain, service, data, target, this.#options.allowUpdate()) ||
-      (this.#options.allowNotify && isNotifyCall(domain, service, data, target));
+      (this.#options.allowNotify && isNotifyCall(domain, service, data, target)) ||
+      isKnopCall(domain, service, data, target, this.#options.allowKnoppen());
     if (!allowed) {
       throw new Error(
         `Schrijven staat uit: ${domain}.${service} is niet verstuurd. ` +

@@ -280,6 +280,8 @@ export class WebServer {
       (this.#d.options.lights != null && path === '/api/licht') ||
       // Schermen (besluit 121): open, dicht, stop of een stand, voor de bewoner.
       (this.#d.options.covers != null && path === '/api/scherm') ||
+      // De klimaatbrug (besluit 210): alleen de knoppen van het oude systeem, tot stap B. Een gast niet.
+      (this.#d.options.klimaat != null && path === '/api/klimaat') ||
       // Scènes (besluit 100): een eigen smalle deur naast het licht.
       (this.#d.options.lights?.scenesEnabled === true && path === '/api/scene') ||
       // Een back-up terugzetten en opnieuw beginnen (besluit 151): alleen de eigen bestanden.
