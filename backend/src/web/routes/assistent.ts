@@ -12,7 +12,7 @@ import type { BrugVraag, Lang, Question } from '../assistant.js';
 import { brugVraag } from '../klimaatbrug.js';
 import type { SiteConfig } from '../../core/model.js';
 import { uitspraak } from '../uitspraak.js';
-import { afsluiter, begrijp, isHalf, isRuis, MAX_TEKST } from '../woordzoeker.js';
+import { afsluiter, begrijp, isHalf, isRuis, MAX_TEKST, verbeter } from '../woordzoeker.js';
 import { bedienbaar, herkenOpdracht, kiesUit, type Herkend, type Optie } from '../opdracht.js';
 import { inEigenWoorden, kies, PROEF_MS, WACHT_MS, type Vraag } from '../taalmodel.js';
 import { sunReport } from '../sun.js';
@@ -129,6 +129,8 @@ export async function assistentRoutes(d: Diensten, v: Verzoek): Promise<boolean>
       // De pagina stuurt de keuzes mee; de gekozen zin gaat daarna gewoon door de woordzoeker.
       const gekozen = kiesUit(tekst, optiesUit(url.searchParams.get('opties')));
       if (gekozen) tekst = gekozen.tekst;
+      // Wat bijna goed verstaan is, recht zetten naar de namen uit het huis (besluit 211).
+      else tekst = verbeter(tekst, huisNamen(d, config)) || tekst;
       vrijeTekst = tekst;
       // Alleen geluid, of het gesprek is klaar (21 oktober 2026): geen vraag.
       if (isRuis(tekst)) {
@@ -286,6 +288,12 @@ export async function assistentRoutes(d: Diensten, v: Verzoek): Promise<boolean>
 }
 
 /** Een opdracht als antwoord: de zin, in eigen woorden als dat kan, en wat de pagina moet sturen. */
+/** De namen uit het huis, om bijna goed verstane woorden recht te zetten (besluit 211). */
+function huisNamen(d: Diensten, config: SiteConfig): string[] {
+  const b = d.bedienbaar();
+  return [...config.zones.map((z) => z.name), ...b.kamers.map((k) => k.naam), ...b.zones.map((z) => z.naam), ...b.lampen.map((l) => l.naam), ...b.schermen.map((s) => s.naam), ...b.scenes.map((s) => s.naam)];
+}
+
 /** De klimaatbrug voor de assistent, of null als hij uit staat of het oude systeem er niet is. */
 function klimaatBrugVoor(d: Diensten, config: SiteConfig, tekst: string | null): BrugVraag | null {
   const k = d.options.klimaat;
@@ -321,6 +329,8 @@ export async function opdrachtAntwoord(d: Diensten, h: Herkend, tekst: string, l
     feiten: o.feiten,
     gesproken: uitspraak(eigen.antwoord, lang),
     opdracht: { pad: o.pad, body: o.body },
+    // Meer opdrachten erachteraan (besluit 211), zoals allebei de screens.
+    ...(o.meer?.length ? { meer: o.meer } : {}),
     gedaan: o.gedaan,
     beweegt: o.beweegt,
     vervolg: o.vervolg,

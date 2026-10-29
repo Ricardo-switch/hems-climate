@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.82.0';
+export const VERSIE = '0.83.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,24 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.83.0',
+    datum: '2026-10-29',
+    beter: [
+      'Het huis verstaat je veel sneller: je zin gaat rechtstreeks naar Whisper in huis, in plaats van via de spraakassistent van Home Assistant',
+      '"Doe de screens naar beneden" doet ze allebei; bij één screen vraagt het huis welke, en "allebei" kan ook',
+      'Na een opdracht sluit het venster vanzelf; het luistert alleen door als het huis iets terugvraagt',
+    ],
+    opgelost: ['Op een keuze tikken, zoals "groot", werd soms een andere vraag'],
+    en: {
+      beter: [
+        'The house understands you much faster: your sentence goes straight to Whisper at home instead of through the Home Assistant voice assistant',
+        '"Lower the screens" lowers both; with one screen the house asks which, and "both" works too',
+        'After a command the window closes by itself; it only keeps listening when the house asks something back',
+      ],
+      opgelost: ['Tapping a choice, such as "large", sometimes turned into a different question'],
+    },
+  },
   {
     versie: '0.82.0',
     datum: '2026-10-29',

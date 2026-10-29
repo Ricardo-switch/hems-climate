@@ -1,5 +1,31 @@
 # Wat is er nieuw · What is new
 
+## 0.83.0
+
+*29 oktober 2026*
+
+**Beter**
+
+- Het huis verstaat je veel sneller: je zin gaat rechtstreeks naar Whisper in huis, in plaats van via de spraakassistent van Home Assistant
+- "Doe de screens naar beneden" doet ze allebei; bij één screen vraagt het huis welke, en "allebei" kan ook
+- Na een opdracht sluit het venster vanzelf; het luistert alleen door als het huis iets terugvraagt
+
+**Opgelost**
+
+- Op een keuze tikken, zoals "groot", werd soms een andere vraag
+
+*English*
+
+**Improved**
+
+- The house understands you much faster: your sentence goes straight to Whisper at home instead of through the Home Assistant voice assistant
+- "Lower the screens" lowers both; with one screen the house asks which, and "both" works too
+- After a command the window closes by itself; it only keeps listening when the house asks something back
+
+**Fixed**
+
+- Tapping a choice, such as "large", sometimes turned into a different question
+
 ## 0.82.0
 
 *29 oktober 2026*

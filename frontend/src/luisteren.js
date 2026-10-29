@@ -11,8 +11,8 @@
  * - De wand luistert altijd naar het wekwoord, als dat op dit scherm aan staat (Functies ›
  *   Praten met je huis, bewaard in deze browser). Hoort hij "Hé huis", dan schuift er een
  *   laag over de pagina: een zacht tikje, het huis luistert, schrijft mee, doet het en
- *   zegt het. Daarna luistert het nog vijf seconden zonder wekwoord, en sluit de laag acht
- *   seconden nadat het huis klaar is met praten. "Niet begrepen" zegt het één keer per
+ *   zegt het, en sluit de laag. Alleen bij een vraag terug ("klein of groot?") of als het
+ *   je niet begreep, luistert het nog vijf seconden zonder wekwoord (besluit 211). "Niet begrepen" zegt het één keer per
  *   gesprek; hoort het daarna weer alleen ruis, dan stopt het stil (besluit 166).
  * - De telefoon luistert nooit vanzelf: de Assistent heeft een microfoonknop
  *   (`luisteren.eenmaal`).
@@ -41,6 +41,8 @@
   const wachttijd = () => lees(WACHTTIJD, 'normaal');
   const DOORPRATEN_MS = 5000;
   const SLUITEN_MS = 8000;
+  /** Na een opdracht of antwoord: nog even in beeld, dan dicht (besluit 211). */
+  const NA_ANTWOORD_MS = 2500;
 
   const aanHier = () => {
     try {
@@ -113,7 +115,7 @@
   function ronde(start, op) {
     // Naast deze pagina, net als `api/…` elders: in Home Assistant staat de app onder
     // /api/hassio_ingress/…, en /api/luister ging naar Home Assistant zelf, dat hem meteen sloot.
-    const q = new URLSearchParams({ start, gevoeligheid: gevoeligheid(), wachttijd: wachttijd() });
+    const q = new URLSearchParams({ start, gevoeligheid: gevoeligheid(), wachttijd: wachttijd(), taal: global.taal?.code ?? 'nl' });
     const adres = new URL(`api/luister?${q}`, location.href);
     adres.protocol = adres.protocol === 'https:' ? 'wss:' : 'ws:';
     const ws = new WebSocket(adres);
@@ -187,6 +189,8 @@
         const f = r ? await r.json().catch(() => ({})) : {};
         uit.antwoord = tk('basis.versie.mislukt', { fout: String(f.fout ?? f.wachten ?? tk('assistent.haGeenAntwoord')).replace(/\.$/, '') });
       } else {
+        // Meer erachteraan (besluit 211), zoals allebei de screens, door dezelfde deur.
+        for (const o of body.meer ?? []) await fetch(o.pad, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(o.body) }).catch(() => null);
         uit.gedaan = body.gedaan ?? [];
         scherm = body.beweegt ? { ...body.beweegt, sinds: Date.now() } : body.opdracht.body?.actie === 'stop' ? null : scherm;
       }
@@ -404,11 +408,15 @@
     if (uit.onbekend && nietBegrepen++ > 0) return sluit();
     if (!uit.onbekend) nietBegrepen = 0;
     const vb = uit.onbekend ? uit.voorbeelden.slice(0, 2).map((x) => `"${x}"`).join(` ${tk('luisteren.of')} `) : '';
-    toon('antwoord', { jij: tekst, groot: uit.onbekend ? tk('luisteren.begrijpNiet') : uit.antwoord, klein: vb ? tk('luisteren.vraagBijvoorbeeld', { voorbeelden: vb }) : '', gedaan: uit.gedaan.slice(0, 2), keuze: uit.keuze, hint: tk('luisteren.nogIets') });
+    toon('antwoord', { jij: tekst, groot: uit.onbekend ? tk('luisteren.begrijpNiet') : uit.antwoord, klein: vb ? tk('luisteren.vraagBijvoorbeeld', { voorbeelden: vb }) : '', gedaan: uit.gedaan.slice(0, 2), keuze: uit.keuze, hint: uit.keuze.length || uit.onbekend ? tk('luisteren.nogIets') : '' });
     await zeg(uit.gesproken ?? uit.antwoord);
     if (!laag?.classList.contains('open')) return;
-    sluitTimer = setTimeout(sluit, SLUITEN_MS);
-    doorpraten();
+    // Alleen doorluisteren bij een vraag terug, of als het huis je niet begreep (besluit 211).
+    // Na een opdracht of een antwoord sluit de laag vanzelf; "Hé huis" opent hem weer.
+    if (uit.keuze.length || uit.onbekend) {
+      sluitTimer = setTimeout(sluit, SLUITEN_MS);
+      doorpraten();
+    } else sluitTimer = setTimeout(sluit, NA_ANTWOORD_MS);
   }
 
   /** Na het antwoord: nog vijf seconden luisteren, zonder wekwoord. */

@@ -247,6 +247,8 @@ async function voerUit(body) {
       nu.vervolg = [];
       return;
     }
+    // Meer erachteraan (besluit 211), zoals allebei de screens, door dezelfde deur.
+    for (const o of body.meer ?? []) await fetch(o.pad, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(o.body) }).catch(() => null);
   } catch {
     nu.antwoord = taal.t('assistent.nietBereikbaar');
     nu.gesproken = null;

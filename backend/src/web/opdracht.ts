@@ -154,6 +154,8 @@ export interface Opdracht {
   readonly ruimte: string | null;
   /** Een vervolg dat nu kan, als zin om op te tikken: "Sfeerverlichting ook zachter". */
   readonly vervolg: readonly { readonly label: string; readonly tekst: string }[];
+  /** Meer opdrachten erachteraan, door dezelfde deuren (besluit 211): allebei de screens. */
+  readonly meer?: readonly { readonly pad: Opdracht['pad']; readonly body: Readonly<Record<string, unknown>> }[];
 }
 
 /**
@@ -471,6 +473,61 @@ function beste<T extends { readonly naam: string }>(tekst: string, lijst: readon
 
 const LICHT_WOORD = /\b(lamp|lampen|lampje|lampjes|licht|lichten|verlichting|spot|spots|spotjes|plafonniere|light|lights)\b/;
 const SCHERM_WOORD = /\b(screen|screens|scherm|schermen|zonnescherm|zonwering|rolluik|rolluiken|markies|luifel|blind|blinds|awning|awnings|shutter|shutters|shade|shades)\b/;
+/** Meer dan één scherm (besluit 211): meervoud, "allebei", "alle". */
+const ALLEMAAL = /\b(screens|schermen|rolluiken|zonneschermen|markiezen|allebei|beide|alle|allemaal|both|all)\b/;
+
+type SchermWat = { readonly actie: SchermActie; readonly waarde: number | null };
+
+/** Wat er met een scherm moet gebeuren, of null als het er niet in staat. */
+function schermWat(tekst: string, zonnescherm: boolean, omlaag: boolean, omhoog: boolean, namen: readonly string[]): SchermWat | null {
+  const n = getal(tekst, namen);
+  if (/\bhalf\b|\bhalfweg\b|\bhalverwege\b/.test(tekst)) return { actie: 'stand', waarde: 50 };
+  if (n != null && n > 0 && n < 100) return { actie: 'stand', waarde: n };
+  if (zonnescherm) {
+    // Een zonnescherm vouw je uit en klap je in.
+    if (/\b(uit|uitvouwen|uitrollen|open|openen|out|extend|roll out)\b/.test(tekst) || omlaag) return { actie: 'open', waarde: null };
+    if (/\b(in|inklappen|inrollen|dicht|sluit|sluiten|weg|retract|close|roll in)\b/.test(tekst) || omhoog) return { actie: 'dicht', waarde: null };
+    return null;
+  }
+  if (/\b(dicht|sluit|sluiten|close|closed|shut)\b/.test(tekst) || omlaag || n === 100) return { actie: 'dicht', waarde: null };
+  if (/\b(open|openen|weg|opendoen|open doen)\b/.test(tekst) || omhoog || n === 0) return { actie: 'open', waarde: null };
+  return null;
+}
+
+/** De richting als woorden die de woordzoeker weer verstaat: "dicht", "open", "op 40". */
+function watWoord(w: SchermWat, nl: boolean): string {
+  if (w.actie === 'stand') return w.waarde === 50 ? (nl ? 'half' : 'half') : `${nl ? 'op' : 'to'} ${w.waarde}`;
+  return w.actie === 'dicht' ? (nl ? 'dicht' : 'close') : nl ? 'open' : 'open';
+}
+
+/**
+ * Meer schermen tegelijk (besluit 211): de eerste is de opdracht, de rest
+ * gaat erachteraan (`meer`), elk door dezelfde deur.
+ */
+function meerdereSchermen(lijst: readonly BedienScherm[], wat: SchermWat, b: Bedienbaar, lang: Lang): Herkend {
+  const losse = lijst.map((x) => schermOpdracht(x, wat.actie, wat.waarde, b, lang)).filter((h): h is Extract<Herkend, { ok: true }> => h.ok).map((h) => h.opdracht);
+  if (!losse.length) return schermOpdracht(lijst[0]!, wat.actie, wat.waarde, b, lang);
+  const nl = lang === 'nl';
+  const zon = lijst.every((x) => x.zonnescherm);
+  const wie = nl ? (zon ? 'De zonneschermen' : 'De screens') : zon ? 'The awnings' : 'The screens';
+  const hoe =
+    wat.actie === 'stand' ? (nl ? `gaan naar ${pct(wat.waarde ?? 0)} ${zon ? 'uit' : 'dicht'}` : `are moving to ${pct(wat.waarde ?? 0)}`)
+    : wat.actie === 'dicht' ? (nl ? (zon ? 'klappen in' : 'gaan dicht') : zon ? 'are retracting' : 'are closing')
+    : nl ? (zon ? 'gaan uit' : 'gaan open') : zon ? 'are extending' : 'are opening';
+  const [eerste, ...rest] = losse;
+  return {
+    ok: true,
+    opdracht: {
+      ...eerste!,
+      antwoord: `${wie} ${hoe}.`,
+      feiten: losse.flatMap((o) => o.feiten),
+      gedaan: losse.flatMap((o) => o.gedaan),
+      beweegt: null,
+      meer: rest.map((o) => ({ pad: o.pad, body: o.body })),
+    },
+  };
+}
+
 /** Te weinig licht, als gevoel (besluit 209): dan gaat het licht aan, of feller. */
 const DONKER = /\b(donker|te donker|zo donker|erg donker|schemerig|ik zie niks|ik zie niets|zie geen hand|dark|too dark|so dark|gloomy|cant see)\b/;
 /** Te veel licht, als gevoel: dan zachter. */
@@ -535,6 +592,9 @@ export function kiesUit(ruw: string, opties: readonly Optie[]): Optie | null {
     if (JA.test(tekst)) return ja;
   }
   const los = ` ${tekst} `;
+  // "Allebei", "beide", "alle": de keuze voor allemaal, als die er is.
+  const alles = opties.find((o) => /^(allebei|allemaal|both|all)$/.test(gewoon(o.label)));
+  if (alles && /\b(allebei|beide|alle|allemaal|both|all)\b/.test(tekst)) return alles;
   for (const [i, woorden] of RANG.entries()) if (i < opties.length && woorden.some((w) => los.includes(` ${w} `))) return opties[i]!;
   if (/\b(laatste|last)\b/.test(tekst)) return opties.at(-1)!;
   // Een woord uit het label, ook verbogen: "de grote" bij "groot", "de kleine" bij "klein".
@@ -589,37 +649,30 @@ export function herkenOpdracht(ruw: string, b: Bedienbaar, lang: Lang, laatsteSc
     return { ok: false, antwoord: nl ? 'Schermen bedienen staat niet aan. Dat zet je aan bij Instellingen, onder Functies.' : 'Operating screens is off. Turn it on under Settings, Features.' };
   }
   if (scherm || (SCHERM_WOORD.test(tekst) && b.schermen.length)) {
-    const zonnescherm = /\b(zonnescherm|zonwering|markies|luifel|awning)\b/.test(tekst);
+    const zonnescherm = /\b(zonnescherm|zonneschermen|zonwering|markies|luifel|awning|awnings)\b/.test(tekst);
     const kandidaten = scherm ? [scherm] : b.schermen.filter((s) => (zonnescherm ? s.zonnescherm : !s.zonnescherm));
-    // Bij twee de kamer die genoemd wordt; anders vragen welke.
+    // Wat er moet gebeuren, los van welk scherm: dan kan het ook voor allemaal of als keuze.
+    const wat = schermWat(tekst, kandidaten[0]?.zonnescherm === true, omlaag, omhoog, [scherm?.naam ?? '', scherm?.kamer ?? '']);
+    // Bij twee de kamer die genoemd wordt.
     const s = kandidaten.length === 1 ? kandidaten[0]! : kandidaten.find((x) => treffer(tekst, x.kamer) > 0) ?? null;
     if (s == null) {
-      if (!kandidaten.length) return null;
-      // Doorvragen met het woord dat het verschil maakt (besluit 209): "klein of groot?".
+      if (!kandidaten.length || wat == null) return null;
+      // Meervoud of "allebei" (besluit 211): "doe de screens naar beneden" doet ze allemaal.
+      if (ALLEMAAL.test(tekst)) return meerdereSchermen(kandidaten, wat, b, lang);
+      // Anders doorvragen met het woord dat het verschil maakt (besluit 209), en de richting in de keuze.
       const labels = onderscheid(kandidaten.map((x) => x.naam));
-      const rest = ` ${tekst} `
-        .replace(SCHERM_WOORD, ' ')
-        .replace(/\b(het|de|the)\b/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
+      const woord = watWoord(wat, nl);
+      const soort = zonnescherm ? (nl ? 'zonneschermen' : 'awnings') : nl ? 'screens' : 'screens';
       return {
         ok: false,
-        antwoord: nl ? `Welke bedoel je: ${ofLijst(labels, nl)}?` : `Which one: ${ofLijst(labels, nl)}?`,
-        keuze: kandidaten.slice(0, 4).map((x, i) => ({ label: labels[i]!, tekst: `${x.naam} ${rest}`.trim() })),
+        antwoord: nl ? `Welke bedoel je: ${ofLijst(labels, nl)}, of allebei?` : `Which one: ${ofLijst(labels, nl)}, or both?`,
+        keuze: [
+          ...kandidaten.slice(0, 3).map((x, i) => ({ label: labels[i]!, tekst: `${x.naam} ${woord}` })),
+          { label: nl ? (kandidaten.length > 2 ? 'Allemaal' : 'Allebei') : kandidaten.length > 2 ? 'All' : 'Both', tekst: nl ? `alle ${soort} ${woord}` : `all ${soort} ${woord}` },
+        ],
       };
     }
-    const n = getal(tekst, [s.naam, s.kamer]);
-    if (/\bhalf\b|\bhalfweg\b|\bhalverwege\b/.test(tekst)) return schermOpdracht(s, 'stand', 50, b, lang);
-    if (n != null && n > 0 && n < 100) return schermOpdracht(s, 'stand', n, b, lang);
-    if (s.zonnescherm) {
-      // Een zonnescherm vouw je uit en klap je in.
-      if (/\b(uit|uitvouwen|uitrollen|open|openen|out|extend|roll out)\b/.test(tekst) || omlaag) return schermOpdracht(s, 'open', null, b, lang);
-      if (/\b(in|inklappen|inrollen|dicht|sluit|sluiten|weg|retract|close|roll in)\b/.test(tekst) || omhoog) return schermOpdracht(s, 'dicht', null, b, lang);
-      return null;
-    }
-    if (/\b(dicht|sluit|sluiten|close|closed|shut)\b/.test(tekst) || omlaag || n === 100) return schermOpdracht(s, 'dicht', null, b, lang);
-    if (/\b(open|openen|weg|opendoen|open doen)\b/.test(tekst) || omhoog || n === 0) return schermOpdracht(s, 'open', null, b, lang);
-    return null;
+    return wat ? schermOpdracht(s, wat.actie, wat.waarde, b, lang) : null;
   }
 
   // Een scène, bij naam: "scène film", of de naam alleen als die lang genoeg is.
