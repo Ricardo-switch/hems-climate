@@ -86,7 +86,7 @@ COPY --from=web /web/dist ./web
 
 # Het wekwoord "Hé huis", dat de dienst zelf hoort (besluit 208). Uit backend/:
 # de NAS checkt alleen backend, frontend, config en deploy uit (SPARSE_MAPPEN).
-COPY backend/wekwoord/*.onnx ./wekwoord/
+COPY backend/wekwoord ./wekwoord
 
 # Waar de gemonteerde mappen terechtkomen. `config/sites` zit onder /app zodat
 # het opzoeken vanaf de werkmap hem vindt zonder extra instelling.
