@@ -199,6 +199,19 @@
   }
 
   let stemNaam;
+  /** De stem van dit apparaat zelf; zonder stem alleen even wachten, zodat de tekst te lezen is. */
+  function zegMetApparaat(tekst) {
+    const wacht = () => new Promise((ok) => setTimeout(ok, Math.max(1500, tekst.length * 55)));
+    if (!global.speechSynthesis || typeof SpeechSynthesisUtterance === 'undefined') return wacht();
+    return new Promise((ok) => {
+      const u = new SpeechSynthesisUtterance(tekst);
+      u.lang = global.taal?.code === 'en' ? 'en-GB' : 'nl-NL';
+      u.onend = () => ok();
+      u.onerror = () => ok();
+      global.speechSynthesis.cancel();
+      global.speechSynthesis.speak(u);
+    });
+  }
   /** Zegt het antwoord met Piper in Home Assistant, als die er is; anders alleen tekst. */
   async function zeg(tekst) {
     if (stemNaam === undefined) {
@@ -206,7 +219,8 @@
       const s = await fetch(`api/stem?taal=${global.taal.code}`).then((r) => r.json()).catch(() => null);
       stemNaam = s?.stem && s?.taal ? s.stem : null;
     }
-    if (!stemNaam) return new Promise((ok) => setTimeout(ok, Math.max(1500, tekst.length * 55)));
+    // Zonder stem in Home Assistant, of als de bewoner het apparaat koos (besluit 212): de stem van dit apparaat.
+    if (!stemNaam) return zegMetApparaat(tekst);
     return new Promise((ok) => {
       const a = new Audio(`api/stem?tekst=${encodeURIComponent(tekst)}&taal=${global.taal.code}`);
       a.onended = ok;
@@ -531,7 +545,7 @@
     return { klaar: () => r.stop(), stop: () => r.abort() };
   }
 
-  global.luisteren = { kan, aanHier, zetHier, start, eenmaal, opnieuw, kanBrowser, viaBrowser, niveau: () => mic?.niveau ?? browserNiveau };
+  global.luisteren = { kan, aanHier, zetHier, start, eenmaal, opnieuw, stemOpnieuw: () => (stemNaam = undefined), kanBrowser, viaBrowser, niveau: () => mic?.niveau ?? browserNiveau };
   // De wand: meteen beginnen als het hier aan staat.
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
   else start();

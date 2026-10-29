@@ -22,6 +22,8 @@ import { CAMERA_ID, GEEN_BEELD, findCameras } from './camera.js';
 import { DREMPEL_KEUZES, STANDAARD_DREMPELS, type Drempels } from './house.js';
 import { OPEN_METEO, OPEN_METEO_NAAM } from './open-meteo.js';
 import { weatherSources } from './weather.js';
+import { geldigeStemKeuze } from './stemmen.js';
+
 
 export const FUNCTIES_FILE = 'functies.json';
 
@@ -87,6 +89,11 @@ export interface Functies {
      * het oude systeem mag verzetten. Weg is uit.
      */
     readonly klimaat?: boolean;
+    /**
+     * De stem van het huis (besluit 212): `engine|voice` uit Home Assistant,
+     * `apparaat`, of weg/null: vanzelf (Piper als die er is, anders het apparaat).
+     */
+    readonly stemKeuze?: string | null;
   };
   /**
    * Wanneer een batterij of een airco-filter een melding geeft (besluit 149):
@@ -300,14 +307,14 @@ export function functiesVoorstel(g: FunctiesGevonden): Functies {
 export function volledig(
   f: Functies,
   g: FunctiesGevonden | null,
-): Functies & { weer: { bron: string | null; uren: boolean }; licht: { bedienen: boolean }; schermen: { bedienen: boolean }; praten: { taalmodel: string | null; bedienen: boolean; spraak: string | null; stem: StemBron; verstaan: boolean; klimaat: boolean }; meldingen: Drempels } {
+): Functies & { weer: { bron: string | null; uren: boolean }; licht: { bedienen: boolean }; schermen: { bedienen: boolean }; praten: { taalmodel: string | null; bedienen: boolean; spraak: string | null; stem: StemBron; verstaan: boolean; klimaat: boolean; stemKeuze: string | null }; meldingen: Drempels } {
   const weer = f.weer ?? { bron: g?.weerbronnen?.[0]?.id ?? null };
   return {
     ...f,
     weer: { bron: weer.bron, uren: weer.uren ?? true },
     licht: f.licht ?? { bedienen: true },
     schermen: f.schermen ?? { bedienen: true },
-    praten: { taalmodel: f.praten?.taalmodel ?? null, bedienen: f.praten?.bedienen ?? true, spraak: f.praten?.spraak ?? null, stem: f.praten?.stem ?? standaardStem(g), verstaan: f.praten?.verstaan ?? true, klimaat: f.praten?.klimaat ?? false },
+    praten: { taalmodel: f.praten?.taalmodel ?? null, bedienen: f.praten?.bedienen ?? true, spraak: f.praten?.spraak ?? null, stem: f.praten?.stem ?? standaardStem(g), verstaan: f.praten?.verstaan ?? true, klimaat: f.praten?.klimaat ?? false, stemKeuze: f.praten?.stemKeuze ?? null },
     meldingen: f.meldingen ?? STANDAARD_DREMPELS,
   };
 }
@@ -383,7 +390,18 @@ export function controleer(body: unknown, g: FunctiesGevonden): FunctiesUitkomst
     // De klimaatbrug (besluit 210); weg is uit.
     const klimaat = pr['klimaat'] ?? false;
     if (typeof klimaat !== 'boolean') return { ok: false, reden: 'praten.klimaat is ja of nee' };
-    praten = { taalmodel: model as string | null, bedienen: pr['bedienen'], spraak: spraak as string | null, stem, verstaan, ...(pr['klimaat'] !== undefined ? { klimaat } : {}) };
+    // De stem van het huis (besluit 212): een stem uit Home Assistant, het apparaat, of vanzelf.
+    const stemKeuze = pr['stemKeuze'] ?? null;
+    if (!geldigeStemKeuze(stemKeuze)) return { ok: false, reden: 'praten.stemKeuze is een stem uit Home Assistant, apparaat, of leeg' };
+    praten = {
+      taalmodel: model as string | null,
+      bedienen: pr['bedienen'],
+      spraak: spraak as string | null,
+      stem,
+      verstaan,
+      ...(pr['klimaat'] !== undefined ? { klimaat } : {}),
+      ...(pr['stemKeuze'] !== undefined ? { stemKeuze: stemKeuze as string | null } : {}),
+    };
   }
   // Wanneer een batterij of filter een melding geeft (besluit 149): een van de keuzes, of nooit.
   const meldingenIn = b['meldingen'];

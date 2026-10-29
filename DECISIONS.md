@@ -213,6 +213,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [208. Luisteren in de dienst: het wekwoord met een schuif, en wachten tot je klaar bent](#208-luisteren-in-de-dienst-het-wekwoord-met-een-schuif-en-wachten-tot-je-klaar-bent)
 - [209. Een assistent die meedenkt: een gevoel wordt een opdracht, licht dat bij het moment past, en doorvragen](#209-een-assistent-die-meedenkt-een-gevoel-wordt-een-opdracht-licht-dat-bij-het-moment-past-en-doorvragen)
 - [211. Sneller verstaan, de screens samen, en het venster dicht na een opdracht](#211-sneller-verstaan-de-screens-samen-en-het-venster-dicht-na-een-opdracht)
+- [212. De stem kiezen, en stem en luisteren op één plek](#212-de-stem-kiezen-en-stem-en-luisteren-op-één-plek)
 
 **Veiligheid**
 
@@ -9856,6 +9857,47 @@ app; en na een opdracht bleef het venster luisteren zonder iets te doen.
   niet begreep, luistert het nog vijf seconden zonder wekwoord; "nee" of "oké
   bedankt" sluit het, zoals eerder.
 - **Versie 0.83.0.**
+
+---
+
+## 212. De stem kiezen, en stem en luisteren op één plek
+
+*Onderwerp: weergave · Status: geldig*
+
+Gevraagd door de bewoner op 29 oktober 2026, na de schets
+`Wand-Instellingen-Stem`: de stem kiezen in de app, vrouw of man, met per stem
+een voorbeeld; weg met wat de app uit openWakeWord haalde (het wekwoord is
+altijd "Hé huis") en met "Waar de stem vandaan komt": de app regelt dat zelf,
+zodat het voor iedereen meteen werkt, tenzij je een stem uit de cloud kiest.
+Google Cloud staat in zijn Home Assistant, met de Chirp 3 HD-stemmen in het
+Nederlands.
+
+*Besluit:*
+
+- **Een eigen onderdeel bij Functies: Stem en luisteren.** Links de stem van je
+  huis, rechts het luisteren ("Hé huis", hoe gevoelig, de wachttijd, of dit
+  scherm luistert, en hoe de app verstaat). De keuze van de spraakassistent
+  en "Met dit apparaat / Helemaal in huis" staan er niet meer: de app hoort het
+  wekwoord zelf (besluit 208), verstaat met Whisper in huis als dat er is
+  (besluit 211), en luistert anders zoals eerst.
+- **De stem kies je uit een korte lijst** (`web/stemmen.ts`, `/api/stemmen`):
+  van Google Chirp 3 HD zes vrouwen- en zes mannenstemmen, met een paar woorden
+  over hoe ze klinken; van Piper de stemmen die niet brabbelen (Nathalie, Pim,
+  Ronnie, Rdh; niet mls); en altijd "Dit apparaat", dat zonder iets erbij
+  werkt. Alleen wat Home Assistant echt heeft, staat erin.
+- **Eerst horen:** ▶ speelt een voorbeeldzin met die stem
+  (`/api/stem?keuze=…`), ook vóór het kiezen; een tik op de kaart kiest hem en
+  laat hem meteen horen. Bewaard bij Functies (`praten.stemKeuze`), voor het
+  hele huis.
+- **Een stem uit de cloud alleen als de bewoner hem kiest.** Besluit 141 zei dat
+  de app nooit vanzelf een stem uit de cloud kiest; dat blijft zo. Vanzelf is
+  het Piper als die er is, anders het apparaat. Kiest de bewoner Google, dan
+  gaat alleen de tekst van het antwoord naar Google, niet zijn stem (tot een
+  miljoen tekens per maand gratis); dat staat erbij.
+- **Wie spreekt:** de dienst zegt de pagina welke stem spreekt (`spreek`), los
+  van hoe hij luistert (`bron`). Kiest de bewoner het apparaat, dan spreekt
+  ook de wand met de stem van de tablet; eerst bleef die dan stil.
+- **Versie 0.84.0.**
 
 ---
 

@@ -1,5 +1,29 @@
 # Wat is er nieuw · What is new
 
+## 0.84.0
+
+*29 oktober 2026*
+
+**Nieuw**
+
+- Kies de stem van je huis bij Functies › Stem en luisteren: vrouw of man, de heldere stemmen van Google of een stem in huis, en tik op ▶ om hem eerst te horen
+
+**Beter**
+
+- Stem en luisteren staan samen op één plek; de lijst met spraakassistenten en "Waar de stem vandaan komt" zijn weg, want de app regelt dat zelf
+- Kies je de stem van dit apparaat, dan spreekt ook de wand daarmee
+
+*English*
+
+**New**
+
+- Choose the voice of your house under Features › Voice and listening: female or male, the clear Google voices or a voice at home, and tap ▶ to hear it first
+
+**Improved**
+
+- Voice and listening are together in one place; the list of voice assistants and "Where the voice comes from" are gone, because the app takes care of it
+- If you choose the voice of this device, the wall speaks with it too
+
 ## 0.83.0
 
 *29 oktober 2026*

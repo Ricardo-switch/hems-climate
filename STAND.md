@@ -418,7 +418,9 @@ verwijzing bestaat.
   Tot stap B verwarmt de assistent via de knoppen van het oude systeem, als
   de bewoner dat aanzet: een graad hoger tot 22:00, daarna terug ([210]).
   De dienst verstaat zelf met Whisper in huis, rechtstreeks; meer screens gaan
-  samen, en het venster sluit na een opdracht ([211]).
+  samen, en het venster sluit na een opdracht ([211]). De stem kies je bij
+  Functies › Stem en luisteren, vrouw of man, Google HD of in huis, met een
+  voorbeeld om te horen ([212]).
 - **Een kamer doet mee** met de regeling van een andere kamer, zoals een
   slaapkamer met de airco in de wasruimte ([142]).
 - **Comfort per bewoner:** wie hier woont staat op volgorde; de eerste die
@@ -701,4 +703,5 @@ verwijzing bestaat.
 [209]: DECISIONS.md#209-een-assistent-die-meedenkt-een-gevoel-wordt-een-opdracht-licht-dat-bij-het-moment-past-en-doorvragen
 [210]: DECISIONS.md#210-de-klimaatbrug-tot-stap-b-via-de-knoppen-van-het-oude-systeem
 [211]: DECISIONS.md#211-sneller-verstaan-de-screens-samen-en-het-venster-dicht-na-een-opdracht
+[212]: DECISIONS.md#212-de-stem-kiezen-en-stem-en-luisteren-op-één-plek
 <!-- links:einde -->

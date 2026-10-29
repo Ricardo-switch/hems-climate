@@ -1604,6 +1604,7 @@ if (webPort != null) {
     ...(lightSwitch ? { lights: lightSwitch } : {}),
     ...(coverSwitch ? { covers: coverSwitch } : {}),
     ...(klimaatBrug ? { klimaat: { brug: klimaatBrug, aan: klimaatAan } } : {}),
+    verstaanInHuis: () => kiesVerstaan([...allStates.keys()]),
     ...(layoutStore && siteConfig
       ? {
           layout: {
@@ -1740,6 +1741,11 @@ if (webPort != null) {
     stem: new Stem({
       base: httpBase(url!),
       token: token!,
+      // De stem die de bewoner koos bij Functies (besluit 212); null is vanzelf.
+      keuze: () => {
+        const f = functiesNu();
+        return f ? volledig(f, functiesKeuzes()).praten.stemKeuze : null;
+      },
       stemmen: () => [...allStates.keys()].filter((id) => id.startsWith('tts.')),
       // Welke talen en stemmen Piper heeft: lezen, zoals de registers.
       talen: async (stem) => {

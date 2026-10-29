@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.83.0';
+export const VERSIE = '0.84.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,26 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.84.0',
+    datum: '2026-10-29',
+    nieuw: [
+      'Kies de stem van je huis bij Functies › Stem en luisteren: vrouw of man, de heldere stemmen van Google of een stem in huis, en tik op ▶ om hem eerst te horen',
+    ],
+    beter: [
+      'Stem en luisteren staan samen op één plek; de lijst met spraakassistenten en "Waar de stem vandaan komt" zijn weg, want de app regelt dat zelf',
+      'Kies je de stem van dit apparaat, dan spreekt ook de wand daarmee',
+    ],
+    en: {
+      nieuw: [
+        'Choose the voice of your house under Features › Voice and listening: female or male, the clear Google voices or a voice at home, and tap ▶ to hear it first',
+      ],
+      beter: [
+        'Voice and listening are together in one place; the list of voice assistants and "Where the voice comes from" are gone, because the app takes care of it',
+        'If you choose the voice of this device, the wall speaks with it too',
+      ],
+    },
+  },
   {
     versie: '0.83.0',
     datum: '2026-10-29',

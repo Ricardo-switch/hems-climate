@@ -2183,22 +2183,39 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       expect(gemaakt).toBe(1);
       expect(await p.evaluate<boolean>('document.scrollingElement.scrollHeight <= innerHeight + 1')).toBe(true);
       await shot('inhuis-klaar');
-      // Functies › Praten met helemaal in huis, zoals in een echt huis: twee spraakassistenten, één met Hé huis.
-      await context.route(`${baseUrl}/api/functies`, async (route) => {
-        if (route.request().method() !== 'GET') return route.continue();
-        const r = await route.fetch();
-        const j = (await r.json()) as { gevonden: Record<string, unknown> };
-        j.gevonden['spraakassistenten'] = [
-          { id: 'p1', naam: 'Smart Climate', wekwoord: 'he_huis', spraakNaarTekst: true, taal: 'nl', voorkeur: false },
-          { id: 'p2', naam: 'Home Assistant', wekwoord: null, spraakNaarTekst: true, taal: 'nl', voorkeur: true },
-        ];
-        await route.fulfill({ response: r, json: j });
-      });
-      await p.goto(`${baseUrl}/functies.html#praten`);
-      await p.locator('#wand [data-vorm] [data-kies="spraak"]').first().waitFor();
-      expect(await p.locator('#wand [data-vorm] [data-hier]').count()).toBe(2);
-      expect(await p.locator('#wand [data-vorm] [data-kies="stemVerstaan"]').count()).toBe(0);
-      await shot('praten-huis');
+      // Functies › Stem en luisteren (besluit 212): links de stem, ernaast het luisteren; geen spraakassistenten meer.
+      await p.goto(`${baseUrl}/functies.html#stem`);
+      await p.locator('#wand [data-vorm] [data-stem-kies]').first().waitFor({ timeout: 10_000 });
+      expect(await p.locator('#wand [data-vorm] [data-stem-kies="apparaat"]').count()).toBe(1);
+      expect(await p.locator('#wand [data-vorm] .stemrechts [data-hier]').count()).toBe(2);
+      expect(await p.locator('#wand [data-kies="spraak"]').count()).toBe(0);
+      expect(await p.locator('#wand [data-kies="stemBron"]').count()).toBe(0);
+      await shot('stem');
+      // Zoals in een huis met Google Cloud en Piper: zes stemmen van Google en de stemmen in huis, en het past.
+      const hd = (naam: string, geslacht: string) => ({ id: `tts.google_cloud|nl-NL-Chirp3-HD-${naam}`, naam, geslacht, soort: 'hd', kenmerk: { nl: 'helder', en: 'clear' } });
+      await context.route(`${baseUrl}/api/stemmen**`, (route) =>
+        route.fulfill({
+          json: {
+            gekozen: 'tts.google_cloud|nl-NL-Chirp3-HD-Kore',
+            nu: 'tts.google_cloud',
+            voorbeeld: { nl: 'Hallo, ik ben je huis.', en: 'Hello, I am your house.' },
+            opties: [
+              ...['Kore', 'Aoede', 'Leda', 'Zephyr', 'Sulafat', 'Achernar'].map((n) => hd(n, 'vrouw')),
+              ...['Charon', 'Puck', 'Orus'].map((n) => hd(n, 'man')),
+              { id: 'tts.piper|nl_BE-nathalie-medium', naam: 'Nathalie', geslacht: 'vrouw', soort: 'huis', kenmerk: { nl: 'Vlaams', en: 'Flemish' } },
+              { id: 'apparaat', naam: 'Dit apparaat', geslacht: null, soort: 'apparaat', kenmerk: { nl: 'werkt overal', en: 'works everywhere' } },
+            ],
+          },
+        }),
+      );
+      await p.reload();
+      await p.locator('#wand [data-stem-kies="tts.google_cloud|nl-NL-Chirp3-HD-Kore"][aria-pressed="true"]').waitFor({ timeout: 10_000 });
+      expect(await p.locator('#wand [data-vorm] [data-stem-kies]').count()).toBe(8);
+      await p.locator('#wand [data-kies="stemGeslacht"]', { hasText: 'Man' }).click();
+      await expect.poll(() => p.locator('#wand [data-vorm] [data-stem-kies]').count()).toBe(4);
+      await p.locator('#wand [data-kies="stemGeslacht"]', { hasText: 'Vrouw' }).click();
+      await shot('stem-hd');
+      await context.unroute(`${baseUrl}/api/stemmen**`);
       // Het past, met ruimte over: lettertypes tekenen in de CI iets anders (28 oktober 2026, 8 pixels).
       const ruimte = await p.locator('#wand [data-vorm]').evaluate((v) => {
         const proef = v.ownerDocument.createElement('div');
@@ -2209,7 +2226,6 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
         return over;
       });
       expect(ruimte).toBeLessThanOrEqual(2);
-      await context.unroute(`${baseUrl}/api/functies`);
       await p.goto(`${baseUrl}/inrichten.html#stem`);
       // Terug naar de standaard, voor de tests hierna.
       await kaart.locator('[data-stembron="apparaat"]').click();

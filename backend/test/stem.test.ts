@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { kiesStem, kiesTaal, Stem } from '../src/web/stem.js';
+import { geldigeStemKeuze, stemOpties, taalVanStem } from '../src/web/stemmen.js';
 
 function nep() {
   const vragen: { url: string; methode: string; body: unknown }[] = [];
@@ -87,5 +88,50 @@ describe('de stem (besluit 141)', () => {
     // Zonder Engelse stem een fout, zodat de pagina de stem van het apparaat kiest.
     const alleenNl = new Stem({ base: 'http://ha.local:8123', token: 't', stemmen: () => ['tts.piper'], talen: async () => ['nl_NL'], fetch: f });
     await expect(alleenNl.zeg('Hello', 'en')).rejects.toThrow('geen Engels');
+  });
+});
+
+describe('de stem kiezen (besluit 212)', () => {
+  it('maakt een korte lijst: Google HD per vrouw of man, Piper zonder mls, en het apparaat', () => {
+    const opties = stemOpties(
+      new Map([
+        ['tts.google_cloud', ['nl-NL-Chirp3-HD-Kore', 'nl-NL-Chirp3-HD-Charon', 'nl-NL-Chirp3-HD-Onbekend', 'nl-NL-Wavenet-F']],
+        ['tts.piper', ['nl_NL-mls-medium', 'nl_BE-nathalie-medium', 'nl_NL-pim-medium']],
+      ]),
+    );
+    expect(opties.map((o) => `${o.naam}:${o.geslacht}:${o.soort}`)).toEqual(['Kore:vrouw:hd', 'Charon:man:hd', 'Nathalie:vrouw:huis', 'Pim:man:huis', 'Dit apparaat:null:apparaat']);
+    expect(opties[0]!.id).toBe('tts.google_cloud|nl-NL-Chirp3-HD-Kore');
+    expect(geldigeStemKeuze('tts.google_cloud|nl-NL-Chirp3-HD-Kore')).toBe(true);
+    expect(geldigeStemKeuze('apparaat')).toBe(true);
+    expect(geldigeStemKeuze(null)).toBe(true);
+    expect(geldigeStemKeuze('climate.beneden|x')).toBe(false);
+    expect(taalVanStem('nl-NL-Chirp3-HD-Kore')).toBe('nl-NL');
+    expect(taalVanStem('nl_BE-nathalie-medium')).toBe('nl_BE');
+  });
+
+  it('spreekt met de gekozen stem, ook uit de cloud als de bewoner die koos', async () => {
+    const { vragen, f } = nep();
+    let keuze: string | null = 'tts.google_cloud|nl-NL-Chirp3-HD-Kore';
+    const stem = new Stem({ base: 'http://ha.local:8123', token: 't', stemmen: () => ['tts.piper', 'tts.google_cloud'], keuze: () => keuze, fetch: f });
+    expect(stem.naam).toBe('tts.google_cloud');
+    expect(stem.keuze).toBe('huis');
+    await stem.zeg('Hallo');
+    expect(vragen[0]!.body).toEqual({ engine_id: 'tts.google_cloud', message: 'Hallo', cache: true, language: 'nl-NL', options: { voice: 'nl-NL-Chirp3-HD-Kore' } });
+    // Het apparaat: dan geen stem uit Home Assistant.
+    keuze = 'apparaat';
+    expect(stem.naam).toBeNull();
+    expect(stem.keuze).toBe('apparaat');
+    // Een stem die er niet meer is: vanzelf, zoals eerst.
+    keuze = 'tts.weg|x';
+    expect(stem.naam).toBe('tts.piper');
+    expect(stem.keuze).toBeNull();
+  });
+
+  it('laat een stem horen voordat je kiest, maar alleen een die Home Assistant kent', async () => {
+    const { vragen, f } = nep();
+    const stem = new Stem({ base: 'http://ha.local:8123', token: 't', stemmen: () => ['tts.piper'], fetch: f });
+    await stem.voorbeeld('tts.piper|nl_BE-nathalie-medium', 'Hallo, ik ben je huis.');
+    expect(vragen[0]!.body).toMatchObject({ engine_id: 'tts.piper', language: 'nl_BE', options: { voice: 'nl_BE-nathalie-medium' } });
+    await expect(stem.voorbeeld('tts.ander|x', 'Hallo')).rejects.toThrow('die stem kent Home Assistant niet');
   });
 });

@@ -19,6 +19,7 @@ import { sunReport } from '../sun.js';
 import { weatherInLang } from '../weather.js';
 import { startOfLocalDay } from '../today.js';
 import { MAX_ZEG } from '../stem.js';
+import { stemOpties, VOORBEELD } from '../stemmen.js';
 import { functiesVoorstel, volledig } from '../functies.js';
 import { sendJson } from '../http.js';
 import { taalVan, type Diensten, type Verzoek } from '../diensten.js';
@@ -34,11 +35,37 @@ export async function assistentRoutes(d: Diensten, v: Verzoek): Promise<boolean>
    * "zet de zolder op 21"; de muur hierboven blijft staan.
    */
   // De stem (besluit 141): het geluid van een zin, of welke stem er is.
+  // De stemmen om uit te kiezen (besluit 212), en welke gekozen is.
+  if (path === '/api/stemmen') {
+    const stem = d.options.stem;
+    const f = d.options.functies;
+    const g = f?.gevonden() ?? null;
+    const praten = f?.store.current ? volledig(f.store.current, g).praten : null;
+    sendJson(res, 200, { gekozen: praten?.stemKeuze ?? null, nu: stem?.naam ?? null, opties: (stem ? await stem.opties().catch(() => null) : null) ?? stemOpties(new Map()), voorbeeld: VOORBEELD });
+    return true;
+  }
+
   if (path === '/api/stem') {
     const stem = d.options.stem;
     const tekst = url.searchParams.get('tekst');
     // In de taal van de app (besluit 185).
     const lang = taalVan(url.searchParams.get('taal') ?? req.headers['x-taal']);
+    // Een stem om te horen voordat je kiest (besluit 212).
+    const keuze = url.searchParams.get('keuze');
+    if (tekst != null && keuze != null && stem != null) {
+      if (tekst.trim() === '' || tekst.length > MAX_ZEG) {
+        sendJson(res, 400, { fout: `tekst moet 1 tot ${MAX_ZEG} tekens zijn` });
+        return true;
+      }
+      try {
+        const g = await stem.voorbeeld(keuze, tekst, lang);
+        res.writeHead(200, { 'content-type': g.type, 'content-length': g.data.length, 'cache-control': 'private, max-age=3600' });
+        res.end(g.data);
+      } catch (error) {
+        sendJson(res, 502, { fout: (error as Error).message });
+      }
+      return true;
+    }
     if (tekst == null) {
       // Welke stem, en of die de taal van de app kan; zonder gebruikt de pagina de stem van het apparaat.
       const t = stem ? await stem.taalVoor(lang).catch(() => ({ taal: null, voice: null })) : { taal: null, voice: null };
@@ -46,7 +73,11 @@ export async function assistentRoutes(d: Diensten, v: Verzoek): Promise<boolean>
       const f = d.options.functies;
       const g = f?.gevonden() ?? null;
       const praten = f?.store.current ? volledig(f.store.current, g).praten : g ? functiesVoorstel(g).praten : null;
-      sendJson(res, 200, { stem: stem?.naam ?? null, taal: t.taal, voice: t.voice, bron: praten?.stem ?? 'apparaat', verstaan: praten?.verstaan ?? true });
+      // Wie spreekt (besluit 212): een gekozen stem gaat voor; vanzelf zoals eerst. Luisteren in huis
+      // als er een spraak naar tekst in huis is (besluit 211), ook zonder de oude keuze.
+      const spreek = stem?.keuze ?? praten?.stem ?? 'apparaat';
+      const bron = d.options.verstaanInHuis?.() ? 'huis' : (praten?.stem ?? 'apparaat');
+      sendJson(res, 200, { stem: stem?.naam ?? null, taal: t.taal, voice: t.voice, bron, spreek, verstaan: praten?.verstaan ?? true });
       return true;
     }
     if (stem == null || stem.naam == null) {
@@ -97,6 +128,8 @@ export async function assistentRoutes(d: Diensten, v: Verzoek): Promise<boolean>
       zelf: s.zelf,
       traag: s.traag,
       rekentijdPct: s.rekentijd == null ? null : Math.round(s.rekentijd * 100),
+      // Hoe de app verstaat (besluit 211): de spraak naar tekst in huis, of null (via de spraakassistent).
+      verstaan: d.options.verstaanInHuis?.() ?? null,
       vandaag: { wakker: boek.length, zonderVraag: boek.filter((m) => m.vraag === false).length },
       laatste: boek.slice(-10).reverse().map((m) => ({ ms: m.ms, kans: m.kans == null ? null : Math.round(m.kans * 100) / 100, gevoeligheid: m.gevoeligheid, vraag: m.vraag })),
     });
