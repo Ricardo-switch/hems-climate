@@ -1,5 +1,19 @@
 # Wat is er nieuw · What is new
 
+## 0.91.0
+
+*30 oktober 2026*
+
+**Nieuw**
+
+- Ben je thuis, dan staan je eigen agenda’s ook op de wand, met je naam erbij; ga je weg, dan verdwijnen ze weer
+
+*English*
+
+**New**
+
+- When you are home your own calendars also show on the wall, with your name; when you leave they disappear again
+
 ## 0.90.1
 
 *30 oktober 2026*

@@ -222,6 +222,28 @@ describe('te doen (besluit 216)', () => {
     expect((await post({ actie: 'toevoegen', lijst: 'iets', item: 'Melk' })).status).toBe(400);
   });
 
+  it('toont op de wand de eigen agenda van wie thuis is, met de naam erbij, en niet als die weg is (besluit 219)', async () => {
+    const { t } = dienst();
+    let thuis: { account: string; naam: string }[] = [{ account: 'u-ricardo', naam: 'Ricardo' }];
+    const metEigen: TeDoenDienst = {
+      ...t,
+      agendaVan: (account) => (account === 'u-ricardo' ? { aan: true, ids: ['calendar.ricardo'] } : { aan: true, ids: [] }),
+      thuis: () => thuis,
+      leesAgendas: async (ids, van) => {
+        const dag = (n: number) => new Date(van + n * 86_400_000 + 12 * 3_600_000).toISOString().slice(0, 10);
+        return Object.fromEntries(ids.map((id) => [id, { events: id === 'calendar.ricardo' ? [{ start: dag(2), end: dag(3), summary: 'Tandarts' }] : [] }]));
+      },
+    };
+    const started = await start({ latest: () => snapshot(), tedoen: metEigen });
+    const afspraken = async () => ((await (await fetch(`${started.base}/api/te-doen`)).json()) as { afspraken: { tekst: string; wie?: string }[] }).afspraken;
+    expect((await afspraken()).filter((x) => x.tekst === 'Tandarts')).toEqual([expect.objectContaining({ tekst: 'Tandarts', bron: 'eigen', wie: 'Ricardo' })]);
+    // Weg van huis: dan niet op de wand.
+    thuis = [];
+    const zonder = await start({ latest: () => snapshot(), tedoen: metEigen });
+    const weg = ((await (await fetch(`${zonder.base}/api/te-doen`)).json()) as { afspraken: { tekst: string; wie?: string }[] }).afspraken;
+    expect(weg.filter((x) => x.wie || x.tekst === 'Tandarts')).toEqual([]);
+  });
+
   it('zonder te doen: een nette 404, ook voor wat nu speelt', async () => {
     const started = await start({ latest: () => snapshot() });
     const r = await fetch(`${started.base}/api/te-doen?alleen=nu`, { signal: AbortSignal.timeout(3000) });
