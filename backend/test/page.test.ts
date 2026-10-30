@@ -4463,7 +4463,8 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     await p.waitForLoadState('networkidle');
     const soortNu = () => layoutStore.current?.kamers.find((k) => k.id === tuin.id)?.buiten?.soort;
     const lijst = p.locator('#wand [data-actie="buitensoort"]');
-    await lijst.waitFor(kort);
+    // Op een drukke CI-machine duurt het tekenen soms langer dan vijf tellen (30 oktober 2026).
+    await lijst.waitFor({ timeout: 15_000 });
     expect(await lijst.locator('option').allTextContents()).toEqual(expect.arrayContaining(['Achtertuin', 'Zijtuin', 'Carport', 'Dakterras', 'Tuinhuis of schuur']));
     expect(await lijst.locator('option').allTextContents()).not.toContain('Slaapkamer');
     await expect

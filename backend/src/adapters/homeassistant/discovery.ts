@@ -73,6 +73,8 @@ export interface HaRegistryEntity {
    * ligging van het huis in zet.
    */
   readonly translation_key?: string | null;
+  /** De sleutel die de integratie zelf geeft; bij Zigbee2MQTT `<ieee>_light_zigbee2mqtt` of `<groep>_light_zigbee2mqtt` (besluit 221). */
+  readonly unique_id?: string | null;
 }
 
 export interface HaCoreConfig {

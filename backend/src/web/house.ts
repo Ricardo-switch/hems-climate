@@ -25,7 +25,7 @@ import type { Warmtebron } from './warmte.js';
 import { STANDAARD_DAGDELEN } from '../config/standaard.js';
 import { findCameras } from './camera.js';
 import { melderNaam, rookmelderNu, vindRookmelders, type Gevaar } from './rookmelders.js';
-import type { HaEntityState } from '../adapters/homeassistant/client.js';
+import type { HaEntityState, ZigbeeGroep } from '../adapters/homeassistant/client.js';
 import { defaultSceneColors, whiteScene } from './scene-colors.js';
 import type { HaArea, HaDevice, HaFloor, HaRegistryEntity } from '../adapters/homeassistant/discovery.js';
 import type { Facade, Geometry, HeatStore, SiteConfig } from '../core/model.js';
@@ -54,6 +54,8 @@ export interface HouseRegisters {
   readonly areas: readonly HaArea[];
   readonly devices: readonly HaDevice[];
   readonly entities: readonly HaRegistryEntity[];
+  /** De groepen van Zigbee2MQTT met hun lampen (besluit 221); Home Assistant noemt die lampen niet. */
+  readonly zigbeeGroepen?: readonly ZigbeeGroep[];
 }
 
 /**
@@ -1088,6 +1090,8 @@ interface LightGroup {
   readonly leden: readonly string[];
   readonly hue: boolean;
   readonly overzicht: boolean;
+  /** Een groep van Zigbee2MQTT (besluit 221): altijd één lamp, zijn lampen staan niet los. */
+  readonly zigbee?: boolean;
 }
 
 interface Context {
@@ -1155,10 +1159,20 @@ function lightGroups(registers: HouseRegisters, states: ReadonlyMap<string, HaEn
     if (!hue && !Array.isArray(members) && !groepPlatform.has(id)) continue;
     out.push({ id, naam: friendly(st, id), leden, hue });
   }
+  // Zigbee2MQTT (besluit 221): de groep heet `<nummer>_light_zigbee2mqtt`, een lamp `<ieee>_light_zigbee2mqtt`.
+  const mqttLicht = registers.entities.filter((e) => e.platform === 'mqtt' && e.entity_id.startsWith('light.') && typeof e.unique_id === 'string');
+  for (const g of registers.zigbeeGroepen ?? []) {
+    const groep = mqttLicht.find((e) => e.unique_id === `${g.id}_light_zigbee2mqtt`);
+    if (!groep || out.some((x) => x.id === groep.entity_id)) continue;
+    const leden = g.leden.flatMap((ieee) => mqttLicht.filter((e) => e.unique_id!.toLowerCase().startsWith(`${ieee.toLowerCase()}_light`)).map((e) => e.entity_id));
+    if (!leden.length) continue;
+    out.push({ id: groep.entity_id, naam: friendly(states.get(groep.entity_id), g.naam), leden, hue: false, zigbee: true });
+  }
   const ids = new Set(out.map((g) => g.id));
   return out.map((g) => ({
     ...g,
-    overzicht: OVERVIEW.test(g.naam) || OVERVIEW.test(g.id.replace(/[._]/g, ' ')) || g.leden.some((m) => ids.has(m)),
+    // Een groep van Zigbee2MQTT is een armatuur, zoals de plafonnière van drie spots: nooit een overzicht.
+    overzicht: !g.zigbee && (OVERVIEW.test(g.naam) || OVERVIEW.test(g.id.replace(/[._]/g, ' ')) || g.leden.some((m) => ids.has(m))),
   }));
 }
 
@@ -1454,12 +1468,14 @@ function collect(
    * Een overzichtsgroep ("Etage 2 alles") is nooit een armatuur; een peer die
    * alleen daarin zit, kan het huis niet tonen, en dat zegt het (`onvindbaar`).
    */
+  // De lampen van een groep van Zigbee2MQTT staan nooit los (besluit 221): de groep is de lamp.
+  const zigbeeLeden = new Set(groups.filter((g) => g.zigbee).flatMap((g) => g.leden));
   const offstage = new Set(
     registers.entities
       .filter(
         (e) =>
           e.entity_id.startsWith('light.') &&
-          (e.hidden_by || e.disabled_by) &&
+          (e.hidden_by || e.disabled_by || zigbeeLeden.has(e.entity_id)) &&
           e.platform !== 'group' &&
           !groupIds.has(e.entity_id),
       )
@@ -1504,7 +1520,7 @@ function collect(
   // Losse lampen: niet verborgen, en zelf geen groep (een groep somt lampen op die er al in staan).
   for (const e of registers.entities) {
     if (!e.entity_id.startsWith('light.') || e.disabled_by || e.hidden_by) continue;
-    if (groupIds.has(e.entity_id)) continue;
+    if (groupIds.has(e.entity_id) || zigbeeLeden.has(e.entity_id)) continue;
     const s = states.get(e.entity_id);
     const { naam: _n, haNaam: _h, zone: _z, groepen: _g, ...device } = lightOf(e.entity_id, s, '', lang);
     found.push({ device, haNaam: friendly(s, e.entity_id), haArea: areaOf(e.entity_id), groepen: memberOf.get(e.entity_id) ?? [] });

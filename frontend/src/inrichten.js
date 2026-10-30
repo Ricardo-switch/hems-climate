@@ -1591,8 +1591,13 @@ function inHuisOnder() {
     }, 3000);
   }
   const kan = ih.addons.filter((a) => a.id !== 'openwakeword').every((a) => a.staat !== 'nee');
+  // Klaar zonder "Hé huis" (30 oktober 2026): de laatste twee tikken in Home Assistant, met een knop naar elk.
+  const owv = ih.addons.find((a) => a.id === 'openwakeword');
+  const wekwoordKnoppen = !ih.assistent?.wekwoord && inHA
+    ? `<div class="chips">${owv?.slug ? `<button type="button" class="knop klein" data-ha-pad="/hassio/addon/${esc(owv.slug)}/info">${esc(t('inr.stem.herstartOwv'))}</button>` : ''}<button type="button" class="knop klein" data-ha-pad="/config/voice-assistants/assistants">${esc(t('inr.stem.kiesWekwoord'))}</button></div>`
+    : '';
   const onder = ih.assistent
-    ? `<p class="mini klaar">${esc(t(ih.assistent.wekwoord ? 'inr.stem.klaarMet' : 'inr.stem.klaarZonder'))}</p>`
+    ? `<p class="mini klaar">${esc(t(ih.assistent.wekwoord ? 'inr.stem.klaarMet' : 'inr.stem.klaarZonder'))}</p>${wekwoordKnoppen}`
     : ih.bezig
       ? `<p class="mini" aria-live="polite">${esc(t('inr.stem.bezig'))}</p>`
       : `${ih.fout ? `<p class="mini fout">${esc(t('inr.as.fout', { fout: ih.fout }))}</p>` : ''}<button type="button" class="knop knop-licht" data-inhuis-maak ${kan ? '' : 'disabled'}>${esc(t(ih.fout ? 'inr.as.opnieuw' : 'inr.stem.maak'))}</button>${kan ? '' : `<p class="mini">${esc(t('inr.stem.eerst'))}</p>`}`;

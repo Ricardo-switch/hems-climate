@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.92.0';
+export const VERSIE = '0.93.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,28 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.93.0',
+    datum: '2026-10-30',
+    nieuw: ['Een groep van Zigbee2MQTT, zoals een plafonnière van drie spots, is één lamp in de app; de spots staan niet meer los'],
+    beter: [
+      'Bij Praten met je huis staat "vaste antwoorden, zonder AI" of "eigen woorden, met een AI" in plaats van "vaste zinnen"',
+      'Op Apparaten zegt een zin "Smart Climate zou: …" als dat een ander doel is dan het apparaat zelf noemt',
+      'Opbrengst zegt bij je panelen "van je zon" achter het percentage',
+      'Op Thuis telt alleen de bel; de sleutel staat op de telefoon naast de bel en opent meteen de lijst',
+      'Staat "Hé huis" nog niet in de spraakassistent, dan brengen twee knoppen je naar de plekken in Home Assistant',
+    ],
+    en: {
+      nieuw: ['A Zigbee2MQTT group, such as a ceiling light of three spots, is one light in the app; the spots no longer show separately'],
+      beter: [
+        'Talk to your house says "fixed answers, without AI" or "own words, with an AI" instead of "fixed sentences"',
+        'On Devices a sentence says "Smart Climate would: …" when that is a different target than the device itself names',
+        'Energy says "of your sun" after the percentage at your panels',
+        'On Home only the bell counts; on the phone the wrench sits next to the bell and opens the list straight away',
+        'If "Hey house" is not in the voice assistant yet, two buttons take you to the places in Home Assistant',
+      ],
+    },
+  },
   {
     versie: '0.92.0',
     datum: '2026-10-30',

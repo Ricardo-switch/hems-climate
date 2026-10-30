@@ -539,7 +539,10 @@ async function readHouseRegisters(): Promise<void> {
     client.query<HaDevice[]>('config/device_registry/list'),
     client.query<HaRegistryEntity[]>('config/entity_registry/list'),
   ]);
-  houseRegisters = { floors, areas, devices, entities };
+  // De groepen van Zigbee2MQTT (besluit 221), alleen als er lampen van Zigbee2MQTT zijn: Home Assistant noemt hun lampen niet.
+  const zigbee = entities.some((e) => e.platform === 'mqtt' && e.entity_id.startsWith('light.') && /_light_zigbee2mqtt$/.test(e.unique_id ?? ''));
+  const zigbeeGroepen = zigbee ? await client.leesZigbeeGroepen().catch(() => []) : [];
+  houseRegisters = { floors, areas, devices, entities, zigbeeGroepen };
   // Ging er al een rookmelder af voor de dienst startte: dan ook (21 oktober 2026).
   setTimeout(() => web?.alarm(alarmNu()), 2_000).unref?.();
 }

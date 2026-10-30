@@ -254,8 +254,11 @@ function klimaatKaart({ a, r }) {
   const doel = a.klimaat?.doelC != null ? `${nl(a.klimaat.doelC, Number.isInteger(a.klimaat.doelC) ? 0 : 1)}°` : null;
   const standLaag = stand[0].toLowerCase();
   const rest = bew?.tekst?.toLowerCase().startsWith(standLaag) ? bew.tekst.slice(standLaag.length).replace(/^[\s·,.;:–-]+/, '') : bew?.tekst;
+  // Twee doelen bij één thermostaat (30 oktober 2026): bovenaan wat het apparaat zelf zegt ("Automatisch naar 18°"),
+  // eronder wat Smart Climate zou doen. Doet het apparaat het niet zelf, dan zegt de zin van wie hij is.
+  const vanSC = rest && !doet && bew?.soort !== 'wait' ? t('apparaten.zouKiezen', { wat: rest }) : rest ? `${huismodel.metHoofdletter(rest)}.` : '';
   const zin = bew?.tekst
-    ? [rest ? `${huismodel.metHoofdletter(rest)}.` : '', wacht ? t('apparaten.begintBij', { kw: nl(wacht.intent.budgetW / 1000) }) : ''].filter(Boolean).join(' ')
+    ? [vanSC, wacht ? t('apparaten.begintBij', { kw: nl(wacht.intent.budgetW / 1000) }) : ''].filter(Boolean).join(' ')
     : doel && !standLaag.includes(doel) && !(a.radiatorknop && a.standCode !== 'uit' && a.standCode !== 'geen-verbinding') ? t('vandaag.doel', { doel }) : '';
   const kw = a.klimaat?.vermogenW != null ? `${nl(a.klimaat.vermogenW / 1000)}<span>${esc(t('apparaten.kwNu'))}</span>` : `–<span>${esc(t('apparaten.geenMeter'))}</span>`;
   // Vandaag: uit de kWh-meter van het apparaat (Opbrengst), anders hoe lang het aan stond.

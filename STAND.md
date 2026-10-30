@@ -291,6 +291,8 @@ verwijzing bestaat.
   van Home Assistant; een back-up zet in de add-on ook de configuratie terug
   ([156]). Sinds [220] doen de assistent, het brein en het weer dat ook, en
   heeft de add-on in Home Assistant een eigen uitleg en benoemde instellingen.
+  Een groep van Zigbee2MQTT is één lamp; de leden komen uit Zigbee2MQTT zelf
+  ([221]).
 - **Inrichten** heeft onderaan overal Terug en Volgende, en Volgende bewaart
   wat er in beeld staat; de balkjes zeggen wat nagelopen is en wat al klaar
   stond. Kamers samenvoegen tot één ruimte met zones, elk deel rond het huis
@@ -726,4 +728,5 @@ verwijzing bestaat.
 [218]: DECISIONS.md#218-later-uitvoeren-afvinken-op-uid-en-de-afgevinkte-weghalen
 [219]: DECISIONS.md#219-je-eigen-agendas-op-de-wand-als-je-thuis-bent
 [220]: DECISIONS.md#220-wat-een-nieuwe-gebruiker-tegenkwam
+[221]: DECISIONS.md#221-groepen-van-zigbee2mqtt-en-de-rest-van-de-beoordeling
 <!-- links:einde -->

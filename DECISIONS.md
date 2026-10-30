@@ -222,6 +222,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [217. Te doen als eigen tab, en de assistent als groep bij Instellingen](#217-te-doen-als-eigen-tab-en-de-assistent-als-groep-bij-instellingen)
 - [218. Later uitvoeren, afvinken op uid, en de afgevinkte weghalen](#218-later-uitvoeren-afvinken-op-uid-en-de-afgevinkte-weghalen)
 - [219. Je eigen agenda's op de wand als je thuis bent](#219-je-eigen-agendas-op-de-wand-als-je-thuis-bent)
+- [221. Groepen van Zigbee2MQTT, en de rest van de beoordeling](#221-groepen-van-zigbee2mqtt-en-de-rest-van-de-beoordeling)
 
 **Veiligheid**
 
@@ -10286,6 +10287,46 @@ de Nest als thermostaat krijgen, en lampen in een groep stonden er ook los in.
   spreekt.
 - Een licentie kiezen ligt bij de bewoner.
 - **Versie 0.92.0.**
+
+---
+
+## 221. Groepen van Zigbee2MQTT, en de rest van de beoordeling
+
+*Onderwerp: weergave · Status: geldig*
+
+Na besluit 220 (30 oktober 2026). De bewoner: de spots van Matts en Mylan
+zitten in Zigbee2MQTT in een groep. Zigbee2MQTT zet zo'n groep in Home
+Assistant als gewone lamp ("Plafonnière Matts", model Group), zonder zijn
+lampen te noemen; de app zag daardoor de groep én de drie spots. Keuzes van de
+bewoner: een groep als één lamp, alleen voor Zigbee2MQTT (Hue-zones en groepen
+van Home Assistant blijven zoals ze zijn), en de vier open punten uit de
+beoordeling meteen.
+
+*Besluit:*
+
+- **De leden uit Zigbee2MQTT zelf.** Zigbee2MQTT bewaart zijn groepen op
+  `zigbee2mqtt/bridge/groups`; Home Assistant geeft dat bericht door met
+  `mqtt/subscribe`. De dienst leest het bij het laden van het huis, alleen als
+  er lampen van Zigbee2MQTT zijn, en zegt het meteen weer op. Alleen lezen.
+  Een groep is `<nummer>_light_zigbee2mqtt`, een lamp `<ieee>_light_zigbee2mqtt`.
+- **Een groep van Zigbee2MQTT is één lamp**, zoals een armatuur met verborgen
+  peren: de groep staat in het huis, zijn lampen niet, en een plek die een lamp
+  al had gaat naar de groep. Nooit een overzicht. Zonder het bericht blijft
+  alles zoals het was.
+- **Praten met je huis** zegt "vaste antwoorden, zonder AI" of "eigen woorden,
+  met een AI".
+- **Apparaten:** doet het apparaat het niet zelf, dan begint de zin onder de
+  stand met "Smart Climate zou:". Zo zijn twee doelen bij één thermostaat uit
+  elkaar te houden.
+- **Opbrengst:** "63% van je zon" achter wat je zelf gebruikte.
+- **Thuis:** alleen de bel telt; de sleutel van Onderhoud telde dezelfde
+  batterijen en filters. Op de telefoon staat de sleutel naast de bel en opent
+  hij meteen de lijst.
+- **Hé huis:** het lijstje met add-ons stond er in de add-on al (besluit 203;
+  de beoordeling draaide erbuiten). Staat het wekwoord nog niet in de
+  spraakassistent, dan openen twee knoppen openWakeWord en Spraakassistenten
+  in Home Assistant. De dienst herstart geen add-on zelf.
+- **Versie 0.93.0.**
 
 ---
 
