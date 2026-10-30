@@ -12,7 +12,7 @@ import { describe, expect, it } from 'vitest';
 import type { Gesprek, SpraakEvent } from '../src/adapters/homeassistant/client.js';
 import { Luisterpost, type LuisterDeur } from '../src/web/luisterpost.js';
 import { OnnxModel, Schuifstand, tensor } from '../src/web/onnx.js';
-import { BEGIN_MS, Spraakeinde, WACHTTIJD, db } from '../src/web/spraakeinde.js';
+import { BEGIN_MS, GEEN_WOORD_MS, Spraakeinde, WACHTTIJD, db } from '../src/web/spraakeinde.js';
 import { GEVOELIGHEID, gevoeligheidVan, laadWekmodellen, Wekluisteraar, Wekmelder } from '../src/web/wekwoord.js';
 import { isHalf } from '../src/web/woordzoeker.js';
 import { kiesTaalVoor, kiesVerstaan, Verstaan } from '../src/web/verstaan.js';
@@ -185,6 +185,65 @@ describe('het einde van je zin', () => {
     // Nog 250 ms "huis", dan stil: geen begin, dus ook geen einde.
     expect(z.voeg(geluid([['praat', 250], ['stil', 2000]]))).toEqual([]);
     expect(z.praat).toBe(false);
+  });
+
+  /** Na hoeveel ms een einde komt, als het geluid per 10 ms binnenkomt; null zonder einde. */
+  function wanneer(z: Spraakeinde, pcm: Int16Array): { praat: number | null; stil: number | null } {
+    const uit: { praat: number | null; stil: number | null } = { praat: null, stil: null };
+    for (let p = 0; p < pcm.length; p += 160) {
+      for (const e of z.voeg(pcm.subarray(p, p + 160))) if (e === 'praat' || e === 'stil') uit[e] ??= p / 16;
+    }
+    return uit;
+  }
+  /** Een tv verderop: geluid dat elke 200 ms wat luider of zachter wordt, van -34 tot -28 dB, ook onder je zin. */
+  function tv(ms: number, start = 0): Int16Array {
+    const uit = new Int16Array(ms * 16);
+    for (let i = 0; i < uit.length; i++) {
+      const blok = Math.floor((start + i / 16) / 200);
+      const sterkte = [900, 1700, 1200, 1800, 1000, 1500][blok % 6]!;
+      uit[i] = Math.round(Math.sin((start * 16 + i) * 0.37) * sterkte);
+    }
+    return uit;
+  }
+  const samen = (...delen: Int16Array[]) => {
+    const uit = new Int16Array(delen.reduce((n, d) => n + d.length, 0));
+    let p = 0;
+    for (const d of delen) (uit.set(d, p), (p += d.length));
+    return uit;
+  };
+  /** Praten zoals in `geluid`, maar met de tv eronder. */
+  function stemMetTv(ms: number, start: number): Int16Array {
+    const s = geluid([['praat', ms]]);
+    const t = tv(ms, start);
+    return s.map((x, i) => Math.max(-32768, Math.min(32767, x + t[i]!)));
+  }
+
+  it('stopt na je zin ook als de tv aanstaat (30 oktober 2026)', () => {
+    const z = new Spraakeinde({ wachttijd: 'normaal' });
+    // Een seconde tv, je zin van 1,2 s over de tv heen, en daarna nog tien seconden tv.
+    const t = wanneer(z, samen(tv(1000), stemMetTv(1200, 1000), tv(10_000, 2200)));
+    expect(t.praat).not.toBeNull();
+    // Klaar kort na je zin: wachttijd plus wat de tv kost, niet pas na vijftien seconden.
+    expect(t.stil).not.toBeNull();
+    expect(t.stil!).toBeLessThanOrEqual(2200 + WACHTTIJD.normaal + 600);
+  });
+
+  it('een zacht woord aan het eind van je zin telt nog mee', () => {
+    const z = new Spraakeinde({ wachttijd: 'normaal' });
+    // Luid praten, dan een woord 12 dB zachter ("... aan"), dan stil.
+    const zacht = geluid([['praat', 400]]).map((x) => Math.round(x / 4));
+    const t = wanneer(z, samen(geluid([['stil', 300], ['praat', 800]]), zacht, geluid([['stil', 2000]])));
+    // Niet al na het luide deel plus de wachttijd: het zachte woord hoort erbij.
+    expect(t.stil).toBeGreaterThanOrEqual(1500 + WACHTTIJD.normaal - 20);
+  });
+
+  it(`stopt als er ${GEEN_WOORD_MS / 1000} seconden geen woord op jouw luidheid komt, ook als het blijft rommelen`, () => {
+    const z = new Spraakeinde({ wachttijd: 'rustig' });
+    // Je zin, en daarna geroezemoes dat steeds net boven de achtergrond komt: zo luisterde het huis eerst door tot vijftien seconden.
+    const geroezemoes = new Int16Array(12_000 * 16).map((_, i) => Math.round(Math.sin(i * 0.31) * (Math.floor(i / 1600) % 2 ? 1400 : 300)));
+    const t = wanneer(z, samen(geluid([['stil', 300], ['praat', 1000]]), geroezemoes));
+    expect(t.stil).not.toBeNull();
+    expect(t.stil!).toBeLessThanOrEqual(1300 + GEEN_WOORD_MS + 50);
   });
 
   it('een klik is geen begin', () => {

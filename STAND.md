@@ -425,6 +425,9 @@ verwijzing bestaat.
   voorbeeld om te horen ([212]). De assistent onthoudt het gesprek, doet meer
   in één zin, maakt met een taalmodel een plan of beantwoordt vragen over
   vandaag en gisteren, en "doe maar terug" zet het weer zoals het was ([213]).
+  Met geluid in de kamer is je eigen stem de maat voor het einde van je zin,
+  en een bijna goed verstaan woord wordt ook op klank rechtgezet, zodat het
+  snelle Whisper-model volstaat ([215]).
 - **Een kamer doet mee** met de regeling van een andere kamer, zoals een
   slaapkamer met de airco in de wasruimte ([142]).
 - **Comfort per bewoner:** wie hier woont staat op volgorde; de eerste die
@@ -710,4 +713,5 @@ verwijzing bestaat.
 [212]: DECISIONS.md#212-de-stem-kiezen-en-stem-en-luisteren-op-één-plek
 [213]: DECISIONS.md#213-het-brein-een-gesprek-meer-in-één-zin-en-doe-maar-terug
 [214]: DECISIONS.md#214-hoe-ver-je-huis-is-de-zonnewaaier
+[215]: DECISIONS.md#215-sneller-verstaan-het-einde-van-je-zin-bij-geluid-en-rechtzetten-op-klank
 <!-- links:einde -->

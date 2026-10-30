@@ -1,5 +1,43 @@
 # Wat is er nieuw · What is new
 
+## 0.87.1
+
+*30 oktober 2026*
+
+**Beter**
+
+- Het huis zet een bijna goed verstaan woord ook op klank recht: "sitoek" is de zithoek, "koot" is koud. Zo verstaat het snellere Whisper-model (base-int8) je net zo goed als het grote, in een derde van de tijd
+
+**Opgelost**
+
+- Met de tv aan of geroezemoes in de kamer luisterde het huis soms nog lang door na je zin; nu is je eigen stem de maat, en na twee seconden zonder woord van jou is je zin klaar
+
+*English*
+
+**Improved**
+
+- The house also corrects a nearly understood word by sound, so the faster Whisper model (base-int8) understands you as well as the large one, in a third of the time
+
+**Fixed**
+
+- With the TV on or chatter in the room the house sometimes kept listening long after your sentence; now your own voice is the measure, and after two seconds without a word from you your sentence is done
+
+## 0.87.0
+
+*30 oktober 2026*
+
+**Beter**
+
+- Praten met je huis bij Functies opnieuw ingedeeld, zoals Stem en luisteren: links het brein met het model als kaart, vandaag in drie getallen en de week in staafjes; rechts wat de assistent mag bedienen, met zinnen om te proberen
+- Te traag of fouten zie je meteen naast de kop
+
+*English*
+
+**Improved**
+
+- Talking to your home under Features rearranged, like Voice and listening: on the left the brain with the model as a card, today in three numbers and the week in bars; on the right what the assistant may operate, with sentences to try
+- Too slow or errors shows right next to the heading
+
 ## 0.86.1
 
 *29 oktober 2026*

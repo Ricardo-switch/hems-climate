@@ -415,7 +415,48 @@ export function afstand(a: string, b: string): number {
 const beginKlank = (w: string): string => ({ z: 's', v: 'f' })[w[0] ?? ''] ?? w[0] ?? '';
 
 /** Woorden die er altijd bij horen, naast de namen uit het huis. */
-const VASTE_WOORDEN = ['woonkamer', 'slaapkamer', 'keuken', 'zolder', 'badkamer', 'zithoek', 'screens', 'verwarming', 'lampen', 'verlichting', 'sfeerverlichting', 'thuis', 'vanavond', 'warmer', 'kouder'];
+const VASTE_WOORDEN = ['woonkamer', 'slaapkamer', 'keuken', 'zolder', 'badkamer', 'zithoek', 'screens', 'verwarming', 'lampen', 'verlichting', 'sfeerverlichting', 'thuis', 'vanavond', 'warmer', 'kouder', 'koud', 'aanzetten', 'uitzetten'];
+
+/**
+ * Gewone woorden die dicht bij een naam liggen, en die het huis dus nooit
+ * rechtzet: "zonder" is geen zolder, "kijken" en "komen" zijn geen keuken
+ * (gevonden met alle woorden uit de teksten van de app, 30 oktober 2026).
+ */
+const NOOIT_RECHTZETTEN = new Set([
+  'zonder', 'kijken', 'komen', 'kopen', 'koper', 'stuk', 'waarmee', 'verwachting', 'kleine', 'koude', 'warme', 'warmere',
+  'zitten', 'zetten', 'zeker', 'zelf', 'zoals', 'solar', 'kosten', 'koelen', 'kouden', 'woont', 'wonen', 'warmte', 'verwarmen',
+]);
+
+/** De soorten van Home Assistant, die in een id staan maar geen woord in je huis zijn. */
+const HA_SOORT = new Set(['light', 'lights', 'cover', 'switch', 'scene', 'sensor', 'climate', 'media', 'player', 'binary', 'input', 'number', 'select', 'button', 'group', 'script', 'automation']);
+
+/**
+ * Een woord zoals het klinkt (30 oktober 2026): "th" is een t, "oe" een u,
+ * "ou", "au" en "eu" een o, "ij" en "ei" een i, lange klinkers kort, s een z,
+ * f een v, een d aan het eind een t, en geen h. Zo is "sitoek" de zithoek en
+ * "koot" koud: wat een sneller Whisper-model ervan maakte.
+ */
+export function klank(w: string): string {
+  return w
+    .replace(/ch/g, 'g')
+    .replace(/th/g, 't')
+    .replace(/ph/g, 'f')
+    .replace(/ck|q/g, 'k')
+    .replace(/c(?=[aou]|$)/g, 'k')
+    .replace(/c/g, 's')
+    .replace(/ij|ei|y/g, 'i')
+    .replace(/au|ou|eu/g, 'o')
+    .replace(/oe/g, 'u')
+    .replace(/ee/g, 'e')
+    .replace(/aa/g, 'a')
+    .replace(/oo/g, 'o')
+    .replace(/uu/g, 'u')
+    .replace(/s/g, 'z')
+    .replace(/f/g, 'v')
+    .replace(/dt$|d$/g, 't')
+    .replace(/h/g, '')
+    .replace(/(.)\1+/g, '$1');
+}
 
 /**
  * Wat Whisper bijna goed verstond, recht gezet (besluit 211): "wonkamer" is de
@@ -427,23 +468,36 @@ const VASTE_WOORDEN = ['woonkamer', 'slaapkamer', 'keuken', 'zolder', 'badkamer'
  */
 export function verbeter(ruw: string, namen: readonly string[]): string {
   const woordenschat = new Set<string>(VASTE_WOORDEN);
-  for (const n of namen) for (const w of gewoon(n).split(' ')) if (w.length >= 5) woordenschat.add(w);
+  // Een naam die nog een id is ("light.hal") geeft geen woord: "licht" klinkt als light.
+  for (const n of namen) for (const w of gewoon(n).split(' ')) if (w.length >= 5 && !HA_SOORT.has(w)) woordenschat.add(w);
   const lijst = [...woordenschat];
   const woorden = gewoon(ruw)
     .replace(/\bzette\b/g, 'zet de')
+    // "Set de zithoek aan" (30 oktober 2026): aan het begin is het zet, en "doet de" is doe de.
+    .replace(/^set\b/, 'zet')
+    .replace(/^doet (de|het)\b/, 'doe $1')
     .split(' ')
     .filter((w) => w !== '');
   return woorden
     .map((w) => {
-      if (w.length < 6 || woordenschat.has(w) || /\d/.test(w)) return w;
+      if (w.length < 4 || woordenschat.has(w) || NOOIT_RECHTZETTEN.has(w) || /\d/.test(w)) return w;
       const mag = w.length >= 9 ? 2 : 1;
       let beste: { w: string; d: number } | null = null;
       for (const k of lijst) {
         // Dezelfde eerste letter: "wandkamer" mag geen badkamer worden (dan liever niet begrepen).
         // Een s of z en een f of v tellen als dezelfde: Whisper hoort "solder" voor zolder.
-        if (beginKlank(k) !== beginKlank(w) || Math.abs(k.length - w.length) > mag) continue;
+        if (w.length < 6 || beginKlank(k) !== beginKlank(w) || Math.abs(k.length - w.length) > mag) continue;
         const d = afstand(w, k);
         if (d <= mag && (beste == null || d < beste.d)) beste = { w: k, d };
+      }
+      if (beste) return beste.w;
+      // Op klank: gelijk, of één klank anders bij een naam van vijf klanken of meer.
+      const kw = klank(w);
+      for (const k of lijst) {
+        if (beginKlank(k) !== beginKlank(w)) continue;
+        const kk = klank(k);
+        const d = kw === kk ? 0 : kk.length >= 5 ? afstand(kw, kk) : 9;
+        if (d <= 1 && (beste == null || d < beste.d)) beste = { w: k, d };
       }
       return beste?.w ?? w;
     })

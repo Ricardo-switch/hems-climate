@@ -2217,6 +2217,48 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await p.locator('#wand [data-kies="stemGeslacht"]', { hasText: 'Vrouw' }).click();
       await shot('stem-hd');
       await context.unroute(`${baseUrl}/api/stemmen**`);
+      // Praten met je huis (besluit 213, schets Wand-Instellingen-Praten): het brein links, bedienen rechts, en het past.
+      await context.route(`${baseUrl}/api/functies`, async (route) => {
+        if (route.request().method() !== 'GET') return route.continue();
+        const echt = (await (await route.fetch()).json()) as { gevonden: Record<string, unknown>; voorstel: { praten?: Record<string, unknown> }; instellingen?: { praten?: Record<string, unknown> } | null };
+        echt.gevonden['taalmodellen'] = [{ id: 'ai_task.google_ai_task', naam: 'Google AI Task' }, { id: 'ai_task.openai_ai_task', naam: 'OpenAI AI Task' }];
+        echt.gevonden['klimaatBrug'] = true;
+        const praten = { ...(echt.instellingen?.praten ?? echt.voorstel.praten ?? {}), taalmodel: 'ai_task.google_ai_task', bedienen: true, klimaat: true };
+        if (echt.instellingen) echt.instellingen.praten = praten;
+        else echt.voorstel.praten = praten;
+        await route.fulfill({ json: echt });
+      });
+      await context.route(`${baseUrl}/api/praten/teller`, (route) =>
+        route.fulfill({
+          json: {
+            vandaag: '2026-10-30',
+            wachtMs: 5000,
+            eigenWoorden: false,
+            dagen: [
+              { dag: '2026-10-30', vragen: 14, fouten: 1, gemiddeldMs: 7800, langsteMs: 12_400 },
+              { dag: '2026-10-29', vragen: 31, fouten: 2, gemiddeldMs: 12_100, langsteMs: 56_700 },
+              { dag: '2026-10-27', vragen: 6, fouten: 0, gemiddeldMs: 2100, langsteMs: 3100 },
+            ],
+          },
+        }),
+      );
+      // Alleen een andere hash laadt niet opnieuw: herladen, met de nagebootste gegevens.
+      await p.goto(`${baseUrl}/functies.html#praten`);
+      await p.reload();
+      await p.locator('#wand [data-vorm] .breingetal').first().waitFor({ timeout: 10_000 });
+      expect(await p.locator('#wand [data-vorm] .breinkaart').count()).toBe(3);
+      expect(await p.locator('#wand [data-vorm] .breinkaart[aria-pressed="true"]').textContent()).toContain('Gemini');
+      expect(await p.locator('#wand [data-vorm] .breinpil').textContent()).toBe('Te traag');
+      expect(await p.locator('#wand [data-vorm] .breinweek .staaf').count()).toBe(7);
+      expect(await p.locator('#wand [data-vorm] [data-kies="pratenKlimaat"][role="switch"]').getAttribute('aria-checked')).toBe('true');
+      await shot('praten');
+      const pratenRuimte = await p.locator('#wand [data-vorm]').evaluate((v) => v.scrollHeight - v.clientHeight);
+      expect(pratenRuimte).toBeLessThanOrEqual(2);
+      // Een schakelaar zet het uit, en het blijft zo na tekenen.
+      await p.locator('#wand [data-vorm] [data-kies="pratenKlimaat"]').click();
+      await expect.poll(() => p.locator('#wand [data-vorm] [data-kies="pratenKlimaat"]').getAttribute('aria-checked')).toBe('false');
+      await context.unroute(`${baseUrl}/api/functies`);
+      await context.unroute(`${baseUrl}/api/praten/teller`);
       // Het past, met ruimte over: lettertypes tekenen in de CI iets anders (28 oktober 2026, 8 pixels).
       const ruimte = await p.locator('#wand [data-vorm]').evaluate((v) => {
         const proef = v.ownerDocument.createElement('div');

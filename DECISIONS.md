@@ -216,6 +216,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [212. De stem kiezen, en stem en luisteren op één plek](#212-de-stem-kiezen-en-stem-en-luisteren-op-één-plek)
 - [213. Het brein: een gesprek, meer in één zin, en doe maar terug](#213-het-brein-een-gesprek-meer-in-één-zin-en-doe-maar-terug)
 - [214. Hoe ver je huis is: de zonnewaaier](#214-hoe-ver-je-huis-is-de-zonnewaaier)
+- [215. Sneller verstaan: het einde van je zin bij geluid, en rechtzetten op klank](#215-sneller-verstaan-het-einde-van-je-zin-bij-geluid-en-rechtzetten-op-klank)
 
 **Veiligheid**
 
@@ -9952,7 +9953,13 @@ hooguit één ding, en kon niets terug.
   vaste antwoord; anders wachtte elk antwoord voor niets. Eens per tien
   minuten toch één keer, en het brein meet mee: wordt het model sneller, dan
   komen de eigen woorden vanzelf terug. Functies zegt het erbij (versie
-  0.86.1). Gemeten op 29
+  0.86.1).
+- **Functies › Praten opnieuw ingedeeld** (30 oktober 2026, versie 0.87.0),
+  zoals Stem en luisteren: links het brein (het model als kaart, vandaag in
+  drie getallen, de week in staafjes, proberen, wat er naar buiten gaat),
+  rechts wat de assistent mag bedienen met zinnen om te proberen. Samen met
+  Stem en luisteren op één pagina past niet zonder scrollen; daarom twee
+  pagina's naast elkaar in de lijst. Gemeten op 29
   oktober na het wisselen naar `gemini-flash-lite-latest`: een plan 6,6 tot
   9,5 seconden, "zeg hallo" 8 tot 12; het netwerk (onder 0,1 s) en de Pi
   waren het niet.
@@ -10007,6 +10014,46 @@ je huis kan. Uit de schetsen `Wand-Voortgang` (met de visgraat ernaast) en
 - **De stralen groeien alleen de eerste keer**; een tik of nieuwe cijfers
   tekenen ze meteen, en een kleine waaier groeit nooit.
 - **Versie 0.86.0.**
+
+---
+
+## 215. Sneller verstaan: het einde van je zin bij geluid, en rechtzetten op klank
+
+*Onderwerp: weergave · Status: geldig*
+
+Gemeld door de bewoner op 30 oktober 2026: met geluid in de kamer bleef het
+huis lang denken dat er nog gepraat werd, en dat kostte tijd. Het einde van je
+zin (besluit 208) volgde een achtergrondniveau dat alleen meeliep als er níet
+gepraat werd; geluid dat telkens even boven die achtergrond kwam, zoals
+tv-dialoog met stiltes ertussen, telde als praten. Dan luisterde het huis door
+tot de grens van vijftien seconden.
+
+*Besluit:*
+
+- **Je eigen stem is de maat** (`Spraakeinde`): zodra je praat, onthoudt het
+  huis hoe luid jij praat (het luidste van een twintigste seconde, zodat een
+  tik niet telt). Wat 16 dB of meer zachter is, telt niet meer als praten; wat
+  12 dB of meer zachter is, gaat mee in de achtergrond, ook terwijl je praat.
+  Een zacht woord aan het eind ("… aan") telt nog wel.
+- **Twee seconden zonder woord van jou**, en je zin is klaar, ook als de kamer
+  blijft rommelen; de bewoner koos twee seconden. Bij de wachttijd Rustig
+  (1,8 s) blijft dat twee seconden.
+- Toetsen met nagebootste tv en geroezemoes; die met geroezemoes faalde met
+  de oude manier.
+- **Rechtzetten op klank** (`klank`, `verbeter`): een lamp bedienen duurde
+  ruim tien seconden, waarvan Whisper small-int8 er zes. Gemeten op 30
+  oktober met dezelfde 30 zinnen (drie stemmen): small-int8 6,1 s per zin en
+  de app begreep er 27 hetzelfde uit; base-int8 2,1 s, maar 20. Wat base
+  fout schreef, klonk wel goed ("sitoek", "zetuk", "koot", "koken",
+  "womkamer", "Set de"). Nu zet het huis een woord ook op klank recht naar
+  een naam uit het huis ("th" is t, "oe" u, "ou" o, s z, f v, geen h; gelijk,
+  of één klank anders bij een naam van vijf klanken), en "set" aan het begin
+  is zet. Daarmee begrijpt de app bij base-int8 er ook 27. Gewone woorden die
+  op een naam lijken ("zonder", "kijken", "komen") zet het nooit recht; dat
+  is nagegaan met alle 1444 woorden uit de teksten van de app. Een naam die
+  nog een id is ("light.hal") geeft geen woord. De bewoner zette de
+  Whisper-add-on op base-int8.
+- **Versie 0.87.1.**
 
 ---
 
