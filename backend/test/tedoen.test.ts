@@ -178,7 +178,8 @@ describe('de deur naar de lijsten (besluit 216)', () => {
     expect(isTodoCall('todo', 'update_item', { item: 'Melk', status: 'needs_action' }, lijst)).toBe(true);
     // Niets weghalen, geen andere velden, geen andere entiteit of meer tegelijk.
     expect(isTodoCall('todo', 'remove_item', { item: 'Melk' }, lijst)).toBe(false);
-    expect(isTodoCall('todo', 'remove_completed_items', {}, lijst)).toBe(false);
+    // De afgevinkte weghalen mag sinds besluit 218 (gepland.test.ts).
+    expect(isTodoCall('todo', 'remove_completed_items', {}, lijst)).toBe(true);
     expect(isTodoCall('todo', 'add_item', { item: 'Melk', due_date: '2026-11-03' }, lijst)).toBe(false);
     expect(isTodoCall('todo', 'update_item', { item: 'Melk', rename: 'Bier' }, lijst)).toBe(false);
     expect(isTodoCall('todo', 'add_item', { item: 'Melk' }, { entity_id: ['todo.a', 'todo.b'] })).toBe(false);

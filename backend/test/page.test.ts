@@ -2179,7 +2179,10 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       return route.fulfill({
         json: {
           aan: true,
+          bewoner: false,
           herinneringen: [herinnering],
+          // Wat het huis later doet (besluit 218).
+          gepland: [{ id: 'g1', tekst: 'Doe de screens dicht', ms: nu + 3 * 3_600_000, voor: null, naam: null, status: 'wacht', gemaakt: nu, opdracht: { stappen: [], zon: 'onder' } }],
           lijsten: [
             { soort: 'boodschappen', id: 'todo.shopping_list', naam: 'Boodschappenlijst', items: [{ uid: '1', tekst: 'Melk', klaar: false }, { uid: '2', tekst: 'Brood', klaar: false }, { uid: '3', tekst: 'Eieren', klaar: false }, { uid: '4', tekst: 'Koffiebonen', klaar: false }, { uid: '5', tekst: 'Bananen', klaar: true }] },
             { soort: 'todo', id: 'todo.to_do', naam: 'To-do', items: [{ uid: '6', tekst: 'Dakgoot', klaar: false }] },
@@ -2208,21 +2211,36 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       const tab = p.locator('#wand [data-td-pagina]');
       await tab.locator('.td-item').first().waitFor({ timeout: 10_000 });
       expect(await p.locator('#balk [data-tab="tedoen"][aria-current="page"]').count()).toBe(1);
-      expect(await tab.locator('.td-her').count()).toBe(1);
+      expect(await tab.locator('.td-her:not(.td-gepland)').count()).toBe(1);
       // Vandaag, morgen (GFT), de zwemles en de PMD over acht dagen.
       expect(await tab.locator('.tdp-dag').count()).toBe(4);
       expect(await tab.locator('.tdp-bronnen').textContent()).toContain('Gezin');
       expect(await tab.locator('.tdp-dag', { hasText: 'PMD' }).count()).toBe(1);
       expect(await tab.locator('.tdp-lijst').count()).toBe(2);
+      // Een scherm aan de wand heeft geen eigen agenda's (besluit 218): geen knop ernaartoe.
+      expect(await tab.locator('a[href="jij.html#agenda"]').count()).toBe(0);
+      // Gepland: wat het huis na zonsondergang doet, met een kruisje.
+      expect(await tab.locator('.td-gepland').textContent()).toContain('na zonsondergang');
       await p.waitForTimeout(500);
       await shot('tedoen-tab');
+      // Afvinken op uid: een naam kan vaker op de lijst staan.
       await tab.locator('.td-item', { hasText: 'Melk' }).click();
       await expect.poll(() => gestuurd.length).toBe(1);
-      expect(gestuurd[0]).toEqual({ actie: 'klaar', lijst: 'boodschappen', item: 'Melk' });
+      expect(gestuurd[0]).toEqual({ actie: 'klaar', lijst: 'boodschappen', item: 'Melk', uid: '1' });
       await tab.locator('[data-td-erbij][data-td-lijst="todo"] input').fill('Kaas');
       await tab.locator('[data-td-erbij][data-td-lijst="todo"] input').press('Enter');
       await expect.poll(() => gestuurd.length).toBe(2);
       expect(gestuurd[1]).toEqual({ actie: 'toevoegen', lijst: 'todo', item: 'Kaas' });
+      await tab.locator('[data-td-annuleer="g1"]').click();
+      await expect.poll(() => gestuurd.length).toBe(3);
+      expect(gestuurd[2]).toEqual({ actie: 'annuleer', id: 'g1' });
+      // De afgevinkte weghalen: eerst vraagt de knop het, de tweede tik doet het.
+      await tab.locator('[data-td-opruim="boodschappen"]').click();
+      await expect.poll(() => tab.locator('[data-td-opruim="boodschappen"]').textContent()).toBe('Zeker? 1 weg');
+      expect(gestuurd).toHaveLength(3);
+      await tab.locator('[data-td-opruim="boodschappen"]').click();
+      await expect.poll(() => gestuurd.length).toBe(4);
+      expect(gestuurd[3]).toEqual({ actie: 'opruimen', lijst: 'boodschappen' });
       await p.goto(`${baseUrl}/thuis.html`);
       await kaart.waitFor({ state: 'visible', timeout: 10_000 });
       // Het moment: de herinnering speelt, de wand toont hem met Gedaan.
@@ -4035,7 +4053,7 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     expect(vast).toEqual([]);
   }, 120_000);
 
-  it('toont Instellingen in zeven groepen, en daarvandaan Wat je huis kan (besluit 130 en 217)', async () => {
+  it('toont Instellingen in acht groepen, en daarvandaan Wat je huis kan (besluit 130, 217 en 218)', async () => {
     const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
     await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
     const p = await context.newPage();
@@ -4043,7 +4061,7 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     p.on('pageerror', (e) => fouten.push(e.message));
     await p.goto(`${baseUrl}/instellingen.html`);
     await p.locator('#wand [data-groepen] .tegel').first().waitFor();
-    expect(await p.locator('#wand [data-groepen] .tegel h3').allTextContents()).toEqual(['Je huis', 'Comfort', 'Energie', 'Regeling', 'Functies', 'Assistent', 'Bewoners en toegang']);
+    expect(await p.locator('#wand [data-groepen] .tegel h3').allTextContents()).toEqual(['Je huis', 'Comfort', 'Energie', 'Regeling', 'Functies', 'Assistent', 'Dit scherm', 'Bewoners en toegang']); // Het testaccount is een scherm; een bewoner ziet daar Jij (besluit 218).
     expect(await p.locator('#balk [aria-current="page"]').getAttribute('aria-label')).toBe('Instellingen');
     expect(await p.evaluate('document.scrollingElement.scrollHeight <= innerHeight')).toBe(true);
     // Zoeken: "zekering" vindt de aansluiting bij Energie.

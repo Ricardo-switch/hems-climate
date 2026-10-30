@@ -65,7 +65,7 @@ import { OPEN_METEO, OpenMeteo } from './web/open-meteo.js';
 import { httpBase } from './web/camera.js';
 import { Pauze, WACHT_MS } from './web/taalmodel.js';
 import { Teller } from './web/brein.js';
-import { Herinneringen } from './web/tedoen.js';
+import { Herinneringen, type Herinnering } from './web/tedoen.js';
 import type { TeDoenDienst } from './web/routes/tedoen.js';
 import { spraakKeuzes, type SpraakKeuze } from './web/functies.js';
 import { cameraMelders, camerasNu, laatsteAanUitHistorie } from './web/cameras.js';
@@ -1157,7 +1157,8 @@ const teDoen: TeDoenDienst = {
   leesAgendas: (ids, van, tot) => client.leesAgendas(ids, van, tot),
   leesLijsten: (ids) => client.leesLijsten(ids),
   lijst: async (id, item, actie) => {
-    if (actie === 'toevoegen') await client.callService('todo', 'add_item', { item }, { entity_id: id });
+    if (actie === 'opruimen') await client.callService('todo', 'remove_completed_items', {}, { entity_id: id });
+    else if (actie === 'toevoegen') await client.callService('todo', 'add_item', { item }, { entity_id: id });
     else await client.callService('todo', 'update_item', { item, status: actie === 'klaar' ? 'completed' : 'needs_action' }, { entity_id: id });
   },
   agendaVan: (account) => voorkeuren?.agenda(account) ?? { aan: true, ids: [] },
@@ -1169,12 +1170,33 @@ const teDoen: TeDoenDienst = {
       .map((s) => ({ id: s.entity_id, naam: String(s.attributes['friendly_name'] ?? s.entity_id) }))
       .sort((a, b) => a.naam.localeCompare(b.naam, 'nl')),
 };
+/**
+ * Een geplande opdracht uitvoeren (besluit 218): dezelfde deuren als de
+ * pagina, binnen wat bij Functies aan staat. Wat niet mag of niet lukt, komt
+ * in het logboek.
+ */
+async function voerGeplandUit(h: Herinnering): Promise<void> {
+  const f = functiesNu();
+  const vol = f ? volledig(f, functiesKeuzes()) : null;
+  for (const s of h.opdracht?.stappen ?? []) {
+    let r: { readonly ok: boolean; readonly reden?: string } | null = null;
+    if (s.pad === 'api/licht' && lightSwitch && vol?.licht.bedienen !== false) r = await lightSwitch.switch(s.body);
+    else if (s.pad === 'api/scene' && lightSwitch?.scenesEnabled && vol?.licht.bedienen !== false) r = await lightSwitch.scene(s.body);
+    else if (s.pad === 'api/scherm' && coverSwitch && vol?.schermen.bedienen !== false) r = await coverSwitch.move(s.body);
+    if (r == null) console.warn(`[gepland] ${s.pad} staat niet aan; "${h.tekst}" niet gedaan`);
+    else if (!r.ok) console.warn(`[gepland] "${h.tekst}" lukte niet: ${r.reden ?? ''}`);
+  }
+}
+
 let herinnerBezig = false;
 async function herinnerRonde(): Promise<void> {
   if (herinnerBezig) return;
   herinnerBezig = true;
   try {
-    const nieuw = await herinneringen.ronde();
+    const alles = await herinneringen.ronde();
+    // Geplande opdrachten voert de dienst zelf uit; ze gaan niet als melding naar een telefoon.
+    for (const g of alles.filter((x) => x.opdracht)) await voerGeplandUit(g).catch((error: unknown) => console.warn(`[gepland] ${(error as Error).message}`));
+    const nieuw = alles.filter((x) => !x.opdracht);
     // Een melding naar de telefoon van wie hem vroeg; een herinnering voor het huis alleen op de wand.
     if (version.installatie !== 'add-on' || !voorkeuren) return;
     for (const h of nieuw) {

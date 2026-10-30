@@ -219,6 +219,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [215. Sneller verstaan: het einde van je zin bij geluid, en rechtzetten op klank](#215-sneller-verstaan-het-einde-van-je-zin-bij-geluid-en-rechtzetten-op-klank)
 - [216. Te doen: herinneringen, de lijsten van Home Assistant, en afval en agenda](#216-te-doen-herinneringen-de-lijsten-van-home-assistant-en-afval-en-agenda)
 - [217. Te doen als eigen tab, en de assistent als groep bij Instellingen](#217-te-doen-als-eigen-tab-en-de-assistent-als-groep-bij-instellingen)
+- [218. Later uitvoeren, afvinken op uid, en de afgevinkte weghalen](#218-later-uitvoeren-afvinken-op-uid-en-de-afgevinkte-weghalen)
 
 **Veiligheid**
 
@@ -10150,6 +10151,58 @@ vervangt in besluit 216 "geen extra tab" en het blad.
 - **De zonnewaaier:** geen blauw vak meer bij een tik op een straal (de
   markering van de browser en geselecteerde tekst).
 - **Versie 0.89.0.**
+
+---
+
+## 218. Later uitvoeren, afvinken op uid, en de afgevinkte weghalen
+
+*Onderwerp: weergave · Status: geldig*
+
+Na 0.89 op de wand (30 oktober 2026). De bewoner: "Ik kan niet vragen om een
+taak later uit te voeren. Vragen om na zonsondergang de screens dicht te doen
+begrijpt de assistent niet. Ook over 5 min de lamp in de keuken aan wordt
+direct uitgevoerd" (en op 5% gezet: het getal uit "over 5 minuten" werd als
+helderheid gelezen). "Bij to-do kan ik niks afvinken": de app vinkte af op
+naam, en Home Assistant pakte het eerste item met die naam, een oud item dat al
+afgevinkt was. Keuzes van de bewoner: later op een tijd én bij de zon; wat
+gepland staat in Te doen met annuleren; bij de lijsten de afgevinkte in één
+keer weghalen (geen losse items); bij Instellingen een tegel Jij op de lege
+plek. Ook: "wat staat er dinsdag op de agenda" werd niet begrepen, en op de
+wand stond een knop naar "jouw agenda's" terwijl een scherm er geen heeft.
+
+*Besluit:*
+
+- **Later uitvoeren** (`web/gepland.ts`, `routes/gepland.ts`): een opdracht
+  met een tijd ("over vijf minuten", "om 22:00", "morgen om zeven uur",
+  "vanavond") of een zonsmoment ("na zonsondergang", "als het donker wordt",
+  "morgen bij zonsopkomst") wordt bewaard in plaats van gedaan. Het
+  zonsmoment rekent de dienst bij het plannen uit voor de plek van het huis.
+  Alleen licht, scènes en schermen; het klimaat niet. De opdracht staat bij de
+  herinneringen (`herinneringen.json`) met zijn stappen, speelt niet op de
+  wand, en de dienst voert hem op het tijdstip zelf uit door dezelfde deuren
+  als de pagina, binnen wat bij Functies aan staat. "Wat staat er gepland?"
+  zegt het, "annuleer" haalt de laatste weg. Vraagt het huis door ("welke
+  screen?"), dan houden de keuzes de tijd vast.
+- **Te doen › Gepland:** onder de herinneringen, met de tijd (of "na
+  zonsondergang") en een kruisje om te annuleren.
+- **Een getal bij een tijd is geen stand:** "over 5 minuten", "om 8 uur" en
+  "10 minuten" tellen niet als helderheid of schermstand.
+- **Afvinken op uid:** de pagina stuurt de uid van het item mee; de deur geeft
+  die door (`todo.update_item` met de uid als `item`). Een naam alleen kan
+  vaker op een lijst staan.
+- **De afgevinkte weghalen:** een knop per lijst ("3 afgevinkt weghalen"), die
+  eerst vraagt ("Zeker? 3 weg"). De smalle deur van besluit 216 laat daarvoor
+  ook `todo.remove_completed_items` door, zonder gegevens, op één lijst. Losse
+  items weghalen kan nog steeds niet. Op een lange lijst toont de tab alles
+  wat open is en de laatste vijf afgevinkte.
+- **De agenda:** ook een dag van de week ("dinsdag", de eerstvolgende),
+  overmorgen en volgende week (maandag tot en met zondag).
+- **Jouw agenda's** alleen voor een bewoner: het overzicht zegt of wie kijkt
+  er een is.
+- **Instellingen:** acht tegels. Voor een bewoner Jij (thema, agenda's, taal);
+  voor een scherm aan de wand op die plek Dit scherm (always-on display en
+  wanneer het scherm uitgaat), want een scherm heeft geen profiel.
+- **Versie 0.90.0.**
 
 ---
 

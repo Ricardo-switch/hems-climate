@@ -19,6 +19,7 @@
 import { readFile, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { Lang } from './assistant.js';
+import type { Stap } from './brein.js';
 import { partsIn, zonedTime } from './today.js';
 
 /* ------------------------------------------------------------ gewone tekst */
@@ -195,7 +196,8 @@ export function leesLijstZin(ruw: string): { readonly lijst: LijstSoort; readonl
   return null;
 }
 
-export type TeDoenVraag = 'boodschappen' | 'todo' | 'afval' | 'vandaag' | 'morgen' | 'week';
+/** Een vraag over te doen; `wd0` tot `wd6` is een dag van de week (zondag is 0). */
+export type TeDoenVraag = 'boodschappen' | 'todo' | 'afval' | 'vandaag' | 'morgen' | 'overmorgen' | 'week' | 'volgendeWeek' | `wd${0 | 1 | 2 | 3 | 4 | 5 | 6}`;
 
 /**
  * Een vraag over te doen: wat er op de boodschappen staat, wat ik nog moet
@@ -207,10 +209,21 @@ export function leesTeDoenVraag(ruw: string): TeDoenVraag | null {
   if (/\b(boodschappen|boodschappenlijst|shopping)\b/.test(k) && /\b(wat|staat|staan|welke|lees|what)\b/.test(k)) return 'boodschappen';
   if (/\bwat moeten we (?:nog )?halen\b|\bwat moet ik (?:nog )?halen\b/.test(k)) return 'boodschappen';
   if (/\b(wat moet ik (?:nog )?doen|wat moeten we (?:nog )?doen|te doen|to ?do|takenlijst|what do i (?:still )?(?:need|have) to do)\b/.test(k) && /\b(wat|staat|what|lees)\b/.test(k)) return 'todo';
-  if (/\bwat (?:staat|is|hebben we|heb ik|gebeurt) (?:er )?(?:op de agenda |allemaal )?(morgen|vandaag|deze week|overmorgen)\b/.test(k) || /\bwhat(?:'s| is) (?:on )?(?:the agenda )?(tomorrow|today|this week)\b/.test(k)) {
-    if (/\b(morgen|overmorgen|tomorrow)\b/.test(k)) return 'morgen';
+  // De agenda (besluit 218: ook "wat staat er dinsdag op de agenda", overmorgen en volgende week).
+  const DAG = '(?:vandaag|morgen|overmorgen|deze week|volgende week|today|tomorrow|this week|next week|zondag|maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|sunday|monday|tuesday|wednesday|thursday|friday|saturday)';
+  const agendaVraag =
+    // Met een woord voor de agenda: "wat staat er dinsdag op de agenda", "welke afspraken heb ik morgen".
+    (/\b(agenda|afspraak|afspraken|calendar|appointments?)\b/.test(k) && /\b(wat|welke|heb ik|hebben we|staat|staan|what|which|any|do i have)\b/.test(k)) ||
+    // Of zo kort als "wat staat er dinsdag", "wat is er morgen", "wat doen we zaterdag".
+    new RegExp(`\\bwat (?:staat|is|hebben we|heb ik|gebeurt|doen we) (?:er )?(?:allemaal )?(?:op )?${DAG}\\b`).test(k) ||
+    new RegExp(`\\bwhat(?:'s| is) (?:on |happening )?${DAG}\\b`).test(k);
+  if (agendaVraag) {
+    if (/\b(volgende week|next week)\b/.test(k)) return 'volgendeWeek';
     if (/\b(deze week|this week)\b/.test(k)) return 'week';
-    return 'vandaag';
+    if (/\bovermorgen\b/.test(k)) return 'overmorgen';
+    if (/\b(morgen|tomorrow)\b/.test(k)) return 'morgen';
+    for (const [i, naam] of [...DAGEN, ...DAYS].entries()) if (new RegExp(`\\b${naam}\\b`).test(k)) return `wd${(i % 7) as 0 | 1 | 2 | 3 | 4 | 5 | 6}`;
+    if (/\b(vandaag|today)\b/.test(k) || /\b(agenda|calendar|afspraken|appointments)\b/.test(k)) return 'vandaag';
   }
   return null;
 }
@@ -324,6 +337,12 @@ export interface Herinnering {
   readonly gemaakt: number;
   /** Wanneer hij begon te spelen, voor het opruimen. */
   readonly sindsMs?: number;
+  /**
+   * Een geplande opdracht (besluit 218) in plaats van een herinnering: de
+   * stappen voor de deuren, en of het tijdstip bij de zon hoort. Zo'n opdracht
+   * speelt niet op de wand; de dienst voert hem uit en zet hem op klaar.
+   */
+  readonly opdracht?: { readonly stappen: readonly Stap[]; readonly zon: 'onder' | 'op' | null };
 }
 
 export const HERINNERINGEN_BESTAND = 'herinneringen.json';
@@ -350,9 +369,18 @@ export class Herinneringen {
     return [...this.#lijst].sort((a, b) => a.ms - b.ms);
   }
 
-  async voeg(h: { readonly tekst: string; readonly ms: number; readonly voor: string | null; readonly naam: string | null }): Promise<Herinnering> {
+  async voeg(h: { readonly tekst: string; readonly ms: number; readonly voor: string | null; readonly naam: string | null; readonly opdracht?: Herinnering['opdracht'] }): Promise<Herinnering> {
     await this.#laad();
-    const nieuw: Herinnering = { id: `h${this.#nu().toString(36)}${Math.random().toString(36).slice(2, 6)}`, tekst: h.tekst.slice(0, 120), ms: h.ms, voor: h.voor, naam: h.naam, status: 'wacht', gemaakt: this.#nu() };
+    const nieuw: Herinnering = {
+      id: `${h.opdracht ? 'g' : 'h'}${this.#nu().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
+      tekst: h.tekst.slice(0, 120),
+      ms: h.ms,
+      voor: h.voor,
+      naam: h.naam,
+      status: 'wacht',
+      gemaakt: this.#nu(),
+      ...(h.opdracht ? { opdracht: h.opdracht } : {}),
+    };
     this.#lijst = [...this.#lijst, nieuw].slice(-MAX);
     await this.#bewaar();
     return nieuw;
@@ -370,7 +398,13 @@ export class Herinneringen {
   /** De herinnering die nu speelt voor dit account (of het huis), de nieuwste eerst; null zonder. */
   async speelt(): Promise<readonly Herinnering[]> {
     await this.#laad();
-    return this.#lijst.filter((h) => h.status === 'nu').sort((a, b) => b.ms - a.ms);
+    return this.#lijst.filter((h) => h.status === 'nu' && !h.opdracht).sort((a, b) => b.ms - a.ms);
+  }
+
+  /** De geplande opdrachten die nog moeten (besluit 218), de eerste eerst. */
+  async gepland(): Promise<readonly Herinnering[]> {
+    await this.#laad();
+    return this.#lijst.filter((h) => h.opdracht && h.status === 'wacht').sort((a, b) => a.ms - b.ms);
   }
 
   /**
@@ -384,7 +418,8 @@ export class Herinneringen {
     let anders = false;
     this.#lijst = this.#lijst.flatMap((h) => {
       if (h.status === 'wacht' && h.ms <= nu) {
-        const s = { ...h, status: 'nu' as const, sindsMs: nu };
+        // Een geplande opdracht speelt niet: de dienst voert hem uit, en dan is hij klaar.
+        const s = { ...h, status: h.opdracht ? ('klaar' as const) : ('nu' as const), sindsMs: nu };
         nieuw.push(s);
         anders = true;
         return [s];
@@ -425,7 +460,13 @@ export class Herinneringen {
       if (Array.isArray(lijst)) {
         this.#lijst = lijst.filter(
           (h): h is Herinnering =>
-            typeof h === 'object' && h != null && typeof (h as Herinnering).id === 'string' && typeof (h as Herinnering).tekst === 'string' && Number.isFinite((h as Herinnering).ms) && ['wacht', 'nu', 'klaar'].includes((h as Herinnering).status),
+            typeof h === 'object' &&
+            h != null &&
+            typeof (h as Herinnering).id === 'string' &&
+            typeof (h as Herinnering).tekst === 'string' &&
+            Number.isFinite((h as Herinnering).ms) &&
+            ['wacht', 'nu', 'klaar'].includes((h as Herinnering).status) &&
+            ((h as Herinnering).opdracht === undefined || Array.isArray((h as Herinnering).opdracht?.stappen)),
         );
       }
     } catch {

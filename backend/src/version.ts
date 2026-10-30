@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.89.0';
+export const VERSIE = '0.90.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,40 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.90.0',
+    datum: '2026-10-30',
+    nieuw: [
+      'Vraag iets voor later: "zet over vijf minuten de lamp in de keuken aan" of "doe na zonsondergang de screens dicht". Het staat bij Te doen onder Gepland, met een kruisje om te annuleren',
+      'Bij de boodschappen en to-do haal je de afgevinkte in één keer weg',
+      'Bij Instellingen een tegel Jij; op de wand staat daar Dit scherm',
+    ],
+    beter: [
+      'De assistent kent ook "wat staat er dinsdag op de agenda", overmorgen en volgende week',
+      'Op de wand staat geen knop meer naar jouw agenda’s: een scherm heeft er geen',
+      'Op een lange lijst zie je alles wat open is en alleen de laatste vijf afgevinkte',
+    ],
+    opgelost: [
+      '"Over 5 minuten" zette de lamp op 5% in plaats van hem later aan te doen',
+      'Afvinken deed niets als dezelfde naam al eens afgevinkt op de lijst stond',
+    ],
+    en: {
+      nieuw: [
+        'Ask for something later: "turn on the kitchen light in five minutes" or "close the screens after sunset". It shows under To do, Planned, with a cross to cancel',
+        'On the shopping and to-do lists you remove the ticked items in one go',
+        'Settings has a You tile; on the wall it shows This screen',
+      ],
+      beter: [
+        'The assistant also knows "what is on the calendar on Tuesday", the day after tomorrow and next week',
+        'The wall no longer shows a button to your calendars: a screen has none',
+        'On a long list you see everything open and only the last five ticked items',
+      ],
+      opgelost: [
+        '"In 5 minutes" set the light to 5% instead of turning it on later',
+        'Ticking an item did nothing when the same name was ticked on the list before',
+      ],
+    },
+  },
   {
     versie: '0.89.0',
     datum: '2026-10-30',

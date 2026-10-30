@@ -29,6 +29,7 @@
     lijst: '<path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/>',
     agenda: '<rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
     vink: '<path d="M5 12.5l4.5 4.5L19 7"/>',
+    kruis: '<path d="M6 6l12 12M18 6 6 18"/>',
     wand: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M9 21h6"/>',
     tel: '<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/>',
   };
@@ -143,6 +144,13 @@
     return `<div class="td-her${h.status === 'nu' ? ' nu' : ''}"><div class="td-uur"><b>${esc(klok(h.ms))}</b><span>${esc(dagenVan(h.ms) === 0 ? t('tedoen.vandaag') : dagKort(h.ms))}</span></div><div class="td-wat"><b>${esc(h.tekst)}</b><span>${esc(wie)} · ${kanalen}</span></div><button type="button" class="td-vink" data-td-gedaan="${esc(h.id)}" aria-label="${esc(t('tedoen.gedaan'))}">${svg(IK.vink, 2.4)}</button></div>`;
   }
 
+  /** Wat de dienst later doet (besluit 218): de tijd, of de zon met de tijd erbij, en Annuleren. */
+  function geplandHtml(g) {
+    const zon = g.opdracht?.zon === 'onder' ? t('tedoen.naZon') : g.opdracht?.zon === 'op' ? t('tedoen.bijZon') : '';
+    const dag = dagenVan(g.ms) === 0 ? t('tedoen.vandaag') : dagKort(g.ms);
+    return `<div class="td-her td-gepland"><div class="td-uur"><b>${esc(klok(g.ms))}</b><span>${esc(dag)}</span></div><div class="td-wat"><b>${esc(g.tekst)}</b><span>${esc(zon || t('tedoen.doetHuis'))}</span></div><button type="button" class="td-vink td-weg" data-td-annuleer="${esc(g.id)}" aria-label="${esc(t('tedoen.annuleer', { wat: g.tekst }))}">${svg(IK.kruis, 2.2)}</button></div>`;
+  }
+
   /** De kleur van een afspraak: het afval naar zijn bak, het gezin roze, je eigen agenda's elk een eigen kleur. */
   function kleurVan(a) {
     if (a.bron === 'afval') return `td-${a.afval ?? 'anders'}`;
@@ -173,26 +181,35 @@
     return `${legenda}<div class="tdp-dagen">${dagen.map(dag).join('')}</div>`;
   }
 
+  /** Welke lijst net "weghalen?" vroeg: een tweede tik binnen vijf seconden haalt ze weg. */
+  let opruimVraag = null;
+
   function lijstHtml(l) {
-    const items = [...l.items].sort((a, b) => Number(a.klaar) - Number(b.klaar)).slice(0, 20);
-    const open = l.items.filter((i) => !i.klaar).length;
+    // Alles wat open is, en hooguit vijf afgevinkte (30 oktober 2026: een lijst van jaren stond vol afgevinkte).
+    const open = l.items.filter((i) => !i.klaar);
+    const af = l.items.filter((i) => i.klaar);
+    const items = [...open.slice(0, 30), ...af.slice(-5).reverse()];
+    const vraag = opruimVraag === l.soort;
+    const opruimen = af.length
+      ? `<button type="button" class="td-opruim${vraag ? ' zeker' : ''}" data-td-opruim="${l.soort}">${esc(vraag ? t('tedoen.opruimenZeker', { n: af.length }) : t('tedoen.opruimen', { n: af.length }))}</button>`
+      : '';
     const naam = t(l.soort === 'boodschappen' ? 'tedoen.boodschappen' : 'tedoen.todo');
     return `<div class="tdp-lijst">
-      <h3>${esc(naam)}<span>${open}</span></h3>
+      <h3>${esc(naam)}<span>${open.length}</span></h3>
       <div class="td-items">${
         items.length
-          ? items.map((i) => `<button type="button" class="td-item${i.klaar ? ' af' : ''}" data-td-item="${esc(i.tekst)}" data-td-lijst="${l.soort}" data-td-klaar="${i.klaar}"><span class="td-box">${i.klaar ? svg(IK.vink, 2.4) : ''}</span>${esc(i.tekst)}</button>`).join('')
+          ? items.map((i) => `<button type="button" class="td-item${i.klaar ? ' af' : ''}" data-td-item="${esc(i.tekst)}" data-td-uid="${esc(i.uid ?? '')}" data-td-lijst="${l.soort}" data-td-klaar="${i.klaar}"><span class="td-box">${i.klaar ? svg(IK.vink, 2.4) : ''}</span>${esc(i.tekst)}</button>`).join('')
           : `<p class="mini">${esc(t('tedoen.leeg'))}</p>`
       }</div>
       <form class="td-erbij" data-td-erbij data-td-lijst="${l.soort}"><input type="text" maxlength="120" placeholder="${esc(t('tedoen.erbij'))}" aria-label="${esc(t('tedoen.erbijLijst', { lijst: naam }))}"></form>
-      <p class="td-bron">${esc(t('tedoen.bron', { naam: l.naam ?? naam }))}</p>
+      <div class="td-voet"><p class="td-bron">${esc(t('tedoen.bron', { naam: l.naam ?? naam }))}</p>${opruimen}</div>
     </div>`;
   }
 
   function paginaHtml() {
     const datum = new Intl.DateTimeFormat(nl() ? 'nl-NL' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long' }).format(Date.now());
     const kop = `<div class="tdp-kop"><div><h1 class="kop-1">${esc(t('tedoen.kop'))}</h1><p>${esc(datum.charAt(0).toUpperCase() + datum.slice(1))} · ${t('tedoen.tip')}</p></div>
-      <div class="tdp-knoppen">${telStand() ? '' : `<a class="pil" href="jij.html#agenda">${esc(t('tedoen.agendasKiezen'))}</a>`}<button type="button" class="pil licht" data-td-nieuwknop>${esc(t('tedoen.plusHerinnering'))}</button></div></div>`;
+      <div class="tdp-knoppen">${telStand() || !data?.bewoner ? '' : `<a class="pil" href="jij.html#agenda">${esc(t('tedoen.agendasKiezen'))}</a>`}<button type="button" class="pil licht" data-td-nieuwknop>${esc(t('tedoen.plusHerinnering'))}</button></div></div>`;
     if (!data) return `${kop}<p class="mini">${esc(t('algemeen.laden'))}</p>`;
     if (!data.aan) return `${kop}<section class="glas tdp-vak"><p class="uitleg">${esc(t('tedoen.uit'))}</p><a class="pil" href="functies.html?groep=assistent#tedoen">${esc(t('tedoen.naarFuncties'))}</a></section>`;
     return `${kop}<div class="tdp-drie">
@@ -200,10 +217,11 @@
         <h2>${esc(t('tedoen.herinneringen'))}<em>${data.herinneringen.length || ''}</em></h2>
         ${data.herinneringen.map(herinneringHtml).join('') || `<p class="mini">${esc(t('tedoen.geenHerinneringen'))}</p>`}
         <form class="td-erbij" data-td-nieuw><input type="text" maxlength="160" placeholder="${esc(t('tedoen.nieuw'))}" aria-label="${esc(t('tedoen.nieuwLabel'))}"></form>
+        ${(data.gepland ?? []).length ? `<h3 class="td-sub">${esc(t('tedoen.gepland'))}<span>${data.gepland.length}</span></h3>${data.gepland.map(geplandHtml).join('')}` : ''}
         <p class="td-bron">${t('tedoen.zoWerkt')}</p>
       </section>
       <section class="glas tdp-vak">
-        <h2>${esc(t('tedoen.agenda'))}${telStand() ? `<a href="jij.html#agenda">${esc(t('tedoen.agendasKiezen'))} ›</a>` : `<em>${esc(t('tedoen.tweeWeken'))}</em>`}</h2>
+        <h2>${esc(t('tedoen.agenda'))}${telStand() && data.bewoner ? `<a href="jij.html#agenda">${esc(t('tedoen.agendasKiezen'))} ›</a>` : `<em>${esc(t('tedoen.tweeWeken'))}</em>`}</h2>
         ${agendaHtml()}
       </section>
       <section class="glas tdp-vak">
@@ -253,7 +271,7 @@
   }
 
   document.addEventListener('click', (e) => {
-    const el = e.target.closest?.('[data-tedoen], [data-td-nieuwknop], [data-td-gedaan], [data-td-item], [data-td-later]');
+    const el = e.target.closest?.('[data-tedoen], [data-td-nieuwknop], [data-td-gedaan], [data-td-item], [data-td-later], [data-td-annuleer], [data-td-opruim]');
     if (!el) return;
     // De kaart op Thuis opent de tab (besluit 217).
     if (el.matches('[data-tedoen]')) {
@@ -263,7 +281,25 @@
     if (el.matches('[data-td-nieuwknop]')) return el.closest('[data-td-pagina]')?.querySelector('form[data-td-nieuw] input')?.focus();
     if (el.matches('[data-td-gedaan]')) return void stuur({ actie: 'gedaan', id: el.dataset.tdGedaan }).then(sluitMoment);
     if (el.matches('[data-td-later]')) return void stuur({ actie: 'later', id: el.dataset.tdId, minuten: Number(el.dataset.tdLater) }).then(sluitMoment);
-    if (el.matches('[data-td-item]')) return void stuur({ actie: el.dataset.tdKlaar === 'true' ? 'open' : 'klaar', lijst: el.dataset.tdLijst, item: el.dataset.tdItem });
+    // Afvinken op uid (besluit 218): een naam kan vaker op de lijst staan.
+    if (el.matches('[data-td-item]')) return void stuur({ actie: el.dataset.tdKlaar === 'true' ? 'open' : 'klaar', lijst: el.dataset.tdLijst, item: el.dataset.tdItem, ...(el.dataset.tdUid ? { uid: el.dataset.tdUid } : {}) });
+    if (el.matches('[data-td-annuleer]')) return void stuur({ actie: 'annuleer', id: el.dataset.tdAnnuleer });
+    if (el.matches('[data-td-opruim]')) {
+      const soort = el.dataset.tdOpruim;
+      // Eerst vragen: weghalen kan niet terug.
+      if (opruimVraag !== soort) {
+        opruimVraag = soort;
+        tekenPagina();
+        setTimeout(() => {
+          if (opruimVraag !== soort) return;
+          opruimVraag = null;
+          tekenPagina();
+        }, 5000);
+        return;
+      }
+      opruimVraag = null;
+      return void stuur({ actie: 'opruimen', lijst: soort });
+    }
   });
   document.addEventListener('submit', (e) => {
     const f = e.target.closest?.('[data-td-erbij], [data-td-nieuw]');

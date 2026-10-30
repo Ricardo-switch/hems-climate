@@ -431,7 +431,8 @@ verwijzing bestaat.
   hardop zegt en naar je telefoon gaan, de boodschappen en to-do van Home
   Assistant, en het afval en je agenda's, met je stem en in een eigen tab
   Te doen; de instellingen van de assistent staan bij Instellingen ›
-  Assistent ([216], [217]).
+  Assistent ([216], [217]). Een opdracht kan ook later: op een tijd of na
+  zonsondergang, en wat gepland staat zie je bij Te doen ([218]).
 - **Een kamer doet mee** met de regeling van een andere kamer, zoals een
   slaapkamer met de airco in de wasruimte ([142]).
 - **Comfort per bewoner:** wie hier woont staat op volgorde; de eerste die
@@ -720,4 +721,5 @@ verwijzing bestaat.
 [215]: DECISIONS.md#215-sneller-verstaan-het-einde-van-je-zin-bij-geluid-en-rechtzetten-op-klank
 [216]: DECISIONS.md#216-te-doen-herinneringen-de-lijsten-van-home-assistant-en-afval-en-agenda
 [217]: DECISIONS.md#217-te-doen-als-eigen-tab-en-de-assistent-als-groep-bij-instellingen
+[218]: DECISIONS.md#218-later-uitvoeren-afvinken-op-uid-en-de-afgevinkte-weghalen
 <!-- links:einde -->

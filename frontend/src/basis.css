@@ -494,6 +494,15 @@ html.sc-stil::view-transition-group(*), html.sc-stil::view-transition-old(*), ht
 .td-box svg { width: 14px; height: 14px; }
 .td-bron { margin: auto 0 0; font-size: 12px; color: var(--gedempt); }
 .td-bron b { color: var(--zacht); font-weight: 600; }
+/* Gepland (besluit 218): wat het huis later doet, met een kruisje om te annuleren. */
+.td-sub { margin: 6px 0 0; font-size: 12px; font-weight: 700; color: var(--gedempt); text-transform: uppercase; letter-spacing: 0.06em; display: flex; justify-content: space-between; }
+.td-gepland { background: rgb(111 211 255 / 0.07); border-color: rgb(111 211 255 / 0.22); }
+.td-weg { color: var(--zacht); }
+.td-voet { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 2px; }
+.td-voet .td-bron { margin: 0; }
+.td-opruim { flex: none; height: 30px; padding: 0 11px; border-radius: 10px; border: 1px solid var(--glas-rand); background: rgb(var(--wit) / 0.05); color: var(--zacht); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.td-opruim.zeker { background: color-mix(in srgb, var(--gloed) 22%, transparent); border-color: color-mix(in srgb, var(--gloed) 55%, transparent); color: var(--tekst); }
+.td-opruim:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
 .td-vink:focus-visible, .td-item:focus-visible, .td-kaart:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
 .td-erbij input:focus { outline: 2px solid var(--ijs); border-style: solid; }
 

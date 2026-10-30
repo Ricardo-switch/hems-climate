@@ -19,6 +19,7 @@ import { dagRegels, deelVan, denk, herkenDelen, isTerug, samen, terugVan, type D
 import type { Fact } from '../assistant.js';
 import type { IncomingMessage } from 'node:http';
 import { alsAntwoord, teDoenZin } from './tedoen.js';
+import { planZin } from './gepland.js';
 import type { URL } from 'node:url';
 import { momentWoorden } from '../lichtrecept.js';
 import { sunReport } from '../sun.js';
@@ -213,6 +214,11 @@ export async function assistentRoutes(d: Diensten, v: Verzoek): Promise<boolean>
       if (tedoen && !viaSleutel) {
         const a = await teDoenZin(d, tedoen, tekst, await d.bezoeker(req), config.timezone, lang).catch(() => null);
         if (a) return stuur({ body: alsAntwoord(a, lang), terug: null });
+      }
+      // Later uitvoeren (besluit 218): "zet over vijf minuten de lamp aan", "na zonsondergang de screens dicht".
+      if (tedoen && lijst && !viaSleutel) {
+        const g = await planZin(d, tedoen.herinneringen, tekst, lijst, await d.bezoeker(req), config.timezone, lang, url.searchParams.get('scherm'), tedoen.naamVan).catch(() => null);
+        if (g) return stuur({ body: g, terug: null });
       }
       // Meer in één zin (besluit 213): "screens dicht en de lamp aan", elk deel apart.
       const delen = lijst ? herkenDelen(tekst, lijst, lang, url.searchParams.get('scherm')) : null;
