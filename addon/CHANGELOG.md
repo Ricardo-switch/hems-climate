@@ -1,5 +1,21 @@
 # Wat is er nieuw · What is new
 
+## 0.87.0
+
+*30 oktober 2026*
+
+**Beter**
+
+- Praten met je huis bij Functies opnieuw ingedeeld, zoals Stem en luisteren: links het brein met het model als kaart, vandaag in drie getallen en de week in staafjes; rechts wat de assistent mag bedienen, met zinnen om te proberen
+- Te traag of fouten zie je meteen naast de kop
+
+*English*
+
+**Improved**
+
+- Talking to your home under Features rearranged, like Voice and listening: on the left the brain with the model as a card, today in three numbers and the week in bars; on the right what the assistant may operate, with sentences to try
+- Too slow or errors shows right next to the heading
+
 ## 0.86.1
 
 *29 oktober 2026*

@@ -354,20 +354,15 @@ async function inApp(id, aan) {
   }, 200);
 }
 
-/** Praten met je huis (besluit 148, schets Wand-Instellingen-Praten). */
+/**
+ * Praten met je huis (besluit 148, 213; schets Wand-Instellingen-Praten, 30
+ * oktober 2026). Zoals Stem en luisteren: links het brein (welk model, hoe
+ * vaak en hoe snel, proberen), rechts wat de assistent mag bedienen, met
+ * zinnen om te proberen en wat er naar buiten gaat.
+ */
 function praten() {
   const modellen = info.gevonden.taalmodellen ?? [];
   const p = concept.praten;
-  const bedienKan = info.lichtMogelijk === true || info.schermMogelijk === true;
-  const proefHtml = !p.taalmodel
-    ? ''
-    : proef === 'bezig'
-      ? `<p class="mini">${esc(t('functies.praten.proberen'))}</p>`
-      : proef
-        ? `<div class="proef"><div><span>${esc(t('functies.praten.vast'))}</span>${esc(proef.vast)}</div><div class="eigen"><span>${esc(t('functies.praten.eigen'))}</span>${esc(proef.eigen ?? t('functies.praten.lukteNiet'))}</div></div>
-          ${proef.snel && proef.ms != null ? `<p class="mini">${esc(t('functies.praten.na', { s: taal.getal(proef.ms / 1000, 1) }))}</p>` : ''}
-          ${proef.reden ? `<p class="uitleg" style="color: var(--zon-t)">${esc(proef.reden)}</p>` : ''}`
-        : '';
   if (p.taalmodel && teller == null) {
     teller = 'bezig';
     void haal('api/praten/teller').then(
@@ -375,37 +370,106 @@ function praten() {
       () => (teller = { dagen: [] }),
     );
   }
-  return `<h2 class="kop-2">${esc(t('functies.praten.kop'))}</h2>
-    ${modellen.length ? keuzes(t('functies.praten.taalmodel'), 'taalmodel', [[null, t('functies.uit')], ...modellen.map((m) => [m.id, m.naam])], p.taalmodel) : `<p class="uitleg">${esc(t('functies.praten.geenAI'))}</p>`}
-    <p class="mini">${esc(t('functies.praten.uitleg'))}</p>
-    ${p.taalmodel ? `<div><button type="button" class="knop knop-licht" data-proef>${esc(t(proef && proef !== 'bezig' ? 'functies.praten.nogEens' : 'functies.praten.probeer'))}</button></div>` : ''}
-    ${proefHtml}
-    ${p.taalmodel ? tellerHtml() : ''}
-    <div class="buiten"><div><b class="wel">${esc(t('functies.praten.gaatNaar'))}</b><span>${esc(t('functies.praten.gaatNaarZin'))}</span></div><div><b class="niet">${esc(t('functies.praten.blijft'))}</b><span>${esc(t('functies.praten.blijftZin'))}</span></div></div>
-    ${bedienKan ? `<h2 class="kop-2" style="margin-top: 8px">${esc(t('functies.praten.bedienen'))}</h2>
-    ${keuzes(t('functies.praten.bedienen'), 'pratenBedienen', aanUit(), p.bedienen)}
-    <p class="mini">${esc(t('functies.praten.zeg', { wat: t(info.schermMogelijk ? 'functies.praten.lampenSchermen' : 'functies.praten.lampen') }))}</p>` : ''}
-    ${info.gevonden.klimaatBrug ? `<h2 class="kop-2" style="margin-top: 8px">${esc(t('functies.praten.klimaat'))}</h2>
-    ${keuzes(t('functies.praten.klimaat'), 'pratenKlimaat', aanUit(), p.klimaat === true)}
-    <p class="mini">${esc(t('functies.praten.klimaatZin'))}</p>` : ''}`;
+  const status = p.taalmodel ? breinStatus() : null;
+  const kaart = (id, naam, soort) =>
+    `<button type="button" class="breinkaart" data-kies="taalmodel" data-waarde='${esc(JSON.stringify(id))}' aria-pressed="${p.taalmodel === id}"><b>${esc(naam)}</b><span>${esc(soort)}</span></button>`;
+  const links = `<div class="stemlinks">
+      <div class="stemkop"><h2 class="kop-2">${esc(t('functies.praten.kop'))}</h2>${status ? `<span class="breinpil ${status.soort}">${esc(status.tekst)}</span>` : ''}</div>
+      <p class="uitleg">${esc(t('functies.praten.uitleg'))}</p>
+      ${modellen.length
+        ? `<div class="breinkaarten" role="group" aria-label="${esc(t('functies.praten.taalmodel'))}">${modellen.map((m) => kaart(m.id, m.naam, aanbieder(m.id))).join('')}${kaart(null, t('functies.uit'), t('functies.praten.alleenVast'))}</div>`
+        : `<p class="uitleg">${esc(t('functies.praten.geenAI'))}</p>`}
+      ${p.taalmodel ? gebruikHtml() : ''}
+      ${p.taalmodel ? proefHtml() : ''}
+      <div class="buiten"><div><b class="wel">${esc(t('functies.praten.gaatNaar'))}</b><span>${esc(t('functies.praten.gaatNaarZin'))}</span></div><div><b class="niet">${esc(t('functies.praten.blijft'))}</b><span>${esc(t('functies.praten.blijftZin'))}</span></div></div>
+    </div>`;
+  return `<div class="stemtwee">${links}${bedienHtml()}</div>`;
 }
 
-/** Het gebruik van het taalmodel (besluit 213): vandaag, de week, en of het te traag is. */
-function tellerHtml() {
-  if (!teller || teller === 'bezig') return '';
+/** Gemini, OpenAI of Claude, uit het id van de AI-taak; anders niets. */
+function aanbieder(id) {
+  return /google|gemini/.test(id) ? 'Gemini' : /openai|chatgpt/.test(id) ? 'OpenAI' : /anthropic|claude/.test(id) ? 'Claude' : /ollama/.test(id) ? 'Ollama' : t('functies.praten.taalmodel');
+}
+
+/** De dag van vandaag in de teller, of null. */
+function tellerVandaag() {
+  if (!teller || teller === 'bezig') return null;
   const vandaag = teller.vandaag ?? new Intl.DateTimeFormat('en-CA').format(new Date());
-  const d = teller.dagen.find((x) => x.dag === vandaag);
-  const s = (ms) => taal.getal(ms / 1000, 1);
-  const regels = [
-    d ? t('functies.praten.teller.vandaag', { n: d.vragen, s: d.gemiddeldMs != null ? s(d.gemiddeldMs) : '–', l: d.langsteMs != null ? s(d.langsteMs) : '–' }) : t('functies.praten.teller.geen'),
-  ];
-  if (d?.fouten) regels.push(t('functies.praten.teller.fouten', { n: d.fouten }));
-  const week = teller.dagen.reduce((n, x) => n + x.vragen, 0);
-  if (week > (d?.vragen ?? 0)) regels.push(t('functies.praten.teller.week', { n: week }));
+  return teller.dagen.find((x) => x.dag === vandaag) ?? null;
+}
+
+/** Hoe het model het doet (besluit 213): werkt, te traag, of alleen fouten vandaag. */
+function breinStatus() {
+  const d = tellerVandaag();
+  if (!d || !d.vragen) return null;
+  if (d.fouten === d.vragen) return { soort: 'fout', tekst: t('functies.praten.status.fout') };
+  if (teller.eigenWoorden === false || (d.gemiddeldMs != null && d.gemiddeldMs > teller.wachtMs)) return { soort: 'traag', tekst: t('functies.praten.status.traag') };
+  return { soort: 'werkt', tekst: t('functies.praten.status.werkt') };
+}
+
+/** Vandaag in drie getallen, en per dag van de afgelopen week een staafje (besluit 213). */
+function gebruikHtml() {
+  if (!teller || teller === 'bezig') return '';
+  const d = tellerVandaag();
+  const s = (ms) => (ms == null ? '–' : `${taal.getal(ms / 1000, 1)} s`);
+  const vak = (getal, label, kleur = '') => `<div class="breingetal${kleur}"><b>${esc(getal)}</b><span>${esc(label)}</span></div>`;
   const traag = d?.gemiddeldMs != null && d.gemiddeldMs > teller.wachtMs;
-  // Te traag voor eigen woorden: dan meteen het vaste antwoord (29 oktober 2026).
-  const uit = teller.eigenWoorden === false ? `<p class="mini">${esc(t('functies.praten.teller.overslaan'))}</p>` : '';
-  return `<p class="mini">${regels.map(esc).join(' ')}</p>${traag ? `<p class="uitleg" style="color: var(--zon-t)">${esc(t('functies.praten.teller.traag', { w: s(teller.wachtMs) }))}</p>` : ''}${uit}`;
+  // De week: zeven dagen tot en met vandaag, ook de dagen zonder vragen.
+  const eind = Date.parse(`${teller.vandaag ?? new Intl.DateTimeFormat('en-CA').format(new Date())}T12:00:00Z`);
+  const dagen = Array.from({ length: 7 }, (_, i) => {
+    const ms = eind - (6 - i) * 86_400_000;
+    const dag = new Date(ms).toISOString().slice(0, 10);
+    return { dag, ms, vragen: teller.dagen.find((x) => x.dag === dag)?.vragen ?? 0 };
+  });
+  const hoogst = Math.max(1, ...dagen.map((x) => x.vragen));
+  const kort = new Intl.DateTimeFormat(taal.code === 'en' ? 'en-GB' : 'nl-NL', { weekday: 'narrow', timeZone: 'UTC' });
+  const week = dagen.reduce((n, x) => n + x.vragen, 0);
+  const staven = `<div class="breinweek" role="img" aria-label="${esc(t('functies.praten.teller.week', { n: week }))}">${dagen
+    .map((x, i) => `<div class="staaf${i === 6 ? ' nu' : ''}"><i style="height: ${Math.round((x.vragen / hoogst) * 100)}%"></i><span>${esc(kort.format(x.ms))}</span></div>`)
+    .join('')}</div>`;
+  const noot = teller.eigenWoorden === false ? t('functies.praten.teller.overslaan') : traag ? t('functies.praten.teller.traag', { w: taal.getal(teller.wachtMs / 1000, 0) }) : d?.fouten ? t('functies.praten.teller.fouten', { n: d.fouten }) : null;
+  return `<div class="breingebruik">
+      <div class="breingetallen">${vak(String(d?.vragen ?? 0), t('functies.praten.vandaagVragen'))}${vak(s(d?.gemiddeldMs), t('functies.praten.gemiddeld'), traag ? ' traag' : '')}${vak(s(d?.langsteMs), t('functies.praten.langste'))}</div>
+      ${staven}
+    </div>
+    ${noot ? `<p class="mini${traag || teller.eigenWoorden === false ? ' breinlet' : ''}">${esc(noot)}</p>` : ''}`;
+}
+
+/** Proberen (besluit 148): het vaste antwoord naast eigen woorden, met hoe lang het duurde. */
+function proefHtml() {
+  const knop = `<button type="button" class="knop knop-licht" data-proef ${proef === 'bezig' ? 'disabled' : ''}>${esc(t(proef === 'bezig' ? 'functies.praten.proberen' : proef ? 'functies.praten.nogEens' : 'functies.praten.probeer'))}</button>`;
+  if (!proef || proef === 'bezig') return `<div>${knop}</div>`;
+  return `<div class="proef"><div><span>${esc(t('functies.praten.vast'))}</span>${esc(proef.vast)}</div><div class="eigen"><span>${esc(t('functies.praten.eigen'))}</span>${esc(proef.eigen ?? t('functies.praten.lukteNiet'))}</div></div>
+    <div class="breinproef">${knop}${proef.snel && proef.ms != null ? `<span class="mini">${esc(t('functies.praten.na', { s: taal.getal(proef.ms / 1000, 1) }))}</span>` : ''}</div>
+    ${proef.reden ? `<p class="mini breinlet">${esc(proef.reden)}</p>` : ''}`;
+}
+
+/** Rechts: wat de assistent mag bedienen, zinnen om te proberen, en wat er naar buiten gaat. */
+function bedienHtml() {
+  const p = concept.praten;
+  const bedienKan = info.lichtMogelijk === true || info.schermMogelijk === true;
+  const icoon = (pad) => `<span class="breinicoon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${pad}</svg></span>`;
+  const rij = (ik, kop, zin, rechts, klasse = '') => `<div class="regelrij breinrij${klasse}">${ik}<div class="l"><b>${esc(kop)}</b><span>${esc(zin)}</span></div>${rechts}</div>`;
+  const rijen = [
+    bedienKan
+      ? rij(
+          icoon('<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>'),
+          t(info.schermMogelijk ? 'functies.praten.rij.lichtScherm' : 'functies.praten.rij.licht'),
+          t(info.schermMogelijk ? 'functies.praten.rij.lichtSchermZin' : 'functies.praten.rij.lichtZin'),
+          schakel(p.bedienen, `data-kies="pratenBedienen" data-waarde='${!p.bedienen}'`, t('functies.praten.bedienen')),
+        )
+      : '',
+    info.gevonden.klimaatBrug
+      ? rij(icoon('<path d="M14 14.8V4a2 2 0 0 0-4 0v10.8a4 4 0 1 0 4 0z"/>'), t('functies.praten.klimaat'), t('functies.praten.rij.klimaatZin'), schakel(p.klimaat === true, `data-kies="pratenKlimaat" data-waarde='${p.klimaat !== true}'`, t('functies.praten.klimaat')))
+      : '',
+    rij(icoon('<path d="M3 21V9l9-6 9 6v12"/><path d="M7 21v-8h10v8M7 17h10"/>'), t('functies.praten.rij.nooit'), t('functies.praten.rij.nooitZin'), `<span class="breinnooit">${esc(t('functies.praten.nooit'))}</span>`, ' grijs'),
+  ].join('');
+  const zinnen = ['functies.praten.zin1', 'functies.praten.zin2', 'functies.praten.zin3', ...(p.taalmodel ? ['functies.praten.zin4'] : [])];
+  return `<div class="stemrechts">
+      <h2 class="kop-2 breinrechtskop">${esc(t('functies.praten.bedienKort'))}</h2>
+      <div class="breinrijen">${rijen}</div>
+      <div><span class="veldnaam">${esc(t('functies.praten.probeerEens'))}</span><div class="breinzinnen">${zinnen.map((k) => `<span>${esc(t(k))}</span>`).join('')}</div></div>
+    </div>`;
 }
 
 const SPEEL = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';

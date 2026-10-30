@@ -31,6 +31,44 @@
   .buiten .wel { color: var(--zon-t); }
   .buiten .niet { color: var(--mint-t); }
   #tel .proef, #tel .buiten { grid-template-columns: 1fr; }
+  /* Het brein (besluit 213, schets Wand-Instellingen-Praten): het model als kaart, het gebruik in getallen en per dag. */
+  .breinpil { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 999px; font-size: 12.5px; font-weight: 700; }
+  .breinpil::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .breinpil.werkt { color: var(--mint-t); background: rgb(110 231 183 / 0.1); }
+  .breinpil.traag { color: var(--zon-t); background: rgb(247 181 72 / 0.12); }
+  .breinpil.fout { color: #ff9a8a; background: rgb(255 120 100 / 0.12); }
+  .breinkaarten { display: grid; grid-template-columns: repeat(auto-fit, minmax(125px, 1fr)); gap: 10px; }
+  /* Terug naar standaard staat rechtsboven in het vak: de kop ernaast houdt er ruimte voor. */
+  .vorm.metstd .breinrechtskop { padding-right: 170px; }
+  #tel .vorm.metstd .breinrechtskop { padding-right: 0; }
+  #tel .vorm.metstd .stemlinks > .stemkop { padding-right: 170px; }
+  .breinkaart { padding: 11px 14px; border-radius: 16px; background: rgb(var(--wit) / 0.05); border: 1px solid rgb(var(--wit) / 0.08); display: flex; flex-direction: column; gap: 2px; text-align: left; color: var(--tekst); font: inherit; cursor: pointer; }
+  .breinkaart[aria-pressed='true'] { background: rgb(143 134 255 / 0.12); border-color: rgb(143 134 255 / 0.55); }
+  .breinkaart b { font-family: var(--kop); font-size: 16px; font-weight: 600; }
+  .breinkaart span { font-size: 12.5px; color: var(--zacht); }
+  .breingebruik { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 12px; align-items: stretch; }
+  .breingetallen { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .breingetal { padding: 10px 12px; border-radius: 14px; background: rgb(var(--wit) / 0.04); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .breingetal b { font-family: var(--kop); font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .breingetal span { font-size: 12px; color: var(--gedempt); }
+  .breingetal.traag b { color: var(--zon-t); }
+  .breinweek { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; align-items: end; padding: 10px 12px 8px; border-radius: 14px; background: rgb(var(--wit) / 0.04); }
+  .breinweek .staaf { display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; justify-content: flex-end; }
+  .breinweek .staaf i { width: 100%; max-width: 14px; min-height: 3px; border-radius: 4px; background: rgb(143 134 255 / 0.45); flex: none; max-height: 34px; }
+  .breinweek .staaf.nu i { background: #B7B0FF; }
+  .breinweek .staaf span { font-size: 10.5px; color: var(--gedempt); text-transform: uppercase; }
+  .breinweek .staaf i[style*='height: 0%'] { height: 3px !important; background: rgb(var(--wit) / 0.12); }
+  .breinlet { color: var(--zon-t) !important; }
+  .breinproef { display: flex; align-items: center; gap: 12px; }
+  .breinrijen .breinrij { gap: 12px; }
+  .breinrij .l b { font-size: 14.5px; }
+  .breinicoon { width: 36px; height: 36px; border-radius: 11px; flex: none; display: grid; place-items: center; background: rgb(var(--wit) / 0.06); color: var(--zon-t); }
+  .breinicoon svg { width: 18px; height: 18px; }
+  .breinrij.grijs .breinicoon, .breinrij.grijs .l b { color: var(--gedempt); }
+  .breinnooit { height: 28px; padding: 0 11px; border-radius: 999px; display: inline-flex; align-items: center; font-size: 12.5px; font-weight: 700; color: var(--gedempt); border: 1px solid rgb(var(--wit) / 0.12); }
+  .breinzinnen { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .breinzinnen span { padding: 6px 11px; border-radius: 999px; background: rgb(var(--wit) / 0.05); border: 1px solid rgb(var(--wit) / 0.08); font-size: 13px; color: var(--zacht); }
+  #tel .breingebruik { grid-template-columns: 1fr; }
   /* Licht en screens per kamer (besluit 167): knopjes per lamp en screen, op de wand in twee kolommen. */
   .lichtkamers { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 18px; }
   #tel .lichtkamers { grid-template-columns: 1fr; }

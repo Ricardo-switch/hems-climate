@@ -9952,7 +9952,13 @@ hooguit één ding, en kon niets terug.
   vaste antwoord; anders wachtte elk antwoord voor niets. Eens per tien
   minuten toch één keer, en het brein meet mee: wordt het model sneller, dan
   komen de eigen woorden vanzelf terug. Functies zegt het erbij (versie
-  0.86.1). Gemeten op 29
+  0.86.1).
+- **Functies › Praten opnieuw ingedeeld** (30 oktober 2026, versie 0.87.0),
+  zoals Stem en luisteren: links het brein (het model als kaart, vandaag in
+  drie getallen, de week in staafjes, proberen, wat er naar buiten gaat),
+  rechts wat de assistent mag bedienen met zinnen om te proberen. Samen met
+  Stem en luisteren op één pagina past niet zonder scrollen; daarom twee
+  pagina's naast elkaar in de lijst. Gemeten op 29
   oktober na het wisselen naar `gemini-flash-lite-latest`: een plan 6,6 tot
   9,5 seconden, "zeg hallo" 8 tot 12; het netwerk (onder 0,1 s) en de Pi
   waren het niet.
