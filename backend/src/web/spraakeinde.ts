@@ -10,6 +10,12 @@
  * Luider dan de achtergrond is praten. Praten begint pas na 150 ms (een tik
  * of klap is geen zin); stil is het pas na de wachttijd. Er wordt niets
  * bewaard.
+ *
+ * Met geluid in de kamer (30 oktober 2026): een tv of afzuigkap die net boven
+ * de achtergrond kwam, telde als praten, en dan luisterde het huis door tot
+ * vijftien seconden. Nu is je eigen stem de maat: wat ruim zachter is dan jij
+ * praat, telt niet als praten en gaat mee in de achtergrond, ook terwijl je
+ * praat. En kwam er twee seconden niets op jouw luidheid, dan ben je klaar.
  */
 
 /** De standen van de wachttijd na je laatste woord, in ms. */
@@ -33,6 +39,14 @@ const BOVEN = 9;
 const ONDER = -52;
 /** Zoveel van de laatste 25 stukjes (250 ms) moeten praten zijn om te beginnen. */
 const BEGIN_STUKJES = 15;
+/** Zoveel dB zachter dan je eigen stem is geen praten meer: een tv verderop, een afzuigkap. */
+export const ONDER_STEM = 16;
+/** Zoveel dB zachter dan je stem gaat mee in de achtergrond, ook terwijl je praat. */
+const ACHTERGROND_ONDER_STEM = 12;
+/** Zo dicht bij je stem is een woord van jou. */
+const STEM_BINNEN = 10;
+/** Zo lang geen woord op jouw luidheid, en je bent klaar, ook als de kamer blijft klinken (de bewoner koos twee seconden). */
+export const GEEN_WOORD_MS = 2000;
 
 export type Einde = 'praat' | 'stil' | 'niets';
 
@@ -60,6 +74,12 @@ export class Spraakeinde {
   #praat = false;
   #stil = 0;
   #klaar = false;
+  /** Hoe luid jij praat: het luidste van een twintigste seconde, sinds je begon. */
+  #stem: number | null = null;
+  /** De laatste vijf stukjes, voor de luidheid van je stem zonder losse tikken. */
+  #kort: number[] = [];
+  /** Zo lang geleden was er een woord op jouw luidheid. */
+  #sindsWoord = 0;
 
   /**
    * `negeerMs`: zo lang na het begin telt praten nog niet. Na het wekwoord is
@@ -93,9 +113,19 @@ export class Spraakeinde {
     this.#ms += 10;
     // De achtergrond: de eerste keer het niveau zelf, daarna langzaam mee als er niet gepraat wordt.
     this.#achtergrond ??= Math.min(niveau, -40);
-    const spraak = niveau > Math.max(this.#achtergrond + BOVEN, ONDER);
-    if (!spraak) this.#achtergrond = 0.97 * this.#achtergrond + 0.03 * niveau;
+    this.#kort.push(niveau);
+    if (this.#kort.length > 5) this.#kort.shift();
+    // Je stem, als je eenmaal praat: wat ruim zachter is, is de kamer.
+    const stem = this.#praat ? this.#stem : null;
+    const spraak = niveau > Math.max(this.#achtergrond + BOVEN, ONDER, stem == null ? -Infinity : stem - ONDER_STEM);
+    if (!spraak || (stem != null && niveau < stem - ACHTERGROND_ONDER_STEM)) this.#achtergrond = Math.min(0.97 * this.#achtergrond + 0.03 * niveau, stem == null ? 0 : stem - ACHTERGROND_ONDER_STEM);
     else if (!this.#praat) this.#achtergrond = Math.min(this.#achtergrond + 0.02, -20);
+    if (this.#praat) {
+      // Het luidste van een twintigste seconde; een losse tik telt zo niet als stem.
+      const gem = this.#kort.reduce((a, b) => a + b, 0) / this.#kort.length;
+      if (spraak && (this.#stem == null || gem > this.#stem)) this.#stem = gem;
+      this.#sindsWoord = this.#stem != null && niveau >= this.#stem - STEM_BINNEN ? 0 : this.#sindsWoord + 10;
+    }
     this.#venster.push(spraak && this.#ms > this.#negeerMs);
     if (this.#venster.length > 25) this.#venster.shift();
     if (!this.#praat) {
@@ -111,7 +141,7 @@ export class Spraakeinde {
       return null;
     }
     this.#stil = spraak ? 0 : this.#stil + 10;
-    if (this.#stil >= this.#stilMs || this.#ms >= MAX_MS) {
+    if (this.#stil >= this.#stilMs || this.#sindsWoord >= Math.max(GEEN_WOORD_MS, this.#stilMs) || this.#ms >= MAX_MS) {
       this.#klaar = true;
       return 'stil';
     }

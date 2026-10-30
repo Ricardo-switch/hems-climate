@@ -1,5 +1,19 @@
 # Wat is er nieuw · What is new
 
+## 0.87.1
+
+*30 oktober 2026*
+
+**Opgelost**
+
+- Met de tv aan of geroezemoes in de kamer luisterde het huis soms nog lang door na je zin; nu is je eigen stem de maat, en na twee seconden zonder woord van jou is je zin klaar
+
+*English*
+
+**Fixed**
+
+- With the TV on or chatter in the room the house sometimes kept listening long after your sentence; now your own voice is the measure, and after two seconds without a word from you your sentence is done
+
 ## 0.87.0
 
 *30 oktober 2026*

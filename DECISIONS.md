@@ -216,6 +216,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [212. De stem kiezen, en stem en luisteren op één plek](#212-de-stem-kiezen-en-stem-en-luisteren-op-één-plek)
 - [213. Het brein: een gesprek, meer in één zin, en doe maar terug](#213-het-brein-een-gesprek-meer-in-één-zin-en-doe-maar-terug)
 - [214. Hoe ver je huis is: de zonnewaaier](#214-hoe-ver-je-huis-is-de-zonnewaaier)
+- [215. Het einde van je zin bij geluid in de kamer](#215-het-einde-van-je-zin-bij-geluid-in-de-kamer)
 
 **Veiligheid**
 
@@ -10013,6 +10014,33 @@ je huis kan. Uit de schetsen `Wand-Voortgang` (met de visgraat ernaast) en
 - **De stralen groeien alleen de eerste keer**; een tik of nieuwe cijfers
   tekenen ze meteen, en een kleine waaier groeit nooit.
 - **Versie 0.86.0.**
+
+---
+
+## 215. Het einde van je zin bij geluid in de kamer
+
+*Onderwerp: weergave · Status: geldig*
+
+Gemeld door de bewoner op 30 oktober 2026: met geluid in de kamer bleef het
+huis lang denken dat er nog gepraat werd, en dat kostte tijd. Het einde van je
+zin (besluit 208) volgde een achtergrondniveau dat alleen meeliep als er níet
+gepraat werd; geluid dat telkens even boven die achtergrond kwam, zoals
+tv-dialoog met stiltes ertussen, telde als praten. Dan luisterde het huis door
+tot de grens van vijftien seconden.
+
+*Besluit:*
+
+- **Je eigen stem is de maat** (`Spraakeinde`): zodra je praat, onthoudt het
+  huis hoe luid jij praat (het luidste van een twintigste seconde, zodat een
+  tik niet telt). Wat 16 dB of meer zachter is, telt niet meer als praten; wat
+  12 dB of meer zachter is, gaat mee in de achtergrond, ook terwijl je praat.
+  Een zacht woord aan het eind ("… aan") telt nog wel.
+- **Twee seconden zonder woord van jou**, en je zin is klaar, ook als de kamer
+  blijft rommelen; de bewoner koos twee seconden. Bij de wachttijd Rustig
+  (1,8 s) blijft dat twee seconden.
+- Toetsen met nagebootste tv en geroezemoes; die met geroezemoes faalde met
+  de oude manier.
+- **Versie 0.87.1.**
 
 ---
 
