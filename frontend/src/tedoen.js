@@ -163,6 +163,18 @@
   function tekenBlad() {
     const vak = blad?.querySelector('.td-blad');
     if (!vak) return;
+    // Wat je aan het typen was, blijft staan als het blad zich opnieuw tekent (na een vinkje of nieuwe gegevens).
+    const bezig = [...vak.querySelectorAll('form input')].map((i) => [i.closest('form').hasAttribute('data-td-nieuw') ? 'nieuw' : 'erbij', i.value, i === document.activeElement]);
+    teken(vak);
+    for (const [soort, waarde, focus] of bezig) {
+      const i = vak.querySelector(`form[data-td-${soort}] input`);
+      if (!i) continue;
+      i.value = waarde;
+      if (focus) i.focus();
+    }
+  }
+
+  function teken(vak) {
     if (!data) {
       vak.innerHTML = `<div class="td-bovenkop"><h2 class="kop-2">${esc(t('tedoen.kop'))}</h2><button type="button" class="td-sluit" data-td-sluit aria-label="${esc(t('tedoen.sluit'))}">×</button></div><p class="mini">${esc(t('algemeen.laden'))}</p>`;
       return;
@@ -219,7 +231,9 @@
     const f = e.target.closest?.('[data-td-erbij], [data-td-nieuw]');
     if (!f) return;
     e.preventDefault();
-    const v = f.querySelector('input').value.trim();
+    const veld = f.querySelector('input');
+    const v = veld.value.trim();
+    veld.value = '';
     if (!v) return;
     if (f.matches('[data-td-nieuw]')) void nieuweHerinnering(v);
     else void stuur({ actie: 'toevoegen', lijst: tab, item: v });
