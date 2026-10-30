@@ -46,6 +46,8 @@ export interface TeDoenDienst {
   /** De naam van een bewoner bij zijn account, of null als het geen bewoner is (een scherm). */
   readonly naamVan: (account: string) => string | null;
   readonly namen?: (ids: readonly string[]) => Readonly<Record<string, string>>;
+  /** De bewoners die nu thuis zijn, voor hun eigen agenda's op de wand (besluit 219). */
+  readonly thuis?: () => readonly { readonly account: string; readonly naam: string }[];
   /** Alle agenda's in Home Assistant, om bij Jij uit te kiezen. */
   readonly agendas?: () => readonly { readonly id: string; readonly naam: string }[];
 }
@@ -73,7 +75,8 @@ export interface Overzicht {
   /** Wat de dienst later doet (besluit 218): licht, scènes en schermen op een tijd. */
   readonly gepland?: readonly Herinnering[];
   readonly lijsten: readonly { readonly soort: LijstSoort; readonly id: string; readonly naam: string; readonly items: readonly LijstItem[] }[];
-  readonly afspraken: readonly (Afspraak & { readonly afval?: string })[];
+  /** `wie`: op de wand, van welke bewoner die thuis is deze eigen afspraak is (besluit 219). */
+  readonly afspraken: readonly (Afspraak & { readonly afval?: string; readonly wie?: string })[];
   readonly speelt: readonly Herinnering[];
   /** De namen van de agenda's in de afspraken, voor de kleuren op de pagina. */
   readonly agendas?: Readonly<Record<string, string>>;
@@ -102,11 +105,21 @@ export async function overzicht(d: Diensten, t: TeDoenDienst, wie: Visitor | nul
     .map(([soort, id]) => ({ soort, id: id!, naam: namen[id!] ?? (soort === 'boodschappen' ? 'Boodschappen' : 'To-do'), items: leesLijst(lijstAntwoord, id!) }));
   // De week: het huis (afval en gezin) en, voor een bewoner, zijn eigen agenda's.
   const eigen = bewoner && account ? t.agendaVan(account) : null;
-  const ids = [...new Set([keus.afval, keus.gezin, ...(eigen?.aan ? eigen.ids : [])].filter((x): x is string => x != null))];
+  // Op de wand (besluit 219): de eigen agenda's van iedereen die nu thuis is, met de naam erbij.
+  const vanWie = new Map<string, string>();
+  if (!bewoner) {
+    for (const p of t.thuis?.() ?? []) {
+      const k = t.agendaVan(p.account);
+      if (k.aan) for (const id of k.ids) if (id !== keus.afval && id !== keus.gezin && !vanWie.has(id)) vanWie.set(id, p.naam);
+    }
+  }
+  const ids = [...new Set([keus.afval, keus.gezin, ...(eigen?.aan ? eigen.ids : []), ...vanWie.keys()].filter((x): x is string => x != null))];
   const van = startOfLocalDay(nuMs, tz);
   const tot = van + 15 * 86_400_000;
   const agenda = ids.length ? await vast(`agenda:${ids.join(',')}:${van}`, () => t.leesAgendas(ids, van, tot)) : null;
-  const afspraken = leesAfspraken(agenda, (id) => (id === keus.afval ? 'afval' : id === keus.gezin ? 'gezin' : 'eigen'), tz).map((a) => (a.bron === 'afval' ? { ...a, afval: afvalSoort(a.tekst) } : a));
+  const afspraken = leesAfspraken(agenda, (id) => (id === keus.afval ? 'afval' : id === keus.gezin ? 'gezin' : 'eigen'), tz).map((a) =>
+    a.bron === 'afval' ? { ...a, afval: afvalSoort(a.tekst) } : vanWie.has(a.agenda) ? { ...a, wie: vanWie.get(a.agenda)! } : a,
+  );
   void d;
   return { aan: true, bewoner, herinneringen, gepland: await t.herinneringen.gepland(), lijsten, afspraken, speelt, agendas: t.namen?.(ids) ?? {} };
 }

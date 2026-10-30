@@ -220,6 +220,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [216. Te doen: herinneringen, de lijsten van Home Assistant, en afval en agenda](#216-te-doen-herinneringen-de-lijsten-van-home-assistant-en-afval-en-agenda)
 - [217. Te doen als eigen tab, en de assistent als groep bij Instellingen](#217-te-doen-als-eigen-tab-en-de-assistent-als-groep-bij-instellingen)
 - [218. Later uitvoeren, afvinken op uid, en de afgevinkte weghalen](#218-later-uitvoeren-afvinken-op-uid-en-de-afgevinkte-weghalen)
+- [219. Je eigen agenda's op de wand als je thuis bent](#219-je-eigen-agendas-op-de-wand-als-je-thuis-bent)
 
 **Veiligheid**
 
@@ -10199,10 +10200,42 @@ wand stond een knop naar "jouw agenda's" terwijl een scherm er geen heeft.
   overmorgen en volgende week (maandag tot en met zondag).
 - **Jouw agenda's** alleen voor een bewoner: het overzicht zegt of wie kijkt
   er een is.
-- **Instellingen:** acht tegels. Voor een bewoner Jij (thema, agenda's, taal);
-  voor een scherm aan de wand op die plek Dit scherm (always-on display en
-  wanneer het scherm uitgaat), want een scherm heeft geen profiel.
-- **Versie 0.90.0.**
+- **Instellingen:** acht tegels; de achtste is Inrichten, stap voor stap, op
+  de wand en op de telefoon gelijk. Dat was eerst een knop bovenin. (In 0.90.0
+  stond daar Jij, en op de wand Dit scherm; de bewoner vond twee situaties
+  raar, en de telefoon heeft staand geen lege plek.)
+- **Eén manier voor buiten:** de knop Buiten in de kopregel van Thuis (besluit
+  206) is weg; buiten tik je aan op het huis, zoals een kamer, en daar staat
+  Alles buiten. "We hebben ook geen knop Binnen."
+- **Bij Jij geen rij "Herinneringen naar":** die wees naar dezelfde telefoon
+  als Meldingen. De uitleg bij Agenda zegt waar een herinnering heen gaat.
+- **Versie 0.90.0, en 0.90.1** (Inrichten, Buiten, Jij).
+
+---
+
+## 219. Je eigen agenda's op de wand als je thuis bent
+
+*Onderwerp: weergave · Status: geldig*
+
+Na 0.90 (30 oktober 2026). De bewoner: "Waarom zie ik mijn geselecteerde
+agenda's niet op de wand als ik thuis ben?" Besluit 216 hield eigen agenda's
+van de wand, voor wie er langsloopt. Keuzes van de bewoner: op de wand de
+eigen agenda's van iedereen die thuis is (niet alleen van wie de wand volgt,
+en niet per agenda aan te zetten), en alles van een afspraak, zoals op je
+telefoon.
+
+*Besluit:*
+
+- **Wie thuis is**, zoals de regeling het ziet (het profiel uit het laatste
+  besluit, besluit 147): van elke bewoner die thuis is en geen gast is, staan
+  de agenda's die hij bij Jij koos op de wand. Gaat hij weg, dan verdwijnen ze.
+  Afval en Gezin staan er altijd, zoals in 216.
+- **Met de naam erbij:** op de wand krijgt elke bewoner een eigen kleur in de
+  agenda, en zijn naam bij de afspraak en bij de bronnen bovenaan.
+- **De assistent op de wand** leest ze ook voor ("wat staat er morgen?").
+- Een bewoner op zijn eigen telefoon ziet, zoals altijd, zijn eigen agenda's.
+- Dit vervangt in besluit 216 "een eigen agenda staat nooit op de wand".
+- **Versie 0.91.0.**
 
 ---
 

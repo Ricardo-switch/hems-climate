@@ -1,5 +1,37 @@
 # Wat is er nieuw · What is new
 
+## 0.91.0
+
+*30 oktober 2026*
+
+**Nieuw**
+
+- Ben je thuis, dan staan je eigen agenda’s ook op de wand, met je naam erbij; ga je weg, dan verdwijnen ze weer
+
+*English*
+
+**New**
+
+- When you are home your own calendars also show on the wall, with your name; when you leave they disappear again
+
+## 0.90.1
+
+*30 oktober 2026*
+
+**Beter**
+
+- Bij Instellingen is Inrichten een tegel, op de wand en op je telefoon; de losse knop bovenin is weg
+- Op Thuis staat geen knop Buiten meer: buiten tik je aan op het huis, zoals een kamer
+- Bij Jij staat geen rij Herinneringen naar meer: een herinnering gaat naar dezelfde telefoon als je meldingen
+
+*English*
+
+**Improved**
+
+- Under Settings, Set up is a tile, on the wall and on your phone; the separate button at the top is gone
+- Home no longer has an Outside button: tap outside on the house, like a room
+- You no longer has a Reminders go to row: a reminder goes to the same phone as your notifications
+
 ## 0.90.0
 
 *30 oktober 2026*

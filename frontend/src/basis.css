@@ -535,6 +535,8 @@ html.sc-stil::view-transition-group(*), html.sc-stil::view-transition-old(*), ht
 .tdp-item i { width: 4px; height: 18px; border-radius: 2px; flex: none; }
 .tdp-item small { color: var(--gedempt); font-size: 12px; margin-left: auto; flex: none; }
 .tdp-item.leeg { color: var(--gedempt); font-size: 13px; }
+/* Van wie een afspraak is, op de wand (besluit 219). */
+.tdp-wie { font-style: normal; font-size: 12px; font-weight: 600; color: var(--zacht); }
 /* Een streepje in de kleur van de bron: het afval naar zijn bak, het gezin roze, je eigen agenda's elk een kleur. */
 .tdp i.td-gft { background: #6ee7b7; }
 .tdp i.td-pmd { background: #ffb86b; }

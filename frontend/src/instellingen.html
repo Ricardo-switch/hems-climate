@@ -55,7 +55,7 @@
   .stand.nodig { color: var(--zon-t); box-shadow: inset 0 0 0 1px rgba(247, 181, 72, 0.45); }
   .stand.uit { color: var(--gedempt); background: rgb(var(--wit) / 0.06); }
 
-  /* Acht groepen (besluit 217 en 218: de assistent en Jij kwamen erbij): twee rijen van vier. */
+  /* Acht tegels (besluit 217: de assistent; 0.90.1: Inrichten, dat eerst een knop bovenin was): twee rijen van vier. */
   .groepen { flex: 1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); gap: 14px; min-height: 0; }
   .tegel { padding: 16px 18px 14px; display: flex; flex-direction: column; color: inherit; text-decoration: none; min-height: 0; }
   .tegel:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
@@ -95,7 +95,7 @@
           <h1 class="kop-1" data-t="nav.instellingen"></h1>
           <p class="lead" style="margin-top: 6px" data-t="instellingen.lead"></p>
         </div>
-        <div style="display: flex; gap: 10px; align-items: center"><a class="pil jijpil" href="jij.html" data-jijpil hidden></a><a class="pil" href="inrichten.html" style="height: 48px; padding: 0 16px; text-decoration: none; color: var(--tekst)" data-t="instellingen.inrichten"></a><div class="zoekvak" data-zoekvak></div></div>
+        <div style="display: flex; gap: 10px; align-items: center"><a class="pil jijpil" href="jij.html" data-jijpil hidden></a><div class="zoekvak" data-zoekvak></div></div>
       </div>
       <div class="boven"><section class="glas mist" data-mist></section><a class="glas kan" href="huis-kan.html" data-kan></a></div>
       <section class="groepen" data-groepen></section>
@@ -108,7 +108,6 @@
       <h1 class="kop-1" style="font-size: 34px" data-t="nav.instellingen"></h1>
       <a class="glas jijregel" href="jij.html" data-jijregel hidden></a>
       <div class="zoekvak" data-zoekvak></div>
-      <a class="knop knop-licht" href="inrichten.html" style="display: inline-flex; align-items: center; justify-content: center; text-decoration: none" data-t="instellingen.inrichten"></a>
       <section class="glas mist" data-mist></section>
       <a class="glas kan" href="huis-kan.html" data-kan></a>
       <section class="groepen" data-groepen></section>

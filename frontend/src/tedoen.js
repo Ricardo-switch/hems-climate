@@ -151,10 +151,15 @@
     return `<div class="td-her td-gepland"><div class="td-uur"><b>${esc(klok(g.ms))}</b><span>${esc(dag)}</span></div><div class="td-wat"><b>${esc(g.tekst)}</b><span>${esc(zon || t('tedoen.doetHuis'))}</span></div><button type="button" class="td-vink td-weg" data-td-annuleer="${esc(g.id)}" aria-label="${esc(t('tedoen.annuleer', { wat: g.tekst }))}">${svg(IK.kruis, 2.2)}</button></div>`;
   }
 
-  /** De kleur van een afspraak: het afval naar zijn bak, het gezin roze, je eigen agenda's elk een eigen kleur. */
+  /**
+   * De kleur van een afspraak: het afval naar zijn bak, het gezin roze, je eigen
+   * agenda's elk een eigen kleur. Op de wand (besluit 219) een kleur per bewoner
+   * die thuis is.
+   */
   function kleurVan(a) {
     if (a.bron === 'afval') return `td-${a.afval ?? 'anders'}`;
     if (a.bron === 'gezin') return 'td-gezin';
+    if (a.wie) return `td-eigen${Math.max(0, [...new Set(data.afspraken.filter((x) => x.wie).map((x) => x.wie))].indexOf(a.wie)) % 4}`;
     const eigen = [...new Set(data.afspraken.filter((x) => x.bron === 'eigen').map((x) => x.agenda))];
     return `td-eigen${Math.max(0, eigen.indexOf(a.agenda)) % 4}`;
   }
@@ -167,14 +172,15 @@
     // De bronnen boven de lijst, met hun kleur.
     const bronnen = new Map();
     for (const a of data.afspraken) {
-      const sleutel = a.bron === 'afval' ? 'afval' : a.bron === 'gezin' ? 'gezin' : a.agenda;
-      if (!bronnen.has(sleutel)) bronnen.set(sleutel, { naam: a.bron === 'afval' ? t('tedoen.afval') : a.bron === 'gezin' ? t('tedoen.gezin') : (data.agendas?.[a.agenda] ?? a.agenda), kleur: a.bron === 'afval' ? 'td-gft' : kleurVan(a) });
+      // Op de wand een bron per bewoner die thuis is, met zijn naam.
+      const sleutel = a.bron === 'afval' ? 'afval' : a.bron === 'gezin' ? 'gezin' : a.wie ? `wie:${a.wie}` : a.agenda;
+      if (!bronnen.has(sleutel)) bronnen.set(sleutel, { naam: a.bron === 'afval' ? t('tedoen.afval') : a.bron === 'gezin' ? t('tedoen.gezin') : (a.wie ?? data.agendas?.[a.agenda] ?? a.agenda), kleur: a.bron === 'afval' ? 'td-gft' : kleurVan(a) });
     }
     const legenda = bronnen.size ? `<div class="tdp-bronnen">${[...bronnen.values()].map((b) => `<span class="tdp-bron"><i class="${b.kleur}"></i>${esc(b.naam)}</span>`).join('')}</div>` : '';
     const dag = (ms) => {
       const daar = data.afspraken.filter((a) => dagStart(a.startMs) === ms);
       const items = daar.length
-        ? daar.map((a) => `<div class="tdp-item"><i class="${kleurVan(a)}"></i>${esc(a.tekst)}<small>${esc(a.heleDag ? (a.bron === 'afval' ? '' : t('tedoen.heleDag')) : klok(a.startMs))}</small></div>`).join('')
+        ? daar.map((a) => `<div class="tdp-item"><i class="${kleurVan(a)}"></i>${esc(a.tekst)}${a.wie ? `<em class="tdp-wie">${esc(a.wie)}</em>` : ''}<small>${esc(a.heleDag ? (a.bron === 'afval' ? '' : t('tedoen.heleDag')) : klok(a.startMs))}</small></div>`).join('')
         : `<div class="tdp-item leeg">${esc(t('tedoen.niets'))}</div>`;
       return `<div class="tdp-dag${ms === vandaag ? ' vandaag' : ''}"><div class="tdp-wanneer"><span>${esc(kort.format(ms).replace('.', ''))}</span><b>${new Date(ms).getDate()}</b></div><div class="tdp-items">${items}</div></div>`;
     };

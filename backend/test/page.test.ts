@@ -1188,11 +1188,8 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
         await expect.poll(() => lightCalls.length).toBe(n + 1);
         expect(lightCalls.at(-1)).toMatch(/^turn_off .*light\.oprit/);
       }
-      // De knop Buiten in de kopregel opent en sluit hetzelfde blad.
-      await blad.locator('.sluit').click();
-      await expect.poll(() => blad.isVisible()).toBe(false);
-      await p.locator('#wand [data-alles-buiten]').click();
-      await expect.poll(() => blad.locator('h2').textContent()).toBe('Alles buiten');
+      // Geen knop Buiten in de kopregel (0.90.1): buiten tik je aan op het huis, zoals een kamer.
+      expect(await p.locator('#wand [data-alles-buiten]').count()).toBe(0);
       await p.keyboard.press('Escape');
       await expect.poll(() => blad.isVisible()).toBe(false);
 
@@ -4053,7 +4050,7 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     expect(vast).toEqual([]);
   }, 120_000);
 
-  it('toont Instellingen in acht groepen, en daarvandaan Wat je huis kan (besluit 130, 217 en 218)', async () => {
+  it('toont Instellingen in acht tegels, met Inrichten, en daarvandaan Wat je huis kan (besluit 130 en 217)', async () => {
     const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
     await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
     const p = await context.newPage();
@@ -4061,7 +4058,7 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     p.on('pageerror', (e) => fouten.push(e.message));
     await p.goto(`${baseUrl}/instellingen.html`);
     await p.locator('#wand [data-groepen] .tegel').first().waitFor();
-    expect(await p.locator('#wand [data-groepen] .tegel h3').allTextContents()).toEqual(['Je huis', 'Comfort', 'Energie', 'Regeling', 'Functies', 'Assistent', 'Dit scherm', 'Bewoners en toegang']); // Het testaccount is een scherm; een bewoner ziet daar Jij (besluit 218).
+    expect(await p.locator('#wand [data-groepen] .tegel h3').allTextContents()).toEqual(['Je huis', 'Comfort', 'Energie', 'Regeling', 'Functies', 'Assistent', 'Bewoners en toegang', 'Inrichten']);
     expect(await p.locator('#balk [aria-current="page"]').getAttribute('aria-label')).toBe('Instellingen');
     expect(await p.evaluate('document.scrollingElement.scrollHeight <= innerHeight')).toBe(true);
     // Zoeken: "zekering" vindt de aansluiting bij Energie.

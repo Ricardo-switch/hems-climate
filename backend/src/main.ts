@@ -1163,6 +1163,15 @@ const teDoen: TeDoenDienst = {
   },
   agendaVan: (account) => voorkeuren?.agenda(account) ?? { aan: true, ids: [] },
   naamVan: bewonerNaam,
+  // Wie er thuis is, zoals de regeling het ziet (besluit 219): hun eigen agenda's staan dan op de wand.
+  thuis: () => {
+    const b = bewonersStore?.current;
+    if (!b) return [];
+    return (runner?.latest?.explanation.profile?.home ?? []).flatMap((id) => {
+      const x = b.bewoners[id];
+      return x && !x.gast && x.haUser ? [{ account: x.haUser, naam: x.naam ?? '' }] : [];
+    });
+  },
   namen: (ids) => Object.fromEntries(ids.map((id) => [id, String(allStates.get(id)?.attributes['friendly_name'] ?? id)])),
   agendas: () =>
     [...allStates.values()]
