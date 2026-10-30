@@ -36,8 +36,12 @@ export interface TeDoenDienst {
   readonly herinneringen: Herinneringen;
   readonly leesAgendas: (ids: readonly string[], vanMs: number, totMs: number) => Promise<unknown>;
   readonly leesLijsten: (ids: readonly string[]) => Promise<unknown>;
-  /** Iets op een lijst zetten, of afvinken (klaar) of terugzetten (open). */
-  readonly lijst: (id: string, item: string, actie: 'toevoegen' | 'klaar' | 'open') => Promise<void>;
+  /**
+   * Iets op een lijst zetten, afvinken (klaar) of terugzetten (open), of de
+   * afgevinkte weghalen (opruimen, besluit 218). Bij afvinken is `item` de uid
+   * als die er is: een naam kan op een lijst vaker staan.
+   */
+  readonly lijst: (id: string, item: string, actie: 'toevoegen' | 'klaar' | 'open' | 'opruimen') => Promise<void>;
   readonly agendaVan: (account: string) => AgendaKeus;
   /** De naam van een bewoner bij zijn account, of null als het geen bewoner is (een scherm). */
   readonly naamVan: (account: string) => string | null;
@@ -63,7 +67,11 @@ const vergeetLijsten = () => {
 
 export interface Overzicht {
   readonly aan: boolean;
+  /** Of wie kijkt een bewoner is; een scherm aan de wand heeft geen eigen agenda's. */
+  readonly bewoner?: boolean;
   readonly herinneringen: readonly (Herinnering & { readonly eigen: boolean })[];
+  /** Wat de dienst later doet (besluit 218): licht, scènes en schermen op een tijd. */
+  readonly gepland?: readonly Herinnering[];
   readonly lijsten: readonly { readonly soort: LijstSoort; readonly id: string; readonly naam: string; readonly items: readonly LijstItem[] }[];
   readonly afspraken: readonly (Afspraak & { readonly afval?: string })[];
   readonly speelt: readonly Herinnering[];
@@ -75,11 +83,11 @@ export interface Overzicht {
 export async function overzicht(d: Diensten, t: TeDoenDienst, wie: Visitor | null, tz: string, nuMs = Date.now()): Promise<Overzicht> {
   const keus = t.keus();
   const speelt = await t.herinneringen.speelt();
-  if (!keus.aan) return { aan: false, herinneringen: [], lijsten: [], afspraken: [], speelt: [] };
+  if (!keus.aan) return { aan: false, herinneringen: [], gepland: [], lijsten: [], afspraken: [], speelt: [] };
   const account = wie?.userId ?? null;
   const bewoner = account != null && t.naamVan(account) != null;
   const herinneringen = (await t.herinneringen.lijst())
-    .filter((h) => h.status !== 'klaar' && (!bewoner || h.voor == null || h.voor === account))
+    .filter((h) => !h.opdracht && h.status !== 'klaar' && (!bewoner || h.voor == null || h.voor === account))
     .map((h) => ({ ...h, eigen: h.voor != null && h.voor === account }));
   const lijstIds = [keus.boodschappen, keus.todo].filter((x): x is string => x != null);
   const lijstAntwoord = lijstIds.length ? await vast(`lijst:${lijstIds.join(',')}`, () => t.leesLijsten(lijstIds)) : null;
@@ -100,7 +108,7 @@ export async function overzicht(d: Diensten, t: TeDoenDienst, wie: Visitor | nul
   const agenda = ids.length ? await vast(`agenda:${ids.join(',')}:${van}`, () => t.leesAgendas(ids, van, tot)) : null;
   const afspraken = leesAfspraken(agenda, (id) => (id === keus.afval ? 'afval' : id === keus.gezin ? 'gezin' : 'eigen'), tz).map((a) => (a.bron === 'afval' ? { ...a, afval: afvalSoort(a.tekst) } : a));
   void d;
-  return { aan: true, herinneringen, lijsten, afspraken, speelt, agendas: t.namen?.(ids) ?? {} };
+  return { aan: true, bewoner, herinneringen, gepland: await t.herinneringen.gepland(), lijsten, afspraken, speelt, agendas: t.namen?.(ids) ?? {} };
 }
 
 /** De routes van te doen. */
@@ -149,13 +157,28 @@ export async function handel(t: TeDoenDienst, body: Record<string, unknown>, wie
   if (!keus.aan) return { status: 409, antwoord: { fout: 'te doen staat uit bij Instellingen › Assistent' } };
   const actie = body['actie'];
   const tekst = typeof body['item'] === 'string' ? body['item'].trim() : '';
+  // Afvinken op uid (besluit 218): op naam vond Home Assistant een oud, al afgevinkt item met dezelfde naam.
+  const uid = typeof body['uid'] === 'string' && /^[\w.:-]{1,80}$/.test(body['uid']) ? body['uid'] : null;
   const lijstId = body['lijst'] === 'boodschappen' ? keus.boodschappen : body['lijst'] === 'todo' ? keus.todo : null;
   try {
+    if (actie === 'opruimen') {
+      if (lijstId == null) return { status: 400, antwoord: { fout: 'lijst is boodschappen of todo, en die moet er zijn' } };
+      await t.lijst(lijstId, '', 'opruimen');
+      vergeetLijsten();
+      return { status: 200, antwoord: { ok: true } };
+    }
     if (actie === 'toevoegen' || actie === 'klaar' || actie === 'open') {
       if (lijstId == null) return { status: 400, antwoord: { fout: 'lijst is boodschappen of todo, en die moet er zijn' } };
       if (tekst === '' || tekst.length > 120) return { status: 400, antwoord: { fout: 'item is 1 tot 120 tekens' } };
-      await t.lijst(lijstId, tekst, actie);
+      await t.lijst(lijstId, actie !== 'toevoegen' && uid ? uid : tekst, actie);
       vergeetLijsten();
+      return { status: 200, antwoord: { ok: true } };
+    }
+    if (actie === 'annuleer') {
+      const id = typeof body['id'] === 'string' ? body['id'] : '';
+      const g = (await t.herinneringen.gepland()).find((x) => x.id === id);
+      if (!g) return { status: 404, antwoord: { fout: 'die geplande opdracht is er niet' } };
+      await t.herinneringen.klaar(id);
       return { status: 200, antwoord: { ok: true } };
     }
     if (actie === 'herinner') {
@@ -177,14 +200,14 @@ export async function handel(t: TeDoenDienst, body: Record<string, unknown>, wie
   } catch (error) {
     return { status: 502, antwoord: { fout: `Home Assistant weigerde: ${(error as Error).message}` } };
   }
-  return { status: 400, antwoord: { fout: 'actie is toevoegen, klaar, open, herinner, gedaan of later' } };
+  return { status: 400, antwoord: { fout: 'actie is toevoegen, klaar, open, opruimen, herinner, gedaan, later of annuleer' } };
 }
 
 /* ------------------------------------------------------------ de assistent */
 
 const nl = (lang: Lang) => lang === 'nl';
 /** "maandag", "morgen", "vandaag". */
-function dagWoord(ms: number, nuMs: number, tz: string, lang: Lang): string {
+export function dagWoord(ms: number, nuMs: number, tz: string, lang: Lang): string {
   const dag = Math.round((startOfLocalDay(ms, tz) - startOfLocalDay(nuMs, tz)) / 86_400_000);
   if (dag === 0) return nl(lang) ? 'vandaag' : 'today';
   if (dag === 1) return nl(lang) ? 'morgen' : 'tomorrow';
@@ -302,15 +325,30 @@ export async function teDoenZin(d: Diensten, t: TeDoenDienst, tekst: string, wie
       feiten: [],
     };
   }
-  // De agenda: vandaag, morgen of de week.
+  // De agenda: vandaag, morgen, overmorgen, een dag van de week, deze of volgende week.
   const dagStart = startOfLocalDay(nuMs, tz);
-  const [van, tot] = vraag === 'vandaag' ? [nuMs, dagStart + 86_400_000] : vraag === 'morgen' ? [dagStart + 86_400_000, dagStart + 2 * 86_400_000] : [nuMs, dagStart + 7 * 86_400_000];
+  const D = 86_400_000;
+  const vandaagWd = new Date(dagStart + 12 * 3_600_000).getUTCDay();
+  // Een dag van de week ("dinsdag"): de eerstvolgende, vandaag meegeteld.
+  const wd = /^wd(\d)$/.exec(vraag);
+  const dagen = wd ? (Number(wd[1]) - vandaagWd + 7) % 7 : vraag === 'morgen' ? 1 : vraag === 'overmorgen' ? 2 : 0;
+  const lang7 = vraag === 'week' || vraag === 'volgendeWeek';
+  // Volgende week: van maandag tot en met zondag.
+  const volgendeMaandag = dagStart + (((1 - vandaagWd + 7) % 7) || 7) * D;
+  const [van, tot] =
+    vraag === 'week' ? [nuMs, dagStart + 7 * D]
+    : vraag === 'volgendeWeek' ? [volgendeMaandag, volgendeMaandag + 7 * D]
+    : dagen === 0 ? [nuMs, dagStart + D]
+    : [dagStart + dagen * D, dagStart + (dagen + 1) * D];
   const daar = o.afspraken.filter((a) => a.startMs >= (a.heleDag ? startOfLocalDay(van, tz) : van) && a.startMs < tot);
-  const wanneer = vraag === 'vandaag' ? (nl(lang) ? 'vandaag' : 'today') : vraag === 'morgen' ? (nl(lang) ? 'morgen' : 'tomorrow') : nl(lang) ? 'deze week' : 'this week';
+  const wanneer =
+    vraag === 'week' ? (nl(lang) ? 'deze week' : 'this week')
+    : vraag === 'volgendeWeek' ? (nl(lang) ? 'volgende week' : 'next week')
+    : dagWoord(dagStart + dagen * D + 12 * 3_600_000, nuMs, tz, lang);
   if (!daar.length) return { antwoord: nl(lang) ? `Er staat ${wanneer} niets in de agenda.` : `Nothing on the calendar ${wanneer}.`, feiten: [] };
   const regels = daar.slice(0, 5).map((a) => {
     const tijd = a.heleDag ? '' : ` ${nl(lang) ? 'om' : 'at'} ${klok(a.startMs, tz)}`;
-    const dag = vraag === 'week' ? `${dagWoord(a.startMs, nuMs, tz, lang)}${tijd}` : tijd.trim();
+    const dag = lang7 ? `${dagWoord(a.startMs, nuMs, tz, lang)}${tijd}` : tijd.trim();
     return `${dag ? `${dag}: ` : ''}${a.tekst}`;
   });
   const feiten = daar.slice(0, 5).filter((a) => !a.heleDag).map((a) => ({ bron: 'tedoen.agenda', tekst: klok(a.startMs, tz) }));

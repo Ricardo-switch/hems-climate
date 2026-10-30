@@ -241,11 +241,14 @@ export function isNotifyCall(domain: string, service: string, data: Record<strin
 /**
  * Iets op een lijst zetten of afvinken (besluit 216): `todo.add_item` met
  * alleen `item`, of `todo.update_item` met `item` en `status`, op precies één
- * `todo.`-entiteit.
+ * `todo.`-entiteit. Sinds besluit 218 ook de afgevinkte weghalen:
+ * `todo.remove_completed_items`, zonder gegevens, op één lijst. Losse items
+ * weghalen kan niet.
  */
 export function isTodoCall(domain: string, service: string, data: Record<string, unknown>, target: Record<string, unknown>): boolean {
   if (domain !== 'todo') return false;
   if (Object.keys(target).length !== 1 || typeof target['entity_id'] !== 'string' || !/^todo\.[a-z0-9_]+$/.test(target['entity_id'])) return false;
+  if (service === 'remove_completed_items') return Object.keys(data).length === 0;
   const item = data['item'];
   if (typeof item !== 'string' || item.trim() === '' || item.length > 120) return false;
   if (service === 'add_item') return Object.keys(data).length === 1;

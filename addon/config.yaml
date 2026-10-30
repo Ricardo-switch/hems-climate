@@ -19,7 +19,7 @@ name: Smart Climate
 # Gelijk aan VERSIE in backend/src/version.ts; een test houdt ze gelijk. De
 # Supervisor ziet een update zodra dit nummer op `main` omhooggaat, en haalt dan
 # het image met dat nummer op (besluit 153).
-version: 0.89.0
+version: 0.90.0
 slug: hems_climate
 description: >-
   Klimaat en zon in één app: kijkt mee met je verwarming, airco's en

@@ -541,6 +541,8 @@ const STOP = /^(stop|stoppen|stop maar|ho|halt|stop het scherm|stop het screen|s
 function getal(tekst: string, namen: readonly string[] = []): number | null {
   let t = ` ${tekst} `;
   for (const naam of namen) if (naam) t = t.split(` ${gewoon(naam)} `).join(' ');
+  // Een tijd is geen stand (30 oktober 2026: "over 5 minuten" zette de lamp op 5%).
+  t = t.replace(/ (?:over|in|na|binnen) \d{1,3} (?:minuut|minuten|min|seconden|sec|uur|uren|kwartier|minutes?|hours?|seconds?)(?= )/g, ' ').replace(/ (?:om|at) \d{1,2}(?: \d{2})?(?: uur)?(?= )/g, ' ').replace(/ \d{1,3} (?:minuut|minuten|uur|uren|minutes?|hours?)(?= )/g, ' ');
   const m = /(?:^| )(\d{1,3})(?= |$)/.exec(t.trim());
   if (!m) return null;
   const n = Number(m[1]);

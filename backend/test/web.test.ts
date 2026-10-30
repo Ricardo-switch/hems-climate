@@ -1546,6 +1546,37 @@ describe('licht bedienen (besluit 97)', () => {
     expect(((await (await fetch(`${zonder.base}/api/vraag?${new URLSearchParams({ v: 'vrij', tekst: 'licht hal uit' })}`)).json()) as { opdracht?: unknown }).opdracht).toBeUndefined();
   });
 
+  it('plant een opdracht voor later in plaats van hem meteen te doen, zegt wat er gepland staat, en annuleert (besluit 218)', async () => {
+    const calls: string[] = [];
+    const lights = new LightSwitch({ house: () => house, call: async (service) => void calls.push(service) });
+    const herinneringen = new Herinneringen({ map: null });
+    const tedoen: TeDoenDienst = {
+      keus: () => ({ aan: true, boodschappen: null, todo: null, afval: null, gezin: null }),
+      herinneringen,
+      leesLijsten: async () => ({}),
+      leesAgendas: async () => ({}),
+      lijst: async () => {},
+      agendaVan: () => ({ aan: true, ids: [] }),
+      naamVan: () => null,
+    };
+    const started = await start({ latest: () => snapshot(), house: () => house, lights, tedoen, praten: { model: () => null, proef: () => async () => null, bedienen: () => true } });
+    const vraag = async (tekst: string) => (await (await fetch(`${started.base}/api/vraag?${new URLSearchParams({ v: 'vrij', tekst })}`)).json()) as { vraag: string; antwoord: string; opdracht?: unknown };
+    const b = await vraag('Zet over 5 minuten het licht in de hal uit');
+    expect(b.vraag).toBe('tedoen');
+    expect(b.antwoord).toMatch(/^Goed, om \d\d:\d\d doe ik dit: zet het licht in de hal uit\.$/);
+    // Er gaat nu niets naar de deur: de dienst doet het straks zelf.
+    expect(b.opdracht).toBeUndefined();
+    expect(calls).toEqual([]);
+    const g = await herinneringen.gepland();
+    expect(g).toHaveLength(1);
+    expect(g[0]!.opdracht?.stappen).toEqual([{ pad: 'api/licht', body: expect.objectContaining({ doel: 'kamer', id: 'hal', aan: false }) }]);
+    expect((await vraag('Wat staat er gepland?')).antwoord).toMatch(/^Gepland: om \d\d:\d\d: zet het licht in de hal uit\.$/);
+    expect((await vraag('Annuleer')).antwoord).toBe('Goed, dat doe ik niet: zet het licht in de hal uit.');
+    expect(await herinneringen.gepland()).toEqual([]);
+    // Zonder tijd gewoon nu, zoals altijd.
+    expect((await vraag('licht hal uit')).opdracht).toMatchObject({ pad: 'api/licht' });
+  });
+
   it('onthoudt het gesprek: "doe maar terug" zet het licht zoals het was, ook na twee opdrachten in één zin (besluit 213)', async () => {
     const lights = new LightSwitch({ house: () => house, call: async () => {} });
     const started = await start({ latest: () => snapshot(), house: () => house, lights, praten: { model: () => null, proef: () => async () => '', bedienen: () => true } });
