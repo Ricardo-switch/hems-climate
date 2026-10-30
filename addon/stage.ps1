@@ -51,6 +51,9 @@ $bestanden = @(
   @{ Van = 'addon/Dockerfile';             Naar = 'Dockerfile' }
   @{ Van = 'addon/run.sh';                 Naar = 'run.sh' }
   @{ Van = 'addon/README.md';              Naar = 'README.md' }
+  @{ Van = 'addon/DOCS.md';                Naar = 'DOCS.md' }
+  @{ Van = 'addon/translations/nl.yaml';   Naar = 'translations/nl.yaml' }
+  @{ Van = 'addon/translations/en.yaml';   Naar = 'translations/en.yaml' }
   @{ Van = '.dockerignore';                Naar = '.dockerignore' }
   @{ Van = 'backend/package.json';         Naar = 'backend/package.json' }
   @{ Van = 'backend/package-lock.json';    Naar = 'backend/package-lock.json' }

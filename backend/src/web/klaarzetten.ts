@@ -81,7 +81,8 @@ const WOORDEN = {
       klaar: (ruimtes: number, etages: number) => `${telling(ruimtes, 'ruimte', 'ruimtes')} op ${telling(etages, 'etage', 'etages')}, elk apparaat in zijn ruimte.`,
       geen: 'Maak etages en ruimtes, en zet elk apparaat in zijn ruimte. De app neemt ze over als voorstel.',
       geenEtage: 'Zet de ruimtes op een etage; dan staat het huis goed in de tekening.',
-      zonder: (n: number) => `${telling(n, 'apparaat staat', 'apparaten staan')} nog in geen ruimte.`,
+      // In Home Assistant, niet in de app (30 oktober 2026): Inrichten noemde een ander getal voor de kamers van de app.
+      zonder: (n: number) => `${telling(n, 'apparaat staat', 'apparaten staan')} in Home Assistant nog in geen ruimte.`,
     },
     personen: {
       titel: 'Een persoon per bewoner',
@@ -138,7 +139,7 @@ const WOORDEN = {
       klaar: (ruimtes: number, etages: number) => `${telling(ruimtes, 'area', 'areas')} on ${telling(etages, 'floor', 'floors')}, every device in its area.`,
       geen: 'Create floors and areas, and put every device in its area. The app takes them over as a proposal.',
       geenEtage: 'Put the areas on a floor; then the house shows properly in the drawing.',
-      zonder: (n: number) => `${telling(n, 'device is', 'devices are')} not in an area yet.`,
+      zonder: (n: number) => `${telling(n, 'device is', 'devices are')} not in a Home Assistant area yet.`,
     },
     personen: {
       titel: 'A person for each resident',

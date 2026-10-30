@@ -43,7 +43,7 @@
     if (a && a.antwoorden?.zekering == null && a.configuratie?.zekering == null) {
       uit.push({ id: 'zekering', groep: 'energie', wat: t('stand.zekering'), waarom: t('stand.zekeringZin'), knop: t('stand.kiezen'), href: 'energie.html#aansluiting' });
     }
-    if (a && a.antwoorden?.panelen?.ligging == null && !(a.configuratie?.panelen ?? []).length) {
+    if (a && a.antwoorden?.panelen?.ligging == null && !(a.configuratie?.panelen ?? []).length && !['bevestigd', 'configuratie'].includes(a.ligging?.stand)) {
       uit.push({ id: 'panelen', groep: 'energie', wat: t('stand.panelen'), waarom: t('stand.panelenZin'), knop: t('stand.kiezen'), href: 'energie.html#panelen' });
     }
     const zonder = d.huis?.zonderRuimte?.length ?? 0;

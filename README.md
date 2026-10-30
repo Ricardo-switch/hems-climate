@@ -69,7 +69,6 @@ Achter de app zit een regeling die elke ronde beslist wat het huis zou moeten do
 
 - **Echt regelen** van verwarming en airco's, na een winter meekijken met dertig winterdagen bewijs.
 - Tarieven per uur en prognoses, en een thermisch model dat leert hoe je huis afkoelt en opwarmt.
-- De app in het Engels.
 
 Een thuisbatterij en een laadpaal laat Smart Climate zien, maar stuurt het niet zelf.
 
@@ -128,7 +127,7 @@ Er is nog geen licentie gekozen. Tot die er is, mag je kijken en meedenken, maar
 <details>
 <summary><b>In English</b></summary>
 
-**Smart Climate** is a Home Assistant add-on with its own app for a wall tablet and your phone. It draws your home as a 3D dollhouse from what Home Assistant already knows, and decides around the clock what your heating, air conditioners and solar surplus should do, explaining every decision in plain words. Today it runs in *shadow mode*: it decides and records everything, but does not switch climate devices yet; lights, scenes and blinds can already be controlled from the app. Real control comes after a full winter of evidence. Everything runs locally. The app is in Dutch for now; English is planned.
+**Smart Climate** is a Home Assistant add-on with its own app for a wall tablet and your phone. It draws your home as a 3D dollhouse from what Home Assistant already knows, and decides around the clock what your heating, air conditioners and solar surplus should do, explaining every decision in plain words. Today it runs in *shadow mode*: it decides and records everything, but does not switch climate devices yet; lights, scenes and blinds can already be controlled from the app. Real control comes after a full winter of evidence. Everything runs locally. The app speaks Dutch and English.
 
 Install: add `https://github.com/Ricardo-switch/hems-climate` as an add-on repository in Home Assistant and install **Smart Climate** (aarch64 and amd64).
 </details>

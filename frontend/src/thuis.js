@@ -229,9 +229,11 @@ function tekenNu() {
 
 /*
  * Onderhoud (15 oktober 2026): een batterij onder de 10% (besluit 122) of een
- * airco-filter dat bijna vol is (besluit 129). Ingeklapt een sleutel met een
- * getal; een tik klapt hem open met wat er te doen is en Bekijk. Niets te doen:
- * niets te zien.
+ * airco-filter dat bijna vol is (besluit 129). Ingeklapt een sleutel; een tik
+ * klapt hem open met wat er te doen is en Bekijk. Niets te doen: niets te zien.
+ * Het getal staat alleen bij de bel, die dezelfde batterijen en filters telt
+ * (besluit 221). Op de telefoon staat de sleutel naast de bel, en een tik opent
+ * meteen de lijst: openklappen past daar niet in de kopregel.
  */
 let onderhoudOpen = false;
 function onderhoudLijst() {
@@ -247,7 +249,7 @@ function tekenOnderhoud() {
   $$('[data-onderhoud]').forEach((el) => {
     el.hidden = lijst.length === 0;
     if (!lijst.length) return;
-    el.innerHTML = `<button type="button" class="pil onderhoudknop" data-onderhoud-knop aria-expanded="${onderhoudOpen}" aria-label="${esc(t('thuis.onderhoud.label', { n: lijst.length }))}"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/></svg>${lijst.length > 1 ? `<b>${lijst.length}</b>` : ''}</button>${onderhoudOpen ? `<span class="pil onderhoudtekst" title="${esc(lijst.map((x) => x.lang).join(', '))}"><span>${esc(lijst.length === 1 ? eerste.tekst : `${eerste.tekst} +${lijst.length - 1}`)}</span>${bekijk}</span>` : ''}`;
+    el.innerHTML = `<button type="button" class="pil onderhoudknop" data-onderhoud-knop aria-expanded="${onderhoudOpen}" aria-label="${esc(t('thuis.onderhoud.label', { n: lijst.length }))}"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/></svg></button>${onderhoudOpen && !el.closest('#tel') ? `<span class="pil onderhoudtekst" title="${esc(lijst.map((x) => x.lang).join(', '))}"><span>${esc(lijst.length === 1 ? eerste.tekst : `${eerste.tekst} +${lijst.length - 1}`)}</span>${bekijk}</span>` : ''}`;
   });
 }
 
@@ -1097,6 +1099,8 @@ document.addEventListener('click', (e) => {
 // Onderhoud: openklappen, en bij meer dan één de lijst met batterijen en filters.
 document.addEventListener('click', (e) => {
   if (e.target.closest('[data-onderhoud-knop]')) {
+    // Op de telefoon meteen de lijst (besluit 221).
+    if (e.target.closest('#tel')) return openWeer(document.querySelector('#tel [data-buiten]'), 'batterij');
     onderhoudOpen = !onderhoudOpen;
     tekenOnderhoud();
   } else if (e.target.closest('[data-onderhoud-alles]')) {

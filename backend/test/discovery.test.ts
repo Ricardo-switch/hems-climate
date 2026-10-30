@@ -184,6 +184,18 @@ describe('de ontdekking', () => {
     expect(zone['temperature']).toBe('sensor.woonkamer_temp');
   });
 
+  it('vindt ook een buitentemperatuur die in één woord heet, zoals een template-sensor "Buitentemperatuur"', () => {
+    const r = base();
+    r.entities.push(ent('sensor.buitentemperatuur', { platform: 'template', original_device_class: 'temperature' }));
+    r.states.push(state('sensor.buitentemperatuur', '8.5', { device_class: 'temperature', friendly_name: 'Buitentemperatuur' }));
+    expect(discover(r).config['outdoorTemperature']).toBe('sensor.buitentemperatuur');
+    // Maar niet zomaar iets met "buiten" erin: een buitenlamp of een "buitenkant"-sensor is geen thermometer van buiten.
+    const r2 = base();
+    r2.entities.push(ent('sensor.buitenkantoor_temp', { platform: 'mqtt', original_device_class: 'temperature', area_id: 'woonkamer' }));
+    r2.states.push(state('sensor.buitenkantoor_temp', '20', { device_class: 'temperature' }));
+    expect(discover(r2).config['outdoorTemperature']).toBeUndefined();
+  });
+
   it('vindt de buitentemperatuur bij de weerintegratie', () => {
     // Een integratie die een `weather.`-entiteit levert, is een weerintegratie.
     // Zo hoeft er geen lijst met namen bijgehouden te worden die veroudert.

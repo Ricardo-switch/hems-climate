@@ -117,6 +117,7 @@ async function start(options: {
   herken?: (account: { userId: string; naam: string }) => Promise<'welkom' | 'vraag' | 'gast' | null>;
   gast?: (userId: string | null) => { gast: boolean; thuis: boolean | null };
   logDir?: string;
+  historie?: NonNullable<ConstructorParameters<typeof WebServer>[0]['historie']>;
   gegevens?: NonNullable<ConstructorParameters<typeof WebServer>[0]['gegevens']>;
   welkomHuis?: () => HouseReport | null;
   naOnboarding?: () => void;
@@ -158,6 +159,7 @@ async function start(options: {
         ...(options.luisteren ? { luisteren: options.luisteren } : {}),
         ...(options.tedoen ? { tedoen: options.tedoen } : {}),
         ...(options.logDir ? { logDir: options.logDir } : {}),
+        ...(options.historie ? { historie: options.historie } : {}),
         ...(options.gegevens ? { gegevens: options.gegevens } : {}),
         ...(options.herken ? { bewoners: { view: () => { throw new Error('niet in deze test'); }, actie: async () => ({ ok: false as const, status: 400, reden: 'niet in deze test' }), herken: options.herken, ...(options.gast ? { gast: options.gast } : {}) } } : {}),
         // Open, zoals vóór besluit 99, tenzij een test de inlog zelf toetst.
@@ -242,6 +244,23 @@ describe('te doen (besluit 216)', () => {
     const zonder = await start({ latest: () => snapshot(), tedoen: metEigen });
     const weg = ((await (await fetch(`${zonder.base}/api/te-doen`)).json()) as { afspraken: { tekst: string; wie?: string }[] }).afspraken;
     expect(weg.filter((x) => x.wie || x.tekst === 'Tandarts')).toEqual([]);
+  });
+
+  it('rekent de zon van vandaag op de eerste dag uit Home Assistant, net als Vandaag (30 oktober 2026)', async () => {
+    const logDir = await mkdtemp(join(tmpdir(), 'hems-eerste-dag-'));
+    cleanups.push(() => rm(logDir, { recursive: true, force: true }));
+    // Een lege map: Smart Climate draait net. Home Assistant kent wel de hele ochtend, 2 kW zon per vijf minuten.
+    const historie = async (van: number, tot: number) => {
+      const zon = [];
+      for (let t = van; t < Math.min(tot, Date.now()); t += 5 * 60_000) zon.push({ startMs: t, meanW: 2000 });
+      return { zon, net: [] };
+    };
+    const started = await start({ latest: () => snapshot(), logDir, historie });
+    const v = (await (await fetch(`${started.base}/api/vandaag`)).json()) as unknown;
+    const b = (await (await fetch(`${started.base}/api/vraag?${new URLSearchParams({ v: 'vrij', tekst: 'Hoeveel zon was er vandaag?' })}`)).json()) as { antwoord: string };
+    // Vandaag en de assistent zeggen hetzelfde: niet "bijna niets".
+    expect(b.antwoord).toMatch(/^Je panelen leverden vandaag \d/);
+    expect((v as { kwartieren: { zonW: number | null }[] }).kwartieren[0]!.zonW).toBe(2000);
   });
 
   it('zonder te doen: een nette 404, ook voor wat nu speelt', async () => {

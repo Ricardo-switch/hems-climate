@@ -479,6 +479,12 @@ export class HaClient extends EventEmitter {
       }
 
       case 'event': {
+        // Een bericht van MQTT (besluit 221): zoals het binnenkomt.
+        const ruw = this.#ruw.get(msg['id'] as number);
+        if (ruw) {
+          ruw(msg['event']);
+          return;
+        }
         // Een spraakopdracht (besluit 150): de gebeurtenissen gaan naar wie luistert.
         const luister = this.#luisteraars.get(msg['id'] as number);
         if (luister) {
@@ -568,6 +574,38 @@ export class HaClient extends EventEmitter {
 
   /** Wie naar een spraakopdracht luistert, per opdracht-id (besluit 150). */
   readonly #luisteraars = new Map<number, (event: SpraakEvent) => void>();
+  /** Wie een gebeurtenis zoals hij binnenkomt wil, per opdracht-id: een bericht van MQTT (besluit 221). */
+  readonly #ruw = new Map<number, (event: unknown) => void>();
+
+  /**
+   * De groepen van Zigbee2MQTT (besluit 221). Zigbee2MQTT zet een groep in Home
+   * Assistant als gewone lamp, zonder zijn lampen; die staan in het bericht dat
+   * Zigbee2MQTT op `<basis>/bridge/groups` bewaart. Home Assistant geeft dat
+   * door met `mqtt/subscribe`. Alleen lezen: luisteren, het eerste bericht, en
+   * weer opzeggen. Leeg zonder MQTT, zonder Zigbee2MQTT of zonder bericht.
+   */
+  async leesZigbeeGroepen(onderwerp = 'zigbee2mqtt/bridge/groups', wachtMs = 4000): Promise<ZigbeeGroep[]> {
+    if (!/^[\w/-]{1,120}$/.test(onderwerp)) throw new Error(`geen onderwerp: ${onderwerp}`);
+    const id = this.#nextId;
+    const bericht = new Promise<unknown>((resolve) => {
+      const grens = setTimeout(() => resolve(null), wachtMs);
+      grens.unref?.();
+      this.#ruw.set(id, (ev) => {
+        clearTimeout(grens);
+        resolve(ev);
+      });
+    });
+    try {
+      await this.#command({ type: 'mqtt/subscribe', topic: onderwerp });
+    } catch {
+      this.#ruw.delete(id);
+      return [];
+    }
+    const ev = await bericht;
+    this.#ruw.delete(id);
+    void this.#command({ type: 'unsubscribe_events', subscription: id }).catch(() => {});
+    return zigbeeGroepenUit(ev);
+  }
 
   /**
    * Laat Home Assistant geluid uitschrijven (besluit 150). Begint bij het
@@ -785,6 +823,31 @@ export class HaClient extends EventEmitter {
     })) as { response?: HaAntwoord } | null;
     return r?.response ?? null;
   }
+}
+
+/** Een groep van Zigbee2MQTT: zijn nummer, naam en de IEEE-adressen van zijn lampen (besluit 221). */
+export interface ZigbeeGroep {
+  readonly id: number;
+  readonly naam: string;
+  readonly leden: readonly string[];
+}
+
+/** Het bericht `bridge/groups` van Zigbee2MQTT, zoals Home Assistant het doorgeeft, als groepen. */
+export function zigbeeGroepenUit(ev: unknown): ZigbeeGroep[] {
+  const payload = (ev as { payload?: unknown } | null)?.payload;
+  let lijst: unknown;
+  try {
+    lijst = typeof payload === 'string' ? JSON.parse(payload) : payload;
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(lijst)) return [];
+  return lijst.flatMap((g) => {
+    const x = g as { id?: unknown; friendly_name?: unknown; members?: unknown };
+    if (typeof x.id !== 'number' || !Array.isArray(x.members)) return [];
+    const leden = x.members.map((m) => (m as { ieee_address?: unknown })?.ieee_address).filter((a): a is string => typeof a === 'string' && /^0x[0-9a-f]{16}$/i.test(a));
+    return [{ id: x.id, naam: typeof x.friendly_name === 'string' ? x.friendly_name : `Groep ${x.id}`, leden: [...new Set(leden)] }];
+  });
 }
 
 /** Een gebeurtenis van een spraakopdracht, zoals Home Assistant hem stuurt (besluit 150). */

@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.91.0';
+export const VERSIE = '0.93.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,62 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.93.0',
+    datum: '2026-10-30',
+    nieuw: ['Een groep van Zigbee2MQTT, zoals een plafonnière van drie spots, is één lamp in de app; de spots staan niet meer los'],
+    beter: [
+      'Bij Praten met je huis staat "vaste antwoorden, zonder AI" of "eigen woorden, met een AI" in plaats van "vaste zinnen"',
+      'Op Apparaten zegt een zin "Smart Climate zou: …" als dat een ander doel is dan het apparaat zelf noemt',
+      'Opbrengst zegt bij je panelen "van je zon" achter het percentage',
+      'Op Thuis telt alleen de bel; de sleutel staat op de telefoon naast de bel en opent meteen de lijst',
+      'Staat "Hé huis" nog niet in de spraakassistent, dan brengen twee knoppen je naar de plekken in Home Assistant',
+    ],
+    en: {
+      nieuw: ['A Zigbee2MQTT group, such as a ceiling light of three spots, is one light in the app; the spots no longer show separately'],
+      beter: [
+        'Talk to your house says "fixed answers, without AI" or "own words, with an AI" instead of "fixed sentences"',
+        'On Devices a sentence says "Smart Climate would: …" when that is a different target than the device itself names',
+        'Energy says "of your sun" after the percentage at your panels',
+        'On Home only the bell counts; on the phone the wrench sits next to the bell and opens the list straight away',
+        'If "Hey house" is not in the voice assistant yet, two buttons take you to the places in Home Assistant',
+      ],
+    },
+  },
+  {
+    versie: '0.92.0',
+    datum: '2026-10-30',
+    beter: [
+      'Bij Inrichten kies je bij vloerverwarming of hij op water of elektrisch is; elektrisch gaat aan met elke thermostaat, zoals die in de badkamer',
+      'Lampen zonder kamer krijgen een kamer voorgesteld op een woord uit hun naam, zoals "Spot 1 Matts" bij Slaapkamer Matts of "Spot hal" bij de Entree',
+      'De add-on heeft in Home Assistant een eigen uitleg, en zijn instellingen hebben een naam; de technische staan bij de ongebruikte opties',
+      'Wat na Inrichten nog mist, heet nu Mist nog; een stap die al is ingevuld, telt daar niet meer mee',
+      'Thuis zegt in de schaduw "Het huis kijkt mee"',
+    ],
+    opgelost: [
+      'Op de eerste dag zeiden de assistent en het weer dat de panelen bijna niets leverden; ze lezen de dag nu net als Vandaag uit Home Assistant',
+      'Een buitentemperatuur die in één woord heet, zoals Buitentemperatuur, wordt bij het begin gevonden',
+      'Een lampgroep die in Home Assistant niet beschikbaar is, staat niet meer als losse lamp naast zijn lampen',
+      'Het welkom telt de etages zoals Inrichten, en gaat na het opslaan meteen naar de eerste stap',
+      'Een bevestigde ligging van de panelen telt bij Instellingen als gekozen',
+    ],
+    en: {
+      beter: [
+        'In Set up you choose whether underfloor heating runs on water or electricity; electric runs on any thermostat, such as the one in the bathroom',
+        'Lights without a room get one suggested from a word in their name, such as "Spot 1 Matts" for Bedroom Matts or "Hall spot" for the Entrance',
+        'The add-on has its own documentation in Home Assistant, and its settings have a name; the technical ones are with the unused options',
+        'What is still missing after Set up is now called Still missing; a step that is already filled in no longer counts there',
+        'Home says "The house is watching" while in shadow mode',
+      ],
+      opgelost: [
+        'On the first day the assistant and the weather said the panels delivered almost nothing; they now read the day from Home Assistant, like Today',
+        'An outdoor temperature named as one word, such as Buitentemperatuur, is found at the start',
+        'A light group that is unavailable in Home Assistant no longer shows as a separate light next to its lights',
+        'The welcome counts the floors like Set up, and goes straight to the first step after saving',
+        'A confirmed panel orientation counts as chosen under Settings',
+      ],
+    },
+  },
   {
     versie: '0.91.0',
     datum: '2026-10-30',

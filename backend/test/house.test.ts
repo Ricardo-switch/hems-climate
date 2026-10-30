@@ -3,6 +3,7 @@
  * hun zones en de apparaten erin, uit een voorstel of een vastgelegde indeling.
  */
 
+import { zigbeeGroepenUit } from '../src/adapters/homeassistant/client.js';
 import { describe, expect, it } from 'vitest';
 
 import { programMinutes, remainingMinutes } from '../src/adapters/homeassistant/mapping.js';
@@ -480,6 +481,56 @@ describe('het voorstel uit Home Assistant', () => {
     expect(roomForName('Slaapkamer-lamp', rooms)).toBe('slaapkamer');
     expect(roomForName('Halogeen spot', rooms)).toBeNull();
     expect(roomForName('Droger', rooms)).toBeNull();
+  });
+
+  it('stelt een kamer ook voor uit een woord dat alleen bij die kamer hoort, of uit de soort (30 oktober 2026)', () => {
+    const kamer = (id: string, naam: string, soort?: 'hal' | 'slaapkamer') => ({ id, naam, etage: 'bg' as const, zones: [], regelzone: null, haGebied: null, ...(soort ? { soort } : {}) });
+    const rooms = [kamer('entree', 'Entree', 'hal'), kamer('slaapkamer', 'Slaapkamer', 'slaapkamer'), kamer('matts', 'Slaapkamer Matts', 'slaapkamer'), kamer('mylan', 'Slaapkamer Mylan', 'slaapkamer')];
+    expect(roomForName('Spot 1 Matts', rooms)).toBe('matts');
+    expect(roomForName('Plafonnière Mylan', rooms)).toBe('mylan');
+    expect(roomForName('Spot 1 hal', rooms)).toBe('entree');
+    // "Slaapkamer" is een soort, geen woord van één kamer; de hele naam wint nog steeds.
+    expect(roomForName('Lamp slaapkamer', rooms)).toBe('slaapkamer');
+    // Twee halletjes: dan niet raden.
+    expect(roomForName('Spot hal', [...rooms, kamer('overloop', 'Overloop', 'hal')])).toBeNull();
+    expect(roomForName('Spot 2', rooms)).toBeNull();
+  });
+
+  it('toont een groep van Zigbee2MQTT als één lamp, zonder zijn spots los (besluit 221)', () => {
+    const st = new Map(states);
+    const lamp = (id: string, naam: string) => st.set(id, { ...st.get('light.tuin_alles')!, entity_id: id, state: 'off', attributes: { friendly_name: naam, supported_color_modes: ['brightness'] } });
+    lamp('light.plafonniere_matts', 'Plafonnière Matts');
+    lamp('light.spot_1_matts', 'Spot 1 Matts');
+    lamp('light.spot_2_matts', 'Spot 2 Matts');
+    const mqtt = (entity_id: string, unique_id: string) => ({ entity_id, unique_id, platform: 'mqtt', area_id: null, device_id: null }) as (typeof registers.entities)[number];
+    const reg = {
+      ...registers,
+      entities: [...registers.entities, mqtt('light.plafonniere_matts', '2_light_zigbee2mqtt'), mqtt('light.spot_1_matts', '0xa4c1388fbbb650cb_light_zigbee2mqtt'), mqtt('light.spot_2_matts', '0xa4c1382502bd64a7_light_zigbee2mqtt')],
+      zigbeeGroepen: zigbeeGroepenUit({ payload: JSON.stringify([{ id: 2, friendly_name: 'Plafonnière Matts', members: [{ ieee_address: '0xa4c1388fbbb650cb', endpoint: 1 }, { ieee_address: '0xa4c1382502bd64a7', endpoint: 1 }] }]) }),
+    };
+    const h = buildHouse(config, reg, st, snapshot);
+    const ids = [...h.etages.flatMap((e) => e.ruimtes).flatMap((r) => r.apparaten), ...h.zonderRuimte].map((d) => d.id);
+    expect(ids).toContain('light.plafonniere_matts');
+    expect(ids).not.toContain('light.spot_1_matts');
+    expect(ids).not.toContain('light.spot_2_matts');
+    expect(h.lampgroepen.find((g) => g.id === 'light.plafonniere_matts')).toMatchObject({ leden: ['light.spot_1_matts', 'light.spot_2_matts'], overzicht: false });
+    // Een plek die een spot al had, gaat naar de groep.
+    expect(knownForLayout(config, reg, st).opvolgers?.get('light.spot_1_matts')).toBe('light.plafonniere_matts');
+    // Zonder het bericht van Zigbee2MQTT: zoals altijd, alles los.
+    const zonder = buildHouse(config, { ...reg, zigbeeGroepen: [] }, st, snapshot);
+    expect([...zonder.etages.flatMap((e) => e.ruimtes).flatMap((r) => r.apparaten), ...zonder.zonderRuimte].map((d) => d.id)).toContain('light.spot_1_matts');
+    expect(zigbeeGroepenUit(null)).toEqual([]);
+    expect(zigbeeGroepenUit({ payload: 'geen json' })).toEqual([]);
+  });
+
+  it('toont een groep van Home Assistant die niet beschikbaar is niet als lamp, ook zonder lijst van lampen', () => {
+    const st = new Map(states);
+    st.set('light.hal_alles', { ...st.get('light.tuin_alles')!, entity_id: 'light.hal_alles', state: 'unavailable', attributes: { friendly_name: 'Hal (alles)', supported_color_modes: ['onoff'] } });
+    const reg = { ...registers, entities: [...registers.entities, { entity_id: 'light.hal_alles', platform: 'group', area_id: null, device_id: null } as (typeof registers.entities)[number]] };
+    const h = buildHouse(config, reg, st, snapshot);
+    const all = [...h.etages.flatMap((e) => e.ruimtes).flatMap((r) => r.apparaten), ...h.zonderRuimte];
+    expect(all.some((d) => d.id === 'light.hal_alles')).toBe(false);
+    expect(h.lampgroepen.find((g) => g.id === 'light.hal_alles')).toMatchObject({ naam: 'Hal (alles)', leden: [], overzicht: true });
   });
 
   it('toont een groep met verborgen peren als één lamp, in de kamer van die peren', () => {

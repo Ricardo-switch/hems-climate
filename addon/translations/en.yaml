@@ -1,0 +1,29 @@
+configuration:
+  licht_bedienen:
+    name: Control lights, scenes and blinds
+    description: >-
+      Turn lights, scenes and blinds on and off from the app. Off means look
+      only. Smart Climate does not operate your heating and air conditioners
+      yet.
+  ha_adres:
+    name: Home Assistant address on your phone
+    description: >-
+      Only needed for Smart Climate as a separate app through Tailscale, see
+      the documentation. For example https://homeassistant.your-tailnet.ts.net.
+      Otherwise leave empty.
+  hartslag_seconden:
+    name: How often to recalculate (seconds)
+    description: >-
+      Technical. Empty means 30 seconds.
+  min_interval_seconden:
+    name: Shortest time between two decisions (seconds)
+    description: >-
+      Technical. Empty means 15 seconds.
+  bewaking_minuten:
+    name: Restart after this many minutes without a decision
+    description: >-
+      Technical. Empty means 10 minutes; 0 turns it off.
+network:
+  8100/tcp: >-
+    Smart Climate as a separate app on your phone, through Tailscale only.
+    Leave empty if you use the Home Assistant app.

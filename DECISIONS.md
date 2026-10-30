@@ -110,6 +110,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [202. Klaarzetten voor iedereen: de assistent met één knop, volledig scherm, een eigen account voor de wand](#202-klaarzetten-voor-iedereen-de-assistent-met-één-knop-volledig-scherm-een-eigen-account-voor-de-wand)
 - [203. De stem: van het apparaat zelf, of helemaal in huis](#203-de-stem-van-het-apparaat-zelf-of-helemaal-in-huis)
 - [204. De standaard voor een nieuw huis, en terug naar standaard](#204-de-standaard-voor-een-nieuw-huis-en-terug-naar-standaard)
+- [220. Wat een nieuwe gebruiker tegenkwam](#220-wat-een-nieuwe-gebruiker-tegenkwam)
 
 **Meten, data en analyse**
 
@@ -221,6 +222,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [217. Te doen als eigen tab, en de assistent als groep bij Instellingen](#217-te-doen-als-eigen-tab-en-de-assistent-als-groep-bij-instellingen)
 - [218. Later uitvoeren, afvinken op uid, en de afgevinkte weghalen](#218-later-uitvoeren-afvinken-op-uid-en-de-afgevinkte-weghalen)
 - [219. Je eigen agenda's op de wand als je thuis bent](#219-je-eigen-agendas-op-de-wand-als-je-thuis-bent)
+- [221. Groepen van Zigbee2MQTT, en de rest van de beoordeling](#221-groepen-van-zigbee2mqtt-en-de-rest-van-de-beoordeling)
 
 **Veiligheid**
 
@@ -10236,6 +10238,95 @@ telefoon.
 - Een bewoner op zijn eigen telefoon ziet, zoals altijd, zijn eigen agenda's.
 - Dit vervangt in besluit 216 "een eigen agenda staat nooit op de wand".
 - **Versie 0.91.0.**
+
+---
+
+## 220. Wat een nieuwe gebruiker tegenkwam
+
+*Onderwerp: configuratie en onboarding · Status: geldig*
+
+Een beoordeling van Smart Climate als nieuwe gebruiker (30 oktober 2026): een
+lege installatie tegen de echte Home Assistant, het welkom, alle stappen van
+Inrichten, en de pagina's op wand en telefoon. De bewoner vond alle punten goed
+en voegde er twee toe: in Inrichten kon een elektrische vloerverwarming alleen
+de Nest als thermostaat krijgen, en lampen in een groep stonden er ook los in.
+
+*Besluit:*
+
+- **Vloerverwarming in Inrichten** vraagt eerst "op water of elektrisch", zoals
+  Kamers en indeling al deed. Op water gaat hij aan met de thermostaat van de
+  cv; elektrisch met een thermostaat naar keuze (bewaard als
+  `vloer-elektrisch`).
+- **Een groep van Home Assistant** (platform `group`) is altijd een groep, ook
+  als hij niet beschikbaar is en zijn lampen dan niet opsomt. "Hal (alles)"
+  stond anders als losse lamp naast de spots in de hal.
+- **Een kamer uit de naam** (besluit 157): naast de hele kamernaam ook een woord
+  dat alleen in de naam van één kamer staat ("Matts" bij "Slaapkamer Matts"),
+  of het woord voor een soort als er één kamer van die soort is ("hal" bij de
+  Entree). Volgende neemt het voorstel over, zoals altijd.
+- **De buitentemperatuur** wordt ook gevonden als hij in één woord heet
+  (`sensor.buitentemperatuur`). Zonder die sensor mist de winterdataset een
+  kolom.
+- **Vandaag op één plek** (`Diensten.vandaag`): het logboek, aangevuld met de
+  statistiek van Home Assistant waar het nog niets heeft. De pagina Vandaag
+  deed dat al; nu ook de assistent, het brein en het weer. Op de eerste dag
+  zeiden die anders "bijna niets geleverd" naast 3,1 kWh op Vandaag.
+- **Mist nog** in plaats van "Nog te doen" (dat botste met de tab Te doen), en
+  een stap telt daar alleen als hij niet nagelopen én niet ingevuld is. Op een
+  ander apparaat telde anders alles weer als open.
+- **Het welkom** telt etages en ruimtes zoals Inrichten (binnen, "en buiten"
+  erbij) en gaat na het opslaan meteen naar de eerste stap, zonder tweede
+  welkom.
+- **De add-on in Home Assistant:** een `DOCS.md` voor de gebruiker, en
+  `translations/` met een naam en uitleg per instelling. De drie technische
+  getallen zijn optioneel; leeg is de standaard van de dienst.
+- **Kleiner:** een bevestigde ligging telt bij Instellingen als gekozen; de
+  klaarzetlijst zegt dat de ruimtes van Home Assistant bedoeld zijn; Thuis zegt
+  in de schaduw "Het huis kijkt mee"; Te doen heeft overal hetzelfde icoon; de
+  rondleiding noemt geen aantal stops meer; de README zegt dat de app Engels
+  spreekt.
+- Een licentie kiezen ligt bij de bewoner.
+- **Versie 0.92.0.**
+
+---
+
+## 221. Groepen van Zigbee2MQTT, en de rest van de beoordeling
+
+*Onderwerp: weergave · Status: geldig*
+
+Na besluit 220 (30 oktober 2026). De bewoner: de spots van Matts en Mylan
+zitten in Zigbee2MQTT in een groep. Zigbee2MQTT zet zo'n groep in Home
+Assistant als gewone lamp ("Plafonnière Matts", model Group), zonder zijn
+lampen te noemen; de app zag daardoor de groep én de drie spots. Keuzes van de
+bewoner: een groep als één lamp, alleen voor Zigbee2MQTT (Hue-zones en groepen
+van Home Assistant blijven zoals ze zijn), en de vier open punten uit de
+beoordeling meteen.
+
+*Besluit:*
+
+- **De leden uit Zigbee2MQTT zelf.** Zigbee2MQTT bewaart zijn groepen op
+  `zigbee2mqtt/bridge/groups`; Home Assistant geeft dat bericht door met
+  `mqtt/subscribe`. De dienst leest het bij het laden van het huis, alleen als
+  er lampen van Zigbee2MQTT zijn, en zegt het meteen weer op. Alleen lezen.
+  Een groep is `<nummer>_light_zigbee2mqtt`, een lamp `<ieee>_light_zigbee2mqtt`.
+- **Een groep van Zigbee2MQTT is één lamp**, zoals een armatuur met verborgen
+  peren: de groep staat in het huis, zijn lampen niet, en een plek die een lamp
+  al had gaat naar de groep. Nooit een overzicht. Zonder het bericht blijft
+  alles zoals het was.
+- **Praten met je huis** zegt "vaste antwoorden, zonder AI" of "eigen woorden,
+  met een AI".
+- **Apparaten:** doet het apparaat het niet zelf, dan begint de zin onder de
+  stand met "Smart Climate zou:". Zo zijn twee doelen bij één thermostaat uit
+  elkaar te houden.
+- **Opbrengst:** "63% van je zon" achter wat je zelf gebruikte.
+- **Thuis:** alleen de bel telt; de sleutel van Onderhoud telde dezelfde
+  batterijen en filters. Op de telefoon staat de sleutel naast de bel en opent
+  hij meteen de lijst.
+- **Hé huis:** het lijstje met add-ons stond er in de add-on al (besluit 203;
+  de beoordeling draaide erbuiten). Staat het wekwoord nog niet in de
+  spraakassistent, dan openen twee knoppen openWakeWord en Spraakassistenten
+  in Home Assistant. De dienst herstart geen add-on zelf.
+- **Versie 0.93.0.**
 
 ---
 

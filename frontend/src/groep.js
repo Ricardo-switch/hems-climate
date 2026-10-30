@@ -42,8 +42,8 @@
     praten: ['var(--violet)', '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>'],
     // Stem en luisteren (besluit 212): een luidspreker met geluid.
     stem: ['var(--mint)', '<path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/>'],
-    // Te doen (besluit 216): een wekker.
-    tedoen: ['var(--mint)', '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M5 4 2.5 6.5M19 4l2.5 2.5"/>'],
+    // Te doen (besluit 216): het lijstje van de tab, sinds 0.92.0 overal hetzelfde.
+    tedoen: ['var(--mint)', '<path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/>'],
     bewoners: ['var(--mint)', '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6.5 6.5 0 0 1 3.5 6"/>'],
     inloggen: ['var(--ijs)', '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>'],
     scherm: ['var(--zacht)', '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>'],

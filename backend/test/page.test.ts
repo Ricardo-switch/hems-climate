@@ -1917,6 +1917,19 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await seg.locator(`[data-rolwaarde="${doel}"]`).click();
     await kaart.locator(`[data-rol] [data-rolwaarde="${doel}"][aria-pressed="true"]`).first().waitFor({ timeout: 5000 });
     await shot('warmte');
+    // Vloerverwarming (0.92.0): eerst op water of elektrisch; elektrisch gaat aan met een thermostaat naar keuze.
+    await kaart.locator('[data-erbij]').first().click();
+    await kaart.locator('[data-toevoeg-soort="vloer"]').click();
+    await kaart.locator('[data-toevoeg-vloer="elektrisch"]').waitFor();
+    expect(await kaart.locator('[data-toevoeg-aan]').count()).toBe(0);
+    await kaart.locator('[data-toevoeg-vloer="elektrisch"]').click();
+    await kaart.locator('[data-toevoeg-aan="thermostaat"]').click();
+    const welke = kaart.locator('select[data-toevoeg-apparaat]');
+    await welke.waitFor();
+    expect(await welke.locator('option').count()).toBeGreaterThan(1);
+    expect(await kaart.locator('[data-toevoeg-bewaar]').isDisabled()).toBe(true);
+    await kaart.locator('[data-toevoeg-annuleer]').click();
+    await expect.poll(() => kaart.locator('[data-toevoeg-soort]').count()).toBe(0);
     await kaart.locator('[data-volgende]').click();
     // Wat elk apparaat kan (besluit 197): per apparaat de punten, met de rol onderaan.
     await kaart.locator('h1', { hasText: 'Wat elk apparaat kan' }).waitFor();
@@ -4450,7 +4463,8 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     await p.waitForLoadState('networkidle');
     const soortNu = () => layoutStore.current?.kamers.find((k) => k.id === tuin.id)?.buiten?.soort;
     const lijst = p.locator('#wand [data-actie="buitensoort"]');
-    await lijst.waitFor(kort);
+    // Op een drukke CI-machine duurt het tekenen soms langer dan vijf tellen (30 oktober 2026).
+    await lijst.waitFor({ timeout: 15_000 });
     expect(await lijst.locator('option').allTextContents()).toEqual(expect.arrayContaining(['Achtertuin', 'Zijtuin', 'Carport', 'Dakterras', 'Tuinhuis of schuur']));
     expect(await lijst.locator('option').allTextContents()).not.toContain('Slaapkamer');
     await expect

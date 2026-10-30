@@ -6,7 +6,6 @@
  */
 
 import { assistKamers } from '../assist.js';
-import { TodayCache } from '../today.js';
 import { ask, LANGS, parseQuestion } from '../assistant.js';
 import type { BrugVraag, Lang, Question } from '../assistant.js';
 import { brugVraag, brugZone, klok } from '../klimaatbrug.js';
@@ -278,9 +277,9 @@ export async function assistentRoutes(d: Diensten, v: Verzoek): Promise<boolean>
     }
     let today = null;
     if ((parsed.question.kind === 'zon' || parsed.question.kind === 'vandaag' || parsed.question.kind === 'terug') && logDir != null) {
-      d.today ??= new TodayCache(logDir, config);
       try {
-        today = await d.today.get();
+        // Met de geschiedenis van Home Assistant waar het logboek nog niets heeft, zoals Vandaag (30 oktober 2026).
+        today = await d.vandaag();
       } catch {
         // Zonder dagoverzicht zegt het antwoord dat het het niet weet.
       }
@@ -519,11 +518,10 @@ export async function situatieVoor(d: Diensten, config: SiteConfig, lang: Lang):
     regels.push(a.antwoord);
     feiten.push(...a.feiten);
   }
-  const logDir = d.options.logDir;
-  if (logDir != null) {
-    d.today ??= new TodayCache(logDir, config);
-    const vandaag = await d.today.get().catch(() => null);
-    const gisteren = await d.today.yesterday().catch(() => null);
+  if (d.options.logDir != null) {
+    // Ook voor het brein met de geschiedenis van Home Assistant (30 oktober 2026).
+    const vandaag = await d.vandaag().catch(() => null);
+    const gisteren = await d.vandaag(true).catch(() => null);
     for (const [r, dag] of [[vandaag, 'vandaag'], [gisteren, 'gisteren']] as const) {
       if (r == null) continue;
       const s = dagRegels(r, config, dag, lang);
