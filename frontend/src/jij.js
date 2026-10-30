@@ -27,6 +27,8 @@ const IK = {
   bel: '<path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10 20a2 2 0 0 0 4 0"/>',
   taal: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
   terug: '<path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3"/><path d="M4 4.5v4h4"/>',
+  agenda: '<rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+  tel: '<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/>',
 };
 /** De taal (besluit 185): vanzelf die van je account in Home Assistant, of zelf gekozen. De teksten in kit/teksten.*.js. */
 const TALEN = ['auto', 'nl', 'en'];
@@ -34,9 +36,11 @@ const ik = (id) => `<span class="ik"><svg viewBox="0 0 24 24" fill="none" stroke
 
 let v = null;
 let b = null;
+/** De agenda's van Home Assistant om uit te kiezen (besluit 216), of null zonder te doen. */
+let agendas = null;
 
 async function laad() {
-  const [vk, bw] = await Promise.allSettled([haal('api/voorkeuren'), haal('api/bewoners')]);
+  const [vk, bw] = await Promise.allSettled([haal('api/voorkeuren'), haal('api/bewoners'), haal('api/te-doen?alleen=agendas').then((x) => (agendas = x?.aan ? x.agendas : null), () => null)]);
   if (vk.status === 'fulfilled') {
     v = vk.value;
     app.zetThema(v);
@@ -126,6 +130,7 @@ function teken() {
       <h2 id="kop-meldingen">${esc(t('jij.meldingen'))}</h2>
       ${link('jij.html#meldingen', 'bel', t('jij.meldingenTel'), mijnTelefoon() ? t('jij.naarTel', { naam: mijnTelefoon().naam }) : t('jij.geenTel'))}
     </section>
+    ${agendaBlok()}
     <section class="glas lijst" aria-labelledby="kop-comfort">
       <h2 id="kop-comfort">${esc(t('jij.comfort'))}</h2>
       ${link('comfort.html', 'comfort', t('jij.jouwComfort'), comfort.charAt(0).toUpperCase() + comfort.slice(1))}
@@ -141,6 +146,40 @@ function teken() {
   for (const el of $$('[data-blad] [data-thema]')) el.setAttribute('aria-checked', String(el.dataset.thema === v.tel.thema));
   for (const el of $$('[data-blad] [data-kies-kleur]')) el.setAttribute('aria-checked', String(el.dataset.kiesKleur === v.tel.kleur));
   for (const el of $$('[data-blad] [data-kies-taal]')) el.setAttribute('aria-checked', String(el.dataset.kiesTaal === v.tel.taal));
+}
+
+/* -------------------------------------------------- agenda en herinneringen */
+
+/*
+ * Agenda en herinneringen (besluit 216, schets Tel-Te-doen#jij): je eigen
+ * agenda's uit Home Assistant, meer tegelijk, ook de gezinsagenda, of uit; en
+ * waar je herinneringen heen gaan. Je eigen agenda's staan nooit op de wand.
+ */
+function agendaKeus() {
+  return v?.tel?.agenda ?? { aan: true, ids: [] };
+}
+function agendaBlok() {
+  if (!agendas) return '';
+  const k = agendaKeus();
+  const namen = agendas.filter((a) => k.ids.includes(a.id)).map((a) => a.naam);
+  const zin = !k.aan ? t('jij.agenda.uit') : namen.length ? namen.join(taal.code === 'en' ? ' and ' : ' en ') : t('jij.agenda.geen');
+  const tel = mijnTelefoon();
+  return `<section class="glas lijst" aria-labelledby="kop-agenda">
+      <h2 id="kop-agenda">${esc(t('jij.agenda.kop'))}</h2>
+      ${knop('data-agenda-open', 'agenda', t('jij.agenda.jouw'), zin)}
+      ${link('jij.html#meldingen', 'tel', t('jij.agenda.naar'), tel ? t('jij.agenda.naarTel', { naam: tel.naam }) : t('jij.agenda.alleenWand'))}
+      <p class="uitleg">${esc(t('jij.agenda.uitleg'))}</p>
+    </section>`;
+}
+function agendaBlad() {
+  const k = agendaKeus();
+  return `
+    <div class="bladkop"><h2 class="kop-2" id="bladkop">${esc(t('jij.agenda.jouw'))}</h2><button type="button" class="knop knop-licht" data-blad-dicht>${esc(t('algemeen.klaar'))}</button></div>
+    <div class="rij rij-zonder"><b>${esc(t('jij.agenda.gebruiken'))}</b><small>${esc(t('jij.agenda.gebruikenZin'))}</small><span class="pijl"><button type="button" class="schakel" role="switch" aria-checked="${k.aan}" aria-label="${esc(t('jij.agenda.gebruiken'))}" data-agenda-aan></button></span></div>
+    <p class="betekenis">${esc(t('jij.agenda.kies'))}</p>
+    <div class="agendas${k.aan ? '' : ' uitgezet'}" role="group" aria-labelledby="bladkop">${agendas
+      .map((a) => `<button type="button" role="checkbox" aria-checked="${k.ids.includes(a.id)}" data-agenda-id="${esc(a.id)}" ${k.aan ? '' : 'disabled'}><i aria-hidden="true"></i><b>${esc(a.naam)}</b>${a.huis === 'gezin' ? `<span>${esc(t('jij.agenda.ookWand'))}</span>` : a.huis === 'afval' ? `<span class="afval">${esc(t('jij.agenda.afval'))}</span>` : ''}</button>`)
+      .join('')}</div>`;
 }
 
 /* -------------------------------------------------- meldingen op je telefoon */
@@ -217,6 +256,10 @@ addEventListener('hashchange', () => {
 
 function tekenBlad() {
   const blad = document.querySelector('[data-blad]');
+  if (blad.dataset.soort === 'agenda') {
+    blad.innerHTML = agendaBlad();
+    return;
+  }
   if (blad.dataset.soort === 'taal') {
     blad.innerHTML = `
     <div class="bladkop"><h2 class="kop-2" id="bladkop">${esc(t('jij.taal.kop'))}</h2><button type="button" class="knop knop-licht" data-blad-dicht>${esc(t('algemeen.klaar'))}</button></div>
@@ -232,6 +275,12 @@ function tekenBlad() {
     <h3 id="kop-kleur">${esc(t('jij.jouwKleur'))}</h3>
     <div class="kleuren" role="radiogroup" aria-labelledby="kop-kleur">${KLEUREN.map(([k, naam]) => `<button type="button" role="radio" aria-checked="${v.tel.kleur === k}" data-kies-kleur="${k}"><span data-kleur="${k}" aria-hidden="true"></span>${esc(naam)}</button>`).join('')}</div>
     <p class="betekenis">${esc(t('jij.kleurUitleg')).replace(/\{(blauw|oranje|amber|groen)\}/g, (m, k) => `<i style="background: var(--${{ blauw: 'ijs', oranje: 'gloed', amber: 'zon', groen: 'mint' }[k]})"></i>`)}</p>`;
+}
+
+/** Staat het agendablad open, dan opnieuw tekenen na het bewaren. */
+function tekenBladAls() {
+  const blad = document.querySelector('[data-blad]');
+  if (!blad.hidden && blad.dataset.soort === 'agenda') tekenBlad();
 }
 
 let terugFocus = null;
@@ -251,8 +300,16 @@ function sluitBlad() {
 }
 
 document.addEventListener('click', (e) => {
-  const el = e.target.closest('[data-thema-open], [data-taal-open], [data-blad-dicht], [data-achter], [data-thema], [data-kies-kleur], [data-kies-taal], [data-weergave], [data-melding], [data-proef], [data-std-uiterlijk], [data-std-kaarten]');
+  const el = e.target.closest('[data-thema-open], [data-taal-open], [data-agenda-open], [data-agenda-aan], [data-agenda-id], [data-blad-dicht], [data-achter], [data-thema], [data-kies-kleur], [data-kies-taal], [data-weergave], [data-melding], [data-proef], [data-std-uiterlijk], [data-std-kaarten]');
   if (!el || !v) return;
+  // Je agenda's (besluit 216): aan of uit, en welke, meer tegelijk.
+  if (el.matches('[data-agenda-open]')) return openBlad('agenda');
+  if (el.matches('[data-agenda-aan]')) return void bewaar({ agenda: { ...agendaKeus(), aan: !agendaKeus().aan } }).then(tekenBladAls);
+  if (el.matches('[data-agenda-id]')) {
+    const k = agendaKeus();
+    const id = el.dataset.agendaId;
+    return void bewaar({ agenda: { aan: k.aan, ids: k.ids.includes(id) ? k.ids.filter((x) => x !== id) : [...k.ids, id] } }).then(tekenBladAls);
+  }
   // Terug naar standaard (besluit 204): het uiterlijk, of de kaarten op Thuis.
   if (el.matches('[data-std-uiterlijk]')) return void bewaar({ thema: v.standaard.thema, kleur: v.standaard.kleur, weergave: { ...v.standaard.weergave } });
   if (el.matches('[data-std-kaarten]')) return void bewaar({ kaarten: [...v.standaard.kaarten], breed: [...v.standaard.breed] });

@@ -28,6 +28,7 @@ import type { UpdateView } from './bijwerken.js';
 import type { KlaarPunt } from './klaarzetten.js';
 import type { Vraag } from './taalmodel.js';
 import type { Dagtelling } from './brein.js';
+import type { TeDoenDienst } from './routes/tedoen.js';
 import type { LuisterDeur } from './luisterpost.js';
 import type { Location } from './sun.js';
 import type { ForecastDay, HourColumns, WeatherLog } from './weather.js';
@@ -309,6 +310,8 @@ export interface WebOptions {
    * microfoon.
    */
   readonly luisteren?: LuisterDeur;
+  /** Te doen (besluit 216): herinneringen, de lijsten en agenda's van Home Assistant. Weg: geen te doen. */
+  readonly tedoen?: TeDoenDienst;
   /**
    * Welke code er draait (besluit 54). Komt uit het image; zie `versionFromEnv`.
    *

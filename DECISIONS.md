@@ -217,6 +217,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [213. Het brein: een gesprek, meer in één zin, en doe maar terug](#213-het-brein-een-gesprek-meer-in-één-zin-en-doe-maar-terug)
 - [214. Hoe ver je huis is: de zonnewaaier](#214-hoe-ver-je-huis-is-de-zonnewaaier)
 - [215. Sneller verstaan: het einde van je zin bij geluid, en rechtzetten op klank](#215-sneller-verstaan-het-einde-van-je-zin-bij-geluid-en-rechtzetten-op-klank)
+- [216. Te doen: herinneringen, de lijsten van Home Assistant, en afval en agenda](#216-te-doen-herinneringen-de-lijsten-van-home-assistant-en-afval-en-agenda)
 
 **Veiligheid**
 
@@ -10054,6 +10055,54 @@ tot de grens van vijftien seconden.
   nog een id is ("light.hal") geeft geen woord. De bewoner zette de
   Whisper-add-on op base-int8.
 - **Versie 0.87.1.**
+
+---
+
+## 216. Te doen: herinneringen, de lijsten van Home Assistant, en afval en agenda
+
+*Onderwerp: weergave · Status: geldig*
+
+Stap 5 van het plan voor een J.A.R.V.I.S.-gevoel (30 oktober 2026), na de
+schetsen `Wand-Te-doen` en `Tel-Te-doen`. Keuzes van de bewoner: de lijsten
+zijn die van Home Assistant (de Boodschappenlijst en To-do, zodat ze ook in de
+app van Home Assistant staan); een herinnering komt hardop op de wand als er
+iemand thuis is, en als melding op de telefoon van wie hem vroeg; het huis
+leest de agenda's Afval en Gezin, en ieder kiest bij Jij zijn eigen agenda's,
+meer tegelijk, ook de gezinsagenda, of zet het uit. Geen extra tab: een kaart
+op Thuis. De naam werd Te doen ("Niet vergeten" klonk raar).
+
+*Besluit:*
+
+- **Een nieuwe smalle deur** (`HaClient`, `allowTodo`, `isTodoCall`): alleen
+  `todo.add_item` met een tekst, of `todo.update_item` met een tekst en klaar
+  of niet klaar, op precies één `todo.`-entiteit. Niets weghalen, geen datum,
+  geen andere lijstdienst. Alleen in de add-on, zoals de meldingen: de NAS
+  kijkt mee. Lezen gaat met `calendar.get_events` en `todo.get_items`; daar
+  verandert niets door.
+- **Herinneringen bewaart de dienst zelf** (`web/tedoen.ts`,
+  `herinneringen.json`). Elke vijftien seconden: wat aan de beurt is, gaat
+  spelen, en de telefoon van wie hem vroeg krijgt een melding
+  (`notify.mobile_app_…`, besluit 183). Een herinnering van de wand is voor
+  het huis: alleen de wand. Na twee uur zonder antwoord is hij vanzelf klaar.
+- **De wand** vraagt elke twintig seconden wat er speelt
+  (`/api/te-doen?alleen=nu`), wekt zichzelf (besluit 164), toont het moment en
+  zegt het één keer hardop, met Gedaan, Over 10 minuten en Over een uur. Met
+  de stem: "gedaan", "straks", "over een uur".
+- **De zinnen** leest de woordzoeker zonder model: een tijd in gewone woorden
+  ("om half negen", "over een kwartier", "morgen om 7 uur", "vanavond",
+  "donderdag om 16:15"; een uur zonder dagdeel is het eerstvolgende), iets op
+  een lijst ("zet melk op de boodschappen", "we hebben geen eieren meer"), en
+  vragen over de lijsten, het afval en de agenda van vandaag, morgen of de
+  week. Zonder tijd vraagt het huis hoe laat, met drie keuzes. Een vraag zet
+  nooit iets op een lijst.
+- **De kaart op Thuis** staat er alleen als er iets is: het afval van vandaag
+  of morgen, de eerstvolgende herinnering, de boodschappen. Een tik opent het
+  blad: herinneringen, de week met afval en agenda's, en de lijsten om af te
+  vinken of aan te vullen.
+- **Instellen:** bij Functies › Te doen aan of uit, en welke lijst en agenda
+  wat is (het voorstel kiest ze op hun naam); bij Jij je eigen agenda's
+  (`voorkeuren.agenda`). Een eigen agenda staat nooit op de wand.
+- **Versie 0.88.0.**
 
 ---
 

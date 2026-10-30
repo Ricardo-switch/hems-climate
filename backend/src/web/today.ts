@@ -135,6 +135,12 @@ export function zonedMidnight(y: number, m: number, d: number, timeZone: string)
   return guess - offsetAt(guess - offsetAt(guess, timeZone), timeZone);
 }
 
+/** Een tijdstip op een kalenderdag in de tijdzone van de installatie; dag en uur mogen overlopen. */
+export function zonedTime(y: number, m: number, d: number, h: number, mi: number, timeZone: string): number {
+  const guess = Date.UTC(y, m - 1, d, h, mi);
+  return guess - offsetAt(guess - offsetAt(guess, timeZone), timeZone);
+}
+
 /** "18:00" in de tijdzone van de installatie. */
 export function clockIn(ms: number, timeZone: string): string {
   const p = partsIn(ms, timeZone);

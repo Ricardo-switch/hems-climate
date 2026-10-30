@@ -1069,6 +1069,7 @@
     nieuweVersie();
     meldingenStart();
     luisterStart();
+    teDoenStart();
     void weergaveLaden();
     niemandStart();
     if (tab === 'instellingen') void gastGrens();
@@ -1172,6 +1173,17 @@
    * "Hé huis" (besluit 150): op een scherm waar luisteren aan staat, laadt elke pagina het
    * luisteren erbij. Op een telefoon nooit vanzelf; daar tik je op de microfoon.
    */
+  /**
+   * Te doen (besluit 216): op een groot scherm laadt elke pagina het moment
+   * van een herinnering erbij; Thuis heeft het al voor de kaart.
+   */
+  function teDoenStart() {
+    if (global.tedoen || telStand() || document.querySelector('script[src="tedoen.js"]')) return;
+    const s = document.createElement('script');
+    s.src = 'tedoen.js';
+    document.head.appendChild(s);
+  }
+
   function luisterStart() {
     let aan = false;
     try {

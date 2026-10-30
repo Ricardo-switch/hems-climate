@@ -65,6 +65,8 @@ import { OPEN_METEO, OpenMeteo } from './web/open-meteo.js';
 import { httpBase } from './web/camera.js';
 import { Pauze, WACHT_MS } from './web/taalmodel.js';
 import { Teller } from './web/brein.js';
+import { Herinneringen } from './web/tedoen.js';
+import type { TeDoenDienst } from './web/routes/tedoen.js';
 import { spraakKeuzes, type SpraakKeuze } from './web/functies.js';
 import { cameraMelders, camerasNu, laatsteAanUitHistorie } from './web/cameras.js';
 import { FunctiesStore, aangebeld, functiesGevonden, functiesVoorstel, getoondeCameras, volledig, type Functies, type FunctiesGevonden } from './web/functies.js';
@@ -439,6 +441,9 @@ const client = new HaClient({
   // Een melding naar de telefoon van een bewoner (besluit 183): alleen notify.mobile_app_…, en alleen
   // in de add-on; de NAS kijkt mee en blijft stil, anders kwam elke melding dubbel.
   allowNotify: Boolean(process.env['SUPERVISOR_TOKEN']),
+  // Te doen (besluit 216): iets op een lijst van Home Assistant zetten of afvinken, op een tik of zin
+  // van de bewoner. Alleen in de add-on, zoals de meldingen: de NAS kijkt mee.
+  allowTodo: Boolean(process.env['SUPERVISOR_TOKEN']),
   // De klimaatbrug (besluit 210): alleen de knoppen van het oude systeem, als de brug aan staat
   // of er nog iets terug moet. Alleen in de add-on (zie `klimaatBrug`).
   allowKnoppen: (): { readonly entiteiten: readonly string[]; readonly opties: readonly string[] } => (klimaatAan() || (klimaatBrug?.terugzetten.length ?? 0) > 0 ? { entiteiten: BRUG_ENTITEITEN, opties: MODUS_OPTIES } : { entiteiten: [], opties: [] }),
@@ -1131,6 +1136,66 @@ if (meldingen) {
   setInterval(meldingenRonde, 60_000).unref();
 }
 
+/*
+ * Te doen (besluit 216): de herinneringen in een eigen bestand, en op het
+ * tijdstip een melding naar de telefoon van wie hem vroeg (alleen in de
+ * add-on). De wand vraagt zelf wat er speelt en zegt het hardop.
+ */
+const herinneringen = new Herinneringen({ map: logDir !== '' ? logDir : null });
+const teDoenKeus = () => {
+  const f = functiesNu();
+  return volledig(f ?? functiesVoorstel(functiesKeuzes() ?? { cameras: [], melders: [] }), functiesKeuzes()).tedoen;
+};
+const bewonerNaam = (account: string): string | null => {
+  const b = bewonersStore?.current;
+  const id = b?.volgorde.find((x) => b.bewoners[x]?.haUser === account && !b.bewoners[x]?.gast);
+  return id ? (b!.bewoners[id]!.naam ?? null) : null;
+};
+const teDoen: TeDoenDienst = {
+  keus: teDoenKeus,
+  herinneringen,
+  leesAgendas: (ids, van, tot) => client.leesAgendas(ids, van, tot),
+  leesLijsten: (ids) => client.leesLijsten(ids),
+  lijst: async (id, item, actie) => {
+    if (actie === 'toevoegen') await client.callService('todo', 'add_item', { item }, { entity_id: id });
+    else await client.callService('todo', 'update_item', { item, status: actie === 'klaar' ? 'completed' : 'needs_action' }, { entity_id: id });
+  },
+  agendaVan: (account) => voorkeuren?.agenda(account) ?? { aan: true, ids: [] },
+  naamVan: bewonerNaam,
+  namen: (ids) => Object.fromEntries(ids.map((id) => [id, String(allStates.get(id)?.attributes['friendly_name'] ?? id)])),
+  agendas: () =>
+    [...allStates.values()]
+      .filter((s) => /^calendar\.[a-z0-9_]+$/.test(s.entity_id) && s.state !== 'unavailable')
+      .map((s) => ({ id: s.entity_id, naam: String(s.attributes['friendly_name'] ?? s.entity_id) }))
+      .sort((a, b) => a.naam.localeCompare(b.naam, 'nl')),
+};
+let herinnerBezig = false;
+async function herinnerRonde(): Promise<void> {
+  if (herinnerBezig) return;
+  herinnerBezig = true;
+  try {
+    const nieuw = await herinneringen.ronde();
+    // Een melding naar de telefoon van wie hem vroeg; een herinnering voor het huis alleen op de wand.
+    if (version.installatie !== 'add-on' || !voorkeuren) return;
+    for (const h of nieuw) {
+      if (h.voor == null) continue;
+      const t = telefoonVan(h.voor, voorkeuren.meldingen(h.voor), telefoons());
+      if (!t) continue;
+      const nl = voorkeuren.taal(h.voor) !== 'en';
+      try {
+        await client.callService('notify', t.dienst, alsMelding({ dienst: t.dienst, titel: nl ? 'Te doen' : 'To do', tekst: h.tekst, tag: `smart-climate-tedoen-${h.id}`, dringend: true, stil: false }, paneelPad), {});
+      } catch (error) {
+        console.warn(`Herinnering naar ${t.dienst} lukte niet: ${(error as Error).message}`);
+      }
+    }
+  } catch (error) {
+    console.warn(`[te doen] ${(error as Error).message}`);
+  } finally {
+    herinnerBezig = false;
+  }
+}
+setInterval(() => void herinnerRonde(), 15_000).unref();
+
 // Vandaag uit de statistiek van Home Assistant (17 oktober 2026, historie.ts).
 const historie = new Historie({
   config: () => siteConfig,
@@ -1815,6 +1880,8 @@ if (webPort != null) {
       },
     },
     // Praten met je huis (besluit 148): de AI-taak die bij Functies gekozen is, standaard uit.
+    // Te doen (besluit 216): herinneringen, de lijsten en agenda's van Home Assistant.
+    tedoen: teDoen,
     praten: {
       model: () => {
         const f = functiesNu();

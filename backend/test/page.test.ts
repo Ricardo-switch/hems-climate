@@ -2140,6 +2140,96 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
    * Helemaal in huis (besluit 203): per add-on of hij erin staat, en de
    * spraakassistent maken met één tik. De add-on is nagebootst met een route.
    */
+  /*
+   * Te doen (besluit 216, schetsen Wand-Te-doen en Tel-Te-doen): de kaart op
+   * Thuis, het blad na een tik, en het moment als een herinnering speelt. De
+   * dienst is nagebootst met een route.
+   */
+  it('toont Te doen op Thuis: de kaart, het blad, en het moment op de wand (besluit 216)', async () => {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, locale: 'nl-NL' });
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    const shot = async (naam: string) => {
+      if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', `-${naam}.png`) });
+    };
+    const nu = Date.now();
+    const dag = (n: number) => {
+      const d = new Date(nu);
+      d.setHours(0, 0, 0, 0);
+      return d.getTime() + n * 86_400_000;
+    };
+    const herinnering = { id: 'h1', tekst: 'Container buiten zetten', ms: nu + 20 * 60_000, voor: null, naam: null, status: 'wacht', gemaakt: nu, eigen: false };
+    let speelt: unknown[] = [];
+    const gestuurd: unknown[] = [];
+    await context.route(`${baseUrl}/api/te-doen**`, async (route) => {
+      if (route.request().method() === 'POST') {
+        gestuurd.push(route.request().postDataJSON());
+        return route.fulfill({ json: { ok: true } });
+      }
+      if (route.request().url().includes('alleen=nu')) return route.fulfill({ json: { speelt } });
+      return route.fulfill({
+        json: {
+          aan: true,
+          herinneringen: [herinnering],
+          lijsten: [
+            { soort: 'boodschappen', id: 'todo.shopping_list', naam: 'Boodschappenlijst', items: [{ uid: '1', tekst: 'Melk', klaar: false }, { uid: '2', tekst: 'Brood', klaar: false }, { uid: '3', tekst: 'Eieren', klaar: false }, { uid: '4', tekst: 'Koffiebonen', klaar: false }, { uid: '5', tekst: 'Bananen', klaar: true }] },
+            { soort: 'todo', id: 'todo.to_do', naam: 'To-do', items: [{ uid: '6', tekst: 'Dakgoot', klaar: false }] },
+          ],
+          afspraken: [
+            { startMs: dag(1), heleDag: true, tekst: 'GFT', bron: 'afval', agenda: 'calendar.afval', afval: 'gft' },
+            { startMs: dag(3) + 16.75 * 3_600_000, heleDag: false, tekst: 'Zwemles', bron: 'gezin', agenda: 'calendar.gezin' },
+            { startMs: dag(8), heleDag: true, tekst: 'PMD', bron: 'afval', agenda: 'calendar.afval', afval: 'pmd' },
+          ],
+          speelt,
+        },
+      });
+    });
+    try {
+      await p.goto(`${baseUrl}/thuis.html`);
+      const kaart = p.locator('#wand [data-tedoen]');
+      await kaart.waitFor({ state: 'visible', timeout: 10_000 });
+      expect(await kaart.locator('.td-rij').count()).toBe(3);
+      expect(await kaart.textContent()).toContain('Morgen GFT');
+      expect(await kaart.textContent()).toContain('melk, brood, eieren en nog 1');
+      await shot('tedoen-kaart');
+      // Het blad: herinneringen, de week, en de lijst om af te vinken.
+      await kaart.click();
+      const blad = p.locator('.td-blad');
+      await blad.locator('.td-item').first().waitFor({ timeout: 10_000 });
+      expect(await blad.locator('.td-her').count()).toBe(1);
+      expect(await blad.locator('.td-dag').count()).toBe(7);
+      expect(await blad.locator('.td-verder').textContent()).toContain('PMD');
+      await shot('tedoen-blad');
+      await blad.locator('.td-item', { hasText: 'Melk' }).click();
+      await expect.poll(() => gestuurd.length).toBe(1);
+      expect(gestuurd[0]).toEqual({ actie: 'klaar', lijst: 'boodschappen', item: 'Melk' });
+      await blad.locator('[data-td-erbij] input').fill('Kaas');
+      await blad.locator('[data-td-erbij] input').press('Enter');
+      await expect.poll(() => gestuurd.length).toBe(2);
+      expect(gestuurd[1]).toEqual({ actie: 'toevoegen', lijst: 'boodschappen', item: 'Kaas' });
+      await blad.locator('[data-td-tab="todo"]').click();
+      await expect.poll(() => blad.locator('.td-item').first().textContent()).toBe('Dakgoot');
+      await p.locator('.td-sluit').click();
+      expect(await p.locator('.td-blad').count()).toBe(0);
+      // Het moment: de herinnering speelt, de wand toont hem met Gedaan.
+      speelt = [{ ...herinnering, status: 'nu', ms: nu }];
+      await p.evaluate('window.tedoen.kijk()');
+      const moment = p.locator('.td-moment');
+      await moment.waitFor({ timeout: 10_000 });
+      expect(await moment.locator('h2').textContent()).toBe('Container buiten zetten');
+      await shot('tedoen-moment');
+      await moment.locator('[data-td-gedaan]').click();
+      await expect.poll(() => gestuurd.at(-1)).toEqual({ actie: 'gedaan', id: 'h1' });
+      await expect.poll(() => p.locator('.td-moment').count()).toBe(0);
+      expect(fouten).toEqual([]);
+    } finally {
+      await context.close();
+    }
+  }, 40_000);
+
   it('maakt de spraakassistent helemaal in huis, met de add-ons op een rij (besluit 203)', async () => {
     const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
     await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);

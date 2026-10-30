@@ -1,5 +1,25 @@
 # Wat is er nieuw · What is new
 
+## 0.88.0
+
+*30 oktober 2026*
+
+**Nieuw**
+
+- Te doen: zeg "herinner me om acht uur aan de container" of "zet melk op de boodschappen". Op het tijdstip zegt de wand het hardop en krijg je een melding op je telefoon
+- Een kaart Te doen op Thuis met het afval van morgen, je volgende herinnering en de boodschappen; een tik opent je herinneringen, de week en je lijsten om af te vinken
+- Vraag "wanneer komt het GFT?", "wat staat er op de boodschappenlijst?" of "wat staat er morgen?"
+- Kies bij Jij je eigen agenda’s, ook de gezinsagenda, of zet het uit; bij Functies welke lijsten en agenda’s van het huis zijn
+
+*English*
+
+**New**
+
+- To do: say "remind me at eight about the bin" or "put milk on the shopping list". At that time the wall says it out loud and you get a notification on your phone
+- A To do card on Home with tomorrow’s waste collection, your next reminder and the shopping list; a tap opens your reminders, the week and your lists to tick off
+- Ask "when is the green bin collected?", "what is on the shopping list?" or "what is on tomorrow?"
+- Choose your own calendars under You, including the family calendar, or turn it off; under Features which lists and calendars belong to the house
+
 ## 0.87.1
 
 *30 oktober 2026*

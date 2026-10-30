@@ -18,6 +18,7 @@ import { controleerZin, inEigenWoorden, PROEF_MS, WACHT_MS, type Vraag } from '.
 import { dagRegels, deelVan, denk, herkenDelen, isTerug, samen, terugVan, type Deel, type Situatie, type Stap } from '../brein.js';
 import type { Fact } from '../assistant.js';
 import type { IncomingMessage } from 'node:http';
+import { alsAntwoord, teDoenZin } from './tedoen.js';
 import type { URL } from 'node:url';
 import { momentWoorden } from '../lichtrecept.js';
 import { sunReport } from '../sun.js';
@@ -206,6 +207,12 @@ export async function assistentRoutes(d: Diensten, v: Verzoek): Promise<boolean>
         const antwoord = terug ? (nl ? 'Ik heb het teruggezet zoals het was.' : 'I put it back the way it was.') : nl ? 'Er is niets om terug te zetten.' : 'There is nothing to undo.';
         const body = { vraag: 'bedien', taal: lang, kamer: null, antwoord, feiten: [], gesproken: uitspraak(antwoord, lang), ...(terug ? { opdracht: terug[0], meer: terug.slice(1), gedaan: [], beweegt: null, vervolg: [] } : {}) };
         return stuur({ body, terug: null });
+      }
+      // Te doen (besluit 216): een herinnering, iets op een lijst, gedaan of later, of een vraag over afval en agenda.
+      const tedoen = d.options.tedoen;
+      if (tedoen && !viaSleutel) {
+        const a = await teDoenZin(d, tedoen, tekst, await d.bezoeker(req), config.timezone, lang).catch(() => null);
+        if (a) return stuur({ body: alsAntwoord(a, lang), terug: null });
       }
       // Meer in één zin (besluit 213): "screens dicht en de lamp aan", elk deel apart.
       const delen = lijst ? herkenDelen(tekst, lijst, lang, url.searchParams.get('scherm')) : null;
