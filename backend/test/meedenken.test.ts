@@ -10,7 +10,7 @@ import { exampleSite } from './site.js';
 import { lichtRecept, type Lichtrecept } from '../src/web/lichtrecept.js';
 import { herkenOpdracht, kiesUit, onderscheid, type BedienLamp, type Bedienbaar, type Herkend } from '../src/web/opdracht.js';
 import { optiesUit } from '../src/web/routes/assistent.js';
-import { afstand, begrijp, verbeter } from '../src/web/woordzoeker.js';
+import { afstand, begrijp, klank, verbeter } from '../src/web/woordzoeker.js';
 
 const TZ = 'Europe/Amsterdam';
 /** 29 oktober 2026 om dit uur, Nederlandse tijd (wintertijd, UTC+1). */
@@ -227,5 +227,22 @@ describe('bijna goed verstaan (besluit 211)', () => {
     // Nooit naar een andere kamer: "wandkamer" ligt twee letters van badkamer, maar begint anders.
     expect(verbeter('Zet de wandkamer op 21', [...namen, 'Badkamer'])).toBe('zet de wandkamer op 21');
     expect(afstand('wonkamer', 'woonkamer')).toBe(1);
+  });
+
+  it('zet ook recht op klank, zoals het snellere model (base-int8) het schreef (30 oktober 2026)', () => {
+    expect(verbeter('Set de zetuk aan.', namen)).toBe('zet de zithoek aan');
+    expect(verbeter('Zet de sitoek aan.', namen)).toBe('zet de zithoek aan');
+    expect(verbeter('Het is koot in de woonkamer.', namen)).toBe('het is koud in de woonkamer');
+    expect(verbeter('Kan je de lamp in de koken aanzetten?', namen)).toBe('kan je de lamp in de keuken aanzetten');
+    expect(verbeter('Zet de womkamer op 21 graden.', namen)).toBe('zet de woonkamer op 21 graden');
+    expect(verbeter('Doet de screens naar beneden.', namen)).toBe('doe de screens naar beneden');
+    expect(klank('zithoek')).toBe(klank('sitoek'));
+  });
+
+  it('zet gewone woorden niet recht, ook als ze op een naam lijken', () => {
+    expect(verbeter('Ik ga even kijken zonder licht', namen)).toBe('ik ga even kijken zonder licht');
+    expect(verbeter('Wanneer komen de kosten?', namen)).toBe('wanneer komen de kosten');
+    // Een naam die nog een id is: "licht" is geen light.
+    expect(verbeter('licht hal uit', ['light.hal'])).toBe('licht hal uit');
   });
 });

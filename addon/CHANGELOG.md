@@ -4,11 +4,19 @@
 
 *30 oktober 2026*
 
+**Beter**
+
+- Het huis zet een bijna goed verstaan woord ook op klank recht: "sitoek" is de zithoek, "koot" is koud. Zo verstaat het snellere Whisper-model (base-int8) je net zo goed als het grote, in een derde van de tijd
+
 **Opgelost**
 
 - Met de tv aan of geroezemoes in de kamer luisterde het huis soms nog lang door na je zin; nu is je eigen stem de maat, en na twee seconden zonder woord van jou is je zin klaar
 
 *English*
+
+**Improved**
+
+- The house also corrects a nearly understood word by sound, so the faster Whisper model (base-int8) understands you as well as the large one, in a third of the time
 
 **Fixed**
 

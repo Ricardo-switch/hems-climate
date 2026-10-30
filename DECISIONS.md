@@ -216,7 +216,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [212. De stem kiezen, en stem en luisteren op één plek](#212-de-stem-kiezen-en-stem-en-luisteren-op-één-plek)
 - [213. Het brein: een gesprek, meer in één zin, en doe maar terug](#213-het-brein-een-gesprek-meer-in-één-zin-en-doe-maar-terug)
 - [214. Hoe ver je huis is: de zonnewaaier](#214-hoe-ver-je-huis-is-de-zonnewaaier)
-- [215. Het einde van je zin bij geluid in de kamer](#215-het-einde-van-je-zin-bij-geluid-in-de-kamer)
+- [215. Sneller verstaan: het einde van je zin bij geluid, en rechtzetten op klank](#215-sneller-verstaan-het-einde-van-je-zin-bij-geluid-en-rechtzetten-op-klank)
 
 **Veiligheid**
 
@@ -10017,7 +10017,7 @@ je huis kan. Uit de schetsen `Wand-Voortgang` (met de visgraat ernaast) en
 
 ---
 
-## 215. Het einde van je zin bij geluid in de kamer
+## 215. Sneller verstaan: het einde van je zin bij geluid, en rechtzetten op klank
 
 *Onderwerp: weergave · Status: geldig*
 
@@ -10040,6 +10040,19 @@ tot de grens van vijftien seconden.
   (1,8 s) blijft dat twee seconden.
 - Toetsen met nagebootste tv en geroezemoes; die met geroezemoes faalde met
   de oude manier.
+- **Rechtzetten op klank** (`klank`, `verbeter`): een lamp bedienen duurde
+  ruim tien seconden, waarvan Whisper small-int8 er zes. Gemeten op 30
+  oktober met dezelfde 30 zinnen (drie stemmen): small-int8 6,1 s per zin en
+  de app begreep er 27 hetzelfde uit; base-int8 2,1 s, maar 20. Wat base
+  fout schreef, klonk wel goed ("sitoek", "zetuk", "koot", "koken",
+  "womkamer", "Set de"). Nu zet het huis een woord ook op klank recht naar
+  een naam uit het huis ("th" is t, "oe" u, "ou" o, s z, f v, geen h; gelijk,
+  of één klank anders bij een naam van vijf klanken), en "set" aan het begin
+  is zet. Daarmee begrijpt de app bij base-int8 er ook 27. Gewone woorden die
+  op een naam lijken ("zonder", "kijken", "komen") zet het nooit recht; dat
+  is nagegaan met alle 1444 woorden uit de teksten van de app. Een naam die
+  nog een id is ("light.hal") geeft geen woord. De bewoner zette de
+  Whisper-add-on op base-int8.
 - **Versie 0.87.1.**
 
 ---
