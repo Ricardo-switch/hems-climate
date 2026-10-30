@@ -483,6 +483,8 @@ html.sc-stil::view-transition-group(*), html.sc-stil::view-transition-old(*), ht
 .td-bovenkop p b { color: var(--tekst); font-weight: 600; }
 .td-sluit { width: 38px; height: 38px; flex: none; border-radius: 50%; border: 0; background: rgb(var(--wit) / 0.08); color: var(--tekst); font-size: 19px; cursor: pointer; }
 .td-kolom { display: flex; flex-direction: column; gap: 9px; min-height: 0; overflow: auto; }
+.td-weekkop { display: flex; justify-content: space-between; align-items: baseline; }
+.td-weekkop a { text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 600; color: var(--accent); text-decoration: none; }
 .td-kolom h3 { margin: 4px 0 0; font-size: 12px; font-weight: 700; color: var(--gedempt); text-transform: uppercase; letter-spacing: 0.06em; }
 .td-her { display: grid; grid-template-columns: 60px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 16px; background: rgb(var(--wit) / 0.05); border: 1px solid rgb(var(--wit) / 0.07); }
 .td-her.nu { background: rgb(143 134 255 / 0.12); border-color: rgb(143 134 255 / 0.4); }

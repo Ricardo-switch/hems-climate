@@ -47,6 +47,8 @@ async function laad() {
   }
   if (bw.status === 'fulfilled') b = bw.value;
   teken();
+  // Vanuit Te doen of Functies (30 oktober 2026): jij.html#agenda opent meteen je agenda's.
+  if (location.hash === '#agenda' && agendas && b?.ik?.soort === 'bewoner') openBlad('agenda');
 }
 
 async function bewaar(wat) {

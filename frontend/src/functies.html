@@ -23,6 +23,10 @@
   #tel .inhoud { padding: 18px 16px 110px; display: flex; flex-direction: column; gap: 14px; }
   /* Praten met je huis (besluit 148): het vaste antwoord naast eigen woorden, en wat er naar buiten gaat. */
   .proef { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  /* Te doen (besluit 216): keuzelijsten, twee naast elkaar. */
+  .tdkeuzes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; }
+  #tel .tdkeuzes { grid-template-columns: 1fr; }
+  .tdkeus select { width: 100%; }
   .proef div { padding: 12px 14px; border-radius: 14px; background: rgb(var(--wit) / 0.04); font-size: 14px; line-height: 1.45; }
   .proef div span { display: block; font-size: 11.5px; font-weight: 700; color: var(--gedempt); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
   .proef .eigen { background: rgba(143, 134, 255, 0.1); border: 1px solid rgba(143, 134, 255, 0.25); }

@@ -68,14 +68,19 @@
   function regels() {
     if (!data?.aan) return [];
     const uit = [];
-    const afval = data.afspraken.filter((a) => a.bron === 'afval' && dagenVan(a.startMs) >= 0 && dagenVan(a.startMs) <= 1);
+    // Het eerstvolgende afval van deze week (30 oktober 2026: eerst alleen vandaag of morgen, dan bleef de kaart vaak weg).
+    const komend = data.afspraken.filter((a) => a.bron === 'afval' && dagenVan(a.startMs) >= 0 && dagenVan(a.startMs) <= 6);
+    const afval = komend.filter((a) => dagStart(a.startMs) === dagStart(komend[0]?.startMs ?? 0));
     if (afval.length) {
-      const morgen = dagenVan(afval[0].startMs) === 1;
+      const n = dagenVan(afval[0].startMs);
+      const wat = afval.map((a) => a.tekst).join(nl() ? ' en ' : ' and ');
+      const lang = new Intl.DateTimeFormat(nl() ? 'nl-NL' : 'en-GB', { weekday: 'long' });
+      const dag = lang.format(afval[0].startMs);
       uit.push({
         ik: 'bak',
         klasse: `td-${afval[0].afval ?? 'anders'}`,
-        kop: t(morgen ? 'tedoen.morgenAfval' : 'tedoen.vandaagAfval', { wat: afval.map((a) => a.tekst).join(nl() ? ' en ' : ' and ') }),
-        zin: t(morgen ? 'tedoen.afvalVanavond' : 'tedoen.afvalVandaag'),
+        kop: n === 0 ? t('tedoen.vandaagAfval', { wat }) : n === 1 ? t('tedoen.morgenAfval', { wat }) : t('tedoen.dagAfval', { wat, dag: dag.charAt(0).toUpperCase() + dag.slice(1) }),
+        zin: n === 0 ? t('tedoen.afvalVandaag') : n === 1 ? t('tedoen.afvalVanavond') : t('tedoen.afvalAvondervoor', { dag: lang.format(afval[0].startMs - 86_400_000) }),
         // De dag zelf ("za"): vandaag of morgen staat al in de kop.
         wanneer: new Intl.DateTimeFormat(nl() ? 'nl-NL' : 'en-GB', { weekday: 'short' }).format(afval[0].startMs).replace('.', ''),
       });
@@ -88,12 +93,15 @@
       const eerst = open.slice(0, 3).map((x) => x.tekst.toLowerCase());
       uit.push({ ik: 'mand', klasse: 'td-mand', kop: t('tedoen.boodschappen'), zin: open.length > 3 ? t('tedoen.enNog', { wat: eerst.join(', '), n: open.length - 3 }) : eerst.join(', '), wanneer: String(open.length) });
     }
+    // Niets: de kaart blijft staan, zodat je altijd bij je lijsten en herinneringen kunt.
+    if (!uit.length) uit.push({ ik: 'lijst', klasse: 'td-mand', kop: t('tedoen.niets'), zin: t('tedoen.nietsZin'), wanneer: '' });
     return uit.slice(0, 3);
   }
 
   function tekenKaarten() {
     const r = regels();
     for (const k of document.querySelectorAll('[data-tedoen]')) {
+      // Er als te doen aan staat, ook als er niets is (30 oktober 2026).
       k.hidden = r.length === 0;
       if (!r.length) continue;
       k.innerHTML = `<div class="td-naam">${esc(t('tedoen.kop'))}<span>${esc(t('tedoen.alles'))} ›</span></div>${r
@@ -188,7 +196,7 @@
         <h3>${esc(t('tedoen.herinneringen'))}</h3>
         ${data.herinneringen.slice(0, 4).map(herinneringHtml).join('') || `<p class="mini">${esc(t('tedoen.geenHerinneringen'))}</p>`}
         <form class="td-erbij" data-td-nieuw><input type="text" maxlength="160" placeholder="${esc(t('tedoen.nieuw'))}" aria-label="${esc(t('tedoen.nieuwLabel'))}"></form>
-        <h3>${esc(t('tedoen.week'))}</h3>
+        <h3 class="td-weekkop">${esc(t('tedoen.week'))}${telStand() ? `<a href="jij.html#agenda">${esc(t('tedoen.agendasKiezen'))} ›</a>` : ''}</h3>
         ${weekHtml()}
         <p class="td-zowerkt">${svg(IK.tel)}<span>${t('tedoen.zoWerkt')}</span></p>
       </div>

@@ -10103,6 +10103,12 @@ op Thuis. De naam werd Te doen ("Niet vergeten" klonk raar).
   wat is (het voorstel kiest ze op hun naam); bij Jij je eigen agenda's
   (`voorkeuren.agenda`). Een eigen agenda staat nooit op de wand.
 - **Versie 0.88.0.**
+- **Na de eerste dag (0.88.1):** de bewoner vond Te doen niet: de kaart stond
+  er alleen bij afval vandaag of morgen, een herinnering of boodschappen. Nu
+  staat hij er altijd als Te doen aan staat ("Niets te doen" als er niets is),
+  met het afval van de hele week. Bij Functies keuzelijsten in plaats van
+  rijen knoppen (elf agenda's werd onoverzichtelijk), en een link naar je eigen
+  agenda's bij Jij (`jij.html#agenda` opent het blad meteen).
 
 ---
 

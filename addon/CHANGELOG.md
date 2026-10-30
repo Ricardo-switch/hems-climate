@@ -1,5 +1,23 @@
 # Wat is er nieuw · What is new
 
+## 0.88.1
+
+*30 oktober 2026*
+
+**Beter**
+
+- De kaart Te doen staat altijd op Thuis als Te doen aan staat, ook als er niets is, met het afval van de hele week
+- Bij Functies › Te doen kies je de lijsten en agenda’s uit een keuzelijst in plaats van een rij knoppen
+- Vanuit Te doen en Functies kom je met één tik bij je eigen agenda’s bij Jij, waar je er meer tegelijk kiest
+
+*English*
+
+**Improved**
+
+- The To do card is always on Home when To do is on, even when there is nothing, with the waste collection of the whole week
+- Under Features › To do you choose the lists and calendars from a drop-down instead of a row of buttons
+- From To do and Features one tap takes you to your own calendars under You, where you choose several at once
+
 ## 0.88.0
 
 *30 oktober 2026*

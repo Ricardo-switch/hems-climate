@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Uit zichzelf</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Uit zichzelf (schets, 30 oktober 2026; stap 7 van het J.A.R.V.I.S.-plan).
+   * Het huis begint zelf, als dat zinnig is.
+   *
+   * Keuzes van de bewoner: over vier dingen (klimaat vooruit, weer en screens,
+   * apparaten en zon, thuiskomen); altijd een kaart op Thuis, en hardop alleen
+   * als de camera van de wand iemand ziet; altijd eerst vragen, met Ja en Nee,
+   * en een nee onthoudt het; rustig: hooguit drie per dag, nooit 's nachts of
+   * als niemand thuis is, en niet twee keer hetzelfde op een dag.
+   *
+   * Standen: zonder hash het voorstel als kaart op Thuis (zondagavond, vannacht
+   * wordt het koud), #hardop het voorstel hardop als er iemand voor de wand
+   * staat, #thuis de begroeting bij thuiskomen, #functies het instellen bij
+   * Functies › Uit zichzelf.
+   */
+  .wand { position: relative; }
+  .podium { position: absolute; left: 150px; top: 150px; width: 700px; height: 560px; }
+  .kop { position: absolute; left: 120px; top: 30px; }
+  .tijd { font-family: var(--kop); font-size: 68px; font-weight: 600; letter-spacing: -0.035em; line-height: 0.9; }
+  .tijd small { display: block; font: 500 16px var(--romp); color: var(--zacht); letter-spacing: 0; margin-top: 10px; }
+  .kop h1 { font-family: var(--kop); font-weight: 600; font-size: 38px; line-height: 1.05; letter-spacing: -0.025em; margin: 18px 0 6px; max-width: 420px; }
+  .kop p { margin: 0; font-size: 16px; color: var(--zacht); max-width: 420px; }
+  .rechts { position: absolute; right: 26px; top: 96px; bottom: 22px; width: 330px; display: flex; flex-direction: column; gap: 10px; justify-content: flex-end; }
+  .k { padding: 12px 14px; border-radius: 18px; background: rgb(var(--nacht) / 0.55); border: 1px solid var(--glas-rand); backdrop-filter: blur(16px); }
+  .k .naam { font-size: 12px; font-weight: 700; color: var(--zacht); }
+  .k .waarde { font-family: var(--kop); font-size: 22px; font-weight: 600; margin-top: 5px; }
+  .k .zin { font-size: 12.5px; color: var(--zacht); margin-top: 2px; }
+  .klein { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .vraagbalk { position: absolute; left: 120px; bottom: 22px; width: 720px; height: 58px; border-radius: 20px; display: flex; align-items: center; gap: 12px; padding: 0 10px; background: rgb(var(--nacht) / 0.55); border: 1px solid var(--glas-rand); backdrop-filter: blur(16px); color: var(--zacht); font-size: 15px; }
+  .vraagbalk .bolletje { width: 40px; height: 40px; border-radius: 50%; background: radial-gradient(circle at 34% 28%, #fff 0%, #bfe3ff 16%, #6fb7ff 40%, #6a5cff 72%, #2a1f6b 100%); }
+
+  /* Het voorstel: violet, boven de kaarten, zoals in Wand-Thuis-3. */
+  .voorstel { padding: 16px; border-radius: 22px; background: linear-gradient(150deg, rgb(143 134 255 / 0.3), rgb(111 211 255 / 0.1)), rgb(var(--nacht) / 0.6); border: 1px solid rgb(143 134 255 / 0.45); backdrop-filter: blur(16px); box-shadow: 0 18px 50px rgb(0 0 0 / 0.35); }
+  .voorstel small { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 700; color: #c3bdff; }
+  .voorstel small .bol { width: 14px; height: 14px; border-radius: 50%; background: radial-gradient(circle at 34% 28%, #fff, #a99bff 50%, #5b4bd6); }
+  .voorstel small em { margin-left: auto; font-style: normal; font-weight: 600; color: var(--gedempt); }
+  .voorstel b { display: block; font-family: var(--kop); font-size: 20px; font-weight: 600; line-height: 1.2; margin-top: 8px; }
+  .voorstel p { margin: 6px 0 0; font-size: 13px; line-height: 1.45; color: var(--zacht); }
+  .voorstel .waarom { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+  .voorstel .waarom span { font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: rgb(var(--wit) / 0.08); color: var(--zacht); }
+  .voorstel .knoppen { display: grid; grid-template-columns: 1.3fr 1fr; gap: 8px; margin-top: 12px; }
+  .voorstel .knoppen span { height: 40px; border-radius: 12px; display: grid; place-items: center; font-size: 14px; font-weight: 700; background: rgb(var(--wit) / 0.08); border: 1px solid var(--glas-rand); }
+  .voorstel .knoppen span.licht { background: var(--tekst); color: var(--inkt); border-color: transparent; }
+
+  /* Hardop: zoals het moment van een herinnering, met Ja en Nee. */
+  .hardop { position: absolute; inset: 0; background: radial-gradient(ellipse at 32% 45%, rgba(40, 30, 90, 0.9), rgba(6, 10, 20, 0.95) 70%); backdrop-filter: blur(8px); }
+  .hardop .kern { position: absolute; left: 120px; top: 200px; width: 300px; height: 300px; display: grid; place-items: center; }
+  .hardop .bol { width: 160px; height: 160px; border-radius: 50%; background: radial-gradient(circle at 34% 28%, #ffffff 0%, #e2dcff 16%, #a99bff 42%, #5b4bd6 75%, #1d1450 100%); box-shadow: 0 0 80px rgba(143, 134, 255, 0.6), 0 0 180px rgba(143, 134, 255, 0.3); }
+  .hardop .ring { position: absolute; border-radius: 50%; border: 2px solid rgba(143, 134, 255, 0.45); }
+  .hardop .r1 { inset: 48px; } .hardop .r2 { inset: 16px; opacity: 0.5; } .hardop .r3 { inset: -14px; opacity: 0.22; }
+  .hardop .tekst { position: absolute; left: 500px; top: 190px; right: 70px; }
+  .hardop small { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 700; color: #c3bdff; }
+  .hardop h2 { font-family: var(--kop); font-weight: 600; font-size: 44px; line-height: 1.08; letter-spacing: -0.025em; margin: 12px 0 14px; }
+  .hardop p { font-size: 18px; line-height: 1.5; color: var(--zacht); margin: 0; max-width: 620px; }
+  .hardop .knoppen { display: flex; gap: 10px; margin-top: 28px; }
+  .hardop .knoppen span { height: 54px; padding: 0 26px; border-radius: 17px; display: inline-flex; align-items: center; font-size: 16.5px; font-weight: 700; background: rgb(var(--wit) / 0.09); border: 1px solid rgb(var(--wit) / 0.12); }
+  .hardop .knoppen span.licht { background: var(--tekst); color: var(--inkt); border-color: transparent; }
+  .hardop .onder { position: absolute; left: 500px; bottom: 54px; font-size: 14px; color: var(--gedempt); }
+
+  /* Thuiskomen: een begroeting die na een halve minuut vanzelf weggaat. */
+  .welkom { position: absolute; left: 120px; right: 380px; top: 110px; bottom: 100px; display: flex; flex-direction: column; justify-content: center; gap: 18px; }
+  .welkom .groet { font-family: var(--kop); font-size: 56px; font-weight: 600; letter-spacing: -0.035em; line-height: 1; }
+  .welkom .groet span { color: #c3bdff; }
+  .welkom .regels { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 700px; }
+  .welkom .regel { display: grid; grid-template-columns: 40px 1fr; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 18px; background: rgb(var(--nacht) / 0.6); border: 1px solid var(--glas-rand); backdrop-filter: blur(16px); }
+  .welkom .regel b { display: block; font-size: 15.5px; }
+  .welkom .regel span { font-size: 12.5px; color: var(--zacht); }
+  .welkom .weg { font-size: 13px; color: var(--gedempt); display: flex; align-items: center; gap: 10px; }
+  .welkom .weg i { width: 160px; height: 4px; border-radius: 2px; background: rgb(var(--wit) / 0.12); overflow: hidden; position: relative; }
+  .welkom .weg i::after { content: ''; position: absolute; inset: 0; width: 60%; background: #a99bff; border-radius: 2px; }
+  .welkomdim { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(6, 10, 20, 0.85), rgba(6, 10, 20, 0.35) 70%, transparent); }
+  .ik { width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center; }
+  .ik svg { width: 21px; height: 21px; }
+  .gft { background: rgb(110 231 183 / 0.16); color: #7ff0bf; }
+  .klok { background: rgb(143 134 255 / 0.18); color: #c3bdff; }
+  .warm { background: rgb(255 140 90 / 0.16); color: #ffb090; }
+  .zon { background: rgb(247 181 72 / 0.16); color: var(--zon); }
+
+  /* Functies › Uit zichzelf, in de opbouw van de groep. */
+  .groep { position: absolute; left: 96px; top: 0; right: 0; bottom: 0; padding: 22px 26px 22px 22px; display: flex; flex-direction: column; gap: 14px; }
+  .groepkop { display: flex; align-items: center; gap: 16px; }
+  .terug { height: 44px; padding: 0 16px; border-radius: 14px; display: inline-flex; align-items: center; background: rgb(var(--wit) / 0.06); border: 1px solid var(--glas-rand); font-weight: 700; font-size: 14px; color: var(--zacht); }
+  .veld { flex: 1; display: grid; grid-template-columns: 300px 1fr; gap: 16px; min-height: 0; }
+  .delen { padding: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .deel { display: grid; grid-template-columns: 40px 1fr; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 16px; }
+  .deel.nu { background: rgb(var(--wit) / 0.08); }
+  .deel b { display: block; font-size: 15.5px; }
+  .deel span { font-size: 12.5px; color: var(--gedempt); }
+  .vak { padding: 20px 22px; display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 22px; }
+  .vak h2 { margin: 0 0 4px; font-family: var(--kop); font-size: 22px; font-weight: 600; }
+  .vak h3 { margin: 12px 0 2px; font-size: 12px; font-weight: 700; color: var(--gedempt); text-transform: uppercase; letter-spacing: 0.06em; }
+  .vak p.mini { margin: 0; font-size: 13px; color: var(--zacht); line-height: 1.45; }
+  .rij { display: grid; grid-template-columns: 36px 1fr auto; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid rgb(var(--wit) / 0.07); }
+  .rij:first-of-type { border-top: 0; }
+  .rij b { display: block; font-size: 14.5px; }
+  .rij span.z { font-size: 12.5px; color: var(--gedempt); }
+  .schakel { width: 48px; height: 28px; border-radius: 999px; background: var(--mint); position: relative; }
+  .schakel::after { content: ''; position: absolute; top: 3px; left: 23px; width: 22px; height: 22px; border-radius: 50%; background: var(--inkt); }
+  .schakel.uit { background: rgb(var(--wit) / 0.14); }
+  .schakel.uit::after { left: 3px; background: #fff; }
+  .keuzes { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+  .keuzes span { height: 38px; padding: 0 16px; border-radius: 12px; display: inline-flex; align-items: center; background: rgb(var(--wit) / 0.06); border: 1px solid rgb(var(--wit) / 0.08); font-weight: 700; font-size: 14px; color: var(--zacht); }
+  .keuzes span.aan { background: rgb(111 211 255 / 0.18); border-color: rgb(111 211 255 / 0.5); color: var(--tekst); }
+  .laatst { display: flex; flex-direction: column; gap: 8px; }
+  .laatst div { padding: 10px 12px; border-radius: 14px; background: rgb(var(--wit) / 0.04); display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; }
+  .laatst b { font-size: 14px; }
+  .laatst span { font-size: 12px; color: var(--gedempt); }
+  .laatst em { grid-row: 1 / 3; grid-column: 2; font-style: normal; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; }
+  .laatst em.ja { background: rgb(110 231 183 / 0.14); color: var(--mint-t); }
+  .laatst em.nee { background: rgb(255 140 90 / 0.14); color: #ffb090; }
+  .laatst em.stil { background: rgb(var(--wit) / 0.08); color: var(--zacht); }
+
+  [data-stand] { display: none !important; }
+  body[data-toon='kaart'] [data-stand~='kaart'], body[data-toon='hardop'] [data-stand~='hardop'], body[data-toon='thuis'] [data-stand~='thuis'], body[data-toon='functies'] [data-stand~='functies'] { display: block !important; }
+  body[data-toon='kaart'] .rechts[data-stand], body[data-toon='kaart'] .vraagbalk[data-stand], body[data-toon='thuis'] .welkom[data-stand], body[data-toon='functies'] .groep[data-stand] { display: flex !important; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position: absolute">
+  <symbol id="bak" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M9 7V4.5h6V7M6 7l1 13h10l1-13M10 11v6M14 11v6"/></symbol>
+  <symbol id="klok" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M5 4 2.5 6.5M19 4l2.5 2.5"/></g></symbol>
+  <symbol id="thermo" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/></symbol>
+  <symbol id="zon" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></g></symbol>
+  <symbol id="wind" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M3 8h11a3 3 0 1 0-3-3M3 12h15a3 3 0 1 1-3 3M3 16h8"/></symbol>
+  <symbol id="was" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="3" width="16" height="18" rx="2.5"/><circle cx="12" cy="13" r="4.5"/><path d="M8 6.5h.01M11 6.5h3"/></g></symbol>
+  <symbol id="deur" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11 12 4l8 7v9H4z"/><path d="M10 20v-5h4v5"/></g></symbol>
+</svg>
+
+<div class="wand lucht lucht-avond">
+  <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+
+  <!-- Thuis, met het voorstel. -->
+  <main data-stand="kaart hardop thuis">
+    <div class="podium" id="podium"></div>
+    <div class="kop" data-stand="kaart hardop">
+      <div class="tijd">21:40<small>zondag 1 november</small></div>
+      <h1>Rustig in huis</h1>
+      <p>Het is overal tussen 20° en 21°. Vannacht wordt het koud.</p>
+    </div>
+    <div class="rechts" data-stand="kaart">
+      <section class="voorstel">
+        <small><span class="bol"></span>Voorstel van je huis<em>1 van 3 vandaag</em></small>
+        <b>Vannacht wordt het 2°. Zal ik de woonkamer morgen om 6:00 al op 20° zetten?</b>
+        <p>Dan is het warm als je opstaat. Via je eigen regeling, tot 9:00; daarna weer zoals altijd.</p>
+        <div class="waarom"><span>buiten 2° om 5:00</span><span>woonkamer nu 20,5°</span></div>
+        <div class="knoppen"><span class="licht">Ja, doe maar</span><span>Nee</span></div>
+      </section>
+      <div class="klein">
+        <div class="k"><div class="naam">Te doen</div><div class="waarde">Di GFT</div><div class="zin">morgenavond buiten</div></div>
+        <div class="k"><div class="naam">Vandaag</div><div class="waarde">6,1 kWh</div><div class="zin">van je dak</div></div>
+      </div>
+    </div>
+    <div class="vraagbalk" data-stand="kaart"><span class="bolletje"></span>Zeg "Hé huis" of tik om iets te vragen</div>
+  </main>
+
+  <!-- #hardop: iemand voor de wand, en het huis zegt het. -->
+  <div class="hardop" data-stand="hardop">
+    <div class="kern"><div class="ring r3"></div><div class="ring r2"></div><div class="ring r1"></div><div class="bol"></div></div>
+    <div class="tekst">
+      <small>Voorstel van je huis · klimaat vooruit</small>
+      <h2>Vannacht wordt het 2°. Zal ik de woonkamer morgen om 6:00 al op 20° zetten?</h2>
+      <p>Dan is het warm als je opstaat. Daarna gaat je regeling weer zoals altijd.</p>
+      <div class="knoppen"><span class="licht">Ja, doe maar</span><span>Nee</span><span>Nee, nooit meer</span></div>
+    </div>
+    <div class="onder">De camera zag iemand, dus het huis zegt het hardop. Zeg "ja" of "nee".</div>
+  </div>
+
+  <!-- #thuis: thuiskomen, een korte begroeting. -->
+  <div class="welkomdim" data-stand="thuis"></div>
+  <div class="welkom" data-stand="thuis">
+    <div class="groet">Welkom thuis,<br><span>Ricardo</span></div>
+    <div class="regels">
+      <div class="regel"><span class="ik warm"><svg><use href="#thermo"/></svg></span><div><b>Binnen 20,5°</b><span>de woonkamer is warm, de zolder 17°</span></div></div>
+      <div class="regel"><span class="ik gft"><svg><use href="#bak"/></svg></span><div><b>Morgen GFT</b><span>de groene bak, vanavond aan de straat</span></div></div>
+      <div class="regel"><span class="ik klok"><svg><use href="#klok"/></svg></span><div><b>20:00 Container buiten</b><span>jouw herinnering</span></div></div>
+      <div class="regel"><span class="ik zon"><svg><use href="#zon"/></svg></span><div><b>Vandaag 6,1 kWh zon</b><span>de vaatwasser draaide erop</span></div></div>
+    </div>
+    <div class="weg"><i></i>Gaat vanzelf weg. Het huis zegt alleen de eerste regel hardop, en het afval.</div>
+  </div>
+
+  <!-- #functies: Functies › Uit zichzelf. -->
+  <div class="groep" data-stand="functies">
+    <div class="groepkop"><span class="terug">‹ Instellingen</span><h1 class="kop-1" style="margin: 0">Functies</h1></div>
+    <div class="veld">
+      <nav class="glas delen">
+        <div class="deel"><span class="ik klok" style="background: rgb(143 134 255 / 0.18)"><svg><use href="#klok"/></svg></span><div><b>Te doen</b><span>4 van 4 gekozen</span></div></div>
+        <div class="deel nu"><span class="ik" style="background: rgb(143 134 255 / 0.18); color: #c3bdff"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3l1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8z"/><path d="M19 15l.8 1.7L21.5 17.5l-1.7.8L19 20l-.8-1.7-1.7-.8 1.7-.8z"/></svg></span><div><b>Uit zichzelf</b><span>rustig, hooguit 3 per dag</span></div></div>
+        <div class="deel"><span class="ik" style="background: rgb(110 231 183 / 0.12); color: var(--mint)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg></span><div><b>Stem en luisteren</b><span>Kore</span></div></div>
+      </nav>
+      <section class="glas vak">
+        <div>
+          <h2>Uit zichzelf</h2>
+          <p class="mini">Het huis stelt zelf iets voor als dat zinnig is. Het vraagt altijd eerst; zonder ja gebeurt er niets.</p>
+          <h3>Waarover</h3>
+          <div class="rij"><span class="ik warm"><svg><use href="#thermo"/></svg></span><div><b>Klimaat vooruit</b><span class="z">een koude nacht of een warme dag die eraan komt</span></div><span class="schakel"></span></div>
+          <div class="rij"><span class="ik" style="background: rgb(111 211 255 / 0.14); color: var(--ijs)"><svg><use href="#wind"/></svg></span><div><b>Weer en screens</b><span class="z">harde wind of regen, en de screens staan uit</span></div><span class="schakel"></span></div>
+          <div class="rij"><span class="ik zon"><svg><use href="#was"/></svg></span><div><b>Apparaten en zon</b><span class="z">de was is klaar, of er is zon over voor de vaatwasser</span></div><span class="schakel"></span></div>
+          <div class="rij"><span class="ik klok"><svg><use href="#deur"/></svg></span><div><b>Thuiskomen</b><span class="z">een korte begroeting met wat er speelt</span></div><span class="schakel"></span></div>
+          <h3>Hoe vaak</h3>
+          <div class="keuzes"><span>Stil</span><span class="aan">Rustig, 3 per dag</span><span>Alles wat zinnig is</span></div>
+          <p class="mini" style="margin-top: 8px">Nooit 's nachts, nooit als niemand thuis is, en niet twee keer hetzelfde op een dag. Hardop alleen als de camera van de wand iemand ziet.</p>
+        </div>
+        <div>
+          <h3 style="margin-top: 0">Laatst voorgesteld</h3>
+          <div class="laatst">
+            <div><b>Woonkamer om 6:00 op 20°</b><span>vanavond 21:40</span><em class="ja">Ja</em></div>
+            <div><b>Screens dicht, harde wind</b><span>vrijdag 15:10</span><em class="ja">Ja</em></div>
+            <div><b>Vaatwasser op de zon</b><span>vrijdag 12:30 · twee keer nee</span><em class="nee">Stil</em></div>
+            <div><b>Welkom thuis</b><span>donderdag 17:45</span><em class="stil">Gezegd</em></div>
+          </div>
+          <p class="mini" style="margin-top: 10px">Twee keer nee op hetzelfde, dan vraagt het huis het een maand niet meer. Tik erop om het weer te laten vragen.</p>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+<script src="../../frontend/kit/teksten.nl.js"></script>
+<script src="../../frontend/kit/teksten.en.js"></script>
+<script src="../../frontend/kit/taal.js"></script>
+<script src="../../frontend/kit/nav.js"></script>
+<script src="../../frontend/kit/huis.js"></script>
+<script>
+  const toon = { '#hardop': 'hardop', '#thuis': 'thuis', '#functies': 'functies' }[location.hash] ?? 'kaart';
+  document.body.dataset.toon = toon;
+  nav.balk(document.getElementById('balk'), toon === 'functies' ? 'instellingen' : 'thuis');
+  if (toon !== 'functies') {
+    huis.teken(document.getElementById('podium'), {
+      beschrijving: "Het huis, 's avonds.",
+      tijd: 'avond',
+      zon: { aandeel: 0, panelen: 12 },
+      etages: [
+        { kamers: [{ naam: 'Woonkamer', gewicht: 1.5, apparaten: [{ soort: 'airco' }, { soort: 'lamp', aan: true, x: 0.4 }] }, { naam: 'Hal', gewicht: 0.6, stil: true, apparaten: [] }] },
+        { kamers: [{ naam: 'Badkamer', stil: true, apparaten: [] }, { naam: 'Slaapkamer', apparaten: [{ soort: 'lamp', aan: true, x: 0.5 }] }] },
+        { dak: true, kamers: [{ naam: 'Zolder', stil: true, apparaten: [{ soort: 'airco' }] }] },
+      ],
+      net: true,
+    }, { breedte: 700, hoogte: 560, marge: 0.06 });
+  }
+</script>
+</body>
+</html>

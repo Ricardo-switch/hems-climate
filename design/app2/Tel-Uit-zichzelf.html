@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telefoon · Uit zichzelf</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Uit zichzelf op de telefoon (schets, 30 oktober 2026), bij Wand-Uit-zichzelf.
+   * Alleen de kaart op Thuis: de telefoon zegt niets hardop en krijgt geen
+   * melding (keuze van de bewoner). Hetzelfde voorstel, met Ja en Nee.
+   */
+  .tel { overflow: hidden; }
+  .tel .tabs { position: fixed; }
+  .boven { padding: 16px 18px 0; }
+  .tijd { font-family: var(--kop); font-weight: 600; font-size: 40px; letter-spacing: -0.03em; line-height: 1; }
+  .groet { font-size: 15px; font-weight: 600; color: var(--zacht); margin-top: 10px; }
+  .boven h1 { font-family: var(--kop); font-size: 30px; font-weight: 600; margin: 4px 0 0; letter-spacing: -0.02em; }
+  .podium { height: 250px; margin-top: -6px; }
+  .inhoud { padding: 0 14px 120px; display: flex; flex-direction: column; gap: 12px; }
+  .ik { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; flex: none; }
+  .ik svg { width: 20px; height: 20px; }
+  .gft { background: rgb(110 231 183 / 0.16); color: #7ff0bf; }
+  .klok { background: rgb(143 134 255 / 0.18); color: #c3bdff; }
+  .mand { background: rgb(111 211 255 / 0.14); color: var(--ijs); }
+  .gezin { background: rgb(255 122 160 / 0.14); color: #ff9fc0; }
+  .grijs { background: rgb(var(--wit) / 0.07); color: var(--zacht); }
+
+  .nv { padding: 14px; border-radius: 22px; background: linear-gradient(160deg, rgb(110 231 183 / 0.16), rgb(111 211 255 / 0.05) 60%), rgb(var(--nacht) / 0.6); border: 1px solid rgb(110 231 183 / 0.35); display: flex; flex-direction: column; gap: 10px; }
+  .nv .naam { display: flex; justify-content: space-between; font-size: 12.5px; font-weight: 700; color: var(--mint-t); }
+  .nv .naam span { color: var(--zacht); font-weight: 600; }
+  .rij { display: grid; grid-template-columns: 38px 1fr auto; gap: 10px; align-items: center; }
+  .rij b { display: block; font-size: 15px; }
+  .rij span { font-size: 12.5px; color: var(--zacht); }
+  .rij .wanneer { font-family: var(--kop); font-weight: 600; font-size: 15px; color: var(--tekst); }
+  .k { padding: 12px 14px; border-radius: 18px; background: rgb(var(--nacht) / 0.55); border: 1px solid var(--glas-rand); }
+  .k b { display: block; font-size: 15px; margin-top: 2px; }
+  .k small { font-size: 12px; font-weight: 700; color: var(--zacht); }
+
+  /* Het blad: een eigen pagina die over Thuis schuift. */
+  .blad { position: absolute; inset: 0; background: rgb(10 16 28 / 0.98); padding: 16px 16px 120px; display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
+  .blad .kopregel { display: flex; justify-content: space-between; align-items: center; }
+  .blad .terug { font-size: 14px; font-weight: 600; color: var(--accent); }
+  .blad h2 { font-family: var(--kop); font-size: 30px; font-weight: 600; margin: 2px 0 0; }
+  .blad .tip { font-size: 13px; color: var(--zacht); margin: 0; }
+  .blad h3 { margin: 6px 2px 0; font-size: 12px; font-weight: 700; color: var(--gedempt); text-transform: uppercase; letter-spacing: 0.06em; display: flex; justify-content: space-between; }
+  .blad h3 em { font-style: normal; text-transform: none; letter-spacing: 0; color: var(--accent); }
+  .her { display: grid; grid-template-columns: 54px 1fr 30px; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 16px; background: rgb(var(--wit) / 0.05); }
+  .her.nu { background: rgb(143 134 255 / 0.14); outline: 1px solid rgb(143 134 255 / 0.4); }
+  .her .uur b { display: block; font-family: var(--kop); font-size: 18px; line-height: 1; }
+  .her .uur span { font-size: 11px; color: var(--gedempt); font-weight: 600; }
+  .her .wat b { display: block; font-size: 14.5px; }
+  .her .wat span { font-size: 12px; color: var(--zacht); }
+  .vink { width: 30px; height: 30px; border-radius: 10px; border: 1.5px solid rgb(var(--wit) / 0.25); display: grid; place-items: center; color: var(--gedempt); }
+  .vink svg { width: 15px; height: 15px; }
+  .week { display: flex; gap: 8px; overflow: hidden; }
+  .dag { flex: none; width: 92px; padding: 10px; border-radius: 14px; background: rgb(var(--wit) / 0.05); display: flex; flex-direction: column; gap: 6px; }
+  .dag > b { font-size: 12px; color: var(--gedempt); font-weight: 700; }
+  .dag .bak { display: flex; align-items: center; gap: 6px; padding: 5px 7px; border-radius: 9px; font-size: 12px; font-weight: 700; }
+  .dag .bak svg { width: 15px; height: 15px; flex: none; }
+  .tabs2 { display: flex; gap: 6px; padding: 4px; border-radius: 13px; background: rgb(var(--wit) / 0.05); }
+  .tabs2 span { flex: 1; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13.5px; font-weight: 700; color: var(--zacht); }
+  .tabs2 span.aan { background: rgb(var(--wit) / 0.12); color: var(--tekst); }
+  .item { display: flex; align-items: center; gap: 12px; padding: 8px 4px; border-top: 1px solid rgb(var(--wit) / 0.06); font-size: 15px; }
+  .item .box { width: 22px; height: 22px; border-radius: 7px; border: 1.5px solid rgb(var(--wit) / 0.3); }
+
+  /* De melding op het slot. */
+  .slot { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 20%, #3b2f7a, #120d2c 60%, #07060f); }
+  .slot .uur { position: absolute; top: 110px; left: 0; right: 0; text-align: center; font-family: var(--kop); font-weight: 600; font-size: 84px; letter-spacing: -0.04em; color: #fff; }
+  .slot .datum { position: absolute; top: 90px; left: 0; right: 0; text-align: center; font-size: 17px; font-weight: 600; color: rgb(255 255 255 / 0.85); }
+  .melding { position: absolute; left: 12px; right: 12px; top: 300px; padding: 14px; border-radius: 24px; background: rgb(255 255 255 / 0.16); backdrop-filter: blur(20px); border: 1px solid rgb(255 255 255 / 0.18); color: #fff; }
+  .melding .van { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 700; color: rgb(255 255 255 / 0.8); }
+  .melding .van i { width: 20px; height: 20px; border-radius: 6px; background: linear-gradient(135deg, #6fb7ff, #8f86ff, #ff9fc0); }
+  .melding .van span { margin-left: auto; font-weight: 600; }
+  .melding b { display: block; font-size: 17px; margin-top: 8px; }
+  .melding p { margin: 3px 0 0; font-size: 14.5px; color: rgb(255 255 255 / 0.85); }
+  .melding .acties { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: 12px; }
+  .melding .acties span { height: 38px; border-radius: 12px; display: grid; place-items: center; font-size: 13.5px; font-weight: 700; background: rgb(255 255 255 / 0.14); }
+  .slot .uitleg { position: absolute; left: 24px; right: 24px; top: 520px; text-align: center; font-size: 13.5px; color: rgb(255 255 255 / 0.65); line-height: 1.5; }
+
+  /* Jij: de agenda kiezen, of uit. */
+  .jij { position: absolute; inset: 0; padding: 16px 16px 120px; display: flex; flex-direction: column; gap: 12px; }
+  .jij .terug { font-size: 14px; font-weight: 600; color: var(--accent); }
+  .jijkop { display: flex; align-items: center; gap: 14px; margin: 6px 0 4px; }
+  .jijkop .av { width: 56px; height: 56px; border-radius: 50%; background: #5b4bd6; display: grid; place-items: center; font-family: var(--kop); font-size: 26px; font-weight: 600; box-shadow: 0 0 0 5px rgb(91 75 214 / 0.3); }
+  .jijkop b { display: block; font-family: var(--kop); font-size: 28px; }
+  .jijkop span { font-size: 13.5px; color: var(--zacht); }
+  .vak { border-radius: 22px; background: rgb(var(--nacht) / 0.6); border: 1px solid var(--glas-rand); padding: 6px 14px; }
+  .vak > small { display: block; font-size: 12.5px; font-weight: 700; color: var(--zacht); padding: 10px 0 2px; }
+  .regel { display: grid; grid-template-columns: 38px 1fr auto; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid rgb(var(--wit) / 0.06); }
+  .regel:first-of-type { border-top: 0; }
+  .regel b { display: block; font-size: 15.5px; }
+  .regel span { font-size: 12.5px; color: var(--zacht); }
+  .regel .pijl { color: var(--gedempt); font-size: 18px; }
+  .vak .noot { font-size: 12.5px; color: var(--gedempt); padding: 4px 0 12px; line-height: 1.45; }
+  .onderblad { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 16px 30px; border-radius: 26px 26px 0 0; background: #121b2c; border-top: 1px solid var(--glas-rand); box-shadow: 0 -20px 60px rgb(0 0 0 / 0.5); display: flex; flex-direction: column; gap: 8px; }
+  .onderblad .greep { width: 40px; height: 5px; border-radius: 3px; background: rgb(var(--wit) / 0.25); align-self: center; }
+  .onderblad h3 { margin: 4px 0 0; font-family: var(--kop); font-size: 21px; font-weight: 600; }
+  .onderblad p { margin: 0 0 4px; font-size: 13px; color: var(--zacht); line-height: 1.45; }
+  .keus { display: grid; grid-template-columns: 22px 1fr; gap: 12px; align-items: center; padding: 11px 12px; border-radius: 14px; background: rgb(var(--wit) / 0.04); }
+  .keus.aan { background: rgb(143 134 255 / 0.14); outline: 1px solid rgb(143 134 255 / 0.45); }
+  /* Een vinkje per agenda: meer tegelijk mag. */
+  .keus i { width: 22px; height: 22px; border-radius: 7px; border: 2px solid rgb(var(--wit) / 0.35); display: grid; place-items: center; color: #121b2c; }
+  .keus.aan i { border-color: #b7b0ff; background: #b7b0ff; }
+  .keus i svg { width: 14px; height: 14px; }
+  .keus .label { justify-self: end; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: rgb(255 122 160 / 0.14); color: #ff9fc0; }
+  .keus { grid-template-columns: 22px 1fr auto; }
+  .schakelrij { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 2px 6px; }
+  .schakelrij b { font-size: 15.5px; display: block; }
+  .schakelrij span { font-size: 12.5px; color: var(--gedempt); }
+  .schakel { width: 52px; height: 30px; border-radius: 999px; background: #8f86ff; position: relative; flex: none; }
+  .schakel::after { content: ''; position: absolute; top: 3px; left: 25px; width: 24px; height: 24px; border-radius: 50%; background: #fff; }
+  .keus b { font-size: 15px; display: block; }
+  .keus span { font-size: 12px; color: var(--gedempt); }
+  .dim { position: absolute; inset: 0; background: rgb(0 0 0 / 0.45); }
+
+  .voorstel { padding: 14px; border-radius: 22px; background: linear-gradient(150deg, rgb(143 134 255 / 0.3), rgb(111 211 255 / 0.1)), rgb(var(--nacht) / 0.6); border: 1px solid rgb(143 134 255 / 0.45); }
+  .voorstel small { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 700; color: #c3bdff; }
+  .voorstel small i { width: 13px; height: 13px; border-radius: 50%; background: radial-gradient(circle at 34% 28%, #fff, #a99bff 50%, #5b4bd6); }
+  .voorstel b { display: block; font-family: var(--kop); font-size: 18px; font-weight: 600; line-height: 1.25; margin-top: 7px; }
+  .voorstel p { margin: 5px 0 0; font-size: 13px; line-height: 1.45; color: var(--zacht); }
+  .voorstel .knoppen { display: grid; grid-template-columns: 1.3fr 1fr; gap: 8px; margin-top: 12px; }
+  .voorstel .knoppen span { height: 40px; border-radius: 12px; display: grid; place-items: center; font-size: 14px; font-weight: 700; background: rgb(var(--wit) / 0.08); border: 1px solid var(--glas-rand); }
+  .voorstel .knoppen span.licht { background: var(--tekst); color: var(--inkt); border-color: transparent; }
+  [data-stand] { display: none !important; }
+  body[data-toon='thuis'] [data-stand~='thuis'], body[data-toon='blad'] [data-stand~='blad'], body[data-toon='melding'] [data-stand~='melding'], body[data-toon='jij'] [data-stand~='jij'] { display: block !important; }
+  body[data-toon='blad'] .blad[data-stand], body[data-toon='jij'] .jij[data-stand], body[data-toon='jij'] .onderblad[data-stand], body[data-toon='thuis'] .inhoud[data-stand] { display: flex !important; }
+  body[data-toon='thuis'] .tabs[data-stand], body[data-toon='blad'] .tabs[data-stand] { display: grid !important; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position: absolute">
+  <symbol id="bak" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M9 7V4.5h6V7M6 7l1 13h10l1-13M10 11v6M14 11v6"/></symbol>
+  <symbol id="klok" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M5 4 2.5 6.5M19 4l2.5 2.5"/></g></symbol>
+  <symbol id="mand" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h18l-2 10H5z"/><path d="M8 9l3-5M16 9l-3-5M9 13v3M15 13v3"/></g></symbol>
+  <symbol id="hart" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></symbol>
+  <symbol id="agenda" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></g></symbol>
+  <symbol id="tel" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></g></symbol>
+  <symbol id="vink" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M5 12.5l4.5 4.5L19 7"/></symbol>
+</svg>
+
+<div class="tel lucht lucht-avond">
+  <!-- Thuis met de kaart. -->
+  <div data-stand="thuis">
+    <div class="boven">
+      <div class="tijd">21:40</div>
+      <div class="groet">Goedenavond, <b style="color: var(--tekst)">Ricardo</b></div>
+      <h1>Rustig in huis</h1>
+    </div>
+    <div class="podium" id="podium"></div>
+  </div>
+  <div class="inhoud" data-stand="thuis">
+    <div class="voorstel">
+      <small><i></i>Voorstel van je huis</small>
+      <b>Vannacht wordt het 2°. Zal ik de woonkamer morgen om 6:00 al op 20° zetten?</b>
+      <p>Dan is het warm als je opstaat. Daarna weer zoals altijd.</p>
+      <div class="knoppen"><span class="licht">Ja, doe maar</span><span>Nee</span></div>
+    </div>
+    <div class="nv">
+      <div class="naam">Te doen<span>alles ›</span></div>
+      <div class="rij"><span class="ik gft"><svg><use href="#bak"/></svg></span><div><b>Morgen GFT</b><span>de groene bak, vanavond aan de straat</span></div><span class="wanneer">di</span></div>
+      <div class="rij"><span class="ik klok"><svg><use href="#klok"/></svg></span><div><b>Container buiten zetten</b><span>jouw herinnering</span></div><span class="wanneer">20:00</span></div>
+      <div class="rij"><span class="ik mand"><svg><use href="#mand"/></svg></span><div><b>Boodschappen</b><span>melk, brood, eieren en nog 2</span></div><span class="wanneer">5</span></div>
+    </div>
+    <div class="k"><small>Straks</small><b>Vannacht 16° overal, rustig</b></div>
+  </div>
+
+  <!-- #blad: alles, als eigen pagina. -->
+  <div class="blad" data-stand="blad">
+    <div class="kopregel"><span class="terug">‹ Thuis</span></div>
+    <h2>Te doen</h2>
+    <p class="tip">Zeg "herinner me om acht uur aan de container" of "zet melk op de boodschappen".</p>
+    <h3>Herinneringen <em>+ Nieuwe</em></h3>
+    <div class="her nu"><div class="uur"><b>20:00</b><span>vandaag</span></div><div class="wat"><b>Container buiten zetten</b><span>jij · wand en telefoon</span></div><span class="vink"><svg><use href="#vink"/></svg></span></div>
+    <div class="her"><div class="uur"><b>07:30</b><span>morgen</span></div><div class="wat"><b>Matt zijn gymtas meegeven</b><span>Shira · telefoon</span></div><span class="vink"><svg><use href="#vink"/></svg></span></div>
+    <h3>Deze week</h3>
+    <div class="week">
+      <div class="dag"><b>DI 3</b><span class="bak gft"><svg><use href="#bak"/></svg>GFT</span></div>
+      <div class="dag"><b>DO 5</b><span class="bak gezin"><svg><use href="#agenda"/></svg>Zwemles</span></div>
+      <div class="dag" style="width: 150px"><b>DI 10</b><span class="bak grijs"><svg><use href="#bak"/></svg>Rest</span><span class="bak" style="background: rgb(247 160 72 / 0.16); color: #ffb86b"><svg><use href="#bak"/></svg>PMD</span></div>
+    </div>
+    <h3>Lijsten</h3>
+    <div class="tabs2"><span class="aan">Boodschappen 5</span><span>To-do 3</span></div>
+    <div>
+      <div class="item" style="border-top: 0"><span class="box"></span>Melk</div>
+      <div class="item"><span class="box"></span>Brood</div>
+      <div class="item"><span class="box"></span>Eieren</div>
+    </div>
+  </div>
+
+  <!-- #melding: om 20:00 op het slot van de telefoon. -->
+  <div class="slot" data-stand="melding">
+    <div class="datum">maandag 2 november</div>
+    <div class="uur">20:00</div>
+    <div class="melding">
+      <div class="van"><i></i>JE HUIS<span>nu</span></div>
+      <b>Container buiten zetten</b>
+      <p>Morgen komt het GFT: de groene bak.</p>
+      <div class="acties"><span>Gedaan</span><span>10 min</span><span>1 uur</span></div>
+    </div>
+    <div class="uitleg">De wand zegt het tegelijk hardop, als er iemand thuis is. Gedaan op de een, is gedaan op de ander.</div>
+  </div>
+
+  <!-- #jij: de agenda kiezen, of uit. -->
+  <div class="jij" data-stand="jij">
+    <span class="terug">‹ Instellingen</span>
+    <div class="jijkop"><span class="av">R</span><div><b>Ricardo</b><span>Hoofdgebruiker · thuis</span></div></div>
+    <div class="vak">
+      <small>Agenda en herinneringen</small>
+      <div class="regel"><span class="ik klok"><svg><use href="#agenda"/></svg></span><div><b>Jouw agenda's</b><span>Ric060589@gmail.com en Gezin</span></div><span class="pijl">›</span></div>
+      <div class="regel"><span class="ik grijs"><svg><use href="#tel"/></svg></span><div><b>Herinneringen naar</b><span>Telefoon Ricardo, en de wand</span></div><span class="pijl">›</span></div>
+      <div class="noot">"Wat staat er morgen?" kijkt in de agenda's die jij kiest, en in Afval. Je eigen agenda staat nooit op de wand; Gezin wel, want die is van iedereen.</div>
+    </div>
+  </div>
+  <div class="dim" data-stand="jij"></div>
+  <div class="onderblad" data-stand="jij">
+    <span class="greep"></span>
+    <h3>Jouw agenda's</h3>
+    <div class="schakelrij"><div><b>Agenda's gebruiken</b><span>uit: de assistent leest geen agenda voor jou</span></div><span class="schakel"></span></div>
+    <p>Kies er zoveel als je wilt, uit Home Assistant. Wat erin staat, zie jij op je telefoon of hoor je als je het vraagt.</p>
+    <div class="keus aan"><i><svg><use href="#vink"/></svg></i><div><b>Ric060589@gmail.com</b><span>Google</span></div></div>
+    <div class="keus aan"><i><svg><use href="#vink"/></svg></i><div><b>Gezin</b><span>Google, van iedereen</span></div><span class="label">ook op de wand</span></div>
+    <div class="keus"><i></i><div><b>Werkplek</b><span>Google</span></div></div>
+    <div class="keus"><i></i><div><b>Verjaardagen</b><span>Google</span></div></div>
+    <div class="keus"><i></i><div><b>Parro agenda</b><span>school</span></div></div>
+  </div>
+
+  <nav class="tabs" id="tabs" data-stand="thuis blad"></nav>
+</div>
+<script src="../../frontend/kit/teksten.nl.js"></script>
+<script src="../../frontend/kit/teksten.en.js"></script>
+<script src="../../frontend/kit/taal.js"></script>
+<script src="../../frontend/kit/nav.js"></script>
+<script src="../../frontend/kit/huis.js"></script>
+<script>
+  const toon = { '#blad': 'blad', '#melding': 'melding', '#jij': 'jij' }[location.hash] ?? 'thuis';
+  document.body.dataset.toon = toon;
+  nav.tabs(document.getElementById('tabs'), 'thuis');
+  if (toon === 'thuis') {
+    huis.teken(document.getElementById('podium'), {
+      beschrijving: "Het huis, 's avonds.",
+      tijd: 'avond',
+      zon: { aandeel: 0, panelen: 12 },
+      etages: [
+        { kamers: [{ naam: 'Woonkamer', gewicht: 1.5, apparaten: [{ soort: 'lamp', aan: true, x: 0.4 }] }, { naam: 'Hal', gewicht: 0.6, stil: true, apparaten: [] }] },
+        { kamers: [{ naam: 'Badkamer', stil: true, apparaten: [] }, { naam: 'Slaapkamer', apparaten: [{ soort: 'lamp', aan: true, x: 0.5 }] }] },
+        { dak: true, kamers: [{ naam: 'Zolder', stil: true, apparaten: [] }] },
+      ],
+      net: true,
+    }, { breedte: 390, hoogte: 250, marge: 0.05 });
+  }
+</script>
+</body>
+</html>

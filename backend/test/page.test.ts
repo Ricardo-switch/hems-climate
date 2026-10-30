@@ -2163,6 +2163,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     };
     const herinnering = { id: 'h1', tekst: 'Container buiten zetten', ms: nu + 20 * 60_000, voor: null, naam: null, status: 'wacht', gemaakt: nu, eigen: false };
     let speelt: unknown[] = [];
+    let leeg = false;
     const gestuurd: unknown[] = [];
     await context.route(`${baseUrl}/api/te-doen**`, async (route) => {
       if (route.request().method() === 'POST') {
@@ -2170,6 +2171,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
         return route.fulfill({ json: { ok: true } });
       }
       if (route.request().url().includes('alleen=nu')) return route.fulfill({ json: { speelt } });
+      if (leeg) return route.fulfill({ json: { aan: true, herinneringen: [], lijsten: [], afspraken: [], speelt: [] } });
       return route.fulfill({
         json: {
           aan: true,
@@ -2224,6 +2226,25 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await moment.locator('[data-td-gedaan]').click();
       await expect.poll(() => gestuurd.at(-1)).toEqual({ actie: 'gedaan', id: 'h1' });
       await expect.poll(() => p.locator('.td-moment').count()).toBe(0);
+      // Niets te doen: de kaart blijft staan, zodat je bij je lijsten kunt (30 oktober 2026).
+      leeg = true;
+      await p.evaluate('window.tedoen.laad()');
+      await expect.poll(() => kaart.locator('.td-rij').count()).toBe(1);
+      expect(await kaart.isVisible()).toBe(true);
+      expect(await kaart.textContent()).toContain('Niets te doen');
+      // Functies › Te doen: keuzelijsten in plaats van rijen knoppen.
+      await context.route(`${baseUrl}/api/functies`, async (route) => {
+        if (route.request().method() !== 'GET') return route.continue();
+        const echt = (await (await route.fetch()).json()) as { gevonden: Record<string, unknown> };
+        echt.gevonden['lijsten'] = [{ id: 'todo.shopping_list', naam: 'Boodschappenlijst' }, { id: 'todo.to_do', naam: 'To-do' }];
+        echt.gevonden['agendas'] = ['Afvalbeheer Dar', 'Agenda', 'F1 - Race Season calendar', 'Feestdagen in nederland', 'Formula 1', 'Gezin', 'Parro agenda', 'Ric060589@gmail.com', 'Verjaardagen', 'Werkplek'].map((naam, i) => ({ id: `calendar.a${i}`, naam }));
+        await route.fulfill({ json: echt });
+      });
+      await p.goto(`${baseUrl}/functies.html#tedoen`);
+      await p.locator('#wand [data-tedoen-keus]').first().waitFor({ timeout: 10_000 });
+      expect(await p.locator('#wand [data-tedoen-keus]').count()).toBe(4);
+      expect(await p.locator('#wand [data-vorm] a[href="jij.html#agenda"]').count()).toBe(1);
+      await shot('tedoen-functies');
       expect(fouten).toEqual([]);
     } finally {
       await context.close();
