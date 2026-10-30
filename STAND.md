@@ -289,7 +289,8 @@ verwijzing bestaat.
   knop boven de bel brengt je terug ([155]).
 - **Vandaag** vult wat het eigen logboek nog niet heeft aan uit de statistiek
   van Home Assistant; een back-up zet in de add-on ook de configuratie terug
-  ([156]).
+  ([156]). Sinds [220] doen de assistent, het brein en het weer dat ook, en
+  heeft de add-on in Home Assistant een eigen uitleg en benoemde instellingen.
 - **Inrichten** heeft onderaan overal Terug en Volgende, en Volgende bewaart
   wat er in beeld staat; de balkjes zeggen wat nagelopen is en wat al klaar
   stond. Kamers samenvoegen tot één ruimte met zones, elk deel rond het huis
@@ -724,4 +725,5 @@ verwijzing bestaat.
 [217]: DECISIONS.md#217-te-doen-als-eigen-tab-en-de-assistent-als-groep-bij-instellingen
 [218]: DECISIONS.md#218-later-uitvoeren-afvinken-op-uid-en-de-afgevinkte-weghalen
 [219]: DECISIONS.md#219-je-eigen-agendas-op-de-wand-als-je-thuis-bent
+[220]: DECISIONS.md#220-wat-een-nieuwe-gebruiker-tegenkwam
 <!-- links:einde -->

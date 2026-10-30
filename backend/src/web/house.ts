@@ -33,6 +33,7 @@ import type { HeatStoreExplanation } from '../core/decision.js';
 import { roomStatus, withArticle, type DecisionView, type Lang, type RoomKind } from './assistant.js';
 import {
   OUTSIDE_FLOOR,
+  ROOM_TYPES,
   carryOver,
   floorName,
   floorOrder,
@@ -1120,6 +1121,10 @@ const OVERVIEW = /\b(alles|alle|all)\b/i;
  * Een overzichtsgroep is een groep die een heel gebied schakelt: zijn naam zegt
  * "alles", of hij bevat zelf groepen. Die is nooit een lamp; alles uit op een
  * etage of in het hele huis doet de app zelf, met de lampen uit de indeling.
+ *
+ * Een groep van Home Assistant (platform `group`) die niet beschikbaar is, somt
+ * zijn lampen niet op. Hij blijft toch een groep (30 oktober 2026: "Hal (alles)"
+ * stond anders als losse lamp naast de spots in de hal).
  */
 function lightGroups(registers: HouseRegisters, states: ReadonlyMap<string, HaEntityState>): LightGroup[] {
   const byName = new Map<string, string>();
@@ -1133,6 +1138,7 @@ function lightGroups(registers: HouseRegisters, states: ReadonlyMap<string, HaEn
     const n = st.attributes['friendly_name'];
     if (typeof n === 'string') byName.set(n.trim().toLowerCase(), id);
   }
+  const groepPlatform = new Set(registers.entities.filter((e) => e.entity_id.startsWith('light.') && e.platform === 'group').map((e) => e.entity_id));
   const out: Omit<LightGroup, 'overzicht'>[] = [];
   for (const [id, st] of states) {
     if (!id.startsWith('light.')) continue;
@@ -1146,7 +1152,7 @@ function lightGroups(registers: HouseRegisters, states: ReadonlyMap<string, HaEn
         .map((n) => (typeof n === 'string' ? byName.get(n.trim().toLowerCase()) : undefined))
         .filter((m): m is string => m != null);
     }
-    if (!hue && !Array.isArray(members)) continue;
+    if (!hue && !Array.isArray(members) && !groepPlatform.has(id)) continue;
     out.push({ id, naam: friendly(st, id), leden, hue });
   }
   const ids = new Set(out.map((g) => g.id));
@@ -1532,18 +1538,47 @@ function roomForGroups(groepen: readonly string[], rooms: readonly LayoutRoom[])
   return null;
 }
 
+/** Hoe een kamer van een soort in een apparaatnaam heet: de hal heet vaak "Entree" in de indeling. */
+const SOORT_WOORDEN: Partial<Record<RoomType, readonly string[]>> = {
+  hal: ['hal', 'gang', 'overloop', 'entree', 'trap'],
+  toilet: ['toilet', 'wc'],
+  wasruimte: ['wasruimte', 'washok'],
+};
+/** Woorden die een kamer niet van een andere onderscheiden. */
+const ALGEMEEN_WOORD = new Set(['kamer', 'de', 'het', 'van', 'en', 'boven', 'beneden', 'achter', 'voor', ...ROOM_TYPES]);
+
 /**
  * Een kamer uit de naam van het apparaat (besluit 157): "Bewegingssensor entree"
  * hoort in de Entree. Hele woorden, en bij twee kamers de langste naam: dan wint
  * "Slaapkamer Daan" van "Slaapkamer".
+ *
+ * Staat de hele kamernaam er niet in, dan nog (30 oktober 2026, "Spot 1 Matts"):
+ * een woord dat alleen in de naam van die ene kamer staat ("Matts" bij
+ * "Slaapkamer Matts"), of het woord voor de soort van een kamer als er maar één
+ * kamer van die soort is ("Spot 1 hal" bij de Entree, die een hal is).
  */
 export function roomForName(naam: string, rooms: readonly LayoutRoom[]): string | null {
-  const woorden = ` ${naam.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ')} `;
+  const plat = (x: string) => x.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+  const woorden = ` ${plat(naam)} `;
+  const heel = (w: string) => woorden.includes(` ${w} `);
   const raak = rooms
-    .map((r) => ({ r, n: r.naam.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim() }))
-    .filter(({ n }) => n.length >= 3 && woorden.includes(` ${n} `))
+    .map((r) => ({ r, n: plat(r.naam) }))
+    .filter(({ n }) => n.length >= 3 && heel(n))
     .sort((a, b) => b.n.length - a.n.length);
-  return raak[0]?.r.id ?? null;
+  if (raak[0]) return raak[0].r.id;
+  // Een onderscheidend woord: alleen in de naam van deze kamer, en geen soort van kamer.
+  const woordenVan = rooms.map((r) => ({ r, w: plat(r.naam).split(' ').filter((x) => x.length >= 3 && !ALGEMEEN_WOORD.has(x)) }));
+  const telling = new Map<string, number>();
+  for (const { w } of woordenVan) for (const x of new Set(w)) telling.set(x, (telling.get(x) ?? 0) + 1);
+  const eigen = woordenVan.filter(({ w }) => w.some((x) => telling.get(x) === 1 && heel(x)));
+  if (eigen.length === 1) return eigen[0]!.r.id;
+  // De soort: "hal" bij de enige kamer die een hal is.
+  for (const [soort, lijst] of Object.entries(SOORT_WOORDEN) as [RoomType, readonly string[]][]) {
+    if (!lijst.some(heel)) continue;
+    const vanSoort = rooms.filter((r) => r.soort === soort);
+    if (vanSoort.length === 1) return vanSoort[0]!.id;
+  }
+  return null;
 }
 
 /** Wat het huis nu kent: de sleutels die een indeling mag gebruiken. */

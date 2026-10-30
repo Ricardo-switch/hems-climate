@@ -106,12 +106,15 @@ let tekening = null;
 /** Geteld zoals Inrichten het telt, zodat het volgende scherm hetzelfde zegt (besluit 154). */
 function tellers(deel) {
   const huisNu = voorstel.huis;
-  const etages = (huisNu.etages ?? []).filter((e) => e.ruimtes?.length).length;
-  const ruimtes = (huisNu.etages ?? []).reduce((n, e) => n + (e.ruimtes?.length ?? 0), 0);
+  // Binnen apart van buiten, zoals Inrichten (30 oktober 2026: het welkom zei 4 etages, Inrichten "3 etages, en buiten").
+  const binnen = (e) => (e.ruimtes ?? []).filter((r) => !huismodel.isBuiten(e, r));
+  const etages = (huisNu.etages ?? []).filter((e) => e.id !== 'buiten' && binnen(e).length).length;
+  const ruimtes = (huisNu.etages ?? []).filter((e) => e.id !== 'buiten').reduce((n, e) => n + binnen(e).length, 0);
+  const buiten = (huisNu.etages ?? []).some((e) => (e.ruimtes ?? []).some((r) => huismodel.isBuiten(e, r)));
   const apparaten = (huisNu.etages ?? []).flatMap((e) => e.ruimtes ?? []).reduce((n, r) => n + (r.apparaten?.length ?? 0), 0) + (huisNu.zonderRuimte?.length ?? 0);
   const tel = (n) => Math.round(n * deel);
   return `<span class="bezig"><i aria-hidden="true"></i><span>${esc(t('begin.gevonden'))}</span></span>
-    <span class="tellers"><span><b>${tel(etages)}</b>${esc(t('inr.tel.etages', { n: etages }))}</span><span><b>${tel(ruimtes)}</b>${esc(t('begin.ruimtes', { n: ruimtes }))}</span><span><b>${tel(apparaten)}</b>${esc(t('inr.tel.apparaten', { n: apparaten }))}</span></span>`;
+    <span class="tellers"><span><b>${tel(etages)}</b>${esc(t(buiten ? 'inr.tel.etagesBuiten' : 'inr.tel.etages', { n: etages }))}</span><span><b>${tel(ruimtes)}</b>${esc(t('begin.ruimtes', { n: ruimtes }))}</span><span><b>${tel(apparaten)}</b>${esc(t('inr.tel.apparaten', { n: apparaten }))}</span></span>`;
 }
 
 function tekenHuis() {
@@ -224,7 +227,8 @@ async function bewaar() {
   tekenLinks();
   try {
     await stuur('api/onboarding', { antwoorden });
-    void wachtOpHerstart('inrichten.html');
+    // Meteen naar de eerste stap (30 oktober 2026): het welkom van Inrichten zei hetzelfde nog een keer.
+    void wachtOpHerstart('inrichten.html#woning');
   } catch (err) {
     fout = err.message;
     stap = vragen().length ? vragen().length - 1 : 'welkom';

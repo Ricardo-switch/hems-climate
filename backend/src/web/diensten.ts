@@ -9,7 +9,7 @@ import { timingSafeEqual } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Geometry, SiteConfig } from '../core/model.js';
 import type { LiveSnapshot } from '../adapters/homeassistant/shadow.js';
-import { TodayCache } from './today.js';
+import { TodayCache, withHistory, type TodayReport } from './today.js';
 import { SolarHistory, learnSolar } from './solar-learn.js';
 import type { YieldReport } from './yield.js';
 import { LANGS } from './assistant.js';
@@ -190,8 +190,8 @@ export class Diensten {
       // Dan met wat er al was.
     }
     await weather.log.load();
-    const todayWh = await this.today.get().then(
-      (t) => t.zonWh,
+    const todayWh = await this.vandaag().then(
+      (t) => t?.zonWh ?? 0,
       () => 0,
     );
     const report = weatherReport({
@@ -231,6 +231,27 @@ export class Diensten {
     const loc = this.options.location?.() ?? null;
     const zon = loc ? sunPosition(nuMs, loc.latDeg, loc.lonDeg) : null;
     return lichtRecept({ nuMs, tijdzone: config.timezone, zonHoogteDeg: zon?.elevationDeg ?? null, weer: this.weather?.report.vandaag.soort ?? null });
+  }
+
+  /**
+   * Vandaag uit het logboek, met de kwartieren zonder eigen meting uit de
+   * statistiek van Home Assistant (17 oktober 2026). Eerst deed alleen de pagina
+   * Vandaag dat; de assistent en het weer telden alleen het logboek, en zeiden op
+   * de eerste dag "bijna niets geleverd" terwijl Vandaag 3,1 kWh liet zien (30
+   * oktober 2026). Null zonder logboek.
+   */
+  async vandaag(gisteren = false): Promise<TodayReport | null> {
+    const config = this.config();
+    const logDir = this.options.logDir;
+    if (config == null || logDir == null) return null;
+    this.today ??= new TodayCache(logDir, config);
+    let rapport = await (gisteren ? this.today.yesterday() : this.today.get());
+    const historie = this.options.historie;
+    if (historie && rapport.kwartieren.some((q) => q.zonW == null || q.netW == null)) {
+      const h = await historie(rapport.vanMs, rapport.totMs).catch(() => null);
+      if (h) rapport = withHistory(rapport, h.zon, h.net);
+    }
+    return rapport;
   }
 
   /** Schermen bedienen: de installatie staat het toe, en het staat aan bij Functies (besluit 121). */

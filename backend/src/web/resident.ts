@@ -129,7 +129,8 @@ const HEAD = {
     many: 'Het huis wordt geregeld',
     // Tijdens de schaduw gebeurt het niet echt (besluit 124).
     oneWould: (room: string, cool: boolean) => `${cap(room)} zou ${cool ? 'koelen' : 'verwarmen'}`,
-    manyWould: 'Het huis zou regelen',
+    // "Het huis zou regelen" las krom voor wie net begint (30 oktober 2026); de kamers eronder zeggen wat het zou doen.
+    manyWould: 'Het huis kijkt mee',
     // De schaduw wil wat er al echt gebeurt (besluit 188): zoals het in huis is.
     manyReal: (rooms: string, cool: boolean) => `${cap(rooms)} worden ${cool ? 'gekoeld' : 'verwarmd'}`,
     // Onder de kop over één kamer de getallen, niet nog eens de kop (17 oktober 2026).
@@ -181,7 +182,7 @@ const HEAD = {
     one: (room: string, cool: boolean) => `${cap(room)} is being ${cool ? 'cooled' : 'heated'}`,
     many: 'The house is being managed',
     oneWould: (room: string, cool: boolean) => `${cap(room)} would ${cool ? 'cool' : 'heat'}`,
-    manyWould: 'The house would act',
+    manyWould: 'The house is watching',
     manyReal: (rooms: string, cool: boolean) => `${cap(rooms)} are being ${cool ? 'cooled' : 'heated'}`,
     numbers: (temp: string, goal: string | null) => `It is ${temp}° there${goal != null ? `, the target is ${goal}°` : ''}.`,
     ownSun: ' That can run on your own solar.',

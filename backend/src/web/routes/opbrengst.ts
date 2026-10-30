@@ -7,7 +7,7 @@
 
 import type { ServerResponse } from 'node:http';
 import type { SiteConfig } from '../../core/model.js';
-import { TodayCache, todayInLang, withHistory } from '../today.js';
+import { todayInLang } from '../today.js';
 import { SolarHistory, learnSolar } from '../solar-learn.js';
 import { PERIODS, periodRange, yearStartOf, yieldReport, type PeriodKind, type YieldReport } from '../yield.js';
 import { partsIn, zonedMidnight } from '../today.js';
@@ -88,17 +88,10 @@ export async function opbrengstRoutes(d: Diensten, v: Verzoek): Promise<boolean>
       sendJson(res, 503, { wachten: 'er wordt niet gelogd, dus er is geen dag om te tonen' });
       return true;
     }
-    d.today ??= new TodayCache(logDir, config);
     try {
-      // ?dag=gisteren: de hele dag ervoor, in dezelfde vorm.
-      const gisteren = url.searchParams.get('dag') === 'gisteren';
-      let rapport = await (gisteren ? d.today.yesterday() : d.today.get());
-      // Kwartieren zonder eigen meting uit de statistiek van Home Assistant (17 oktober 2026).
-      const historie = d.options.historie;
-      if (historie && rapport.kwartieren.some((q) => q.zonW == null || q.netW == null)) {
-        const h = await historie(rapport.vanMs, rapport.totMs).catch(() => null);
-        if (h) rapport = withHistory(rapport, h.zon, h.net);
-      }
+      // ?dag=gisteren: de hele dag ervoor, in dezelfde vorm. Kwartieren zonder eigen meting uit Home Assistant.
+      const rapport = await d.vandaag(url.searchParams.get('dag') === 'gisteren');
+      if (rapport == null) throw new Error('geen logboek');
       sendJson(res, 200, todayInLang(rapport, config, taalVan(url.searchParams.get('taal') ?? req.headers['x-taal'])));
     } catch (error) {
       sendJson(res, 500, { fout: (error as Error).message });

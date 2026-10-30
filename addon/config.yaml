@@ -19,7 +19,7 @@ name: Smart Climate
 # Gelijk aan VERSIE in backend/src/version.ts; een test houdt ze gelijk. De
 # Supervisor ziet een update zodra dit nummer op `main` omhooggaat, en haalt dan
 # het image met dat nummer op (besluit 153).
-version: 0.91.0
+version: 0.92.0
 slug: hems_climate
 description: >-
   Klimaat en zon in één app: kijkt mee met je verwarming, airco's en
@@ -93,18 +93,19 @@ map:
   # beheerder, en alleen in custom_components/smart_climate.
   - homeassistant_config:rw
 
+# De drie technische getallen zijn optioneel (0.92.0): een nieuwe gebruiker ziet
+# ze dan niet, Home Assistant zet ze onder "ongebruikte opties". Leeg is de
+# standaard van de dienst: 30 s, 15 s en 10 minuten. Namen en uitleg staan in
+# translations/.
 options:
-  hartslag_seconden: 30
-  min_interval_seconden: 15
-  bewaking_minuten: 10
   # Lampen aan- en uitzetten vanuit de app (besluit 97). Alleen licht, en alleen
   # de lampen die het huis toont; klimaat en screens blijven alleen-lezen.
   licht_bedienen: true
 
 schema:
-  hartslag_seconden: int(5,3600)
-  min_interval_seconden: int(0,600)
-  bewaking_minuten: int(0,1440)
+  hartslag_seconden: int(5,3600)?
+  min_interval_seconden: int(0,600)?
+  bewaking_minuten: int(0,1440)?
   licht_bedienen: bool
   # Het adres waarop je telefoon Home Assistant bereikt, voor het inloggen op de
   # eigen poort (besluit 160), bijvoorbeeld https://homeassistant.<tailnet>.ts.net

@@ -67,10 +67,19 @@ export SHADOW_LOG_DIR="${LOG_DIR}"
 if bashio::supervisor.ping 2> /dev/null; then
   # Toewijzen en exporteren apart: `export X="$(...)"` slikt de foutcode van
   # het commando tussen de haakjes in (ShellCheck SC2155).
-  SHADOW_TICK_SECONDS="$(bashio::config 'hartslag_seconden')"
-  SHADOW_MIN_INTERVAL_SECONDS="$(bashio::config 'min_interval_seconden')"
-  SHADOW_WATCHDOG_MINUTES="$(bashio::config 'bewaking_minuten')"
-  export SHADOW_TICK_SECONDS SHADOW_MIN_INTERVAL_SECONDS SHADOW_WATCHDOG_MINUTES
+  # De drie technische getallen zijn optioneel (0.92.0): leeg is de standaard van de dienst.
+  if bashio::config.has_value 'hartslag_seconden'; then
+    SHADOW_TICK_SECONDS="$(bashio::config 'hartslag_seconden')"
+    export SHADOW_TICK_SECONDS
+  fi
+  if bashio::config.has_value 'min_interval_seconden'; then
+    SHADOW_MIN_INTERVAL_SECONDS="$(bashio::config 'min_interval_seconden')"
+    export SHADOW_MIN_INTERVAL_SECONDS
+  fi
+  if bashio::config.has_value 'bewaking_minuten'; then
+    SHADOW_WATCHDOG_MINUTES="$(bashio::config 'bewaking_minuten')"
+    export SHADOW_WATCHDOG_MINUTES
+  fi
   # Licht bedienen (besluit 97). Achter Ingress staat het in de dienst standaard
   # aan; uitzetten in de instellingen maakt er HEMS_LIGHTS=0 van.
   if bashio::config.true 'licht_bedienen'; then

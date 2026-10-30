@@ -1,0 +1,28 @@
+configuration:
+  licht_bedienen:
+    name: Lampen, scènes en schermen bedienen
+    description: >-
+      Zet lampen, scènes en schermen aan en uit vanuit de app. Uit is alleen
+      kijken. Je verwarming en airco's bedient Smart Climate nog niet.
+  ha_adres:
+    name: Adres van Home Assistant op je telefoon
+    description: >-
+      Alleen nodig voor Smart Climate als losse app via Tailscale, zie de
+      documentatie. Bijvoorbeeld https://homeassistant.jouw-tailnet.ts.net.
+      Anders leeg laten.
+  hartslag_seconden:
+    name: Hoe vaak opnieuw rekenen (seconden)
+    description: >-
+      Technisch. Leeg laten is 30 seconden.
+  min_interval_seconden:
+    name: Minste tijd tussen twee besluiten (seconden)
+    description: >-
+      Technisch. Leeg laten is 15 seconden.
+  bewaking_minuten:
+    name: Herstarten na zoveel minuten zonder besluit
+    description: >-
+      Technisch. Leeg laten is 10 minuten; 0 zet het uit.
+network:
+  8100/tcp: >-
+    Smart Climate als losse app op je telefoon, alleen via Tailscale. Laat leeg
+    als je de app van Home Assistant gebruikt.

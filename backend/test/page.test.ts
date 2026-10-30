@@ -1917,6 +1917,19 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await seg.locator(`[data-rolwaarde="${doel}"]`).click();
     await kaart.locator(`[data-rol] [data-rolwaarde="${doel}"][aria-pressed="true"]`).first().waitFor({ timeout: 5000 });
     await shot('warmte');
+    // Vloerverwarming (0.92.0): eerst op water of elektrisch; elektrisch gaat aan met een thermostaat naar keuze.
+    await kaart.locator('[data-erbij]').first().click();
+    await kaart.locator('[data-toevoeg-soort="vloer"]').click();
+    await kaart.locator('[data-toevoeg-vloer="elektrisch"]').waitFor();
+    expect(await kaart.locator('[data-toevoeg-aan]').count()).toBe(0);
+    await kaart.locator('[data-toevoeg-vloer="elektrisch"]').click();
+    await kaart.locator('[data-toevoeg-aan="thermostaat"]').click();
+    const welke = kaart.locator('select[data-toevoeg-apparaat]');
+    await welke.waitFor();
+    expect(await welke.locator('option').count()).toBeGreaterThan(1);
+    expect(await kaart.locator('[data-toevoeg-bewaar]').isDisabled()).toBe(true);
+    await kaart.locator('[data-toevoeg-annuleer]').click();
+    await expect.poll(() => kaart.locator('[data-toevoeg-soort]').count()).toBe(0);
     await kaart.locator('[data-volgende]').click();
     // Wat elk apparaat kan (besluit 197): per apparaat de punten, met de rol onderaan.
     await kaart.locator('h1', { hasText: 'Wat elk apparaat kan' }).waitFor();

@@ -90,7 +90,9 @@ function feitenVan(id) {
       const a = d.aansluiting;
       const p = d.energie?.instellingen?.prijzen;
       const aantal = a?.antwoorden?.panelen?.aantal;
-      const panelen = aantal ? (a.antwoorden.panelen.ligging === 'beide' ? t('instellingen.tweeKanten', { n: aantal }) : `${aantal}`) : (a?.configuratie?.panelen ?? []).length ? t('instellingen.vlakken', { n: a.configuratie.panelen.length }) : null;
+      // Een ligging die je bij Inrichten bevestigde, telt ook (30 oktober 2026: "Klopt" gaf hier toch "nog kiezen").
+      const lig = ['bevestigd', 'configuratie'].includes(a?.ligging?.stand) ? a.ligging.nu : null;
+      const panelen = aantal ? (a.antwoorden.panelen.ligging === 'beide' ? t('instellingen.tweeKanten', { n: aantal }) : `${aantal}`) : (a?.configuratie?.panelen ?? []).length ? t('instellingen.vlakken', { n: a.configuratie.panelen.length }) : lig ? (lig.vermogenKort ?? lig.vermogen ?? lig.richting ?? null) : null;
       const z = a?.antwoorden?.zekering ?? a?.configuratie?.zekering;
       return [
         [t('instellingen.panelen'), panelen, !a ? '…' : t('instellingen.nogKiezen')],

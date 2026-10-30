@@ -1,5 +1,43 @@
 # Wat is er nieuw · What is new
 
+## 0.92.0
+
+*30 oktober 2026*
+
+**Beter**
+
+- Bij Inrichten kies je bij vloerverwarming of hij op water of elektrisch is; elektrisch gaat aan met elke thermostaat, zoals die in de badkamer
+- Lampen zonder kamer krijgen een kamer voorgesteld op een woord uit hun naam, zoals "Spot 1 Matts" bij Slaapkamer Matts of "Spot hal" bij de Entree
+- De add-on heeft in Home Assistant een eigen uitleg, en zijn instellingen hebben een naam; de technische staan bij de ongebruikte opties
+- Wat na Inrichten nog mist, heet nu Mist nog; een stap die al is ingevuld, telt daar niet meer mee
+- Thuis zegt in de schaduw "Het huis kijkt mee"
+
+**Opgelost**
+
+- Op de eerste dag zeiden de assistent en het weer dat de panelen bijna niets leverden; ze lezen de dag nu net als Vandaag uit Home Assistant
+- Een buitentemperatuur die in één woord heet, zoals Buitentemperatuur, wordt bij het begin gevonden
+- Een lampgroep die in Home Assistant niet beschikbaar is, staat niet meer als losse lamp naast zijn lampen
+- Het welkom telt de etages zoals Inrichten, en gaat na het opslaan meteen naar de eerste stap
+- Een bevestigde ligging van de panelen telt bij Instellingen als gekozen
+
+*English*
+
+**Improved**
+
+- In Set up you choose whether underfloor heating runs on water or electricity; electric runs on any thermostat, such as the one in the bathroom
+- Lights without a room get one suggested from a word in their name, such as "Spot 1 Matts" for Bedroom Matts or "Hall spot" for the Entrance
+- The add-on has its own documentation in Home Assistant, and its settings have a name; the technical ones are with the unused options
+- What is still missing after Set up is now called Still missing; a step that is already filled in no longer counts there
+- Home says "The house is watching" while in shadow mode
+
+**Fixed**
+
+- On the first day the assistant and the weather said the panels delivered almost nothing; they now read the day from Home Assistant, like Today
+- An outdoor temperature named as one word, such as Buitentemperatuur, is found at the start
+- A light group that is unavailable in Home Assistant no longer shows as a separate light next to its lights
+- The welcome counts the floors like Set up, and goes straight to the first step after saving
+- A confirmed panel orientation counts as chosen under Settings
+
 ## 0.91.0
 
 *30 oktober 2026*

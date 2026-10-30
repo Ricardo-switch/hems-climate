@@ -823,14 +823,22 @@ let toevoegenIn = null;
  * er hangt, dan hoe het aangaat. Een radiator op de cv gaat aan met de
  * thermostaat van de ketel (zoals een Nest), een slimme radiatorknop, of met
  * de hand. Een airco of thermostaat uit Home Assistant kies je uit de lijst.
+ * Vloerverwarming is op water of elektrisch (0.92.0, zoals bij Kamers en
+ * indeling): elektrisch gaat aan met een eigen thermostaat, zoals die in de
+ * badkamer die een infraroodpaneel en de vloer aanstuurt.
  */
 let toevoeg = null;
 const TOEVOEG_SOORT = [...['radiator', 'vloer', 'paneel', 'kachel'].map((b) => [b, huismodel.metHoofdletter(t(`bron.${b}`))]), ['ha', t('inr.aircoThermo')]];
 function toevoegVorm(r, los, elders) {
-  const v = toevoeg ?? { soort: null, aan: null, apparaat: null };
-  const cv = v.soort === 'radiator' || v.soort === 'vloer';
+  const v = toevoeg ?? { soort: null, aan: null, apparaat: null, vloer: null };
+  const cv = v.soort === 'radiator' || (v.soort === 'vloer' && v.vloer !== 'elektrisch');
   const ketel = huismodel.cvThermostaat(d.huis, antwoorden().verwarming);
   const toestellen = binnen().flatMap((x) => klimaatIn(x).map((a) => ({ a, r: x })));
+  // Vloerverwarming: eerst op water (de cv) of elektrisch, daarna pas hoe hij aangaat.
+  const vloerVraag = v.soort === 'vloer'
+    ? `<span class="zacht">${esc(t('indeling.vloerIs'))}</span><div class="chips">${knop('data-toevoeg-vloer="water"', t('indeling.opWater'), v.vloer === 'water')}${knop('data-toevoeg-vloer="elektrisch"', huismodel.metHoofdletter(t('indeling.elektrisch')), v.vloer === 'elektrisch')}</div>`
+    : '';
+  const vloerKlaar = v.soort !== 'vloer' || v.vloer != null;
   const uitHA = `<select class="veld" data-toevoegen="${esc(r.id)}" aria-label="${esc(t('inr.uitHA'))}"><option value="">${esc(t('inr.kiesUitHA'))}</option>${[...los.map((x) => ({ key: x.id, naam: x.naam, waar: t('inr.nogLos') })), ...elders.filter((x) => x.r.id !== r.id).map((x) => ({ key: sleutel(x.a), naam: x.a.naam, waar: x.r.naam }))].map((x) => `<option value="${esc(x.key)}">${esc(t('energie.naamKamer', { naam: x.naam, kamer: x.waar }))}</option>`).join('')}</select>`;
   const aanOpties = cv
     ? [['thermostaat', ketel ? t('indeling.cvThermoNaam', { naam: ketel.naam }) : t('indeling.cvThermo')], ...(v.soort === 'radiator' ? [['knop', t('indeling.aan.knop')]] : []), ['hand', t('indeling.aan.hand')]]
@@ -839,14 +847,15 @@ function toevoegVorm(r, los, elders) {
   const welke = v.soort && v.soort !== 'ha' && v.aan && v.aan !== 'hand' && !(cv && v.aan === 'thermostaat')
     ? `<select class="veld" data-toevoeg-apparaat aria-label="${esc(t('inr.welkApparaat'))}"><option value="">${esc(t(v.aan === 'knop' ? 'inr.welkeKnop' : 'inr.welkApparaatVraag'))}</option>${kiesbaar.map((x) => `<option value="${esc(sleutel(x.a))}" ${sleutel(x.a) === v.apparaat ? 'selected' : ''}>${esc(t('energie.naamKamer', { naam: x.a.naam, kamer: x.r.naam }))}</option>`).join('')}</select>`
     : '';
-  const klaar = v.soort && v.soort !== 'ha' && v.aan && (v.aan === 'hand' || (cv && v.aan === 'thermostaat') || v.apparaat);
+  const klaar = v.soort && v.soort !== 'ha' && vloerKlaar && v.aan && (v.aan === 'hand' || (cv && v.aan === 'thermostaat') || v.apparaat);
   return `<div class="kolom toevoeg" style="width: 100%">
     <span class="zacht">${esc(t('inr.watHangt'))}</span>
     <div class="chips">${TOEVOEG_SOORT.map(([w, x]) => knop(`data-toevoeg-soort="${w}"`, x, v.soort === w)).join('')}</div>
     ${v.soort === 'ha' ? uitHA : ''}
-    ${v.soort && v.soort !== 'ha' ? `<span class="zacht">${esc(t('indeling.hoeAan'))}</span><div class="chips">${aanOpties.map(([w, x]) => knop(`data-toevoeg-aan="${w}"`, x, v.aan === w)).join('')}</div>${welke}` : ''}
+    ${vloerVraag}
+    ${v.soort && v.soort !== 'ha' && vloerKlaar ? `<span class="zacht">${esc(t('indeling.hoeAan'))}</span><div class="chips">${aanOpties.map(([w, x]) => knop(`data-toevoeg-aan="${w}"`, x, v.aan === w)).join('')}</div>${welke}` : ''}
     <div class="chips">${knop('data-toevoeg-annuleer', t('indeling.annuleren'))}${v.soort !== 'ha' ? `<button type="button" class="chip aan" data-toevoeg-bewaar ${klaar ? '' : 'disabled'}>${esc(t('indeling.toevoegen'))}</button>` : ''}</div>
-    ${v.soort === 'paneel' || v.soort === 'kachel' ? `<span class="zacht">${esc(t('inr.vermogenLater'))}</span>` : ''}
+    ${v.soort === 'paneel' || v.soort === 'kachel' || (v.soort === 'vloer' && v.vloer === 'elektrisch') ? `<span class="zacht">${esc(t('inr.vermogenLater'))}</span>` : ''}
   </div>`;
 }
 /*
@@ -919,7 +928,7 @@ function warmteStap() {
  * apparaat niet. Links de lijst, rechts het apparaat dat open staat; op de
  * telefoon klapt het open in de lijst. Een bereik dat niet kan kloppen (onder
  * 4° of boven 35°) wordt een voorstel dat de bewoner aanpast; een open vraag
- * staat bij Nog te doen.
+ * staat bij Mist nog.
  */
 // Wat kan kloppen: 4° is de vorstbeveiliging van een radiatorknop; daaronder of boven 35° niet.
 const BEREIK = [4, 35];
@@ -1620,7 +1629,8 @@ async function bewaarPrijzen(wijzig) {
  * Assistant mist), Wat je huis kan, en de film.
  */
 function klaarStap() {
-  const open = STAPPEN.filter(([id]) => id !== 'klaar' && !nagelopen.has(id));
+  // Open is wat niet nagelopen is én niet al ingevuld (30 oktober 2026): op een ander apparaat telde anders alles weer als open.
+  const open = STAPPEN.filter(([id]) => id !== 'klaar' && !nagelopen.has(id) && !gedaan(id));
   const mist = (d.klaar?.punten ?? []).filter((p) => p.stand === 'mist');
   // Een open vraag bij Wat elk apparaat kan (besluit 197): je mocht door, en hij staat hier.
   const vragen = kanToestellen().filter(({ a }) => kanVraagOpen(a)).map(({ a }) => t('inr.kan.nogVraag', { naam: a.naam }));
@@ -1896,7 +1906,7 @@ document.addEventListener('click', async (e) => {
     return;
   }
   if (el.hasAttribute('data-later')) {
-    // Later (besluit 190): door zonder te bewaren; de stap staat dan bij Nog te doen.
+    // Later (besluit 190): door zonder te bewaren; de stap staat dan bij Mist nog.
     naar(volgende(stapNu()));
     return;
   }
@@ -2114,7 +2124,12 @@ document.addEventListener('click', async (e) => {
   }
   // Iets toevoegen (besluit 167): wat er hangt, hoe het aangaat, en bewaren.
   if (el.dataset.toevoegSoort) {
-    toevoeg = { soort: el.dataset.toevoegSoort, aan: null, apparaat: null };
+    toevoeg = { soort: el.dataset.toevoegSoort, aan: null, apparaat: null, vloer: null };
+    teken();
+    return;
+  }
+  if (el.dataset.toevoegVloer && toevoeg) {
+    toevoeg = { ...toevoeg, vloer: el.dataset.toevoegVloer, aan: null, apparaat: null };
     teken();
     return;
   }
@@ -2134,9 +2149,11 @@ document.addEventListener('click', async (e) => {
     const k = next?.kamers.find((x) => x.id === toevoegenIn);
     if (!k) return;
     const v = toevoeg;
-    const cv = v.soort === 'radiator' || v.soort === 'vloer';
+    const elektrisch = v.soort === 'vloer' && v.vloer === 'elektrisch';
+    const cv = v.soort === 'radiator' || (v.soort === 'vloer' && !elektrisch);
     const ketel = huismodel.cvThermostaat(d.huis, antwoorden().verwarming);
-    const soorten = [v.soort];
+    // Elektrische vloerverwarming bewaart de dienst als vloer-elektrisch, zoals Kamers en indeling.
+    const soorten = [elektrisch ? 'vloer-elektrisch' : v.soort];
     const bezet = new Set((k.bronnen ?? []).map((x) => x.id));
     let id = v.soort;
     for (let i = 2; bezet.has(id); i++) id = `${v.soort}-${i}`;

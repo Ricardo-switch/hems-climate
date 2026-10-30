@@ -197,8 +197,12 @@ const DERIVED_TEMPERATURE =
 const PRODUCTION_WORDS =
   /solar|zonne|zonnepane|pv[_ ]|photovolta|omvormer|inverter|huidig[_ ]vermogen/i;
 
+/*
+ * Ook als één woord met de temperatuur erachter (30 oktober 2026): de sensor
+ * "Buitentemperatuur" (`sensor.buitentemperatuur`) werd anders niet gevonden.
+ */
 const OUTDOOR_WORDS = new RegExp(
-  `${BEFORE_BOUNDARY}(?:buiten|outdoor|outside|extern|external)${AFTER_BOUNDARY}`,
+  `${BEFORE_BOUNDARY}(?:(?:buiten|outdoor|outside|extern|external)${AFTER_BOUNDARY}|(?:buiten|outdoor|outside)_?(?:temp|temperatuur|temperature)${AFTER_BOUNDARY})`,
   'i',
 );
 

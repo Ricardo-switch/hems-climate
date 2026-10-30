@@ -482,6 +482,29 @@ describe('het voorstel uit Home Assistant', () => {
     expect(roomForName('Droger', rooms)).toBeNull();
   });
 
+  it('stelt een kamer ook voor uit een woord dat alleen bij die kamer hoort, of uit de soort (30 oktober 2026)', () => {
+    const kamer = (id: string, naam: string, soort?: 'hal' | 'slaapkamer') => ({ id, naam, etage: 'bg' as const, zones: [], regelzone: null, haGebied: null, ...(soort ? { soort } : {}) });
+    const rooms = [kamer('entree', 'Entree', 'hal'), kamer('slaapkamer', 'Slaapkamer', 'slaapkamer'), kamer('matts', 'Slaapkamer Matts', 'slaapkamer'), kamer('mylan', 'Slaapkamer Mylan', 'slaapkamer')];
+    expect(roomForName('Spot 1 Matts', rooms)).toBe('matts');
+    expect(roomForName('Plafonnière Mylan', rooms)).toBe('mylan');
+    expect(roomForName('Spot 1 hal', rooms)).toBe('entree');
+    // "Slaapkamer" is een soort, geen woord van één kamer; de hele naam wint nog steeds.
+    expect(roomForName('Lamp slaapkamer', rooms)).toBe('slaapkamer');
+    // Twee halletjes: dan niet raden.
+    expect(roomForName('Spot hal', [...rooms, kamer('overloop', 'Overloop', 'hal')])).toBeNull();
+    expect(roomForName('Spot 2', rooms)).toBeNull();
+  });
+
+  it('toont een groep van Home Assistant die niet beschikbaar is niet als lamp, ook zonder lijst van lampen', () => {
+    const st = new Map(states);
+    st.set('light.hal_alles', { ...st.get('light.tuin_alles')!, entity_id: 'light.hal_alles', state: 'unavailable', attributes: { friendly_name: 'Hal (alles)', supported_color_modes: ['onoff'] } });
+    const reg = { ...registers, entities: [...registers.entities, { entity_id: 'light.hal_alles', platform: 'group', area_id: null, device_id: null } as (typeof registers.entities)[number]] };
+    const h = buildHouse(config, reg, st, snapshot);
+    const all = [...h.etages.flatMap((e) => e.ruimtes).flatMap((r) => r.apparaten), ...h.zonderRuimte];
+    expect(all.some((d) => d.id === 'light.hal_alles')).toBe(false);
+    expect(h.lampgroepen.find((g) => g.id === 'light.hal_alles')).toMatchObject({ naam: 'Hal (alles)', leden: [], overzicht: true });
+  });
+
   it('toont een groep met verborgen peren als één lamp, in de kamer van die peren', () => {
     const wk = house.etages.find((e) => e.id === 'bg')!.ruimtes[0]!;
     const lamps = wk.apparaten.filter((d) => d.soort === 'licht').map((d) => [d.naam, d.stand]);
