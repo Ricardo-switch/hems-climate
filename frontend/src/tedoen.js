@@ -52,8 +52,10 @@
   }
 
   async function laad() {
+    // Zelf ophalen, niet via haal: een fout hier is geen "geen verbinding" voor de hele pagina (CI, 30 oktober 2026).
     try {
-      data = await haal('api/te-doen');
+      const res = await fetch('api/te-doen', { cache: 'no-store', headers: { 'x-taal': global.taal.code } });
+      data = res.ok ? await res.json() : null;
     } catch {
       data = null;
     }
