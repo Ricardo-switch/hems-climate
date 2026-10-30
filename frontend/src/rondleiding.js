@@ -1,5 +1,5 @@
 /*
- * De rondleiding (besluit 139 en 144, schets Wand-Inrichten-Compleet): twaalf
+ * De rondleiding (besluit 139 en 144, schets Wand-Inrichten-Compleet): dertien
  * stops op de echte pagina's, langs alle tabbladen en een kamer, met je eigen
  * huis, en dan Klaar. Het scherm wordt donker en
  * licht op waar het om gaat; een kaart vertelt. Iedereen krijgt hem de eerste
@@ -18,7 +18,8 @@
 
   /**
    * Per stop: de pagina, waar en welke tekst (teksten.*.js: rond.<id>), en waar
-   * het licht op valt (wand, telefoon). Twaalf stops en Klaar (besluit 144), en
+   * het licht op valt (wand, telefoon). Dertien stops en Klaar (besluit 144; Te
+   * doen kwam erbij in besluit 217), en
    * in de app van Home Assistant de knop terug naar Home Assistant (besluit 202).
    */
   const ALLE_STOPS = [
@@ -58,6 +59,12 @@
       plek: 'vandaag',
       id: 'gisteren',
       doel: ['#wand [data-wissel]', '#tel [data-wissel]'],
+    },
+    {
+      pagina: 'tedoen.html',
+      plek: 'tedoen',
+      id: 'tedoen',
+      doel: ['#wand [data-td-pagina]', '#tel [data-td-pagina]'],
     },
     {
       pagina: 'apparaten.html',

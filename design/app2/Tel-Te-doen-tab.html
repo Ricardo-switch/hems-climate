@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telefoon · Te doen als tab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Te doen als tab op de telefoon (schets, 30 oktober 2026), bij
+   * Wand-Te-doen-tab. Zes tabs passen niet met een naam onder elk icoon; zoals
+   * in een andere app van de bewoner: alleen iconen, en bij de gekozen tab het
+   * icoon met de naam in een pil. Standen: zonder hash Te doen, #thuis
+   * dezelfde balk op Thuis.
+   */
+  .tel { overflow: hidden; }
+  .inhoud { padding: 16px 16px 110px; display: flex; flex-direction: column; gap: 12px; }
+  .kop h1 { margin: 0; font-family: var(--kop); font-size: 34px; font-weight: 600; letter-spacing: -0.02em; }
+  .kop p { margin: 4px 0 0; font-size: 13.5px; color: var(--zacht); }
+  .vak { padding: 14px; border-radius: 20px; background: rgb(var(--nacht) / 0.55); border: 1px solid var(--glas-rand); display: flex; flex-direction: column; gap: 8px; }
+  .vak h2 { margin: 0; font-size: 12px; font-weight: 700; color: var(--gedempt); text-transform: uppercase; letter-spacing: 0.06em; display: flex; justify-content: space-between; }
+  .vak h2 a { text-transform: none; letter-spacing: 0; color: var(--accent); font-weight: 600; font-size: 13px; }
+  .her { display: grid; grid-template-columns: 52px 1fr 28px; gap: 10px; align-items: center; padding: 9px 10px; border-radius: 14px; background: rgb(var(--wit) / 0.05); }
+  .her.nu { background: rgb(143 134 255 / 0.14); outline: 1px solid rgb(143 134 255 / 0.4); }
+  .her .uur b { display: block; font-family: var(--kop); font-size: 17px; line-height: 1; }
+  .her .uur span { font-size: 11px; color: var(--gedempt); font-weight: 600; }
+  .her .wat b { display: block; font-size: 14px; }
+  .her .wat span { font-size: 12px; color: var(--zacht); }
+  .vink { width: 28px; height: 28px; border-radius: 9px; border: 1.5px solid rgb(var(--wit) / 0.25); }
+  .dag { display: grid; grid-template-columns: 42px 1fr; gap: 8px; padding: 5px 0; border-top: 1px solid rgb(var(--wit) / 0.06); }
+  .dag:first-of-type { border-top: 0; }
+  .dag .w { text-align: center; } .dag .w span { display: block; font-size: 10.5px; font-weight: 700; color: var(--gedempt); text-transform: uppercase; } .dag .w b { font-family: var(--kop); font-size: 17px; }
+  .item { display: flex; align-items: center; gap: 8px; font-size: 14px; padding: 2px 0; }
+  .item i { width: 4px; height: 16px; border-radius: 2px; flex: none; }
+  .item small { margin-left: auto; color: var(--gedempt); font-size: 12px; }
+  .gft { background: #6ee7b7; } .gezin { background: #ff9fc0; } .eigen { background: #b7b0ff; } .werk { background: #6fd3ff; }
+  .rij { display: flex; align-items: center; gap: 11px; padding: 6px 0; border-top: 1px solid rgb(var(--wit) / 0.06); font-size: 15px; }
+  .rij:first-of-type { border-top: 0; }
+  .rij .box { width: 22px; height: 22px; border-radius: 7px; border: 1.5px solid rgb(var(--wit) / 0.3); }
+
+  /* De nieuwe tabbalk: iconen, en de gekozen tab met naam in een pil. */
+  .tabs6 { position: fixed; left: 12px; right: 12px; bottom: 14px; height: 64px; border-radius: 24px; background: rgb(var(--nacht) / 0.88); border: 1px solid var(--glas-rand); backdrop-filter: blur(16px); display: flex; align-items: center; justify-content: space-around; padding: 0 6px; }
+  .tabs6 a { height: 46px; min-width: 44px; border-radius: 16px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; color: var(--zacht); text-decoration: none; font-weight: 700; font-size: 14px; position: relative; }
+  .tabs6 a svg { width: 23px; height: 23px; }
+  .tabs6 a span { display: none; }
+  .tabs6 a[aria-current] { padding: 0 14px; background: rgb(111 211 255 / 0.16); color: var(--accent); }
+  .tabs6 a[aria-current] span { display: inline; }
+  .tabs6 a b { position: absolute; top: 6px; right: 4px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--gloed); color: #fff; font-size: 10px; display: grid; place-items: center; }
+
+  /* #thuis: alleen om de balk op Thuis te zien. */
+  .thuis { padding: 16px 18px; }
+  .thuis .tijd { font-family: var(--kop); font-weight: 600; font-size: 40px; }
+  .thuis h1 { font-family: var(--kop); font-size: 30px; margin: 6px 0 0; }
+  .thuis .podium { height: 300px; }
+  [data-stand] { display: none !important; }
+  body[data-toon='tedoen'] [data-stand~='tedoen'], body[data-toon='thuis'] [data-stand~='thuis'] { display: block !important; }
+  body[data-toon='tedoen'] .inhoud[data-stand] { display: flex !important; }
+</style>
+</head>
+<body>
+<div class="tel lucht lucht-avond">
+  <div class="inhoud" data-stand="tedoen">
+    <div class="kop"><h1>Te doen</h1><p>Maandag 2 november · zeg "herinner me om acht uur…"</p></div>
+    <section class="vak">
+      <h2>Herinneringen<a>+ Nieuwe</a></h2>
+      <div class="her nu"><div class="uur"><b>20:00</b><span>vandaag</span></div><div class="wat"><b>Container buiten zetten</b><span>jij · wand en telefoon</span></div><span class="vink"></span></div>
+      <div class="her"><div class="uur"><b>07:30</b><span>morgen</span></div><div class="wat"><b>Matt zijn gymtas meegeven</b><span>Shira · telefoon</span></div><span class="vink"></span></div>
+    </section>
+    <section class="vak">
+      <h2>Agenda<a>Jouw agenda’s ›</a></h2>
+      <div class="dag"><div class="w"><span>ma</span><b>2</b></div><div><div class="item"><i class="eigen"></i>Tandarts<small>15:30</small></div></div></div>
+      <div class="dag"><div class="w"><span>di</span><b>3</b></div><div><div class="item"><i class="gft"></i>GFT, de groene bak</div><div class="item"><i class="werk"></i>Overleg team<small>10:00</small></div></div></div>
+      <div class="dag"><div class="w"><span>do</span><b>5</b></div><div><div class="item"><i class="gezin"></i>Matts zwemles<small>16:45</small></div></div></div>
+    </section>
+    <section class="vak">
+      <h2>Boodschappen <span>5</span></h2>
+      <div class="rij"><span class="box"></span>Melk</div>
+      <div class="rij"><span class="box"></span>Brood</div>
+      <div class="rij"><span class="box"></span>Eieren</div>
+    </section>
+  </div>
+
+  <div class="thuis" data-stand="thuis">
+    <div class="tijd">19:42</div>
+    <h1>Rustig in huis</h1>
+    <div class="podium" id="podium"></div>
+  </div>
+
+  <nav class="tabs6" id="tabs6" aria-label="Hoofdmenu"></nav>
+</div>
+<script src="../../frontend/kit/teksten.nl.js"></script>
+<script src="../../frontend/kit/teksten.en.js"></script>
+<script src="../../frontend/kit/taal.js"></script>
+<script src="../../frontend/kit/nav.js"></script>
+<script src="../../frontend/kit/huis.js"></script>
+<script>
+  const toon = location.hash === '#thuis' ? 'thuis' : 'tedoen';
+  document.body.dataset.toon = toon;
+  const lijst = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/></svg>';
+  const tabs = [['thuis', 'Thuis', nav.svg('thuis')], ['vandaag', 'Vandaag', nav.svg('vandaag')], ['tedoen', 'Te doen', lijst], ['apparaten', 'Apparaten', nav.svg('apparaten')], ['opbrengst', 'Opbrengst', nav.svg('opbrengst')], ['assistent', 'Assistent', nav.svg('assistent')]];
+  document.getElementById('tabs6').innerHTML = tabs.map(([id, naam, icoon]) => `<a href="#" ${id === toon ? 'aria-current="page"' : ''} aria-label="${naam}">${icoon}<span>${naam}</span>${id === 'tedoen' && toon !== 'tedoen' ? '<b>3</b>' : ''}</a>`).join('');
+  if (toon === 'thuis') {
+    huis.teken(document.getElementById('podium'), { beschrijving: 'Het huis.', tijd: 'avond', zon: { aandeel: 0, panelen: 12 }, etages: [{ kamers: [{ naam: 'Woonkamer', gewicht: 1.5, apparaten: [{ soort: 'lamp', aan: true, x: 0.4 }] }] }, { dak: true, kamers: [{ naam: 'Zolder', stil: true, apparaten: [] }] }], net: true }, { breedte: 354, hoogte: 300, marge: 0.05 });
+  }
+</script>
+</body>
+</html>

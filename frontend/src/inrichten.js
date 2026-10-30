@@ -243,6 +243,7 @@ const IK = {
   droger: '<rect x="5" y="3" width="14" height="18" rx="2"/><circle cx="12" cy="13" r="4"/>', vaat: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M5 8h14M9 13h6"/>',
   boiler: '<rect x="7" y="2.5" width="10" height="19" rx="5"/><path d="M10 15h4"/>', accu: '<rect x="6" y="4" width="12" height="17" rx="2"/><path d="M10 2h4M12 9l-2 4h4l-2 4"/>',
   lamp: '<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z"/>', screen: '<rect x="4" y="4" width="16" height="4" rx="1"/><path d="M6 8v9h12V8"/>', camera: '<rect x="3" y="7" width="13" height="10" rx="2"/><path d="m16 11 5-3v8l-5-3"/>',
+  lijst: '<path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/>',
   praat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-5A8 8 0 1 1 21 12z"/>', zon: '<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/>', stekker: '<path d="M9 3v5M15 3v5M6 8h12v3a6 6 0 0 1-12 0zM12 17v4"/>',
   meter: '<path d="M4 18a8 8 0 1 1 16 0"/><path d="M12 18l4-6"/>', tablet: '<rect x="4" y="3" width="16" height="18" rx="2.5"/><path d="M11 18h2"/>', koffer: '<rect x="4" y="7" width="16" height="13" rx="2"/><path d="M9 7V4h6v3M4 12h16"/>', tel: '<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18h2"/>',
 };
@@ -1342,6 +1343,7 @@ const functiesNu = () => {
   c.schermen ??= f.voorstel.schermen ?? { bedienen: true };
   c.weer ??= f.voorstel.weer;
   c.praten ??= f.voorstel.praten ?? { taalmodel: null, bedienen: true, spraak: null };
+  c.tedoen ??= f.voorstel.tedoen;
   return c;
 };
 function functiesStap() {
@@ -1360,6 +1362,7 @@ function functiesStap() {
           ${f.schermMogelijk ? een('screen', t('inr.zonneschermen'), 'data-fscherm', c.schermen?.bedienen === true, t('functies.bedienen'), t('functies.kijken')) : ''}
           ${cams.length ? een('camera', t('functies.cameras'), 'data-fcam', c.cameras?.aan === true, lijstje(cams.map((x) => x.naam)), t('functies.nietTonen')) : ''}
           ${een('praat', t('inr.assistent'), 'data-fpraat', c.praten?.bedienen !== false, t('inr.assistentAan'), t('inr.assistentUit'))}
+          ${een('lijst', t('nav.tedoen'), 'data-ftedoen', c.tedoen?.aan === true, t('inr.tedoenAan'), t('inr.tedoenUit'))}
         </div>${tip(t('inr.gemakTip'))}`
       : `<p class="zacht">${esc(t('inr.lezen'))}</p>`,
   };
@@ -1415,7 +1418,7 @@ function accountStap() {
  * kaarten om aan of uit te zetten; 's nachts uit en de taal. Dezelfde indeling
  * als op je telefoon (niet dubbel). Daaronder elk scherm.
  */
-const WAND_KAARTEN = ['favorieten', 'vandaag', 'apparaat', 'gevoel', 'morgen', 'auto', 'batterij', 'maand', 'deurbel', 'boiler', 'sluip'];
+const WAND_KAARTEN = ['favorieten', 'vandaag', 'apparaat', 'gevoel', 'morgen', 'auto', 'batterij', 'maand', 'deurbel', 'boiler', 'sluip', 'tedoen'];
 function wandStap() {
   const schermen = d.bewoners?.schermen ?? [];
   const inlog = d.sessie?.toegang === 'sessions';
@@ -2273,13 +2276,15 @@ document.addEventListener('click', async (e) => {
     await bewaarIndeling(next);
     return;
   }
-  if (el.dataset.flicht || el.dataset.fscherm || el.dataset.fcam || el.dataset.fpraat) {
+  if (el.dataset.flicht || el.dataset.fscherm || el.dataset.fcam || el.dataset.fpraat || el.dataset.ftedoen) {
     const c = functiesNu();
     if (!c) return;
     if (el.dataset.flicht) c.licht = { ...c.licht, bedienen: el.dataset.flicht === 'true' };
     if (el.dataset.fscherm) c.schermen = { ...c.schermen, bedienen: el.dataset.fscherm === 'true' };
     if (el.dataset.fcam) c.cameras = { ...c.cameras, aan: el.dataset.fcam === 'true' };
     if (el.dataset.fpraat) c.praten = { ...c.praten, bedienen: el.dataset.fpraat === 'true' };
+    // Te doen (besluit 217): de lijsten en agenda's die het huis vond, die kies je bij Instellingen › Assistent.
+    if (el.dataset.ftedoen) c.tedoen = { boodschappen: null, todo: null, afval: null, gezin: null, ...c.tedoen, aan: el.dataset.ftedoen === 'true' };
     await bewaarFuncties(c);
   }
   // Hoe praat je huis (besluit 203): waar de stem vandaan komt, en of de browser mag verstaan.

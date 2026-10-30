@@ -18,6 +18,26 @@
 
 const { $$, esc, haal } = app;
 
+/*
+ * De assistent (besluit 217): Praten met je huis, Stem en luisteren en Te doen
+ * staan als eigen groep bij Instellingen (functies.html?groep=assistent). Een
+ * oud adres als functies.html#praten gaat vanzelf naar die groep, en andersom.
+ */
+const ASSISTENT = ['praten', 'stem', 'tedoen'];
+const isAssistent = new URLSearchParams(location.search).get('groep') === 'assistent';
+{
+  const h = decodeURIComponent(location.hash.slice(1));
+  if (!isAssistent && ASSISTENT.includes(h)) location.replace(`functies.html?groep=assistent#${h}`);
+  else if (isAssistent && h && !ASSISTENT.includes(h)) location.replace(`functies.html#${h}`);
+  if (isAssistent) {
+    document.title = `${t('groep.assistent')} · Smart Climate`;
+    $$('h1[data-t="groep.functies"]').forEach((el) => {
+      el.dataset.t = 'groep.assistent';
+      el.textContent = t('groep.assistent');
+    });
+  }
+}
+
 let info = null;
 let concept = null;
 let zon = null;
@@ -364,13 +384,17 @@ function teDoenVorm() {
   const td = concept.tedoen;
   const lijsten = info.gevonden.lijsten ?? [];
   const agendas = info.gevonden.agendas ?? [];
-  const keus = (sleutel, label, uit, opties) => `<div><span class="veldnaam">${esc(label)}</span>${keuzes(label, `tedoen:${sleutel}`, [[null, t('instellingen.geen')], ...opties.map((x) => [x.id, x.naam])], td[sleutel], !td.aan)}</div>`;
+  // Een keuzelijst per vak (30 oktober 2026): een rij knoppen met elf agenda's was onoverzichtelijk.
+  const keus = (sleutel, label, opties) =>
+    `<label class="veldnaam tdkeus">${esc(label)}<select class="invoer" data-tedoen-keus="${sleutel}" ${td.aan ? '' : 'disabled'}><option value="">${esc(t('instellingen.geen'))}</option>${opties
+      .map((x) => `<option value="${esc(x.id)}" ${td[sleutel] === x.id ? 'selected' : ''}>${esc(x.naam)}</option>`)
+      .join('')}</select></label>`;
   return `<h2 class="kop-2">${esc(t('functies.tedoen.kop'))}</h2>
     ${keuzes(t('functies.tedoen.kop'), 'tedoen:aan', aanUit(), td.aan)}
     <p class="mini">${esc(t('functies.tedoen.uitleg'))}</p>
-    ${lijsten.length ? `${keus('boodschappen', t('functies.tedoen.boodschappen'), td.aan, lijsten)}${keus('todo', t('functies.tedoen.todo'), td.aan, lijsten)}` : `<p class="uitleg">${esc(t('functies.tedoen.geenLijsten'))}</p>`}
-    ${agendas.length ? `${keus('afval', t('functies.tedoen.afval'), td.aan, agendas)}${keus('gezin', t('functies.tedoen.gezin'), td.aan, agendas)}` : ''}
-    <p class="mini">${esc(t('functies.tedoen.jij'))}</p>`;
+    ${lijsten.length ? `<div class="tdkeuzes">${keus('boodschappen', t('functies.tedoen.boodschappen'), lijsten)}${keus('todo', t('functies.tedoen.todo'), lijsten)}</div>` : `<p class="uitleg">${esc(t('functies.tedoen.geenLijsten'))}</p>`}
+    ${agendas.length ? `<div class="tdkeuzes">${keus('afval', t('functies.tedoen.afval'), agendas)}${keus('gezin', t('functies.tedoen.gezin'), agendas)}</div>` : ''}
+    <p class="mini">${esc(t('functies.tedoen.jij'))} <a href="jij.html#agenda">${esc(t('functies.tedoen.naarJij'))} ›</a></p>`;
 }
 
 /**
@@ -619,6 +643,12 @@ const NAAST = {
 };
 
 function delen() {
+  const alle = alleDelen();
+  if (isAssistent) return alle.filter((x) => ASSISTENT.includes(x.id));
+  return alle.filter((x) => !ASSISTENT.includes(x.id));
+}
+
+function alleDelen() {
   if (!info || !concept) return [];
   const f = concept;
   const beelden = f.cameras.aan ? f.cameras.lijst.length : 0;
@@ -883,6 +913,12 @@ document.addEventListener('change', (e) => {
   if (el.matches?.('[data-nk-helder-dag]')) return bewaarNiemand({ helderDag: Math.round(Number(el.value)) });
   if (el.matches?.('[data-nk-helder-avond]')) return bewaarNiemand({ helderAvond: Math.round(Number(el.value)) });
   if (el.matches?.('[data-nk-melder]')) return bewaarNiemand({ melder: el.value });
+  // Te doen (besluit 216): welke lijst of agenda wat is, uit een keuzelijst.
+  if (el.matches?.('[data-tedoen-keus]') && concept) {
+    concept.tedoen[el.dataset.tedoenKeus] = el.value || null;
+    teken();
+    return bewaar();
+  }
   if (el.matches?.('[data-nk-van], [data-nk-tot]') && /^\d\d:\d\d$/.test(el.value)) return bewaarNiemand({ [el.matches('[data-nk-van]') ? 'van' : 'tot']: el.value });
   const veld = e.target.closest('[data-veld]');
 

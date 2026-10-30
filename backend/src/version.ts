@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.88.0';
+export const VERSIE = '0.89.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,48 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.89.0',
+    datum: '2026-10-30',
+    nieuw: [
+      'Te doen is een eigen tab: je herinneringen, de agenda van twee weken en de boodschappen en to-do op één pagina',
+      'Instellingen heeft een groep Assistent, met Praten met je huis, Stem en luisteren en Te doen bij elkaar',
+    ],
+    beter: [
+      'Op de telefoon staan de tabs als iconen; de tab waar je bent staat er met zijn naam bij',
+      'De kaart Te doen op Thuis is een gewone kaart: verbergen en verplaatsen doe je bij Thuis aanpassen',
+      'Te doen loopt mee in Inrichten, de rondleiding, Wat je huis kan en de zonnewaaier',
+    ],
+    opgelost: ['Een tik op een straal van de zonnewaaier geeft geen blauw vak meer'],
+    en: {
+      nieuw: [
+        'To do is a tab of its own: your reminders, two weeks of calendar and the shopping and to-do lists on one page',
+        'Settings has an Assistant group, with Talk to your house, Voice and listening and To do together',
+      ],
+      beter: [
+        'On the phone the tabs are icons; the tab you are on shows its name too',
+        'The To do card on Home is a regular card: hide and move it under Customise Home',
+        'To do is part of Set up, the tour, What your house can do and the sun fan',
+      ],
+      opgelost: ['Tapping a ray of the sun fan no longer shows a blue box'],
+    },
+  },
+  {
+    versie: '0.88.1',
+    datum: '2026-10-30',
+    beter: [
+      'De kaart Te doen staat altijd op Thuis als Te doen aan staat, ook als er niets is, met het afval van de hele week',
+      'Bij Functies › Te doen kies je de lijsten en agenda’s uit een keuzelijst in plaats van een rij knoppen',
+      'Vanuit Te doen en Functies kom je met één tik bij je eigen agenda’s bij Jij, waar je er meer tegelijk kiest',
+    ],
+    en: {
+      beter: [
+        'The To do card is always on Home when To do is on, even when there is nothing, with the waste collection of the whole week',
+        'Under Features › To do you choose the lists and calendars from a drop-down instead of a row of buttons',
+        'From To do and Features one tap takes you to your own calendars under You, where you choose several at once',
+      ],
+    },
+  },
   {
     versie: '0.88.0',
     datum: '2026-10-30',

@@ -218,6 +218,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [214. Hoe ver je huis is: de zonnewaaier](#214-hoe-ver-je-huis-is-de-zonnewaaier)
 - [215. Sneller verstaan: het einde van je zin bij geluid, en rechtzetten op klank](#215-sneller-verstaan-het-einde-van-je-zin-bij-geluid-en-rechtzetten-op-klank)
 - [216. Te doen: herinneringen, de lijsten van Home Assistant, en afval en agenda](#216-te-doen-herinneringen-de-lijsten-van-home-assistant-en-afval-en-agenda)
+- [217. Te doen als eigen tab, en de assistent als groep bij Instellingen](#217-te-doen-als-eigen-tab-en-de-assistent-als-groep-bij-instellingen)
 
 **Veiligheid**
 
@@ -10103,6 +10104,52 @@ op Thuis. De naam werd Te doen ("Niet vergeten" klonk raar).
   wat is (het voorstel kiest ze op hun naam); bij Jij je eigen agenda's
   (`voorkeuren.agenda`). Een eigen agenda staat nooit op de wand.
 - **Versie 0.88.0.**
+- **Na de eerste dag (0.88.1):** de bewoner vond Te doen niet: de kaart stond
+  er alleen bij afval vandaag of morgen, een herinnering of boodschappen. Nu
+  staat hij er altijd als Te doen aan staat ("Niets te doen" als er niets is),
+  met het afval van de hele week. Bij Functies keuzelijsten in plaats van
+  rijen knoppen (elf agenda's werd onoverzichtelijk), en een link naar je eigen
+  agenda's bij Jij (`jij.html#agenda` opent het blad meteen).
+
+---
+
+## 217. Te doen als eigen tab, en de assistent als groep bij Instellingen
+
+*Onderwerp: weergave · Status: geldig*
+
+Na 0.88 (30 oktober 2026). De bewoner: "Ik ben nog steeds voor een tab. Daar
+kan je taken, agenda, boodschappen, herinneringen op één pagina krijgen, met
+een losse kaart die je kunt verbergen, net als de andere." Voor de ruimte op de
+telefoon wees hij op een andere app: alleen iconen, en tekst bij de gekozen
+tab. Bij de schetsen `Wand-Te-doen-tab` en `Tel-Te-doen-tab`: "zorg dat de hele
+app meegroeit", en de instellingen van de assistent als eigen groep. Dit
+vervangt in besluit 216 "geen extra tab" en het blad.
+
+*Besluit:*
+
+- **Zes tabs:** Te doen staat tussen Vandaag en Apparaten (`tedoen.html`). Op
+  de wand drie kolommen: de herinneringen, de agenda van twee weken (vandaag en
+  elke dag waarop iets staat, elke bron een eigen kleur: het afval naar zijn
+  bak, het gezin roze, je eigen agenda's elk een kleur), en de boodschappen en
+  to-do onder elkaar. Op de telefoon onder elkaar. Het blad van 216 is weg.
+- **De tabbalk op de telefoon:** alleen iconen; de gekozen tab is een pil met
+  zijn naam. Bij Te doen een getal: hoeveel herinneringen er vandaag nog komen
+  (onthouden per tabblad, zodat niet elke pagina alles ophaalt).
+- **De kaart op Thuis** is een gewone kaart (`tedoen` in `KAARTEN`): een tik
+  opent de tab; verbergen en verplaatsen bij Thuis aanpassen. Standaard staat
+  hij erbij, op de wand breed. Wie Thuis al had aangepast, voegt hem toe met
+  Kaart toevoegen.
+- **Instellingen › Assistent:** Praten met je huis, Stem en luisteren en Te
+  doen staan in een eigen groep (`functies.html?groep=assistent`), Functies
+  houdt de rest. Een oud adres als `functies.html#praten` gaat vanzelf naar de
+  groep. Instellingen heeft zeven tegels, op de wand vier en drie.
+- **Meegroeien:** Inrichten zet Te doen aan of uit bij Functies en heeft hem
+  bij de kaarten van de wand; de rondleiding heeft een stop op de tab (dertien
+  stops); Wat je huis kan en de zonnewaaier hebben het onderwerp Te doen onder
+  Gemak; zoeken vindt Praten, Stem en Te doen.
+- **De zonnewaaier:** geen blauw vak meer bij een tik op een straal (de
+  markering van de browser en geselecteerde tekst).
+- **Versie 0.89.0.**
 
 ---
 

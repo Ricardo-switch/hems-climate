@@ -1,13 +1,15 @@
 /*
- * Te doen (besluit 216, schetsen Wand-Te-doen en Tel-Te-doen): de kaart op
- * Thuis, het blad met herinneringen, de week en de lijsten, en het moment op
- * de wand als een herinnering afgaat.
+ * Te doen (besluit 216 en 217, schetsen Wand-Te-doen-tab en Tel-Te-doen-tab):
+ * de kaart op Thuis, de eigen tab, en het moment op de wand als een
+ * herinnering afgaat.
  *
- * - De kaart staat er alleen als er iets is: het afval van vandaag of morgen,
- *   de eerstvolgende herinnering, en wat er op de boodschappen staat.
- * - Het blad: je herinneringen (op een scherm die van iedereen), de week met
- *   afval en de agenda's, en de lijsten van Home Assistant om af te vinken of
- *   aan te vullen. Een nieuwe herinnering schrijf je zoals je hem zegt.
+ * - De kaart op Thuis: het afval van deze week, de eerstvolgende herinnering
+ *   en de boodschappen. Een tik opent de tab. Verbergen kan bij Thuis
+ *   aanpassen, zoals elke kaart.
+ * - De tab (tedoen.html): je herinneringen (op een scherm die van iedereen),
+ *   de agenda van twee weken (afval, gezin en je eigen agenda's, elk een
+ *   kleur), en de lijsten van Home Assistant om af te vinken of aan te vullen.
+ *   Een nieuwe herinnering schrijf je zoals je hem zegt.
  * - Het moment: op een groot scherm vraagt de pagina elke twintig seconden
  *   wat er speelt. Dan neemt de herinnering het scherm over en zegt het huis
  *   hem één keer hardop, met Gedaan en Later.
@@ -33,8 +35,6 @@
   const svg = (pad, w = 1.8) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${pad}</svg>`;
 
   let data = null;
-  let tab = 'boodschappen';
-  let blad = null;
 
   const dagStart = (ms) => {
     const d = new Date(ms);
@@ -52,14 +52,38 @@
   }
 
   async function laad() {
+    // Zelf ophalen, niet via haal: een fout hier is geen "geen verbinding" voor de hele pagina (CI, 30 oktober 2026).
     try {
-      data = await haal('api/te-doen');
+      const res = await fetch('api/te-doen', { cache: 'no-store', headers: { 'x-taal': global.taal.code } });
+      data = res.ok ? await res.json() : null;
     } catch {
       data = null;
     }
     tekenKaarten();
-    if (blad) tekenBlad();
+    tekenPagina();
+    tekenGetal();
     return data;
+  }
+
+  /** Op de tabbalk: hoeveel herinneringen er vandaag nog komen (besluit 217). */
+  function tekenGetal() {
+    let n = 0;
+    if (data) {
+      n = data.aan ? data.herinneringen.filter((h) => dagenVan(h.ms) <= 0).length : 0;
+      // Onthouden, zodat de andere tabs het getal ook tonen zonder alles op te halen.
+      try {
+        sessionStorage.setItem('sc-tedoen-getal', JSON.stringify({ n, dag: dagStart(Date.now()) }));
+      } catch {}
+    } else {
+      try {
+        const o = JSON.parse(sessionStorage.getItem('sc-tedoen-getal'));
+        if (o?.dag === dagStart(Date.now())) n = o.n;
+      } catch {}
+    }
+    for (const a of document.querySelectorAll('.tabs [data-tab="tedoen"]')) {
+      a.querySelector('b')?.remove();
+      if (n && a.getAttribute('aria-current') !== 'page') a.insertAdjacentHTML('beforeend', `<b>${n}</b>`);
+    }
   }
 
   /* ------------------------------------------------------------ de kaart */
@@ -68,14 +92,19 @@
   function regels() {
     if (!data?.aan) return [];
     const uit = [];
-    const afval = data.afspraken.filter((a) => a.bron === 'afval' && dagenVan(a.startMs) >= 0 && dagenVan(a.startMs) <= 1);
+    // Het eerstvolgende afval van deze week (30 oktober 2026: eerst alleen vandaag of morgen, dan bleef de kaart vaak weg).
+    const komend = data.afspraken.filter((a) => a.bron === 'afval' && dagenVan(a.startMs) >= 0 && dagenVan(a.startMs) <= 6);
+    const afval = komend.filter((a) => dagStart(a.startMs) === dagStart(komend[0]?.startMs ?? 0));
     if (afval.length) {
-      const morgen = dagenVan(afval[0].startMs) === 1;
+      const n = dagenVan(afval[0].startMs);
+      const wat = afval.map((a) => a.tekst).join(nl() ? ' en ' : ' and ');
+      const lang = new Intl.DateTimeFormat(nl() ? 'nl-NL' : 'en-GB', { weekday: 'long' });
+      const dag = lang.format(afval[0].startMs);
       uit.push({
         ik: 'bak',
         klasse: `td-${afval[0].afval ?? 'anders'}`,
-        kop: t(morgen ? 'tedoen.morgenAfval' : 'tedoen.vandaagAfval', { wat: afval.map((a) => a.tekst).join(nl() ? ' en ' : ' and ') }),
-        zin: t(morgen ? 'tedoen.afvalVanavond' : 'tedoen.afvalVandaag'),
+        kop: n === 0 ? t('tedoen.vandaagAfval', { wat }) : n === 1 ? t('tedoen.morgenAfval', { wat }) : t('tedoen.dagAfval', { wat, dag: dag.charAt(0).toUpperCase() + dag.slice(1) }),
+        zin: n === 0 ? t('tedoen.afvalVandaag') : n === 1 ? t('tedoen.afvalVanavond') : t('tedoen.afvalAvondervoor', { dag: lang.format(afval[0].startMs - 86_400_000) }),
         // De dag zelf ("za"): vandaag of morgen staat al in de kop.
         wanneer: new Intl.DateTimeFormat(nl() ? 'nl-NL' : 'en-GB', { weekday: 'short' }).format(afval[0].startMs).replace('.', ''),
       });
@@ -88,13 +117,17 @@
       const eerst = open.slice(0, 3).map((x) => x.tekst.toLowerCase());
       uit.push({ ik: 'mand', klasse: 'td-mand', kop: t('tedoen.boodschappen'), zin: open.length > 3 ? t('tedoen.enNog', { wat: eerst.join(', '), n: open.length - 3 }) : eerst.join(', '), wanneer: String(open.length) });
     }
+    // Niets: de kaart blijft staan, zodat je altijd bij je lijsten en herinneringen kunt.
+    if (!uit.length) uit.push({ ik: 'lijst', klasse: 'td-mand', kop: t('tedoen.niets'), zin: t('tedoen.nietsZin'), wanneer: '' });
     return uit.slice(0, 3);
   }
 
   function tekenKaarten() {
     const r = regels();
     for (const k of document.querySelectorAll('[data-tedoen]')) {
+      // Er als te doen aan staat, ook als er niets is (30 oktober 2026). Verbergen kan bij Thuis aanpassen (besluit 217).
       k.hidden = r.length === 0;
+      k.toggleAttribute('data-niet-hier', !data?.aan);
       if (!r.length) continue;
       k.innerHTML = `<div class="td-naam">${esc(t('tedoen.kop'))}<span>${esc(t('tedoen.alles'))} ›</span></div>${r
         .map((x) => `<div class="td-rij"><span class="td-ik ${x.klasse}">${svg(IK[x.ik])}</span><div><b>${esc(x.kop)}</b><span>${esc(x.zin)}</span></div><span class="td-wanneer">${esc(x.wanneer)}</span></div>`)
@@ -102,22 +135,7 @@
     }
   }
 
-  /* ------------------------------------------------------------ het blad */
-
-  function openBlad() {
-    if (!blad) {
-      blad = document.createElement('div');
-      blad.className = 'td-laag';
-      blad.innerHTML = '<div class="td-achter" data-td-sluit></div><aside class="glas td-blad" role="dialog" aria-modal="true"></aside>';
-      (document.querySelector(telStand() ? '#tel' : '#wand') ?? document.body).append(blad);
-    }
-    tekenBlad();
-    void laad();
-  }
-  function sluitBlad() {
-    blad?.remove();
-    blad = null;
-  }
+  /* ------------------------------------------------------------ de tab */
 
   function herinneringHtml(h) {
     const wie = h.eigen ? t('tedoen.jij') : (h.naam ?? t('tedoen.iedereen'));
@@ -125,80 +143,100 @@
     return `<div class="td-her${h.status === 'nu' ? ' nu' : ''}"><div class="td-uur"><b>${esc(klok(h.ms))}</b><span>${esc(dagenVan(h.ms) === 0 ? t('tedoen.vandaag') : dagKort(h.ms))}</span></div><div class="td-wat"><b>${esc(h.tekst)}</b><span>${esc(wie)} · ${kanalen}</span></div><button type="button" class="td-vink" data-td-gedaan="${esc(h.id)}" aria-label="${esc(t('tedoen.gedaan'))}">${svg(IK.vink, 2.4)}</button></div>`;
   }
 
-  function weekHtml() {
-    const dagen = Array.from({ length: 7 }, (_, i) => dagStart(Date.now()) + i * 86_400_000);
-    const kort = new Intl.DateTimeFormat(nl() ? 'nl-NL' : 'en-GB', { weekday: 'short' });
-    const vak = (ms, i) => {
-      const daar = data.afspraken.filter((a) => dagStart(a.startMs) === ms);
-      const regel = (a) =>
-        a.bron === 'afval'
-          ? `<span class="td-bak td-${a.afval ?? 'anders'}">${svg(IK.bak)}${esc(a.tekst)}</span>`
-          : `<span class="td-bak td-${a.bron}">${svg(IK.agenda)}${a.heleDag ? '' : `${esc(klok(a.startMs))} `}${esc(a.tekst)}</span>`;
-      return `<div class="td-dag${i === 0 ? ' vandaag' : ''}"><b>${esc(kort.format(ms).replace('.', ''))}<span>${new Date(ms).getDate()}</span></b>${daar.map(regel).join('')}</div>`;
-    };
-    const later = data.afspraken.filter((a) => dagStart(a.startMs) >= dagen[6] + 86_400_000).slice(0, 3);
-    const daarna = later.length ? `<p class="td-verder">${esc(t('tedoen.daarna'))} ${later.map((a) => `<b>${esc(`${dagKort(a.startMs)} ${new Date(a.startMs).getDate()}`)}</b> ${esc(a.tekst)}`).join(', ')}</p>` : '';
-    return `<div class="td-week">${dagen.map(vak).join('')}</div>${daarna}`;
+  /** De kleur van een afspraak: het afval naar zijn bak, het gezin roze, je eigen agenda's elk een eigen kleur. */
+  function kleurVan(a) {
+    if (a.bron === 'afval') return `td-${a.afval ?? 'anders'}`;
+    if (a.bron === 'gezin') return 'td-gezin';
+    const eigen = [...new Set(data.afspraken.filter((x) => x.bron === 'eigen').map((x) => x.agenda))];
+    return `td-eigen${Math.max(0, eigen.indexOf(a.agenda)) % 4}`;
   }
 
-  function lijstenHtml() {
-    if (!data.lijsten.length) return `<div class="td-lijsten"><p class="mini">${esc(t('tedoen.geenLijsten'))}</p></div>`;
-    if (!data.lijsten.some((l) => l.soort === tab)) tab = data.lijsten[0].soort;
-    const l = data.lijsten.find((x) => x.soort === tab);
-    const items = [...l.items].sort((a, b) => Number(a.klaar) - Number(b.klaar)).slice(0, 14);
-    return `<div class="td-lijsten">
-      <div class="td-tabs" role="tablist">${data.lijsten
-        .map((x) => `<button type="button" role="tab" aria-selected="${x.soort === tab}" data-td-tab="${x.soort}">${esc(t(x.soort === 'boodschappen' ? 'tedoen.boodschappen' : 'tedoen.todo'))} <em>${x.items.filter((i) => !i.klaar).length}</em></button>`)
-        .join('')}</div>
+  /** Twee weken: vandaag, en elke dag waarop iets staat. */
+  function agendaHtml() {
+    const vandaag = dagStart(Date.now());
+    const dagen = [...new Set([vandaag, ...data.afspraken.map((a) => dagStart(a.startMs)).filter((d) => d >= vandaag)])].sort((a, b) => a - b);
+    const kort = new Intl.DateTimeFormat(nl() ? 'nl-NL' : 'en-GB', { weekday: 'short' });
+    // De bronnen boven de lijst, met hun kleur.
+    const bronnen = new Map();
+    for (const a of data.afspraken) {
+      const sleutel = a.bron === 'afval' ? 'afval' : a.bron === 'gezin' ? 'gezin' : a.agenda;
+      if (!bronnen.has(sleutel)) bronnen.set(sleutel, { naam: a.bron === 'afval' ? t('tedoen.afval') : a.bron === 'gezin' ? t('tedoen.gezin') : (data.agendas?.[a.agenda] ?? a.agenda), kleur: a.bron === 'afval' ? 'td-gft' : kleurVan(a) });
+    }
+    const legenda = bronnen.size ? `<div class="tdp-bronnen">${[...bronnen.values()].map((b) => `<span class="tdp-bron"><i class="${b.kleur}"></i>${esc(b.naam)}</span>`).join('')}</div>` : '';
+    const dag = (ms) => {
+      const daar = data.afspraken.filter((a) => dagStart(a.startMs) === ms);
+      const items = daar.length
+        ? daar.map((a) => `<div class="tdp-item"><i class="${kleurVan(a)}"></i>${esc(a.tekst)}<small>${esc(a.heleDag ? (a.bron === 'afval' ? '' : t('tedoen.heleDag')) : klok(a.startMs))}</small></div>`).join('')
+        : `<div class="tdp-item leeg">${esc(t('tedoen.niets'))}</div>`;
+      return `<div class="tdp-dag${ms === vandaag ? ' vandaag' : ''}"><div class="tdp-wanneer"><span>${esc(kort.format(ms).replace('.', ''))}</span><b>${new Date(ms).getDate()}</b></div><div class="tdp-items">${items}</div></div>`;
+    };
+    return `${legenda}<div class="tdp-dagen">${dagen.map(dag).join('')}</div>`;
+  }
+
+  function lijstHtml(l) {
+    const items = [...l.items].sort((a, b) => Number(a.klaar) - Number(b.klaar)).slice(0, 20);
+    const open = l.items.filter((i) => !i.klaar).length;
+    const naam = t(l.soort === 'boodschappen' ? 'tedoen.boodschappen' : 'tedoen.todo');
+    return `<div class="tdp-lijst">
+      <h3>${esc(naam)}<span>${open}</span></h3>
       <div class="td-items">${
         items.length
-          ? items.map((i) => `<button type="button" class="td-item${i.klaar ? ' af' : ''}" data-td-item="${esc(i.tekst)}" data-td-klaar="${i.klaar}"><span class="td-box">${i.klaar ? svg(IK.vink, 2.4) : ''}</span>${esc(i.tekst)}</button>`).join('')
+          ? items.map((i) => `<button type="button" class="td-item${i.klaar ? ' af' : ''}" data-td-item="${esc(i.tekst)}" data-td-lijst="${l.soort}" data-td-klaar="${i.klaar}"><span class="td-box">${i.klaar ? svg(IK.vink, 2.4) : ''}</span>${esc(i.tekst)}</button>`).join('')
           : `<p class="mini">${esc(t('tedoen.leeg'))}</p>`
       }</div>
-      <form class="td-erbij" data-td-erbij><input type="text" maxlength="120" placeholder="${esc(t('tedoen.erbij'))}" aria-label="${esc(t('tedoen.erbij'))}"></form>
-      <p class="td-bron">${esc(t('tedoen.bron', { naam: l.naam }))}</p>
+      <form class="td-erbij" data-td-erbij data-td-lijst="${l.soort}"><input type="text" maxlength="120" placeholder="${esc(t('tedoen.erbij'))}" aria-label="${esc(t('tedoen.erbijLijst', { lijst: naam }))}"></form>
+      <p class="td-bron">${esc(t('tedoen.bron', { naam: l.naam ?? naam }))}</p>
     </div>`;
   }
 
-  function tekenBlad() {
-    const vak = blad?.querySelector('.td-blad');
-    if (!vak) return;
-    // Wat je aan het typen was, blijft staan als het blad zich opnieuw tekent (na een vinkje of nieuwe gegevens).
-    const bezig = [...vak.querySelectorAll('form input')].map((i) => [i.closest('form').hasAttribute('data-td-nieuw') ? 'nieuw' : 'erbij', i.value, i === document.activeElement]);
-    teken(vak);
-    for (const [soort, waarde, focus] of bezig) {
-      const i = vak.querySelector(`form[data-td-${soort}] input`);
-      if (!i) continue;
-      i.value = waarde;
-      if (focus) i.focus();
-    }
+  function paginaHtml() {
+    const datum = new Intl.DateTimeFormat(nl() ? 'nl-NL' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long' }).format(Date.now());
+    const kop = `<div class="tdp-kop"><div><h1 class="kop-1">${esc(t('tedoen.kop'))}</h1><p>${esc(datum.charAt(0).toUpperCase() + datum.slice(1))} · ${t('tedoen.tip')}</p></div>
+      <div class="tdp-knoppen">${telStand() ? '' : `<a class="pil" href="jij.html#agenda">${esc(t('tedoen.agendasKiezen'))}</a>`}<button type="button" class="pil licht" data-td-nieuwknop>${esc(t('tedoen.plusHerinnering'))}</button></div></div>`;
+    if (!data) return `${kop}<p class="mini">${esc(t('algemeen.laden'))}</p>`;
+    if (!data.aan) return `${kop}<section class="glas tdp-vak"><p class="uitleg">${esc(t('tedoen.uit'))}</p><a class="pil" href="functies.html?groep=assistent#tedoen">${esc(t('tedoen.naarFuncties'))}</a></section>`;
+    return `${kop}<div class="tdp-drie">
+      <section class="glas tdp-vak">
+        <h2>${esc(t('tedoen.herinneringen'))}<em>${data.herinneringen.length || ''}</em></h2>
+        ${data.herinneringen.map(herinneringHtml).join('') || `<p class="mini">${esc(t('tedoen.geenHerinneringen'))}</p>`}
+        <form class="td-erbij" data-td-nieuw><input type="text" maxlength="160" placeholder="${esc(t('tedoen.nieuw'))}" aria-label="${esc(t('tedoen.nieuwLabel'))}"></form>
+        <p class="td-bron">${t('tedoen.zoWerkt')}</p>
+      </section>
+      <section class="glas tdp-vak">
+        <h2>${esc(t('tedoen.agenda'))}${telStand() ? `<a href="jij.html#agenda">${esc(t('tedoen.agendasKiezen'))} ›</a>` : `<em>${esc(t('tedoen.tweeWeken'))}</em>`}</h2>
+        ${agendaHtml()}
+      </section>
+      <section class="glas tdp-vak">
+        ${data.lijsten.length ? data.lijsten.map(lijstHtml).join('') : `<p class="mini">${esc(t('tedoen.geenLijsten'))}</p>`}
+      </section>
+    </div>`;
   }
 
-  function teken(vak) {
-    if (!data) {
-      vak.innerHTML = `<div class="td-bovenkop"><h2 class="kop-2">${esc(t('tedoen.kop'))}</h2><button type="button" class="td-sluit" data-td-sluit aria-label="${esc(t('tedoen.sluit'))}">×</button></div><p class="mini">${esc(t('algemeen.laden'))}</p>`;
-      return;
+  function tekenPagina() {
+    for (const vak of document.querySelectorAll('[data-td-pagina]')) {
+      // Wat je aan het typen was, blijft staan als de pagina zich opnieuw tekent (na een vinkje of nieuwe gegevens).
+      const bezig = [...vak.querySelectorAll('form input')].map((i) => [i.closest('form').hasAttribute('data-td-nieuw') ? 'form[data-td-nieuw]' : `form[data-td-lijst="${i.closest('form').dataset.tdLijst}"]`, i.value, i === document.activeElement]);
+      vak.innerHTML = paginaHtml();
+      for (const [sel, waarde, focus] of bezig) {
+        const i = vak.querySelector(`${sel} input`);
+        if (!i) continue;
+        i.value = waarde;
+        if (focus) i.focus();
+      }
     }
-    if (!data.aan) {
-      vak.innerHTML = `<div class="td-bovenkop"><h2 class="kop-2">${esc(t('tedoen.kop'))}</h2><button type="button" class="td-sluit" data-td-sluit aria-label="${esc(t('tedoen.sluit'))}">×</button></div><p class="uitleg">${esc(t('tedoen.uit'))}</p>`;
-      return;
-    }
-    vak.innerHTML = `<div class="td-bovenkop"><div><h2 class="kop-2">${esc(t('tedoen.kop'))}</h2><p>${t('tedoen.tip')}</p></div><button type="button" class="td-sluit" data-td-sluit aria-label="${esc(t('tedoen.sluit'))}">×</button></div>
-      <div class="td-kolom">
-        <h3>${esc(t('tedoen.herinneringen'))}</h3>
-        ${data.herinneringen.slice(0, 4).map(herinneringHtml).join('') || `<p class="mini">${esc(t('tedoen.geenHerinneringen'))}</p>`}
-        <form class="td-erbij" data-td-nieuw><input type="text" maxlength="160" placeholder="${esc(t('tedoen.nieuw'))}" aria-label="${esc(t('tedoen.nieuwLabel'))}"></form>
-        <h3>${esc(t('tedoen.week'))}</h3>
-        ${weekHtml()}
-        <p class="td-zowerkt">${svg(IK.tel)}<span>${t('tedoen.zoWerkt')}</span></p>
-      </div>
-      ${lijstenHtml()}`;
   }
 
   /* ------------------------------------------------------------ handelingen */
 
+  /** Ga je naar een andere pagina, dan breekt de browser wat onderweg is af: dat is geen fout om te melden. */
+  let weg = false;
+  addEventListener('pagehide', () => (weg = true));
+  addEventListener('beforeunload', () => (weg = true));
+  addEventListener('pageshow', () => (weg = false));
+
   async function stuur(body) {
     const res = await deur('api/te-doen', body).catch(() => null);
+    if (weg) return;
     if (!res?.ok) {
       const f = res ? await res.json().catch(() => ({})) : {};
       global.alert?.(f.fout ?? t('tedoen.lukteNiet'));
@@ -215,17 +253,17 @@
   }
 
   document.addEventListener('click', (e) => {
-    const el = e.target.closest?.('[data-tedoen], [data-td-sluit], [data-td-gedaan], [data-td-tab], [data-td-item], [data-td-later]');
+    const el = e.target.closest?.('[data-tedoen], [data-td-nieuwknop], [data-td-gedaan], [data-td-item], [data-td-later]');
     if (!el) return;
-    if (el.matches('[data-tedoen]')) return openBlad();
-    if (el.matches('[data-td-sluit]')) return sluitBlad();
-    if (el.matches('[data-td-tab]')) {
-      tab = el.dataset.tdTab;
-      return tekenBlad();
+    // De kaart op Thuis opent de tab (besluit 217).
+    if (el.matches('[data-tedoen]')) {
+      location.href = 'tedoen.html';
+      return;
     }
+    if (el.matches('[data-td-nieuwknop]')) return el.closest('[data-td-pagina]')?.querySelector('form[data-td-nieuw] input')?.focus();
     if (el.matches('[data-td-gedaan]')) return void stuur({ actie: 'gedaan', id: el.dataset.tdGedaan }).then(sluitMoment);
     if (el.matches('[data-td-later]')) return void stuur({ actie: 'later', id: el.dataset.tdId, minuten: Number(el.dataset.tdLater) }).then(sluitMoment);
-    if (el.matches('[data-td-item]')) return void stuur({ actie: el.dataset.tdKlaar === 'true' ? 'open' : 'klaar', lijst: tab, item: el.dataset.tdItem });
+    if (el.matches('[data-td-item]')) return void stuur({ actie: el.dataset.tdKlaar === 'true' ? 'open' : 'klaar', lijst: el.dataset.tdLijst, item: el.dataset.tdItem });
   });
   document.addEventListener('submit', (e) => {
     const f = e.target.closest?.('[data-td-erbij], [data-td-nieuw]');
@@ -236,9 +274,8 @@
     veld.value = '';
     if (!v) return;
     if (f.matches('[data-td-nieuw]')) void nieuweHerinnering(v);
-    else void stuur({ actie: 'toevoegen', lijst: tab, item: v });
+    else void stuur({ actie: 'toevoegen', lijst: f.dataset.tdLijst, item: v });
   });
-  document.addEventListener('keydown', (e) => e.key === 'Escape' && blad && sluitBlad());
 
   /* ------------------------------------------------------------ het moment */
 
@@ -302,6 +339,13 @@
     klok20 = setInterval(() => void kijk(), 20_000);
   }
 
-  global.tedoen = { laad, openBlad, sluitBlad, start, kijk };
+  global.tedoen = { laad, start, kijk };
   start();
+  tekenGetal();
+  // De tab zelf (besluit 217): de pagina, elke minuut vers.
+  if (document.querySelector('[data-td-pagina]')) {
+    global.app.start('tedoen');
+    void laad();
+    setInterval(() => void laad(), 60_000);
+  }
 })(window);

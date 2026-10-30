@@ -9,6 +9,20 @@
 'use strict';
 
 (function (global) {
+  /*
+   * De overgang tussen pagina's (@view-transition in basis.css). Breekt de
+   * browser die af, omdat de pagina al te zien was, dan meldt hij dat als een
+   * fout die niemand opvangt (CI, 30 oktober 2026). Die vangen we hier: de
+   * pagina staat er gewoon, alleen zonder overgang.
+   */
+  const vangOvergang = (e) => {
+    const v = e.viewTransition;
+    if (!v) return;
+    for (const p of [v.ready, v.finished, v.updateCallbackDone]) p?.catch?.(() => {});
+  };
+  global.addEventListener('pagereveal', vangOvergang);
+  global.addEventListener('pageswap', vangOvergang);
+
   const $$ = (sel) => [...document.querySelectorAll(sel)];
   /** Een getal in de taal van de app (besluit 185); de naam is van voor er talen waren. */
   const nl = (n, d = 1) => global.taal.getal(n, d);
@@ -43,6 +57,7 @@
   const LINKS = {
     thuis: 'thuis.html',
     vandaag: 'vandaag.html',
+    tedoen: 'tedoen.html',
     apparaten: 'apparaten.html',
     opbrengst: 'opbrengst.html',
     assistent: 'assistent.html',
@@ -1178,7 +1193,8 @@
    * van een herinnering erbij; Thuis heeft het al voor de kaart.
    */
   function teDoenStart() {
-    if (global.tedoen || telStand() || document.querySelector('script[src="tedoen.js"]')) return;
+    // Ook op de telefoon: voor het getal bij de tab Te doen (besluit 217).
+    if (global.tedoen || document.querySelector('script[src="tedoen.js"]')) return;
     const s = document.createElement('script');
     s.src = 'tedoen.js';
     document.head.appendChild(s);

@@ -22,12 +22,12 @@
 
   /** Zolang de dienst niets zegt: zoals Thuis altijd was. */
   const STANDAARD = {
-    tel: { kaarten: ['kamers', 'favorieten', 'straks', 'apparaat', 'gevoel', 'vandaag'], favorieten: [], weergave: { eenvoudig: false, groteLetters: false, minderBeweging: false, seizoen: true, weer: true, feestdagen: true, zonnebaan: true } },
-    wand: { kaarten: ['vandaag', 'gevoel', 'apparaat'], breed: ['favorieten', 'vandaag', 'gevoel'], favorieten: [], magAanpassen: false },
+    tel: { kaarten: ['kamers', 'favorieten', 'straks', 'tedoen', 'apparaat', 'gevoel', 'vandaag'], favorieten: [], weergave: { eenvoudig: false, groteLetters: false, minderBeweging: false, seizoen: true, weer: true, feestdagen: true, zonnebaan: true } },
+    wand: { kaarten: ['tedoen', 'vandaag', 'gevoel', 'apparaat'], breed: ['tedoen', 'favorieten', 'vandaag', 'gevoel'], favorieten: [], magAanpassen: false },
     maxFavorieten: 12,
   };
   /** De kaarten met een korte uitleg bij Kaart toevoegen; de zinnen in teksten.*.js (eigen.kort.<kaart>, besluit 185). */
-  const KORT = new Set(['kamers', 'favorieten', 'straks', 'apparaat', 'gevoel', 'vandaag', 'morgen', 'auto', 'batterij', 'maand', 'deurbel', 'boiler', 'sluip']);
+  const KORT = new Set(['kamers', 'favorieten', 'straks', 'apparaat', 'gevoel', 'vandaag', 'morgen', 'auto', 'batterij', 'maand', 'deurbel', 'boiler', 'sluip', 'tedoen']);
   const S = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
   const ICOON = {
     kamers: S('<path d="M4 11l8-7 8 7v9H4z"/><path d="M10 20v-5h4v5"/>'),
@@ -47,6 +47,8 @@
     boiler: S('<rect x="7" y="2.5" width="10" height="19" rx="5"/><path d="M10 15h4"/>'),
     // Het sluipverbruik (besluit 192): de maan, want het gaat om de nacht.
     sluip: S('<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>'),
+    // Te doen (besluit 217): het icoon van de tab.
+    tedoen: S('<path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/>'),
     lamp: S('<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>'),
     scene: S('<path d="M5 19l4-11 4 6 3-4 3 9z"/><circle cx="17" cy="6" r="1.6"/>'),
     screen: S('<path d="M4 4h16"/><path d="M5.5 4v9h13V4"/><path d="M5.5 7h13M5.5 10h13"/><path d="M12 13v3"/>'),

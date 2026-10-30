@@ -67,6 +67,8 @@ export interface Overzicht {
   readonly lijsten: readonly { readonly soort: LijstSoort; readonly id: string; readonly naam: string; readonly items: readonly LijstItem[] }[];
   readonly afspraken: readonly (Afspraak & { readonly afval?: string })[];
   readonly speelt: readonly Herinnering[];
+  /** De namen van de agenda's in de afspraken, voor de kleuren op de pagina. */
+  readonly agendas?: Readonly<Record<string, string>>;
 }
 
 /** Wat er voor wie kijkt te doen is: zijn herinneringen (op een scherm die van iedereen), de lijsten en de week. */
@@ -98,7 +100,7 @@ export async function overzicht(d: Diensten, t: TeDoenDienst, wie: Visitor | nul
   const agenda = ids.length ? await vast(`agenda:${ids.join(',')}:${van}`, () => t.leesAgendas(ids, van, tot)) : null;
   const afspraken = leesAfspraken(agenda, (id) => (id === keus.afval ? 'afval' : id === keus.gezin ? 'gezin' : 'eigen'), tz).map((a) => (a.bron === 'afval' ? { ...a, afval: afvalSoort(a.tekst) } : a));
   void d;
-  return { aan: true, herinneringen, lijsten, afspraken, speelt };
+  return { aan: true, herinneringen, lijsten, afspraken, speelt, agendas: t.namen?.(ids) ?? {} };
 }
 
 /** De routes van te doen. */
@@ -144,7 +146,7 @@ export async function teDoenRoutes(d: Diensten, v: Verzoek): Promise<boolean> {
 /** Eén handeling: toevoegen, afvinken, een herinnering, gedaan of later. */
 export async function handel(t: TeDoenDienst, body: Record<string, unknown>, wie: Visitor | null): Promise<{ status: number; antwoord: Record<string, unknown> }> {
   const keus = t.keus();
-  if (!keus.aan) return { status: 409, antwoord: { fout: 'te doen staat uit bij Functies' } };
+  if (!keus.aan) return { status: 409, antwoord: { fout: 'te doen staat uit bij Instellingen › Assistent' } };
   const actie = body['actie'];
   const tekst = typeof body['item'] === 'string' ? body['item'].trim() : '';
   const lijstId = body['lijst'] === 'boodschappen' ? keus.boodschappen : body['lijst'] === 'todo' ? keus.todo : null;
