@@ -57,6 +57,7 @@
   const LINKS = {
     thuis: 'thuis.html',
     vandaag: 'vandaag.html',
+    tedoen: 'tedoen.html',
     apparaten: 'apparaten.html',
     opbrengst: 'opbrengst.html',
     assistent: 'assistent.html',
@@ -1192,7 +1193,8 @@
    * van een herinnering erbij; Thuis heeft het al voor de kaart.
    */
   function teDoenStart() {
-    if (global.tedoen || telStand() || document.querySelector('script[src="tedoen.js"]')) return;
+    // Ook op de telefoon: voor het getal bij de tab Te doen (besluit 217).
+    if (global.tedoen || document.querySelector('script[src="tedoen.js"]')) return;
     const s = document.createElement('script');
     s.src = 'tedoen.js';
     document.head.appendChild(s);

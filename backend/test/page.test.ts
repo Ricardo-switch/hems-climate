@@ -1980,7 +1980,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await kaart.locator('[data-volgende]').click();
     // De wand (besluit 190): de kaarten om aan of uit te zetten, en de wand in het klein.
     await kaart.locator('h1', { hasText: 'Hoe ziet de wand eruit?' }).waitFor();
-    expect(await kaart.locator('[data-wkaart]').count()).toBe(11);
+    expect(await kaart.locator('[data-wkaart]').count()).toBe(12);
     await kaart.locator('.wandje [data-mini] svg.sc-huis').waitFor();
     await shot('wand');
     await kaart.locator('[data-volgende]').click();
@@ -2145,13 +2145,17 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
    * Thuis, het blad na een tik, en het moment als een herinnering speelt. De
    * dienst is nagebootst met een route.
    */
-  it('toont Te doen op Thuis: de kaart, het blad, en het moment op de wand (besluit 216)', async () => {
+  it('toont Te doen: de kaart op Thuis, de eigen tab, en het moment op de wand (besluit 216 en 217)', async () => {
     const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, locale: 'nl-NL' });
     await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
     await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
     const p = await context.newPage();
     const fouten: string[] = [];
     p.on('pageerror', (e) => fouten.push(e.message));
+    p.on('dialog', (d) => {
+      fouten.push(`melding: ${d.message()}`);
+      void d.dismiss();
+    });
     const shot = async (naam: string) => {
       if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', `-${naam}.png`) });
     };
@@ -2186,6 +2190,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
             { startMs: dag(8), heleDag: true, tekst: 'PMD', bron: 'afval', agenda: 'calendar.afval', afval: 'pmd' },
           ],
           speelt,
+          agendas: { 'calendar.afval': 'Afvalbeheer', 'calendar.gezin': 'Gezin' },
         },
       });
     });
@@ -2197,25 +2202,29 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       expect(await kaart.textContent()).toContain('Morgen GFT');
       expect(await kaart.textContent()).toContain('melk, brood, eieren en nog 1');
       await shot('tedoen-kaart');
-      // Het blad: herinneringen, de week, en de lijst om af te vinken.
+      // De kaart opent de tab (besluit 217): herinneringen, de agenda van twee weken, en beide lijsten.
       await kaart.click();
-      const blad = p.locator('.td-blad');
-      await blad.locator('.td-item').first().waitFor({ timeout: 10_000 });
-      expect(await blad.locator('.td-her').count()).toBe(1);
-      expect(await blad.locator('.td-dag').count()).toBe(7);
-      expect(await blad.locator('.td-verder').textContent()).toContain('PMD');
-      await shot('tedoen-blad');
-      await blad.locator('.td-item', { hasText: 'Melk' }).click();
+      await p.waitForURL(/tedoen\.html$/);
+      const tab = p.locator('#wand [data-td-pagina]');
+      await tab.locator('.td-item').first().waitFor({ timeout: 10_000 });
+      expect(await p.locator('#balk [data-tab="tedoen"][aria-current="page"]').count()).toBe(1);
+      expect(await tab.locator('.td-her').count()).toBe(1);
+      // Vandaag, morgen (GFT), de zwemles en de PMD over acht dagen.
+      expect(await tab.locator('.tdp-dag').count()).toBe(4);
+      expect(await tab.locator('.tdp-bronnen').textContent()).toContain('Gezin');
+      expect(await tab.locator('.tdp-dag', { hasText: 'PMD' }).count()).toBe(1);
+      expect(await tab.locator('.tdp-lijst').count()).toBe(2);
+      await p.waitForTimeout(500);
+      await shot('tedoen-tab');
+      await tab.locator('.td-item', { hasText: 'Melk' }).click();
       await expect.poll(() => gestuurd.length).toBe(1);
       expect(gestuurd[0]).toEqual({ actie: 'klaar', lijst: 'boodschappen', item: 'Melk' });
-      await blad.locator('[data-td-erbij] input').fill('Kaas');
-      await blad.locator('[data-td-erbij] input').press('Enter');
+      await tab.locator('[data-td-erbij][data-td-lijst="todo"] input').fill('Kaas');
+      await tab.locator('[data-td-erbij][data-td-lijst="todo"] input').press('Enter');
       await expect.poll(() => gestuurd.length).toBe(2);
-      expect(gestuurd[1]).toEqual({ actie: 'toevoegen', lijst: 'boodschappen', item: 'Kaas' });
-      await blad.locator('[data-td-tab="todo"]').click();
-      await expect.poll(() => blad.locator('.td-item').first().textContent()).toBe('Dakgoot');
-      await p.locator('.td-sluit').click();
-      expect(await p.locator('.td-blad').count()).toBe(0);
+      expect(gestuurd[1]).toEqual({ actie: 'toevoegen', lijst: 'todo', item: 'Kaas' });
+      await p.goto(`${baseUrl}/thuis.html`);
+      await kaart.waitFor({ state: 'visible', timeout: 10_000 });
       // Het moment: de herinnering speelt, de wand toont hem met Gedaan.
       speelt = [{ ...herinnering, status: 'nu', ms: nu }];
       await p.evaluate('window.tedoen.kijk()');
@@ -2232,7 +2241,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await expect.poll(() => kaart.locator('.td-rij').count()).toBe(1);
       expect(await kaart.isVisible()).toBe(true);
       expect(await kaart.textContent()).toContain('Niets te doen');
-      // Functies › Te doen: keuzelijsten in plaats van rijen knoppen.
+      // Instellingen › Assistent › Te doen (besluit 217): keuzelijsten; het oude adres gaat er vanzelf heen.
       await context.route(`${baseUrl}/api/functies`, async (route) => {
         if (route.request().method() !== 'GET') return route.continue();
         const echt = (await (await route.fetch()).json()) as { gevonden: Record<string, unknown> };
@@ -2241,10 +2250,22 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
         await route.fulfill({ json: echt });
       });
       await p.goto(`${baseUrl}/functies.html#tedoen`);
+      await p.waitForURL(/functies\.html\?groep=assistent#tedoen$/);
       await p.locator('#wand [data-tedoen-keus]').first().waitFor({ timeout: 10_000 });
+      expect(await p.locator('#wand h1').first().textContent()).toBe('Assistent');
+      expect(await p.locator('#wand [data-delen] .deel').count()).toBe(3);
       expect(await p.locator('#wand [data-tedoen-keus]').count()).toBe(4);
       expect(await p.locator('#wand [data-vorm] a[href="jij.html#agenda"]').count()).toBe(1);
       await shot('tedoen-functies');
+      // De telefoon: zes tabs, alleen iconen, de gekozen tab met zijn naam.
+      await p.setViewportSize({ width: 390, height: 844 });
+      await p.goto(`${baseUrl}/tedoen.html`);
+      await p.locator('#tel .tabs a').first().waitFor({ timeout: 10_000 });
+      expect(await p.locator('#tel .tabs a').count()).toBe(6);
+      expect(await p.locator('#tel .tabs a span:visible').count()).toBe(1);
+      expect(await p.locator('#tel .tabs a[aria-current="page"]').textContent()).toBe('Te doen');
+      expect(await p.evaluate('document.documentElement.scrollWidth <= innerWidth')).toBe(true);
+      await shot('tedoen-tel');
       expect(fouten).toEqual([]);
     } finally {
       await context.close();
@@ -2769,7 +2790,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await p.mouse.move(x, g.y + g.height / 2);
       await p.mouse.down();
       for (let i = 1; i <= 10; i++) await p.mouse.move(x, g.y + g.height / 2 - ((g.y - 40) * i) / 10);
-      for (let i = 0; i < 30; i++) await p.mouse.move(x, 40 - (i % 2));
+      for (let i = 0; i < 60; i++) await p.mouse.move(x, 40 - (i % 2));
       await p.mouse.up();
       await expect.poll(async () => (await voorkeuren()).tel.kaarten[0]).toBe('gevoel');
       expect((await volgorde())[0]).toBe('gevoel');
@@ -2826,7 +2847,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await blad.waitFor();
       expect(await blad.textContent()).toContain('Een nieuwe kaart komt onderaan');
       await blad.locator('[data-erbij="favorieten"]').click();
-      await expect.poll(async () => (await voorkeuren()).wand.kaarten).toEqual(['vandaag', 'apparaat', 'favorieten']);
+      await expect.poll(async () => (await voorkeuren()).wand.kaarten).toEqual(['tedoen', 'vandaag', 'apparaat', 'favorieten']);
       await p.locator('#wand [data-bewerkkop] [data-klaar]').click();
       // De wand heeft zijn eigen favorieten: nog geen, dus een knop om te kiezen. Ook
       // met Straks erbij staat hij er: de kolom schuift zelf.
@@ -2839,8 +2860,8 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     } finally {
       // Terug zoals het was, voor de tests hierna.
       const terug = (body: unknown) => fetch(`${baseUrl}/api/voorkeuren`, { method: 'POST', headers: { 'content-type': 'application/json', origin: baseUrl }, body: JSON.stringify(body) });
-      await terug({ plek: 'tel', kaarten: ['kamers', 'favorieten', 'straks', 'apparaat', 'gevoel', 'vandaag'], favorieten: [] });
-      await terug({ plek: 'wand', kaarten: ['vandaag', 'gevoel', 'apparaat'], breed: ['favorieten', 'vandaag', 'gevoel'], favorieten: [] });
+      await terug({ plek: 'tel', kaarten: ['kamers', 'favorieten', 'straks', 'tedoen', 'apparaat', 'gevoel', 'vandaag'], favorieten: [] });
+      await terug({ plek: 'wand', kaarten: ['tedoen', 'vandaag', 'gevoel', 'apparaat'], breed: ['tedoen', 'favorieten', 'vandaag', 'gevoel'], favorieten: [] });
       await context.close();
     }
   }, 60_000);
@@ -3488,7 +3509,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
   }
 
   /*
-   * De rondleiding (besluit 139 en 144): twaalf stops op de echte pagina's en
+   * De rondleiding (besluit 139, 144 en 217): dertien stops op de echte pagina's en
    * dan Klaar, de eerste keer vanzelf, daarna achter het vraagteken op Thuis.
    */
   it('loopt de rondleiding langs alle tabbladen en een kamer, en daarna achter het vraagteken', async () => {
@@ -3517,18 +3538,20 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await p.waitForURL(/vandaag\.html$/);
     await volgende('Wat er vandaag gebeurt', 'rl-5');
     await volgende('Gisteren en morgen', 'rl-6');
+    await p.waitForURL(/tedoen\.html$/);
+    await volgende('Wat er te doen is', 'rl-7');
     await p.waitForURL(/apparaten\.html$/);
-    await volgende('Wat elk apparaat nu doet', 'rl-7');
+    await volgende('Wat elk apparaat nu doet', 'rl-8');
     await p.waitForURL(/opbrengst\.html$/);
-    await volgende('Wat je panelen opleverden', 'rl-8');
+    await volgende('Wat je panelen opleverden', 'rl-9');
     await p.waitForURL(/assistent\.html$/);
-    await volgende('Vraag het je huis', 'rl-9');
+    await volgende('Vraag het je huis', 'rl-10');
     await p.waitForURL(/thuis\.html$/);
-    await volgende('De bel', 'rl-10');
+    await volgende('De bel', 'rl-11');
     await p.waitForURL(/instellingen\.html$/);
-    await volgende('Het tandwiel', 'rl-11');
+    await volgende('Het tandwiel', 'rl-12');
     await p.waitForURL(/huis-kan\.html$/);
-    await volgende('Hoe ver het huis is', 'rl-12');
+    await volgende('Hoe ver het huis is', 'rl-13');
     await p.waitForURL(/thuis\.html$/);
     await kaart.filter({ hasText: 'Klaar' }).locator('[data-rl-klaar]').waitFor();
     await shot('rl-klaar');
@@ -4012,7 +4035,7 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     expect(vast).toEqual([]);
   }, 120_000);
 
-  it('toont Instellingen in zes groepen, en daarvandaan Wat je huis kan (besluit 130)', async () => {
+  it('toont Instellingen in zeven groepen, en daarvandaan Wat je huis kan (besluit 130 en 217)', async () => {
     const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
     await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
     const p = await context.newPage();
@@ -4020,7 +4043,7 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     p.on('pageerror', (e) => fouten.push(e.message));
     await p.goto(`${baseUrl}/instellingen.html`);
     await p.locator('#wand [data-groepen] .tegel').first().waitFor();
-    expect(await p.locator('#wand [data-groepen] .tegel h3').allTextContents()).toEqual(['Je huis', 'Comfort', 'Energie', 'Regeling', 'Functies', 'Bewoners en toegang']);
+    expect(await p.locator('#wand [data-groepen] .tegel h3').allTextContents()).toEqual(['Je huis', 'Comfort', 'Energie', 'Regeling', 'Functies', 'Assistent', 'Bewoners en toegang']);
     expect(await p.locator('#balk [aria-current="page"]').getAttribute('aria-label')).toBe('Instellingen');
     expect(await p.evaluate('document.scrollingElement.scrollHeight <= innerHeight')).toBe(true);
     // Zoeken: "zekering" vindt de aansluiting bij Energie.

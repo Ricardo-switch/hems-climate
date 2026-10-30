@@ -1,5 +1,41 @@
 # Wat is er nieuw · What is new
 
+## 0.89.0
+
+*30 oktober 2026*
+
+**Nieuw**
+
+- Te doen is een eigen tab: je herinneringen, de agenda van twee weken en de boodschappen en to-do op één pagina
+- Instellingen heeft een groep Assistent, met Praten met je huis, Stem en luisteren en Te doen bij elkaar
+
+**Beter**
+
+- Op de telefoon staan de tabs als iconen; de tab waar je bent staat er met zijn naam bij
+- De kaart Te doen op Thuis is een gewone kaart: verbergen en verplaatsen doe je bij Thuis aanpassen
+- Te doen loopt mee in Inrichten, de rondleiding, Wat je huis kan en de zonnewaaier
+
+**Opgelost**
+
+- Een tik op een straal van de zonnewaaier geeft geen blauw vak meer
+
+*English*
+
+**New**
+
+- To do is a tab of its own: your reminders, two weeks of calendar and the shopping and to-do lists on one page
+- Settings has an Assistant group, with Talk to your house, Voice and listening and To do together
+
+**Improved**
+
+- On the phone the tabs are icons; the tab you are on shows its name too
+- The To do card on Home is a regular card: hide and move it under Customise Home
+- To do is part of Set up, the tour, What your house can do and the sun fan
+
+**Fixed**
+
+- Tapping a ray of the sun fan no longer shows a blue box
+
 ## 0.88.1
 
 *30 oktober 2026*

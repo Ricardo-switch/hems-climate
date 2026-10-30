@@ -18,6 +18,26 @@
 
 const { $$, esc, haal } = app;
 
+/*
+ * De assistent (besluit 217): Praten met je huis, Stem en luisteren en Te doen
+ * staan als eigen groep bij Instellingen (functies.html?groep=assistent). Een
+ * oud adres als functies.html#praten gaat vanzelf naar die groep, en andersom.
+ */
+const ASSISTENT = ['praten', 'stem', 'tedoen'];
+const isAssistent = new URLSearchParams(location.search).get('groep') === 'assistent';
+{
+  const h = decodeURIComponent(location.hash.slice(1));
+  if (!isAssistent && ASSISTENT.includes(h)) location.replace(`functies.html?groep=assistent#${h}`);
+  else if (isAssistent && h && !ASSISTENT.includes(h)) location.replace(`functies.html#${h}`);
+  if (isAssistent) {
+    document.title = `${t('groep.assistent')} · Smart Climate`;
+    $$('h1[data-t="groep.functies"]').forEach((el) => {
+      el.dataset.t = 'groep.assistent';
+      el.textContent = t('groep.assistent');
+    });
+  }
+}
+
 let info = null;
 let concept = null;
 let zon = null;
@@ -623,6 +643,12 @@ const NAAST = {
 };
 
 function delen() {
+  const alle = alleDelen();
+  if (isAssistent) return alle.filter((x) => ASSISTENT.includes(x.id));
+  return alle.filter((x) => !ASSISTENT.includes(x.id));
+}
+
+function alleDelen() {
   if (!info || !concept) return [];
   const f = concept;
   const beelden = f.cameras.aan ? f.cameras.lijst.length : 0;

@@ -13,6 +13,7 @@
     energie: 'energie.html',
     regeling: 'regeling.html',
     functies: 'functies.html',
+    assistent: 'functies.html?groep=assistent',
     toegang: 'toegang.html',
   };
 
@@ -79,6 +80,9 @@
     ['uit', 'zoek.waar.weergave', 'functies.html#uit'],
     ['scherm', 'zoek.waar.weergave', 'functies.html#scherm'],
     ['meldingen', 'functies', 'functies.html#meldingen'],
+    ['praten', 'assistent', 'functies.html?groep=assistent#praten'],
+    ['stem', 'assistent', 'functies.html?groep=assistent#stem'],
+    ['tedoen', 'assistent', 'functies.html?groep=assistent#tedoen'],
     ['bewoners', 'toegang', 'bewoners.html'],
     ['eigen', 'toegang', 'bewoners.html'],
     ['inloggen', 'toegang', 'toegang.html#bewoners'],
@@ -197,7 +201,7 @@
   }
 
   /** Hoeveel regels "Zo werkt het" en "Wanneer het werkt" elk onderwerp heeft (kan.<id>.zo.<n>). */
-  const REGELS = { ligging: [3, 3], boiler: [3, 2], jacuzzi: [3, 2], temperatuur: [3, 2], optijd: [3, 2], perkamer: [3, 2], gevoel: [2, 1], opzon: [3, 2], apparaten: [3, 2], batterij: [3, 1], goedkoop: [2, 1], auto: [2, 1], licht: [2, 2], screens: [2, 1], afwezig: [2, 1], vraag: [2, 1], opbrengst: [2, 1], zekering: [2, 1], sluip: [2, 1], camera: [2, 1], batterijen: [2, 1], weer: [2, 1] };
+  const REGELS = { ligging: [3, 3], boiler: [3, 2], jacuzzi: [3, 2], temperatuur: [3, 2], optijd: [3, 2], perkamer: [3, 2], gevoel: [2, 1], opzon: [3, 2], apparaten: [3, 2], batterij: [3, 1], goedkoop: [2, 1], auto: [2, 1], licht: [2, 2], screens: [2, 1], afwezig: [2, 1], vraag: [2, 1], opbrengst: [2, 1], zekering: [2, 1], sluip: [2, 1], camera: [2, 1], batterijen: [2, 1], weer: [2, 1], tedoen: [3, 2] };
   /** De vaste teksten van een onderwerp: de titel, wat het is, hoe en wanneer. */
   function teksten(id) {
     const t = global.taal.t;
@@ -311,6 +315,8 @@
       ...(screens.length ? [{ ...teksten('screens'), groep: 'gemak', stand: d.functies?.schermMogelijk && f?.schermen?.bedienen !== false ? 'werkt' : 'uit', nu: t('kan.screens.n', { n: screens.length }), href: 'functies.html#licht' }] : []),
       { ...teksten('afwezig'), groep: 'comfort', stand: geenRegeling ? 'nodig' : meekijk, ...(geenRegeling ? { label: t('kan.temperatuur.nodig') } : {}), nu: geenRegeling ? t('kan.zonderRegeling') : t('kan.afwezig.nu'), href: 'comfort.html#afwezig' },
       { ...teksten('vraag'), groep: 'gemak', stand: 'werkt', nu: t('kan.vraag.nu'), href: 'assistent.html' },
+      // Te doen (besluit 216 en 217): herinneringen, de agenda en de lijsten, in een eigen tab.
+      ...(f ? [teDoenOnderwerp(f, t)] : []),
       // Overzicht
       {
         ...teksten('opbrengst'), groep: 'overzicht', stand: zonderMeter || zonderPrijs ? 'mis' : 'werkt', label: zonderMeter ? t('kan.opbrengst.meters') : zonderPrijs ? t('kan.opbrengst.prijs') : null,
@@ -326,6 +332,13 @@
       { ...teksten('weer'), groep: 'overzicht', stand: f?.weer?.bron ? 'werkt' : 'uit', nu: weerNaam ? t('kan.weer.van', { bron: weerNaam }) : t('kan.weer.nu'), href: 'functies.html#weer' },
     ];
     return lijst.map((x) => ({ ...x, label: x.label ?? LABEL(x.stand) ?? x.stand }));
+  }
+
+  /** Te doen in Wat je huis kan: aan met wat er gekozen is, of uit met de weg ernaartoe. */
+  function teDoenOnderwerp(f, t) {
+    const td = f.tedoen;
+    const n = td ? ['boodschappen', 'todo', 'afval', 'gezin'].filter((k) => td[k]).length : 0;
+    return { ...teksten('tedoen'), groep: 'gemak', stand: td?.aan ? 'werkt' : 'uit', nu: td?.aan ? t('kan.tedoen.n', { n }) : t('kan.tedoen.nu'), href: td?.aan ? 'tedoen.html' : 'functies.html?groep=assistent#tedoen' };
   }
 
   /** De groepen op de zonnewaaier, van links naar rechts: wat nog leert staat bovenin. */

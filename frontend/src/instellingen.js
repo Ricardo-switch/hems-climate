@@ -1,6 +1,6 @@
 /*
  * Instellingen (besluit 130, schets Wand-Instellingen). Achter het tandwiel:
- * wat er nog mist, Wat je huis kan, en zes groepen die je herkent aan wat ze
+ * wat er nog mist, Wat je huis kan, en zeven groepen die je herkent aan wat ze
  * regelen. Elke groep toont zijn belangrijkste waarden en of er iets mist.
  * Bedienen doe je in het huis; hier stel je in.
  */
@@ -53,6 +53,8 @@ const ICOON = {
   energie: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--zon)" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4"/></svg>',
   regeling: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--violet)" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="6" width="18" height="8" rx="2"/><path d="M7 18c0-1.5 1-2 1-3M12 19c0-1.5 1-2 1-3M17 18c0-1.5 1-2 1-3"/></svg>',
   functies: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z"/></svg>',
+  // De assistent (besluit 217): een spraakwolk.
+  assistent: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--violet)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M8.5 12h.01M12 12h.01M15.5 12h.01"/></svg>',
   toegang: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M10 18h4"/></svg>',
 };
 
@@ -115,6 +117,15 @@ function feitenVan(id) {
         [t('instellingen.weer'), f ? weer.replace(' (via internet)', '') : '…'],
       ];
     }
+    case 'assistent': {
+      const f = d.functies?.instellingen ?? d.functies?.voorstel;
+      const aanUit = (x) => t(x ? 'instellingen.aan' : 'instellingen.uit');
+      return [
+        [t('instellingen.praten'), f ? t(f.praten?.taalmodel ? 'functies.deel.eigen' : 'functies.deel.vast') : '…'],
+        [t('instellingen.bedienenZin'), f ? aanUit(f.praten?.bedienen !== false) : '…'],
+        [t('nav.tedoen'), f ? aanUit(f.tedoen?.aan === true) : '…'],
+      ];
+    }
     case 'toegang': {
       const s = d.sessie;
       const ingelogd = !s ? '…' : s.toegang === 'open' ? t('instellingen.geenInlog') : s.ingelogd ? `${s.naam ?? ''}${s.rol ? `, ${s.rol}` : ''}` : t('instellingen.nogNiet');
@@ -131,7 +142,7 @@ function feitenVan(id) {
   }
 }
 
-const GROEPEN = ['huis', 'comfort', 'energie', 'regeling', 'functies', 'toegang'].map((id) => [id, t(`groep.${id}`), t(`groep.${id}Zin`)]);
+const GROEPEN = ['huis', 'comfort', 'energie', 'regeling', 'functies', 'assistent', 'toegang'].map((id) => [id, t(`groep.${id}`), t(`groep.${id}Zin`)]);
 
 function groepen() {
   const mis = isGast() ? [] : stand.nogTeDoen(d);

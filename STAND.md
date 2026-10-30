@@ -429,7 +429,9 @@ verwijzing bestaat.
   en een bijna goed verstaan woord wordt ook op klank rechtgezet, zodat het
   snelle Whisper-model volstaat ([215]). Te doen: herinneringen die de wand
   hardop zegt en naar je telefoon gaan, de boodschappen en to-do van Home
-  Assistant, en het afval en je agenda's, op een kaart en met je stem ([216]).
+  Assistant, en het afval en je agenda's, met je stem en in een eigen tab
+  Te doen; de instellingen van de assistent staan bij Instellingen ›
+  Assistent ([216], [217]).
 - **Een kamer doet mee** met de regeling van een andere kamer, zoals een
   slaapkamer met de airco in de wasruimte ([142]).
 - **Comfort per bewoner:** wie hier woont staat op volgorde; de eerste die
@@ -717,4 +719,5 @@ verwijzing bestaat.
 [214]: DECISIONS.md#214-hoe-ver-je-huis-is-de-zonnewaaier
 [215]: DECISIONS.md#215-sneller-verstaan-het-einde-van-je-zin-bij-geluid-en-rechtzetten-op-klank
 [216]: DECISIONS.md#216-te-doen-herinneringen-de-lijsten-van-home-assistant-en-afval-en-agenda
+[217]: DECISIONS.md#217-te-doen-als-eigen-tab-en-de-assistent-als-groep-bij-instellingen
 <!-- links:einde -->

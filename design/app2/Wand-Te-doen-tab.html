@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Te doen als tab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Te doen als eigen tab (schets, 30 oktober 2026; na 0.88). De bewoner: "ik
+   * ben nog steeds voor een tab; daar kan je taken, agenda, boodschappen en
+   * herinneringen op één pagina krijgen, met een losse kaart op Thuis die je
+   * kunt verbergen, net als de andere". De tab staat tussen Vandaag en
+   * Apparaten. Drie kolommen: herinneringen, de agenda van twee weken (afval,
+   * gezin en jouw agenda's, elk met een eigen kleur), en de lijsten. De kaart
+   * op Thuis wordt een gewone kaart: verbergen kan bij Kaarten aanpassen.
+   */
+  .wand { position: relative; }
+  main { position: relative; padding: 22px 26px 22px 22px; display: flex; flex-direction: column; gap: 14px; height: 100%; box-sizing: border-box; }
+  .kopregel { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
+  .kopregel h1 { margin: 0; }
+  .kopregel p { margin: 6px 0 0; font-size: 14.5px; color: var(--zacht); }
+  .kopregel p b { color: var(--tekst); font-weight: 600; }
+  .kopregel .knoppen { display: flex; gap: 8px; }
+  .pil { height: 40px; padding: 0 16px; border-radius: 13px; display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; background: rgb(var(--wit) / 0.07); border: 1px solid var(--glas-rand); }
+  .pil.licht { background: var(--tekst); color: var(--inkt); border-color: transparent; }
+  .drie { flex: 1; display: grid; grid-template-columns: 1fr 1.25fr 1fr; gap: 14px; min-height: 0; }
+  .vak { padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow: hidden; }
+  .vak h2 { margin: 0; font-family: var(--kop); font-size: 19px; font-weight: 600; display: flex; justify-content: space-between; align-items: baseline; }
+  .vak h2 a, .vak h2 em { font: 600 13px var(--romp); font-style: normal; color: var(--accent); }
+  .her { display: grid; grid-template-columns: 58px 1fr 30px; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 15px; background: rgb(var(--wit) / 0.05); border: 1px solid rgb(var(--wit) / 0.07); }
+  .her.nu { background: rgb(143 134 255 / 0.12); border-color: rgb(143 134 255 / 0.4); }
+  .her .uur { text-align: center; }
+  .her .uur b { display: block; font-family: var(--kop); font-size: 18px; line-height: 1; }
+  .her .uur span { font-size: 11px; color: var(--gedempt); font-weight: 600; }
+  .her .wat b { display: block; font-size: 14px; }
+  .her .wat span { font-size: 12px; color: var(--zacht); }
+  .vink { width: 30px; height: 30px; border-radius: 10px; border: 1.5px solid rgb(var(--wit) / 0.25); display: grid; place-items: center; color: var(--gedempt); }
+  .vink svg { width: 14px; height: 14px; }
+  .erbij { height: 40px; border-radius: 12px; border: 1.5px dashed rgb(var(--wit) / 0.2); display: flex; align-items: center; padding: 0 12px; font-size: 13.5px; color: var(--gedempt); }
+  .afgelopen { font-size: 12.5px; color: var(--gedempt); margin-top: auto; }
+
+  /* De agenda: twee weken als lijst per dag; elke bron een eigen kleur. */
+  .bronnen { display: flex; gap: 6px; flex-wrap: wrap; }
+  .bron { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 999px; font-size: 12px; font-weight: 700; background: rgb(var(--wit) / 0.06); color: var(--zacht); }
+  .bron i { width: 8px; height: 8px; border-radius: 50%; }
+  .dagen { display: flex; flex-direction: column; gap: 4px; overflow: hidden; }
+  .dag { display: grid; grid-template-columns: 54px 1fr; gap: 10px; padding: 7px 4px; border-top: 1px solid rgb(var(--wit) / 0.06); }
+  .dag:first-child { border-top: 0; }
+  .dag .wanneer { text-align: center; }
+  .dag .wanneer span { display: block; font-size: 11px; font-weight: 700; color: var(--gedempt); text-transform: uppercase; }
+  .dag .wanneer b { font-family: var(--kop); font-size: 20px; }
+  .dag.vandaag .wanneer b { color: var(--accent); }
+  .items { display: flex; flex-direction: column; gap: 4px; justify-content: center; }
+  .item { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+  .item i { width: 4px; height: 18px; border-radius: 2px; flex: none; }
+  .item small { color: var(--gedempt); font-size: 12px; margin-left: auto; }
+  .item.leeg { color: var(--gedempt); font-size: 13px; }
+  .gft { background: #6ee7b7; } .pmd { background: #ffb86b; } .rest { background: #a7b0bd; } .gezin { background: #ff9fc0; } .eigen { background: #b7b0ff; } .werk { background: #6fd3ff; }
+
+  /* De lijsten: boodschappen en to-do onder elkaar. */
+  .lijst { display: flex; flex-direction: column; }
+  .lijst h3 { margin: 0 0 4px; font-size: 12px; font-weight: 700; color: var(--gedempt); text-transform: uppercase; letter-spacing: 0.06em; display: flex; justify-content: space-between; }
+  .rij { display: flex; align-items: center; gap: 11px; padding: 6px 2px; border-top: 1px solid rgb(var(--wit) / 0.06); font-size: 14.5px; }
+  .rij:first-of-type { border-top: 0; }
+  .rij .box { width: 22px; height: 22px; border-radius: 7px; border: 1.5px solid rgb(var(--wit) / 0.3); flex: none; }
+  .rij.af { color: var(--gedempt); text-decoration: line-through; }
+  .rij.af .box { background: var(--mint); border-color: var(--mint); }
+  .rij small { margin-left: auto; font-size: 11.5px; color: var(--gedempt); }
+  .bronregel { margin-top: auto; font-size: 12px; color: var(--gedempt); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position: absolute">
+  <symbol id="vink" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M5 12.5l4.5 4.5L19 7"/></symbol>
+</svg>
+<div class="wand lucht lucht-avond">
+  <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+  <main>
+    <div class="kopregel">
+      <div><h1 class="kop-1">Te doen</h1><p>Maandag 2 november · zeg <b>"Hé huis, herinner me…"</b> of <b>"zet melk op de boodschappen"</b></p></div>
+      <div class="knoppen"><span class="pil">Jouw agenda’s</span><span class="pil licht">+ Herinnering</span></div>
+    </div>
+    <div class="drie">
+      <section class="glas vak">
+        <h2>Herinneringen<em>3</em></h2>
+        <div class="her nu"><div class="uur"><b>20:00</b><span>vandaag</span></div><div class="wat"><b>Container buiten zetten</b><span>Ricardo · wand en telefoon</span></div><span class="vink"><svg><use href="#vink"/></svg></span></div>
+        <div class="her"><div class="uur"><b>07:30</b><span>morgen</span></div><div class="wat"><b>Matt zijn gymtas meegeven</b><span>Shira · telefoon</span></div><span class="vink"><svg><use href="#vink"/></svg></span></div>
+        <div class="her"><div class="uur"><b>16:15</b><span>do</span></div><div class="wat"><b>Zwemtas pakken</b><span>iedereen · wand</span></div><span class="vink"><svg><use href="#vink"/></svg></span></div>
+        <div class="erbij">+ Nieuwe, zoals "om 8 uur aan de container"</div>
+        <div class="afgelopen">Gedaan vandaag: oven uit (17:40)</div>
+      </section>
+      <section class="glas vak">
+        <h2>Agenda<a>twee weken</a></h2>
+        <div class="bronnen"><span class="bron"><i class="gft"></i>Afval</span><span class="bron"><i class="gezin"></i>Gezin</span><span class="bron"><i class="eigen"></i>Ric060589</span><span class="bron"><i class="werk"></i>Werkplek</span></div>
+        <div class="dagen">
+          <div class="dag vandaag"><div class="wanneer"><span>ma</span><b>2</b></div><div class="items"><div class="item"><i class="eigen"></i>Tandarts<small>15:30</small></div></div></div>
+          <div class="dag"><div class="wanneer"><span>di</span><b>3</b></div><div class="items"><div class="item"><i class="gft"></i>GFT, de groene bak</div><div class="item"><i class="werk"></i>Overleg team<small>10:00</small></div></div></div>
+          <div class="dag"><div class="wanneer"><span>wo</span><b>4</b></div><div class="items"><div class="item leeg">niets</div></div></div>
+          <div class="dag"><div class="wanneer"><span>do</span><b>5</b></div><div class="items"><div class="item"><i class="gezin"></i>Matts zwemles<small>16:45</small></div></div></div>
+          <div class="dag"><div class="wanneer"><span>za</span><b>7</b></div><div class="items"><div class="item"><i class="gezin"></i>Verjaardag oma<small>hele dag</small></div></div></div>
+          <div class="dag"><div class="wanneer"><span>di</span><b>10</b></div><div class="items"><div class="item"><i class="rest"></i>Restafval</div><div class="item"><i class="pmd"></i>PMD, het plastic</div></div></div>
+          <div class="dag"><div class="wanneer"><span>do</span><b>12</b></div><div class="items"><div class="item"><i class="gezin"></i>Matts zwemles<small>16:45</small></div></div></div>
+        </div>
+      </section>
+      <section class="glas vak">
+        <div class="lijst">
+          <h3>Boodschappen <span>5</span></h3>
+          <div class="rij"><span class="box"></span>Melk<small>Ricardo</small></div>
+          <div class="rij"><span class="box"></span>Brood</div>
+          <div class="rij"><span class="box"></span>Eieren</div>
+          <div class="rij"><span class="box"></span>Koffiebonen<small>Shira</small></div>
+          <div class="rij af"><span class="box"></span>Bananen</div>
+          <div class="erbij" style="margin-top: 6px">+ Iets toevoegen</div>
+        </div>
+        <div class="lijst" style="margin-top: 8px">
+          <h3>To-do <span>3</span></h3>
+          <div class="rij"><span class="box"></span>Dakgoot schoonmaken</div>
+          <div class="rij"><span class="box"></span>Filter airco zolder</div>
+          <div class="rij"><span class="box"></span>Fietsband plakken</div>
+        </div>
+        <div class="bronregel">Uit Home Assistant; ook in de app van Home Assistant.</div>
+      </section>
+    </div>
+  </main>
+</div>
+<script src="../../frontend/kit/teksten.nl.js"></script>
+<script src="../../frontend/kit/teksten.en.js"></script>
+<script src="../../frontend/kit/taal.js"></script>
+<script src="../../frontend/kit/nav.js"></script>
+<script>
+  nav.balk(document.getElementById('balk'), 'vandaag');
+  // De nieuwe tab, tussen Vandaag en Apparaten, en gekozen.
+  const balk = document.getElementById('balk');
+  const vandaag = balk.querySelectorAll('a')[1];
+  vandaag.removeAttribute('aria-current');
+  const tab = document.createElement('a');
+  tab.href = '#';
+  tab.setAttribute('aria-current', 'page');
+  tab.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/></svg>Te doen';
+  vandaag.after(tab);
+</script>
+</body>
+</html>

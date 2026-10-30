@@ -40,25 +40,25 @@ export const VOORKEUREN_FILE = 'voorkeuren.json';
 
 /** De kaarten van Thuis, onder het huis (telefoon) of rechts ervan (wand). */
 /** De auto, de batterij, deze maand en de deurbel kwamen erbij in besluit 182: om te kiezen, niet standaard. */
-/** De boiler (de boiler of de jacuzzi) kwam erbij in besluit 189. */
-export const KAARTEN = ['kamers', 'favorieten', 'straks', 'apparaat', 'gevoel', 'vandaag', 'morgen', 'auto', 'batterij', 'maand', 'deurbel', 'boiler', 'sluip'] as const;
+/** De boiler (de boiler of de jacuzzi) kwam erbij in besluit 189, Te doen in besluit 217. */
+export const KAARTEN = ['kamers', 'favorieten', 'straks', 'apparaat', 'gevoel', 'vandaag', 'morgen', 'auto', 'batterij', 'maand', 'deurbel', 'boiler', 'sluip', 'tedoen'] as const;
 export type KaartId = (typeof KAARTEN)[number];
 
 /** De kaarten die op de wand kunnen. De kamers staan daar in het huis, Straks komt vanzelf. */
-export const WAND_KAARTEN: readonly KaartId[] = ['favorieten', 'vandaag', 'apparaat', 'gevoel', 'morgen', 'auto', 'batterij', 'maand', 'deurbel', 'boiler', 'sluip'];
+export const WAND_KAARTEN: readonly KaartId[] = ['favorieten', 'vandaag', 'apparaat', 'gevoel', 'morgen', 'auto', 'batterij', 'maand', 'deurbel', 'boiler', 'sluip', 'tedoen'];
 /** Twaalf favorieten, vier per pagina (21 oktober 2026; eerst vier, besluit 162). */
 export const MAX_FAVORIETEN = 12;
 
 /** Zo staat Thuis erbij zolang niemand iets koos: zoals het was, met Favorieten onder de kamers. */
-export const STANDAARD_TEL: readonly KaartId[] = ['kamers', 'favorieten', 'straks', 'apparaat', 'gevoel', 'vandaag'];
+export const STANDAARD_TEL: readonly KaartId[] = ['kamers', 'favorieten', 'straks', 'tedoen', 'apparaat', 'gevoel', 'vandaag'];
 /** Op de wand: wijkt er een voor Straks, dan liever het apparaat dan Hoe voelt het. */
-export const STANDAARD_WAND: readonly KaartId[] = ['vandaag', 'gevoel', 'apparaat'];
+export const STANDAARD_WAND: readonly KaartId[] = ['tedoen', 'vandaag', 'gevoel', 'apparaat'];
 /**
  * Op de wand staan de kaarten in twee kolommen (besluit 187): een kaart is smal
  * (een kolom) of breed (de hele breedte, laat meer zien). Zo staan ze erbij
  * zolang niemand iets koos: wat een lijst of grafiek heeft, breed.
  */
-export const STANDAARD_BREED: readonly KaartId[] = ['favorieten', 'vandaag', 'gevoel'];
+export const STANDAARD_BREED: readonly KaartId[] = ['tedoen', 'favorieten', 'vandaag', 'gevoel'];
 
 /** Hoe Thuis eruitziet voor jou, op elk scherm waar je inlogt (besluit 164). */
 export interface Weergave {

@@ -474,25 +474,61 @@ a.knop:not(.knop-licht) {
   background: rgb(var(--nacht) / 0.82);
   border: 1px solid var(--glas-rand);
   backdrop-filter: blur(16px);
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  /* Zes tabs (besluit 217): alleen iconen, en de gekozen tab met zijn naam in een pil. */
+  display: flex;
+  justify-content: space-around;
   align-items: center;
+  padding: 0 6px;
 }
 .tabs a {
-  display: flex;
-  flex-direction: column;
+  position: relative;
+  height: 46px;
+  min-width: 44px;
+  border-radius: 16px;
+  display: inline-flex;
   align-items: center;
-  gap: 3px;
-  font-size: 10.5px;
-  font-weight: 600;
-  color: var(--gedempt);
+  justify-content: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--zacht);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
 }
 .tabs a svg {
-  width: 22px;
-  height: 22px;
+  width: 23px;
+  height: 23px;
+  flex: none;
+}
+.tabs a span {
+  display: none;
 }
 .tabs a[aria-current='page'] {
+  padding: 0 14px;
   color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.tabs a[aria-current='page'] span {
+  display: inline;
+}
+.tabs a:focus-visible {
+  outline: 2px solid var(--tekst);
+  outline-offset: 2px;
+}
+/* Een getal bij een tab, zoals wat er vandaag te doen is. */
+.tabs a b {
+  position: absolute;
+  top: 5px;
+  right: 2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--gloed);
+  color: #fff;
+  font-size: 10px;
+  line-height: 16px;
+  text-align: center;
 }
 
 /* De uitleg van het huis: de eerste keer als rondleiding, daarna achter dit knopje. */
@@ -630,8 +666,10 @@ a.knop:not(.knop-licht) {
 }
 
 /* De zonnewaaier (kit/waaier.js, schets Wand-Voortgang): hoe ver het huis is. */
-.waaier { display: block; overflow: visible; }
-.waaier .straal { cursor: pointer; outline: none; }
+/* Geen blauw vak bij een tik (30 oktober 2026): de markering van de browser en geselecteerde tekst rond de straal en zijn naam. */
+.waaier { display: block; overflow: visible; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; }
+.waaier .straal { cursor: pointer; outline: none; -webkit-tap-highlight-color: transparent; }
+.waaier .straal:focus:not(:focus-visible) { outline: none; }
 .waaier .straal .spoor { fill: rgb(var(--wit) / 0.045); transition: fill 0.2s; }
 .waaier .straal:hover .spoor, .waaier .straal:focus-visible .spoor { fill: rgb(var(--wit) / 0.1); }
 .waaier .straal .vul { transform-box: view-box; animation: waaier-groei 1s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
