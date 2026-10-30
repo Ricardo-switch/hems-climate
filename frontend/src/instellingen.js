@@ -9,10 +9,10 @@
 const { $$, nl, esc, haal } = app;
 
 /** Alles wat de pagina leest, per deur; null zolang die niets gaf. */
-const d = { energie: null, aansluiting: null, huis: null, functies: null, comfort: null, site: null, sessie: null, export: null, health: null, zon: null, bewoners: null, divergence: null, sluip: null, voorkeuren: null };
+const d = { energie: null, aansluiting: null, huis: null, functies: null, comfort: null, site: null, sessie: null, export: null, health: null, zon: null, bewoners: null, divergence: null, sluip: null };
 
 async function laadAlles() {
-  const deuren = { energie: 'api/energie', aansluiting: 'api/aansluiting', huis: 'api/huis', functies: 'api/functies', comfort: 'api/comfort', site: 'api/site', sessie: 'api/sessie', export: 'api/export/info', health: 'api/health', zon: 'api/zon', bewoners: 'api/bewoners', divergence: 'api/divergence', sluip: 'api/sluipverbruik', voorkeuren: 'api/voorkeuren' };
+  const deuren = { energie: 'api/energie', aansluiting: 'api/aansluiting', huis: 'api/huis', functies: 'api/functies', comfort: 'api/comfort', site: 'api/site', sessie: 'api/sessie', export: 'api/export/info', health: 'api/health', zon: 'api/zon', bewoners: 'api/bewoners', divergence: 'api/divergence', sluip: 'api/sluipverbruik' };
   const r = await Promise.allSettled(Object.values(deuren).map((p) => haal(p)));
   Object.keys(deuren).forEach((k, i) => {
     if (r[i].status === 'fulfilled') d[k] = r[i].value;
@@ -53,9 +53,8 @@ const ICOON = {
   energie: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--zon)" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4"/></svg>',
   regeling: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--violet)" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="6" width="18" height="8" rx="2"/><path d="M7 18c0-1.5 1-2 1-3M12 19c0-1.5 1-2 1-3M17 18c0-1.5 1-2 1-3"/></svg>',
   functies: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z"/></svg>',
-  // Jij (besluit 218): een persoon; op de wand Dit scherm.
-  jij: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--mint)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>',
-  scherm: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--ijs)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>',
+  // Inrichten (0.90.1): een pad met stappen.
+  inrichten: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--mint)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="18" r="2"/><circle cx="19" cy="6" r="2"/><path d="M7 18h6a3 3 0 0 0 0-6h-2a3 3 0 0 1 0-6h6"/></svg>',
   // De assistent (besluit 217): een spraakwolk.
   assistent: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--violet)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M8.5 12h.01M12 12h.01M15.5 12h.01"/></svg>',
   toegang: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M10 18h4"/></svg>',
@@ -129,20 +128,11 @@ function feitenVan(id) {
         [t('nav.tedoen'), f ? aanUit(f.tedoen?.aan === true) : '…'],
       ];
     }
-    case 'jij': {
-      const v = d.voorkeuren?.tel;
-      const a = v?.agenda;
+    case 'inrichten': {
+      const n = nagelopen();
       return [
-        [t('instellingen.thema'), v ? t(`jij.thema.${v.thema ?? 'donker'}`) : '…'],
-        [t('instellingen.agendas'), !v ? '…' : !a?.aan ? t('instellingen.uit') : a.ids.length ? t('instellingen.nAgendas', { n: a.ids.length }) : t('instellingen.geen')],
-        [t('jij.taal.kop'), v ? t(`jij.taal.${v.taal ?? 'auto'}`) : '…'],
-      ];
-    }
-    case 'scherm': {
-      const n = d.voorkeuren?.wand?.niemand;
-      return [
-        [t('functies.aod.kop'), !n ? '…' : n.rustMin > 0 ? t('functies.deel.aodAan', { n: n.rustMin }) : t('instellingen.uit')],
-        [t('functies.uit.kop'), !n ? '…' : n.nacht ? `${n.van}–${n.tot}` : t(n.weg ? 'functies.deel.niemand' : 'functies.deel.nooit')],
+        [t('instellingen.inr.wat'), t('instellingen.inr.watWaarde')],
+        [t('instellingen.inr.nagelopen'), n ? t('instellingen.inr.nStappen', { n }) : t('instellingen.inr.nogNiet')],
       ];
     }
     case 'toegang': {
@@ -161,14 +151,21 @@ function feitenVan(id) {
   }
 }
 
-const GROEPEN = ['huis', 'comfort', 'energie', 'regeling', 'functies', 'assistent', 'jij', 'toegang'];
+/** Hoeveel stappen van Inrichten op dit apparaat al nagelopen zijn (inrichten.js bewaart ze zo). */
+function nagelopen() {
+  try {
+    return JSON.parse(localStorage.getItem('sc-inrichten-bevestigd') ?? '[]').filter((x) => x !== 'welkom').length;
+  } catch {
+    return 0;
+  }
+}
+
+// Inrichten als achtste tegel (0.90.1): op de wand twee rijen van vier, op de telefoon onderaan de lijst. Eerst stond hij als knop bovenin.
+const GROEPEN = ['huis', 'comfort', 'energie', 'regeling', 'functies', 'assistent', 'toegang', 'inrichten'];
 
 function groepen() {
   const mis = isGast() ? [] : stand.nogTeDoen(d);
-  // Jij is van een bewoner (besluit 218); een scherm aan de wand heeft geen profiel, en krijgt op die plek Dit scherm.
-  const bewoner = d.bewoners?.ik?.soort === 'bewoner' || d.bewoners == null;
-  const ids = GROEPEN.map((id) => (id === 'jij' && !bewoner ? 'scherm' : id));
-  return ids.map((id) => [id, t(`groep.${id}`), t(`groep.${id}Zin`)]).filter(([id]) => !isGast() || id === 'toegang').map(([id, titel, onder]) => {
+  return GROEPEN.map((id) => [id, t(`groep.${id}`), t(`groep.${id}Zin`)]).filter(([id]) => !isGast() || id === 'toegang').map(([id, titel, onder]) => {
     const n = mis.filter((x) => x.groep === id).length;
     const feiten = feitenVan(id)
       .map(([naam, waarde, leeg]) => `<li>${esc(naam)}<b class="${waarde == null && leeg !== '…' ? 'leeg' : ''}">${esc(waarde ?? leeg ?? '')}</b></li>`)
@@ -176,7 +173,14 @@ function groepen() {
     return `<a class="glas tegel${n ? ' aandacht' : ''}" href="${stand.GROEPEN[id]}">
       <div class="titel"><span class="icoon">${ICOON[id]}</span><h3>${esc(titel)}</h3><span class="pijl" aria-hidden="true">›</span></div>
       <ul>${feiten}</ul>
-      <div class="onder"><span>${esc(onder)}</span>${n ? `<span class="stand mis">${esc(t('instellingen.mist', { n }))}</span>` : `<span class="stand werkt">${esc(t('instellingen.klaar'))}</span>`}</div>
+      <div class="onder"><span>${esc(onder)}</span>${
+        // Inrichten is geen groep die klaar is of iets mist: beginnen, of verder waar je was.
+        id === 'inrichten'
+          ? `<span class="stand kijkt">${esc(t(nagelopen() ? 'instellingen.inr.verder' : 'instellingen.inr.begin'))}</span>`
+          : n
+            ? `<span class="stand mis">${esc(t('instellingen.mist', { n }))}</span>`
+            : `<span class="stand werkt">${esc(t('instellingen.klaar'))}</span>`
+      }</div>
     </a>`;
   }).join('');
 }

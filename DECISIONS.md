@@ -10199,10 +10199,16 @@ wand stond een knop naar "jouw agenda's" terwijl een scherm er geen heeft.
   overmorgen en volgende week (maandag tot en met zondag).
 - **Jouw agenda's** alleen voor een bewoner: het overzicht zegt of wie kijkt
   er een is.
-- **Instellingen:** acht tegels. Voor een bewoner Jij (thema, agenda's, taal);
-  voor een scherm aan de wand op die plek Dit scherm (always-on display en
-  wanneer het scherm uitgaat), want een scherm heeft geen profiel.
-- **Versie 0.90.0.**
+- **Instellingen:** acht tegels; de achtste is Inrichten, stap voor stap, op
+  de wand en op de telefoon gelijk. Dat was eerst een knop bovenin. (In 0.90.0
+  stond daar Jij, en op de wand Dit scherm; de bewoner vond twee situaties
+  raar, en de telefoon heeft staand geen lege plek.)
+- **Eén manier voor buiten:** de knop Buiten in de kopregel van Thuis (besluit
+  206) is weg; buiten tik je aan op het huis, zoals een kamer, en daar staat
+  Alles buiten. "We hebben ook geen knop Binnen."
+- **Bij Jij geen rij "Herinneringen naar":** die wees naar dezelfde telefoon
+  als Meldingen. De uitleg bij Agenda zegt waar een herinnering heen gaat.
+- **Versie 0.90.0, en 0.90.1** (Inrichten, Buiten, Jij).
 
 ---
 

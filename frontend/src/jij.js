@@ -153,7 +153,8 @@ function teken() {
 /* -------------------------------------------------- agenda en herinneringen */
 
 /*
- * Agenda en herinneringen (besluit 216, schets Tel-Te-doen#jij): je eigen
+ * Agenda (besluit 216, schets Tel-Te-doen#jij; 0.90.1 zonder de rij "Herinneringen
+ * naar", die naar dezelfde telefoon wees als Meldingen): je eigen
  * agenda's uit Home Assistant, meer tegelijk, ook de gezinsagenda, of uit; en
  * waar je herinneringen heen gaan. Je eigen agenda's staan nooit op de wand.
  */
@@ -165,11 +166,9 @@ function agendaBlok() {
   const k = agendaKeus();
   const namen = agendas.filter((a) => k.ids.includes(a.id)).map((a) => a.naam);
   const zin = !k.aan ? t('jij.agenda.uit') : namen.length ? namen.join(taal.code === 'en' ? ' and ' : ' en ') : t('jij.agenda.geen');
-  const tel = mijnTelefoon();
   return `<section class="glas lijst" aria-labelledby="kop-agenda">
       <h2 id="kop-agenda">${esc(t('jij.agenda.kop'))}</h2>
       ${knop('data-agenda-open', 'agenda', t('jij.agenda.jouw'), zin)}
-      ${link('jij.html#meldingen', 'tel', t('jij.agenda.naar'), tel ? t('jij.agenda.naarTel', { naam: tel.naam }) : t('jij.agenda.alleenWand'))}
       <p class="uitleg">${esc(t('jij.agenda.uitleg'))}</p>
     </section>`;
 }

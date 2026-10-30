@@ -139,10 +139,6 @@
     return keuze.alles ? allesHtml(huis) : deelHtml(huis, keuze.kamer, keuze.zone ?? null);
   }
 
-  /** Hoeveel lampen buiten branden, voor de knop op Thuis. */
-  const aantalAan = (huis) => ruimtes(huis).flatMap((r) => lampenIn(r.apparaten ?? [])).filter(aanVan).length;
-  const heeftBuiten = (huis) => ruimtes(huis).length > 0;
-
   /**
    * Het huis zoals je het net koos: elke lamp die je schakelde staat al aan of
    * uit, ook in de tekening, voordat Home Assistant het doorgeeft (28 oktober
@@ -207,5 +203,5 @@
     return true;
   }
 
-  global.buitenBlad = { html, tik, metGewenst, isBuiten, aantalAan, heeftBuiten };
+  global.buitenBlad = { html, tik, metGewenst, isBuiten };
 })(window);

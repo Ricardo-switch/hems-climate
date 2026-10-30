@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.90.0';
+export const VERSIE = '0.90.1';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,22 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.90.1',
+    datum: '2026-10-30',
+    beter: [
+      'Bij Instellingen is Inrichten een tegel, op de wand en op je telefoon; de losse knop bovenin is weg',
+      'Op Thuis staat geen knop Buiten meer: buiten tik je aan op het huis, zoals een kamer',
+      'Bij Jij staat geen rij Herinneringen naar meer: een herinnering gaat naar dezelfde telefoon als je meldingen',
+    ],
+    en: {
+      beter: [
+        'Under Settings, Set up is a tile, on the wall and on your phone; the separate button at the top is gone',
+        'Home no longer has an Outside button: tap outside on the house, like a room',
+        'You no longer has a Reminders go to row: a reminder goes to the same phone as your notifications',
+      ],
+    },
+  },
   {
     versie: '0.90.0',
     datum: '2026-10-30',

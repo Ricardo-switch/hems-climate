@@ -202,12 +202,6 @@ function tekenNu() {
   tekenOnderhoud();
   if (blad === 'batterij' && $$('[data-weer]').some((x) => !x.hidden)) tekenBatterijen();
   if (blad === 'buiten' && buitenKeuze && $$('[data-weer]').some((x) => !x.hidden)) tekenBuiten();
-  // De knop Buiten (besluit 206): alleen als er iets buiten is, met hoeveel lampen er branden.
-  const buitenAan = buitenBlad.aantalAan(huisData);
-  $$('[data-alles-buiten]').forEach((k) => {
-    k.hidden = !buitenBlad.heeftBuiten(huisData);
-    k.querySelector('[data-alles-buiten-aantal]').textContent = buitenAan ? String(buitenAan) : '';
-  });
   const wandPodium = document.getElementById('podium-wand');
   if (!app.telStand()) huis.teken(wandPodium, model, { breedte: wandPodium.clientWidth || 860, hoogte: 612, marge: 0.04, schuifX: 10, schuifY: 10, tik: true });
   // Eenvoudig (besluit 164): geen getallen op het huis.
@@ -1004,7 +998,7 @@ function openWeer(knop, soort = 'weer') {
 
 function sluitWeer() {
   $$('[data-weer], [data-weer-achter]').forEach((el) => (el.hidden = true));
-  $$('[data-buiten], [data-alles-buiten]').forEach((k) => k.setAttribute('aria-expanded', 'false'));
+  $$('[data-buiten]').forEach((k) => k.setAttribute('aria-expanded', 'false'));
   // Het deel buiten licht niet meer op.
   if (buitenKeuze) {
     buitenKeuze = null;
@@ -1030,7 +1024,6 @@ function openBuiten(keuze) {
   if (!buitenKeuze) return;
   blad0.hidden = false;
   if (blad0.id === 'weer-tel') document.querySelector('[data-weer-achter]').hidden = false;
-  $$('[data-alles-buiten]').forEach((k) => k.setAttribute('aria-expanded', String(!!keuze.alles)));
   teken();
 }
 
@@ -1120,7 +1113,7 @@ document.addEventListener('click', (e) => {
 document.addEventListener('pointerdown', (e) => {
   const open = $$('[data-weer]').some((b) => !b.hidden);
   // Een tik op een ander deel buiten opent dat deel, dus niet eerst dicht.
-  if (open && !e.target.closest('[data-weer], [data-buiten], [data-onderhoud], [data-alles-buiten], .podium .sc-tik')) sluitWeer();
+  if (open && !e.target.closest('[data-weer], [data-buiten], [data-onderhoud], .podium .sc-tik')) sluitWeer();
 });
 // Op de telefoon: het blad naar beneden vegen.
 const telBlad = document.getElementById('weer-tel');
@@ -1173,7 +1166,6 @@ document.addEventListener('click', async (e) => {
   );
   if (uit && uit !== true) openBuiten(uit);
 });
-$$('[data-alles-buiten]').forEach((k) => k.addEventListener('click', () => (buitenKeuze?.alles ? sluitWeer() : openBuiten({ alles: true }))));
 for (const podium of [document.getElementById('podium-wand'), document.getElementById('podium-tel')]) {
   podium.addEventListener('click', openKamer);
   podium.addEventListener('keydown', (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), openKamer(e)));

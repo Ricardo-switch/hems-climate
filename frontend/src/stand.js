@@ -14,9 +14,8 @@
     regeling: 'regeling.html',
     functies: 'functies.html',
     assistent: 'functies.html?groep=assistent',
-    // Jij (besluit 218), en op de wand Dit scherm.
-    jij: 'jij.html',
-    scherm: 'functies.html#aod',
+    // Inrichten, stap voor stap, als tegel (0.90.1).
+    inrichten: 'inrichten.html',
     toegang: 'toegang.html',
   };
 
