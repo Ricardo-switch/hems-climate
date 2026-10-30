@@ -96,7 +96,7 @@ describe('VoorkeurenStore', () => {
     const store = new VoorkeurenStore(dir);
     await store.load();
     const v = store.view(noor);
-    expect(v.tel).toEqual({ kaarten: STANDAARD_TEL, favorieten: [], cameras: null, weergave: STANDAARD_WEERGAVE, thema: 'donker', kleur: 'lucht', taal: 'auto', meldingen: STANDAARD_MELDINGEN });
+    expect(v.tel).toEqual({ kaarten: STANDAARD_TEL, favorieten: [], cameras: null, weergave: STANDAARD_WEERGAVE, thema: 'donker', kleur: 'lucht', taal: 'auto', meldingen: STANDAARD_MELDINGEN, agenda: { aan: true, ids: [] } });
     expect(v.wand).toEqual({ kaarten: STANDAARD_WAND, breed: STANDAARD_BREED, favorieten: [], cameras: null, magAanpassen: false, niemand: STANDAARD_NIEMAND, kleur: 'lucht', van: null, naam: null, eigen: false, persoon: null });
   });
 
@@ -118,10 +118,10 @@ describe('VoorkeurenStore', () => {
     expect(uit.ok).toBe(true);
     expect(store.view(ricardo).tel.kaarten).toEqual(['gevoel', 'kamers']);
     // Noor houdt haar eigen Thuis.
-    expect(store.view(noor).tel).toEqual({ kaarten: STANDAARD_TEL, favorieten: [], cameras: null, weergave: STANDAARD_WEERGAVE, thema: 'donker', kleur: 'lucht', taal: 'auto', meldingen: STANDAARD_MELDINGEN });
+    expect(store.view(noor).tel).toEqual({ kaarten: STANDAARD_TEL, favorieten: [], cameras: null, weergave: STANDAARD_WEERGAVE, thema: 'donker', kleur: 'lucht', taal: 'auto', meldingen: STANDAARD_MELDINGEN, agenda: { aan: true, ids: [] } });
     // Alleen de favorieten veranderen laat de kaarten staan.
     await store.save({ plek: 'tel', favorieten: [] }, ricardo);
-    expect(store.view(ricardo).tel).toEqual({ kaarten: ['gevoel', 'kamers'], favorieten: [], cameras: null, weergave: STANDAARD_WEERGAVE, thema: 'donker', kleur: 'lucht', taal: 'auto', meldingen: STANDAARD_MELDINGEN });
+    expect(store.view(ricardo).tel).toEqual({ kaarten: ['gevoel', 'kamers'], favorieten: [], cameras: null, weergave: STANDAARD_WEERGAVE, thema: 'donker', kleur: 'lucht', taal: 'auto', meldingen: STANDAARD_MELDINGEN, agenda: { aan: true, ids: [] } });
 
     const opnieuw = new VoorkeurenStore(dir);
     await opnieuw.load();

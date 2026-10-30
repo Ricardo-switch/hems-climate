@@ -100,6 +100,20 @@ export interface Functies {
    * onder dit percentage, of null voor nooit. Weg is 10%, zoals het was.
    */
   readonly meldingen?: Drempels;
+  /**
+   * Te doen (besluit 216): of het aan staat, welke lijsten van Home Assistant
+   * de boodschappen en de to-do zijn, en welke agenda's het afval en het gezin.
+   * Weg: het voorstel, met wat Home Assistant heeft.
+   */
+  readonly tedoen?: TeDoenKeus;
+}
+
+export interface TeDoenKeus {
+  readonly aan: boolean;
+  readonly boodschappen: string | null;
+  readonly todo: string | null;
+  readonly afval: string | null;
+  readonly gezin: string | null;
 }
 
 /** Een camera zoals Home Assistant hem heeft: één apparaat, soms met meer beelden. */
@@ -166,6 +180,24 @@ export interface FunctiesGevonden {
   readonly spraakassistenten?: readonly SpraakKeuze[];
   /** Of de knoppen van het oude klimaatsysteem er zijn, voor de klimaatbrug (besluit 210). */
   readonly klimaatBrug?: boolean;
+  /** De lijsten en agenda's in Home Assistant (besluit 216). */
+  readonly lijsten?: readonly { readonly id: string; readonly naam: string }[];
+  readonly agendas?: readonly { readonly id: string; readonly naam: string }[];
+}
+
+/**
+ * Het voorstel voor te doen (besluit 216): de boodschappenlijst en een andere
+ * lijst als to-do; een agenda met afval in de naam, en een met gezin.
+ */
+export function teDoenVoorstel(g: FunctiesGevonden | null): TeDoenKeus {
+  const lijsten = g?.lijsten ?? [];
+  const agendas = g?.agendas ?? [];
+  const isBoodschap = (x: { id: string; naam: string }) => /boodschap|shopping/i.test(`${x.id} ${x.naam}`);
+  const boodschappen = lijsten.find(isBoodschap)?.id ?? null;
+  const todo = lijsten.find((x) => !isBoodschap(x) && /to.?do|taken|klus/i.test(`${x.id} ${x.naam}`))?.id ?? lijsten.find((x) => !isBoodschap(x))?.id ?? null;
+  const afval = agendas.find((x) => /afval|waste|container|vuilnis|ophaal|garbage/i.test(`${x.id} ${x.naam}`))?.id ?? null;
+  const gezin = agendas.find((x) => /gezin|famil/i.test(`${x.id} ${x.naam}`))?.id ?? null;
+  return { aan: boodschappen != null || todo != null || afval != null || gezin != null, boodschappen, todo, afval, gezin };
 }
 
 /** Een spraakassistent uit Home Assistant (besluit 150): met welk wekwoord en welke spraak naar tekst. */
@@ -282,7 +314,13 @@ export function functiesGevonden(entities: readonly HaRegistryEntity[], devices:
     .filter((id) => /^ai_task\.[a-z0-9_]+$/.test(id) && states.get(id)?.state !== 'unavailable')
     .map((id) => ({ id, naam: friendly(states, id) }))
     .sort((a, b) => a.naam.localeCompare(b.naam, 'nl'));
-  return { cameras, melders, weerbronnen: [...weatherSources(entities, states), { id: OPEN_METEO, naam: OPEN_METEO_NAAM }], taalmodellen };
+  // Te doen (besluit 216): de lijsten en agenda's van Home Assistant.
+  const van = (domein: string) =>
+    [...states.keys()]
+      .filter((id) => new RegExp(`^${domein}\\.[a-z0-9_]+$`).test(id) && states.get(id)?.state !== 'unavailable')
+      .map((id) => ({ id, naam: friendly(states, id) }))
+      .sort((a, b) => a.naam.localeCompare(b.naam, 'nl'));
+  return { cameras, melders, weerbronnen: [...weatherSources(entities, states), { id: OPEN_METEO, naam: OPEN_METEO_NAAM }], taalmodellen, lijsten: van('todo'), agendas: van('calendar') };
 }
 
 /** Het voorstel: elke camera met het lichtste beeld, en de deurbel als die er zeker is. */
@@ -300,6 +338,7 @@ export function functiesVoorstel(g: FunctiesGevonden): Functies {
     // De stem van het apparaat, ook verstaan (besluit 203): werkt meteen, zonder installatie.
     praten: { taalmodel: null, bedienen: true, spraak: null, stem: standaardStem(g), verstaan: true },
     meldingen: STANDAARD_DREMPELS,
+    tedoen: teDoenVoorstel(g),
   };
 }
 
@@ -307,7 +346,7 @@ export function functiesVoorstel(g: FunctiesGevonden): Functies {
 export function volledig(
   f: Functies,
   g: FunctiesGevonden | null,
-): Functies & { weer: { bron: string | null; uren: boolean }; licht: { bedienen: boolean }; schermen: { bedienen: boolean }; praten: { taalmodel: string | null; bedienen: boolean; spraak: string | null; stem: StemBron; verstaan: boolean; klimaat: boolean; stemKeuze: string | null }; meldingen: Drempels } {
+): Functies & { weer: { bron: string | null; uren: boolean }; licht: { bedienen: boolean }; schermen: { bedienen: boolean }; praten: { taalmodel: string | null; bedienen: boolean; spraak: string | null; stem: StemBron; verstaan: boolean; klimaat: boolean; stemKeuze: string | null }; meldingen: Drempels; tedoen: TeDoenKeus } {
   const weer = f.weer ?? { bron: g?.weerbronnen?.[0]?.id ?? null };
   return {
     ...f,
@@ -316,6 +355,7 @@ export function volledig(
     schermen: f.schermen ?? { bedienen: true },
     praten: { taalmodel: f.praten?.taalmodel ?? null, bedienen: f.praten?.bedienen ?? true, spraak: f.praten?.spraak ?? null, stem: f.praten?.stem ?? standaardStem(g), verstaan: f.praten?.verstaan ?? true, klimaat: f.praten?.klimaat ?? false, stemKeuze: f.praten?.stemKeuze ?? null },
     meldingen: f.meldingen ?? STANDAARD_DREMPELS,
+    tedoen: f.tedoen ?? teDoenVoorstel(g),
   };
 }
 
@@ -412,6 +452,17 @@ export function controleer(body: unknown, g: FunctiesGevonden): FunctiesUitkomst
     if (!keuze(m['batterij']) || !keuze(m['filter'])) return { ok: false, reden: `meldingen: onder ${DREMPEL_KEUZES.join(', ')}%, of nooit` };
     meldingen = { batterij: m['batterij'] as number | null, filter: m['filter'] as number | null };
   }
+  // Te doen (besluit 216): alleen lijsten en agenda's die Home Assistant kent.
+  const tedoenIn = b['tedoen'];
+  let tedoen: TeDoenKeus | null = null;
+  if (tedoenIn !== undefined) {
+    const t = (typeof tedoenIn === 'object' && tedoenIn != null ? tedoenIn : {}) as Record<string, unknown>;
+    if (typeof t['aan'] !== 'boolean') return { ok: false, reden: 'tedoen.aan is ja of nee' };
+    const kent = (v: unknown, lijst: readonly { id: string }[] | undefined) => v === null || v === undefined || (typeof v === 'string' && (lijst ?? []).some((x) => x.id === v));
+    if (!kent(t['boodschappen'], g.lijsten) || !kent(t['todo'], g.lijsten)) return { ok: false, reden: 'die lijst kent Home Assistant niet' };
+    if (!kent(t['afval'], g.agendas) || !kent(t['gezin'], g.agendas)) return { ok: false, reden: 'die agenda kent Home Assistant niet' };
+    tedoen = { aan: t['aan'], boodschappen: (t['boodschappen'] as string | null) ?? null, todo: (t['todo'] as string | null) ?? null, afval: (t['afval'] as string | null) ?? null, gezin: (t['gezin'] as string | null) ?? null };
+  }
   return {
     ok: true,
     functies: {
@@ -423,6 +474,7 @@ export function controleer(body: unknown, g: FunctiesGevonden): FunctiesUitkomst
       schermen: { bedienen: schermen },
       praten,
       meldingen,
+      ...(tedoen ? { tedoen } : {}),
     },
   };
 }

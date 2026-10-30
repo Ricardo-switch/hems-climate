@@ -42,13 +42,14 @@ import { opbrengstRoutes } from './routes/opbrengst.js';
 import { standRoutes } from './routes/stand.js';
 import { assistentRoutes } from './routes/assistent.js';
 import { huisRoutes } from './routes/huis.js';
+import { teDoenRoutes } from './routes/tedoen.js';
 
 export { taalVan } from './diensten.js';
 export type { AlarmMelder } from './live.js';
 export { UNKNOWN_VERSION, versionFromEnv, type Version, type WebOptions } from './server-opties.js';
 
 /** De onderwerpen, in de volgorde waarin #handle ze vraagt (hun paden overlappen niet). */
-const ROUTES = [cameraRoutes, inloggenRoutes, beheerRoutes, energieRoutes, bewonersRoutes, opbrengstRoutes, standRoutes, assistentRoutes, huisRoutes] as const;
+const ROUTES = [cameraRoutes, inloggenRoutes, beheerRoutes, energieRoutes, bewonersRoutes, opbrengstRoutes, standRoutes, assistentRoutes, huisRoutes, teDoenRoutes] as const;
 
 /**
  * De beta op de NAS (23 oktober 2026): het manifest en de iconen met een label
@@ -287,6 +288,8 @@ export class WebServer {
       (this.#d.options.covers != null && path === '/api/scherm') ||
       // De klimaatbrug (besluit 210): alleen de knoppen van het oude systeem, tot stap B. Een gast niet.
       (this.#d.options.klimaat != null && path === '/api/klimaat') ||
+      // Te doen (besluit 216): een herinnering in het eigen bestand, of iets op een lijst van Home Assistant. Een gast niet.
+      (this.#d.options.tedoen != null && path === '/api/te-doen') ||
       // Scènes (besluit 100): een eigen smalle deur naast het licht.
       (this.#d.options.lights?.scenesEnabled === true && path === '/api/scene') ||
       // Een back-up terugzetten en opnieuw beginnen (besluit 151): alleen de eigen bestanden.

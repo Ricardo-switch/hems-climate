@@ -145,6 +145,13 @@ export interface HaClientOptions {
    * schakelen van Home Assistant komen er nooit aan te pas.
    */
   readonly allowListen?: boolean;
+  /**
+   * Te doen (besluit 216): een ding op een lijst van Home Assistant zetten of
+   * afvinken. Precies `todo.add_item` met alleen een tekst, of
+   * `todo.update_item` met een tekst en klaar of niet klaar, op één
+   * `todo.`-entiteit. Niets weghalen, geen andere lijstdienst.
+   */
+  readonly allowTodo?: boolean;
   /** Wachttijd voordat een verbroken verbinding opnieuw wordt opgezet. */
   readonly reconnectBaseMs?: number;
   /** Zo lang wacht een vraag op antwoord; weg is 20 seconden (22 oktober 2026). Kleiner in de tests. */
@@ -231,6 +238,21 @@ export function isNotifyCall(domain: string, service: string, data: Record<strin
  * De klimaatbrug (besluit 210): een getal op een toegestane `input_number`, of
  * een toegestane optie op een toegestane `input_select`. Verder niets.
  */
+/**
+ * Iets op een lijst zetten of afvinken (besluit 216): `todo.add_item` met
+ * alleen `item`, of `todo.update_item` met `item` en `status`, op precies één
+ * `todo.`-entiteit.
+ */
+export function isTodoCall(domain: string, service: string, data: Record<string, unknown>, target: Record<string, unknown>): boolean {
+  if (domain !== 'todo') return false;
+  if (Object.keys(target).length !== 1 || typeof target['entity_id'] !== 'string' || !/^todo\.[a-z0-9_]+$/.test(target['entity_id'])) return false;
+  const item = data['item'];
+  if (typeof item !== 'string' || item.trim() === '' || item.length > 120) return false;
+  if (service === 'add_item') return Object.keys(data).length === 1;
+  if (service === 'update_item') return Object.keys(data).length === 2 && (data['status'] === 'completed' || data['status'] === 'needs_action');
+  return false;
+}
+
 export function isKnopCall(
   domain: string,
   service: string,
@@ -294,7 +316,7 @@ export declare interface HaClient {
 }
 
 export class HaClient extends EventEmitter {
-  readonly #options: Required<Omit<HaClientOptions, 'allowWrites' | 'allowLights' | 'allowScenes' | 'allowCovers' | 'allowAiTask' | 'allowListen' | 'allowUpdate' | 'allowNotify' | 'allowKnoppen'>> & {
+  readonly #options: Required<Omit<HaClientOptions, 'allowWrites' | 'allowLights' | 'allowScenes' | 'allowCovers' | 'allowAiTask' | 'allowListen' | 'allowUpdate' | 'allowNotify' | 'allowKnoppen' | 'allowTodo'>> & {
     allowUpdate: () => string | null;
     allowKnoppen: () => { readonly entiteiten: readonly string[]; readonly opties: readonly string[] };
     allowNotify: boolean;
@@ -304,6 +326,7 @@ export class HaClient extends EventEmitter {
     allowCovers: boolean;
     allowAiTask: boolean;
     allowListen: boolean;
+    allowTodo: boolean;
   };
   #socket: WebSocket | null = null;
   #nextId = 1;
@@ -326,6 +349,7 @@ export class HaClient extends EventEmitter {
       allowKnoppen: options.allowKnoppen ?? (() => ({ entiteiten: [], opties: [] })),
       allowAiTask: options.allowAiTask ?? false,
       allowListen: options.allowListen ?? false,
+      allowTodo: options.allowTodo ?? false,
       reconnectBaseMs: options.reconnectBaseMs ?? 1_000,
       antwoordMs: options.antwoordMs ?? ANTWOORD_MS,
       reconnectMaxMs: options.reconnectMaxMs ?? 60_000,
@@ -684,6 +708,7 @@ export class HaClient extends EventEmitter {
       (this.#options.allowCovers && isCoverCall(domain, service, data, target)) ||
       isUpdateCall(domain, service, data, target, this.#options.allowUpdate()) ||
       (this.#options.allowNotify && isNotifyCall(domain, service, data, target)) ||
+      (this.#options.allowTodo && isTodoCall(domain, service, data, target)) ||
       isKnopCall(domain, service, data, target, this.#options.allowKnoppen());
     if (!allowed) {
       throw new Error(
@@ -726,6 +751,37 @@ export class HaClient extends EventEmitter {
     } | null;
     return result?.response?.data ?? null;
   }
+
+  /**
+   * De afspraken van agenda's tussen twee momenten (besluit 216), met
+   * `calendar.get_events`: alleen lezen, er verandert niets.
+   */
+  async leesAgendas(ids: readonly string[], vanMs: number, totMs: number): Promise<HaAntwoord> {
+    if (!ids.length || ids.some((id) => !/^calendar\.[a-z0-9_]+$/.test(id))) throw new Error('geen agenda');
+    const r = (await this.#command({
+      type: 'call_service',
+      domain: 'calendar',
+      service: 'get_events',
+      service_data: { start_date_time: new Date(vanMs).toISOString(), end_date_time: new Date(totMs).toISOString() },
+      target: { entity_id: [...ids] },
+      return_response: true,
+    })) as { response?: HaAntwoord } | null;
+    return r?.response ?? null;
+  }
+
+  /** Wat er op lijsten staat (besluit 216), met `todo.get_items`: alleen lezen. */
+  async leesLijsten(ids: readonly string[]): Promise<HaAntwoord> {
+    if (!ids.length || ids.some((id) => !/^todo\.[a-z0-9_]+$/.test(id))) throw new Error('geen lijst');
+    const r = (await this.#command({
+      type: 'call_service',
+      domain: 'todo',
+      service: 'get_items',
+      service_data: { status: ['needs_action', 'completed'] },
+      target: { entity_id: [...ids] },
+      return_response: true,
+    })) as { response?: HaAntwoord } | null;
+    return r?.response ?? null;
+  }
 }
 
 /** Een gebeurtenis van een spraakopdracht, zoals Home Assistant hem stuurt (besluit 150). */
@@ -733,6 +789,9 @@ export interface SpraakEvent {
   readonly type: string;
   readonly data: Record<string, unknown>;
 }
+
+/** Iets dat Home Assistant teruggeeft op een vraag zonder dat er iets verandert, of null. */
+export type HaAntwoord = Readonly<Record<string, unknown>> | null;
 
 /** Een lopende spraakopdracht: geluid erin, klaar, of stoppen. */
 export interface Gesprek {

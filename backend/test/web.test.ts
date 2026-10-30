@@ -35,6 +35,8 @@ import { comfortView, controleerComfort, type ComfortView } from '../src/web/com
 import { onUsablePort } from './ports.js';
 import { WebSocket as WsClient } from 'ws';
 import type { LuisterDeur } from '../src/web/luisterpost.js';
+import type { TeDoenDienst } from '../src/web/routes/tedoen.js';
+import { Herinneringen } from '../src/web/tedoen.js';
 import { exampleSite } from './site.js';
 
 const cleanups: (() => Promise<void>)[] = [];
@@ -110,6 +112,7 @@ async function start(options: {
   comfort?: { view: () => ComfortView; save: (body: unknown) => Promise<{ ok: true; view: ComfortView } | { ok: false; status: number; reden: string }> };
   sleutel?: string;
   luisteren?: LuisterDeur;
+  tedoen?: TeDoenDienst;
   praten?: { model: () => ((opdracht: string, velden?: unknown) => Promise<unknown>) | null; proef: (id: string) => (opdracht: string) => Promise<unknown>; bedienen: () => boolean; eigenWoorden?: () => boolean };
   herken?: (account: { userId: string; naam: string }) => Promise<'welkom' | 'vraag' | 'gast' | null>;
   gast?: (userId: string | null) => { gast: boolean; thuis: boolean | null };
@@ -153,6 +156,7 @@ async function start(options: {
         ...(options.sleutel ? { sleutel: options.sleutel } : {}),
         ...(options.praten ? { praten: options.praten } : {}),
         ...(options.luisteren ? { luisteren: options.luisteren } : {}),
+        ...(options.tedoen ? { tedoen: options.tedoen } : {}),
         ...(options.logDir ? { logDir: options.logDir } : {}),
         ...(options.gegevens ? { gegevens: options.gegevens } : {}),
         ...(options.herken ? { bewoners: { view: () => { throw new Error('niet in deze test'); }, actie: async () => ({ ok: false as const, status: 400, reden: 'niet in deze test' }), herken: options.herken, ...(options.gast ? { gast: options.gast } : {}) } } : {}),
@@ -168,6 +172,71 @@ async function start(options: {
   cleanups.push(() => server.stop());
   return { base: `http://127.0.0.1:${port}`, server };
 }
+
+describe('te doen (besluit 216)', () => {
+  function dienst(aan = true) {
+    const gedaan: string[] = [];
+    const herinneringen = new Herinneringen({ map: null });
+    const t: TeDoenDienst = {
+      keus: () => ({ aan, boodschappen: 'todo.shopping_list', todo: 'todo.to_do', afval: 'calendar.afval', gezin: 'calendar.gezin' }),
+      herinneringen,
+      leesLijsten: async () => ({ 'todo.shopping_list': { items: [{ summary: 'Brood', uid: '1', status: 'needs_action' }] }, 'todo.to_do': { items: [] } }),
+      leesAgendas: async (_ids, van) => {
+        const dag = (n: number) => new Date(van + n * 86_400_000 + 12 * 3_600_000).toISOString().slice(0, 10);
+        return { 'calendar.afval': { events: [{ start: dag(1), end: dag(2), summary: 'GFT' }] }, 'calendar.gezin': { events: [] } };
+      },
+      lijst: async (id, item, actie) => void gedaan.push(`${actie} ${item} op ${id}`),
+      agendaVan: () => ({ aan: true, ids: [] }),
+      naamVan: () => null,
+    };
+    return { t, gedaan, herinneringen };
+  }
+
+  it('zet iets op de boodschappen en maakt een herinnering, via de assistent en dezelfde deur', async () => {
+    const { t, gedaan, herinneringen } = dienst();
+    const started = await start({ latest: () => snapshot(), tedoen: t });
+    const vraag = async (tekst: string) => (await (await fetch(`${started.base}/api/vraag?${new URLSearchParams({ v: 'vrij', tekst })}`)).json()) as { antwoord: string; opdracht?: { pad: string; body: unknown }; keuze?: unknown[] };
+    const post = (body: unknown) => fetch(`${started.base}/api/te-doen`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(body) });
+    const melk = await vraag('Zet melk op de boodschappen');
+    expect(melk).toMatchObject({ antwoord: 'Melk staat op de boodschappenlijst.', opdracht: { pad: 'api/te-doen', body: { actie: 'toevoegen', lijst: 'boodschappen', item: 'Melk' } } });
+    // De vraag zelf verandert niets; de pagina stuurt de opdracht naar de deur.
+    expect(gedaan).toEqual([]);
+    expect((await post(melk.opdracht!.body)).status).toBe(200);
+    expect(gedaan).toEqual(['toevoegen Melk op todo.shopping_list']);
+    const oven = await vraag('herinner me over tien minuten aan de oven');
+    expect(oven.antwoord).toMatch(/^Goed, ik herinner je vandaag om \d\d:\d\d aan de oven\.$/);
+    expect((await post(oven.opdracht!.body)).status).toBe(200);
+    expect((await herinneringen.lijst()).map((h) => h.tekst)).toEqual(['De oven']);
+    // Zonder tijd: hoe laat, met keuzes.
+    expect((await vraag('herinner me aan de container')).keuze).toHaveLength(3);
+    // Een vraag: de lijst, en het afval van morgen.
+    expect((await vraag('wat staat er op de boodschappenlijst?')).antwoord).toBe('Op de boodschappenlijst staat Brood.');
+    expect((await vraag('wanneer komt het gft?')).antwoord).toBe('Morgen komt GFT (de groene bak).');
+    // Het overzicht voor de kaart.
+    const o = (await (await fetch(`${started.base}/api/te-doen`)).json()) as { lijsten: unknown[]; afspraken: { tekst: string; afval?: string }[]; herinneringen: unknown[] };
+    expect(o.lijsten).toHaveLength(2);
+    expect(o.afspraken).toEqual([expect.objectContaining({ tekst: 'GFT', afval: 'gft', bron: 'afval' })]);
+    expect(o.herinneringen).toHaveLength(1);
+    // Iets geks door de deur: nee.
+    expect((await post({ actie: 'weg', item: 'Melk' })).status).toBe(400);
+    expect((await post({ actie: 'toevoegen', lijst: 'iets', item: 'Melk' })).status).toBe(400);
+  });
+
+  it('zonder te doen: een nette 404, ook voor wat nu speelt', async () => {
+    const started = await start({ latest: () => snapshot() });
+    const r = await fetch(`${started.base}/api/te-doen?alleen=nu`, { signal: AbortSignal.timeout(3000) });
+    expect(r.status).toBe(404);
+    expect(await r.json()).toEqual({ fout: 'te doen is er hier niet' });
+  });
+
+  it('staat het uit bij Functies, dan gaat de zin de gewone weg en weigert de deur', async () => {
+    const { t } = dienst(false);
+    const started = await start({ latest: () => snapshot(), tedoen: t });
+    const b = (await (await fetch(`${started.base}/api/vraag?${new URLSearchParams({ v: 'vrij', tekst: 'zet melk op de boodschappen' })}`)).json()) as { opdracht?: unknown };
+    expect(b.opdracht).toBeUndefined();
+    expect((await fetch(`${started.base}/api/te-doen`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ actie: 'toevoegen', lijst: 'boodschappen', item: 'Melk' }) })).status).toBe(409);
+  });
+});
 
 describe('scèneplaatjes uit de map van de bewoner (besluit 100)', () => {
   it('geeft een plaatje uit die map, en niets daarbuiten of met een rare naam', async () => {

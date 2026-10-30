@@ -52,6 +52,7 @@ async function laad() {
     concept.licht ??= info.voorstel.licht;
     concept.schermen ??= info.voorstel.schermen ?? { bedienen: true };
     concept.praten ??= info.voorstel.praten ?? { taalmodel: null, bedienen: true };
+    concept.tedoen ??= info.voorstel.tedoen ?? { aan: false, boodschappen: null, todo: null, afval: null, gezin: null };
     concept.praten.spraak ??= null;
     concept.meldingen ??= info.voorstel.meldingen ?? { batterij: 10, filter: 10 };
   }
@@ -355,6 +356,24 @@ async function inApp(id, aan) {
 }
 
 /**
+ * Te doen (besluit 216, schets Wand-Te-doen): aan of uit, en welke lijst van
+ * Home Assistant de boodschappen en de to-do is, en welke agenda het afval en
+ * het gezin. Het voorstel kiest ze vanzelf op hun naam.
+ */
+function teDoenVorm() {
+  const td = concept.tedoen;
+  const lijsten = info.gevonden.lijsten ?? [];
+  const agendas = info.gevonden.agendas ?? [];
+  const keus = (sleutel, label, uit, opties) => `<div><span class="veldnaam">${esc(label)}</span>${keuzes(label, `tedoen:${sleutel}`, [[null, t('instellingen.geen')], ...opties.map((x) => [x.id, x.naam])], td[sleutel], !td.aan)}</div>`;
+  return `<h2 class="kop-2">${esc(t('functies.tedoen.kop'))}</h2>
+    ${keuzes(t('functies.tedoen.kop'), 'tedoen:aan', aanUit(), td.aan)}
+    <p class="mini">${esc(t('functies.tedoen.uitleg'))}</p>
+    ${lijsten.length ? `${keus('boodschappen', t('functies.tedoen.boodschappen'), td.aan, lijsten)}${keus('todo', t('functies.tedoen.todo'), td.aan, lijsten)}` : `<p class="uitleg">${esc(t('functies.tedoen.geenLijsten'))}</p>`}
+    ${agendas.length ? `${keus('afval', t('functies.tedoen.afval'), td.aan, agendas)}${keus('gezin', t('functies.tedoen.gezin'), td.aan, agendas)}` : ''}
+    <p class="mini">${esc(t('functies.tedoen.jij'))}</p>`;
+}
+
+/**
  * Praten met je huis (besluit 148, 213; schets Wand-Instellingen-Praten, 30
  * oktober 2026). Zoals Stem en luisteren: links het brein (welk model, hoe
  * vaak en hoe snel, proberen), rechts wat de assistent mag bedienen, met
@@ -594,6 +613,7 @@ const NAAST = {
   uit: ['functies.zoWerkt', 3],
   praten: ['functies.zoWerkt', 4],
   stem: ['functies.zoWerkt', 3],
+  tedoen: ['functies.zoWerkt', 3],
   meldingen: ['functies.zoWerkt', 3],
   weer: ['functies.naast.weer', 3],
 };
@@ -614,6 +634,8 @@ function delen() {
     { id: 'praten', titel: t('functies.deel.praten'), zin: f.praten.taalmodel ? (info.gevonden.taalmodellen ?? []).find((m) => m.id === f.praten.taalmodel)?.naam ?? t('functies.deel.eigen') : t('functies.deel.vast'), stand: 'goed' },
     // Stem en luisteren (besluit 212): de stem van je huis, en "Hé huis".
     { id: 'stem', titel: t('functies.deel.stem'), zin: (stemmen?.opties ?? []).find((o) => o.id === stemGekozen())?.naam ?? t('functies.deel.vanzelf'), stand: 'goed' },
+    // Te doen (besluit 216): de lijsten en agenda's van Home Assistant.
+    { id: 'tedoen', titel: t('functies.deel.tedoen'), zin: f.tedoen?.aan ? t('functies.tedoen.zin', { n: ['boodschappen', 'todo', 'afval', 'gezin'].filter((k) => f.tedoen[k]).length }) : t('functies.deel.uit'), stand: 'goed' },
     // Weergave (besluit 167): dit scherm, het always-on display en wanneer het scherm uitgaat.
     { kop: t('functies.deel.weergave') },
     ...(app.inHA() ? [{ id: 'scherm', titel: t('functies.ditScherm'), zin: t(app.volledigGekozen() ? 'functies.deel.volledig' : 'functies.deel.zijbalk'), stand: 'goed' }] : []),
@@ -636,7 +658,7 @@ function tekenNu() {
   app.luchtVan(zon, 0);
   if (!info || !concept) return;
   const nu = groep.tekenDelen(delen());
-  const vorm = { cameras, deurbel, licht, weer, praten, stem: stemVorm, meldingen, scherm, startscherm: startschermVorm, aod, uit: schermUit }[nu]?.() ?? '';
+  const vorm = { cameras, deurbel, licht, weer, praten, stem: stemVorm, tedoen: teDoenVorm, meldingen, scherm, startscherm: startschermVorm, aod, uit: schermUit }[nu]?.() ?? '';
   // Terug naar standaard (besluit 204): rechtsboven, alleen als dit deel afwijkt van wat de app voorstelt.
   const terug = afwijkend(nu) ? `<button type="button" class="knop stdknop" data-standaard-deel="${esc(nu)}">${esc(t('functies.std'))}</button>` : '';
   $$('[data-vorm]').forEach((el) => {
@@ -765,6 +787,8 @@ document.addEventListener('click', (e) => {
     } else if (s === 'pratenBedienen') concept.praten.bedienen = w;
     // De klimaatbrug (besluit 210): de knoppen van je eigen regeling, tot stap B.
     else if (s === 'pratenKlimaat') concept.praten.klimaat = w;
+    // Te doen (besluit 216): aan of uit, en welke lijst en agenda wat is.
+    else if (s.startsWith('tedoen:')) concept.tedoen[s.slice(7)] = w;
     else if (s === 'spraak') concept.praten.spraak = w;
     else if (s === 'stemBron') concept.praten.stem = w;
     else if (s === 'stemVerstaan') concept.praten.verstaan = w;

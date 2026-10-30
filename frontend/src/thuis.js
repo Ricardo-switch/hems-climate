@@ -43,6 +43,8 @@ async function laadAlles() {
   // De kaarten van besluit 182: alleen ophalen wat er gekozen is.
   await kaartGegevens();
   teken();
+  // Te doen (besluit 216): de kaart, als er iets is.
+  void window.tedoen?.laad();
   if (eersteKeer) eigen.vanInstellingen();
   // Met #batterijen meteen de lijst, ook als niets bijna leeg is (besluit 131).
   if (eersteKeer && location.hash === '#batterijen') {

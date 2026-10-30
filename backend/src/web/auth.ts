@@ -38,6 +38,8 @@ export const DOOR_ROLES: Readonly<Record<string, Role>> = {
   '/api/licht': 'bewoner',
   '/api/scene': 'bewoner',
   '/api/scherm': 'bewoner',
+  // Te doen (besluit 216): voor wie in huis woont, en de wand.
+  '/api/te-doen': 'bewoner',
   // Hoe het voelt mag zonder inlog (besluit 134): het verandert niets aan het huis.
   '/api/uitstel': 'bewoner',
   // Een melding wegzetten (besluit 136): voor wie in huis woont.

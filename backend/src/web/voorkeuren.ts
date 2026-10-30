@@ -164,6 +164,23 @@ interface Eigen {
   readonly taal?: TaalKeus;
   /** Wat je op je telefoon wilt horen (besluit 183); weg is de standaard. */
   readonly meldingen?: Partial<MeldingKeus>;
+  /** Je eigen agenda's voor Te doen (besluit 216); weg is aan, zonder agenda's. */
+  readonly agenda?: AgendaKeus;
+}
+
+/** Welke agenda's uit Home Assistant van jou zijn (besluit 216), en of de assistent ze mag lezen. */
+export interface AgendaKeus {
+  readonly aan: boolean;
+  readonly ids: readonly string[];
+}
+export const STANDAARD_AGENDA: AgendaKeus = { aan: true, ids: [] };
+
+/** Meer agenda's tegelijk, elk een `calendar.` uit Home Assistant. */
+export function leesAgenda(x: unknown): { ok: true; agenda: AgendaKeus } | { ok: false; reden: string } {
+  if (!isObject(x) || typeof x['aan'] !== 'boolean' || !Array.isArray(x['ids'])) return { ok: false, reden: 'agenda is { aan, ids }' };
+  const ids = x['ids'];
+  if (ids.length > 12 || ids.some((i) => typeof i !== 'string' || !/^calendar\.[a-z0-9_]+$/.test(i))) return { ok: false, reden: 'agenda.ids zijn agenda\u2019s uit Home Assistant (calendar.…), hooguit 12' };
+  return { ok: true, agenda: { aan: x['aan'], ids: [...new Set(ids as string[])] } };
 }
 
 interface Bestand {
@@ -177,7 +194,7 @@ interface Bestand {
 const LEEG: Bestand = { versie: 1, accounts: {} };
 
 export interface VoorkeurenView {
-  readonly tel: { readonly kaarten: readonly KaartId[]; readonly favorieten: readonly Favoriet[]; readonly cameras: readonly string[] | null; readonly weergave: Weergave; readonly thema: Thema; readonly kleur: Kleur; readonly taal: TaalKeus; readonly meldingen: MeldingKeus };
+  readonly tel: { readonly kaarten: readonly KaartId[]; readonly favorieten: readonly Favoriet[]; readonly cameras: readonly string[] | null; readonly weergave: Weergave; readonly thema: Thema; readonly kleur: Kleur; readonly taal: TaalKeus; readonly meldingen: MeldingKeus; readonly agenda: AgendaKeus };
   /**
    * De wand: de kaarten, favorieten en kleur van wiens profiel geldt (`van`,
    * een account), zoals op zijn telefoon; zonder bewoners die van het huis.
@@ -355,7 +372,7 @@ export function voorkeurenView(b: Bestand, wie: VoorkeurWie): VoorkeurenView {
   const thema = themaVan(eigen);
   const taal = taalVan(eigen);
   return {
-    tel: { kaarten: eigen.tel ?? STANDAARD_TEL, favorieten: eigen.favorieten ?? [], cameras: eigen.cameras ?? null, weergave: { ...STANDAARD_WEERGAVE, ...eigen.weergave }, thema, kleur: kleurVan(b, wie.userId, wie.profielen), taal, meldingen: { ...STANDAARD_MELDINGEN, ...eigen.meldingen } },
+    tel: { kaarten: eigen.tel ?? STANDAARD_TEL, favorieten: eigen.favorieten ?? [], cameras: eigen.cameras ?? null, weergave: { ...STANDAARD_WEERGAVE, ...eigen.weergave }, thema, kleur: kleurVan(b, wie.userId, wie.profielen), taal, meldingen: { ...STANDAARD_MELDINGEN, ...eigen.meldingen }, agenda: eigen.agenda ?? STANDAARD_AGENDA },
     wand: {
       kaarten: profiel ? (profiel.tel ?? STANDAARD_TEL).filter((k) => WAND_KAARTEN.includes(k)) : (b.wand?.kaarten ?? STANDAARD_WAND),
       breed: (profiel ? profiel.breed : b.wand?.breed) ?? STANDAARD_BREED,
@@ -439,8 +456,8 @@ export function pasToe(b: Bestand, body: unknown, wie: VoorkeurWie): { ok: true;
   const r = isObject(body) ? body : null;
   const plek = r?.['plek'];
   if (plek !== 'tel' && plek !== 'wand') return { ok: false, status: 400, reden: 'plek is tel of wand' };
-  if (!['kaarten', 'breed', 'favorieten', 'cameras', 'weergave', 'niemand', 'thema', 'kleur', 'taal', 'meldingen'].some((k) => r![k] !== undefined)) return { ok: false, status: 400, reden: 'geef kaarten, breed, favorieten, cameras, weergave, thema, kleur, taal, meldingen of niemand' };
-  if (plek === 'wand' && ['weergave', 'thema', 'kleur', 'taal', 'meldingen'].some((k) => r![k] !== undefined)) return { ok: false, status: 400, reden: 'de weergave, het thema, de kleur, de taal en de meldingen zijn per account: plek tel' };
+  if (!['kaarten', 'breed', 'favorieten', 'cameras', 'weergave', 'niemand', 'thema', 'kleur', 'taal', 'meldingen', 'agenda'].some((k) => r![k] !== undefined)) return { ok: false, status: 400, reden: 'geef kaarten, breed, favorieten, cameras, weergave, thema, kleur, taal, meldingen, agenda of niemand' };
+  if (plek === 'wand' && ['weergave', 'thema', 'kleur', 'taal', 'meldingen', 'agenda'].some((k) => r![k] !== undefined)) return { ok: false, status: 400, reden: 'de weergave, het thema, de kleur, de taal, de meldingen en de agenda zijn per account: plek tel' };
   if (plek === 'tel' && r!['niemand'] !== undefined) return { ok: false, status: 400, reden: 'als niemand kijkt hoort bij de wand: plek wand' };
   const { van } = wandVan(wie);
   if (plek === 'wand' && (van == null || r!['niemand'] !== undefined) && !wie.magWand) return { ok: false, status: 403, reden: 'de wand past alleen de hoofdgebruiker aan' };
@@ -488,6 +505,8 @@ export function pasToe(b: Bestand, body: unknown, wie: VoorkeurWie): { ok: true;
   if (taal && !taal.ok) return { ok: false, status: 400, reden: taal.reden };
   const meldingen = r!['meldingen'] === undefined ? null : leesMeldingen(r!['meldingen'], nu.tel.meldingen);
   if (meldingen && !meldingen.ok) return { ok: false, status: 400, reden: meldingen.reden };
+  const agenda = r!['agenda'] === undefined ? null : leesAgenda(r!['agenda']);
+  if (agenda && !agenda.ok) return { ok: false, status: 400, reden: agenda.reden };
   const sleutel = wie.userId ?? '';
   const eigen = {
     ...b.accounts[sleutel],
@@ -500,6 +519,7 @@ export function pasToe(b: Bestand, body: unknown, wie: VoorkeurWie): { ok: true;
     ...(kleur ? { kleur: kleur.kleur } : {}),
     ...(taal ? { taal: taal.taal } : {}),
     ...(meldingen ? { meldingen: meldingen.meldingen } : {}),
+    ...(agenda ? { agenda: agenda.agenda } : {}),
   };
   return { ok: true, bestand: { ...b, accounts: { ...b.accounts, [sleutel]: eigen } } };
 }
@@ -531,6 +551,11 @@ export class VoorkeurenStore {
   /** Wat een account op zijn telefoon wil horen (besluit 183). */
   meldingen(account: string): MeldingKeus {
     return meldingenVan(this.#current, account);
+  }
+
+  /** De eigen agenda's van een account (besluit 216). */
+  agenda(account: string): AgendaKeus {
+    return this.#current.accounts[account]?.agenda ?? STANDAARD_AGENDA;
   }
 
   /**

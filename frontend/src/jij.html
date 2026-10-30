@@ -57,6 +57,16 @@
   .bladkop .knop { height: 36px; padding: 0 16px; font-size: 14px; }
   .blad h3 { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--gedempt); margin: 16px 0 8px; }
   .drie { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  /* Je agenda's (besluit 216): een vinkje per agenda, meer tegelijk. */
+  .agendas { display: flex; flex-direction: column; gap: 8px; }
+  .agendas.uitgezet { opacity: 0.45; }
+  .agendas button { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 12px; align-items: center; min-height: 52px; padding: 8px 14px; border-radius: 14px; border: 1.5px solid rgb(var(--wit) / 0.08); background: rgb(var(--wit) / 0.03); color: var(--tekst); font: inherit; text-align: left; cursor: pointer; }
+  .agendas button[aria-checked='true'] { border-color: var(--accent); background: var(--accent-vlak); }
+  .agendas i { width: 22px; height: 22px; border-radius: 7px; border: 2px solid rgb(var(--wit) / 0.35); }
+  .agendas button[aria-checked='true'] i { border-color: var(--accent); background: var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 15px no-repeat; }
+  .agendas b { font-size: 15px; font-weight: 600; }
+  .agendas span { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: rgb(255 122 160 / 0.14); color: #ff9fc0; white-space: nowrap; }
+  .agendas span.afval { background: rgb(110 231 183 / 0.14); color: var(--mint-t); }
   .drie button { padding: 8px 8px 10px; border-radius: 16px; border: 2px solid rgb(var(--wit) / 0.08); background: none; color: var(--tekst); font: inherit; text-align: center; cursor: pointer; }
   .drie button[aria-checked='true'] { border-color: var(--accent); background: var(--accent-vlak); }
   .drie button:focus-visible, .kleuren button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
