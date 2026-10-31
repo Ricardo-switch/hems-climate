@@ -111,6 +111,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [203. De stem: van het apparaat zelf, of helemaal in huis](#203-de-stem-van-het-apparaat-zelf-of-helemaal-in-huis)
 - [204. De standaard voor een nieuw huis, en terug naar standaard](#204-de-standaard-voor-een-nieuw-huis-en-terug-naar-standaard)
 - [220. Wat een nieuwe gebruiker tegenkwam](#220-wat-een-nieuwe-gebruiker-tegenkwam)
+- [223. De licentie: AGPL-3.0](#223-de-licentie-agpl-30)
 
 **Meten, data en analyse**
 
@@ -10390,6 +10391,37 @@ de assistent en in de browser.
 - **De zijbalk van Home Assistant** kent alleen standaardiconen: daar staat nu
   `mdi:weather-sunset`, de zon op de horizon.
 - **Versie 0.94.1.**
+
+---
+
+## 223. De licentie: AGPL-3.0
+
+*Onderwerp: configuratie en onboarding · Status: geldig*
+
+31 oktober 2026. De repository is openbaar sinds 17 oktober, maar had geen
+licentie: kijken mocht, gebruiken niet. Voor wie de app wil installeren, en
+voor de route naar meer gebruikers (het rapport "SunArc polijsten", ronde 4),
+is een licentie nodig. Afgewogen: vrij (MIT of Apache-2.0, zoals Home
+Assistant), delen verplicht (GPL-3.0), of delen verplicht ook als dienst of op
+een apparaat (AGPL-3.0). De bewoner koos AGPL-3.0.
+
+*Besluit:*
+
+- **De code van SunArc valt onder AGPL-3.0** (`LICENSE`, de tekst van GitHub).
+  Wie een aangepaste versie verspreidt of aanbiedt, ook op een kastje (stap H,
+  besluit 34), deelt de broncode. De bewoner heeft alle code zelf laten
+  schrijven en houdt dus de rechten: een eigen licentie voor een bedrijf kan
+  later nog.
+- **De naam en het teken** vallen er niet onder (besluit 222).
+- **Van anderen**, in de README: qrcode-generator (MIT), de letters Bricolage
+  Grotesque en Figtree (OFL 1.1), en de twee voorstappen van het wekwoord uit
+  openWakeWord (CC BY-NC-SA 4.0). De dienst en de weergave hebben verder geen
+  pakketten die meegaan.
+- **Let op bij stap H:** die voorstappen mogen niet commercieel gebruikt
+  worden. Een kastje dat verkocht wordt, heeft voor "Hé huis" andere
+  voorstappen nodig, of een afspraak met de maker. Voor eigen gebruik en als
+  open project is het goed.
+- Geen nieuwe versie: er verandert niets aan de app.
 
 ---
 
