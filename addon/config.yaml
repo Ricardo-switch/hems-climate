@@ -19,7 +19,7 @@ name: SunArc
 # Gelijk aan VERSIE in backend/src/version.ts; een test houdt ze gelijk. De
 # Supervisor ziet een update zodra dit nummer op `main` omhooggaat, en haalt dan
 # het image met dat nummer op (besluit 153).
-version: 0.94.0
+version: 0.94.1
 slug: hems_climate
 description: >-
   Klimaat en zon in één app: kijkt mee met je verwarming, airco's en
@@ -46,7 +46,8 @@ discovery:
 # De weergave gaat via Ingress en dus door de inlog van Home Assistant.
 ingress: true
 ingress_port: 8099
-panel_icon: mdi:home-thermometer
+# De zon op de horizon, zoals het teken van SunArc (besluit 222); de zijbalk kent alleen mdi-iconen.
+panel_icon: mdi:weather-sunset
 panel_title: SunArc
 # Het paneel voor iedereen met een account, niet alleen voor beheerders
 # (besluit 161): bewoners, gasten en de wand. Wat iemand mag, bepaalt de app;

@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.94.0';
+export const VERSIE = '0.94.1';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,24 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.94.1',
+    datum: '2026-10-31',
+    opgelost: [
+      'De assistent in Home Assistant heeft het teken van SunArc, op licht en donker',
+      'Het tabblad in de browser en de app op je startscherm halen het nieuwe icoon op',
+      'Het logo van de add-on is ook op het donkere thema leesbaar',
+      'In de zijbalk van Home Assistant staat de zon op de horizon',
+    ],
+    en: {
+      opgelost: [
+        'The assistant in Home Assistant shows the SunArc mark, in light and dark',
+        'The browser tab and the app on your home screen fetch the new icon',
+        'The add-on logo is readable in the dark theme too',
+        'The Home Assistant sidebar shows the sun on the horizon',
+      ],
+    },
+  },
   {
     versie: '0.94.0',
     datum: '2026-10-31',

@@ -121,7 +121,7 @@ meteen SunArc opent:
 2. In de app van Home Assistant: **Instellingen › Companion-app ›
    Snelkoppelingen beheren**, en maak een **vastgezette** snelkoppeling: naam
    *SunArc*, soort *Dashboard*, het pad uit stap 1, en een icoon naar
-   keuze (bijvoorbeeld `mdi:home-thermometer`).
+   keuze (bijvoorbeeld `mdi:weather-sunset`, de zon op de horizon).
 3. Zet hem op je startscherm.
 
 ### Als losse app, via Tailscale (besluit 160)
