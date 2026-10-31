@@ -215,5 +215,5 @@ export async function sendFile(
 export function verderNa(naar: string): string {
   const html = naar.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
   const js = JSON.stringify(naar).replace(/</g, '\\u003c');
-  return `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=${html}"><title>Ingelogd · Smart Climate</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0b1424;color:#eef3f7;font-family:system-ui,sans-serif}</style></head><body><p>Ingelogd. <a href="${html}" style="color:#6fd3ff">Verder</a></p><script>location.replace(${js});</script></body></html>`;
+  return `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=${html}"><title>Ingelogd · SunArc</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0b1424;color:#eef3f7;font-family:system-ui,sans-serif}</style></head><body><p>Ingelogd. <a href="${html}" style="color:#6fd3ff">Verder</a></p><script>location.replace(${js});</script></body></html>`;
 }

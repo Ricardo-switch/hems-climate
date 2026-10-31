@@ -1,5 +1,39 @@
 # Wat is er nieuw · What is new
 
+## 0.94.0
+
+*31 oktober 2026*
+
+**Nieuw**
+
+- Smart Climate heet nu SunArc: Autonomous Residential Climate, met een eigen teken van de zon op de horizon
+- Een nieuw icoon voor je startscherm, en de add-on heeft een eigen icoon en logo in Home Assistant
+
+**Beter**
+
+- Het teken staat bovenaan de zijbalk, bij Welkom, Inrichten en Inloggen, en aan het eind van de film
+- Assist verstaat ook "SunArc"; "Smart Climate" blijft werken
+
+**Opgelost**
+
+- Je spraakassistent "Smart Climate" en de update van de add-on worden met de nieuwe naam nog herkend; er komt geen tweede bij
+
+*English*
+
+**New**
+
+- Smart Climate is now called SunArc: Autonomous Residential Climate, with its own mark of the sun on the horizon
+- A new icon for your home screen, and the add-on has its own icon and logo in Home Assistant
+
+**Improved**
+
+- The mark sits at the top of the sidebar, in Welcome, Setup and Sign in, and at the end of the film
+- Assist also understands "SunArc"; "Smart Climate" keeps working
+
+**Fixed**
+
+- Your "Smart Climate" voice assistant and the add-on update are still recognised under the new name; no second one is added
+
 ## 0.93.0
 
 *30 oktober 2026*

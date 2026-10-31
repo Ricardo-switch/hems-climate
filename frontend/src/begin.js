@@ -193,7 +193,7 @@ async function laad(poging = 0) {
   groei();
 }
 
-/** Wacht tot Smart Climate weer antwoordt na opnieuw starten, en gaat dan verder. */
+/** Wacht tot SunArc weer antwoordt na opnieuw starten, en gaat dan verder. */
 async function wachtOpHerstart(naar) {
   const begin = Date.now();
   await new Promise((ok) => setTimeout(ok, 5000));

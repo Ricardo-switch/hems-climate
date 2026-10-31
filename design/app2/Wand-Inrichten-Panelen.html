@@ -9,7 +9,7 @@
 <style>
   /*
    * Hoe de panelen liggen (schets, 17 oktober 2026). Een vervolg op stap 5 van
-   * Inrichten: na "waar liggen ze?" en "hoeveel?" zoekt Smart Climate de
+   * Inrichten: na "waar liggen ze?" en "hoeveel?" zoekt SunArc de
    * richting, de helling en het vermogen op in wat de panelen de afgelopen
    * tien dagen leverden (de statistiek van Home Assistant), en de omvormer in
    * zijn typenummer. De bewoner bevestigt of past aan (besluit 93).
@@ -19,7 +19,7 @@
    */
   .scherm { position: relative; width: 1280px; height: 800px; overflow: hidden; }
   .boven { position: absolute; left: 32px; right: 32px; top: 24px; display: flex; align-items: center; gap: 18px; }
-  .boven .logo { width: 36px; height: 36px; border-radius: 11px; background: conic-gradient(from 200deg, #6fd3ff, #8f86ff, #ff7a4d, #f7b548, #6ee7b7, #6fd3ff); }
+  .boven .logo { width: 36px; height: 36px; border-radius: 11px; background: url('../../frontend/kit/icoon-klein.svg') center / cover; }
   .boven b { font-family: var(--kop); font-size: 18px; }
   .stappen { margin-left: auto; display: flex; gap: 6px; align-items: center; }
   .stap { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--gedempt); }
@@ -61,7 +61,7 @@
 <body>
 <div class="scherm lucht lucht-dag">
   <div class="boven">
-    <span class="logo"></span><b>Smart Climate</b>
+    <span class="logo"></span><b>SunArc</b>
     <div class="stappen" id="stappen"></div>
   </div>
   <div class="podium" id="podium"></div>
@@ -89,7 +89,7 @@
   <section class="glas kaart" data-stand="aanpassen">
     <span class="klein">Stap 5 · Zon en energie</span>
     <h1 class="kop-2">Pas aan wat niet klopt</h1>
-    <p class="lead">Wat je hier zet, gaat voor wat Smart Climate meet.</p>
+    <p class="lead">Wat je hier zet, gaat voor wat SunArc meet.</p>
     <div class="kompas">
       <svg id="roos" viewBox="0 0 116 116" width="116" height="116" role="img" aria-label="Het dak van boven: de voorkant kijkt naar het oosten"></svg>
       <div class="chips">

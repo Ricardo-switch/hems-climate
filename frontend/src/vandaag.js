@@ -281,7 +281,7 @@ function tekenTijdlijn(r, verwacht, lijst) {
   if (dag !== 'morgen') {
     for (const a of r.apparaten ?? []) if (a.huidig.length || a.smartClimate.length) banen.push({ id: a.actuatorId, naam: naamVan(a.actuatorId), echt: a.huidig, zou: a.smartClimate, kleur: /heat/.test(a.huidig[0]?.actie ?? '') || apparaatVan(a.actuatorId)?.klimaat?.kanKoelen === false ? '#FF7A4D' : '#6FD3FF' });
     for (const u of r.uitstelbaar ?? []) if (u.draaide.length || u.zouStarten.length) banen.push({ id: u.id, naam: naamVan(u.id), echt: u.draaide, zou: u.zouStarten, kleur: '#F7B548' });
-    // De boiler en de jacuzzi (besluit 186): wanneer ze stookten, en wanneer Smart Climate dat zou doen.
+    // De boiler en de jacuzzi (besluit 186): wanneer ze stookten, en wanneer SunArc dat zou doen.
     for (const w of r.warmtebuffers ?? []) if (w.stookte.length || w.zouStoken.length) banen.push({ id: w.id, naam: naamVan(w.id), echt: w.stookte, zou: w.zouStoken, kleur: '#FF9A6B' });
   }
   for (const v of verwacht) if (!banen.some((b) => b.id === v.actuatorId)) banen.push({ id: v.actuatorId, naam: naamVan(v.actuatorId), echt: [], zou: [], kleur: '#6FD3FF' });
@@ -328,7 +328,7 @@ function tekenTijdlijn(r, verwacht, lijst) {
     })
     .join('');
 
-  // De apparaten: vol wat het deed, licht wat Smart Climate zou doen, gestreept wat er verwacht wordt.
+  // De apparaten: vol wat het deed, licht wat SunArc zou doen, gestreept wat er verwacht wordt.
   // Achter het blok, of ervoor als het anders buiten de tijdlijn valt (besluit 131).
   const verwachtTekst = (v, tekst, yy) => {
     const rechts = x(v.totMs) + 8 + tekst.length * 6.4 <= X1;

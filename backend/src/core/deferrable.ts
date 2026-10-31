@@ -4,7 +4,7 @@
  *
  * Een uitstelbaar apparaat draait één programma en stopt dan; halverwege
  * pauzeren kan niet. De bewoner kiest een programma, sluit de deur en zet "start
- * op afstand" aan. Vanaf dat moment beslist Smart Climate wanneer het begint:
+ * op afstand" aan. Vanaf dat moment beslist SunArc wanneer het begint:
  *
  * - **op zon**, als het overschot na de airco's het apparaat draagt;
  * - **uiterlijk om `latestStart`**, ook zonder zon, zoals de oude automatisering

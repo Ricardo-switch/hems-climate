@@ -1,4 +1,4 @@
-"""Het zinnenbestand voor Assist (besluit 184): wat Smart Climate geeft, met een kop erboven.
+"""Het zinnenbestand voor Assist (besluit 184): wat SunArc geeft, met een kop erboven.
 
 Draaien: ``python -m unittest discover -s tests/integratie -p "test_zinnen.py"``.
 """
@@ -18,7 +18,7 @@ GEGEVENS = {"language": "nl", "intents": {zinnen.INTENTIE: {"data": [{"sentences
 class ZinnenTest(unittest.TestCase):
     def test_het_bestand_is_te_lezen_met_een_kop_erboven(self):
         inhoud = zinnen.tekst(GEGEVENS)
-        self.assertTrue(inhoud.startswith("# Smart Climate: de zinnen voor Assist."))
+        self.assertTrue(inhoud.startswith("# SunArc: de zinnen voor Assist."))
         self.assertEqual(json.loads("\n".join(r for r in inhoud.splitlines() if not r.startswith("#"))), GEGEVENS)
 
     def test_per_taal_wat_smart_climate_gaf(self):

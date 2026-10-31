@@ -154,7 +154,7 @@ function blad() {
 }
 
 /*
- * Waar iemand die erbij komt Smart Climate opent. In Home Assistant (de add-on)
+ * Waar iemand die erbij komt SunArc opent. In Home Assistant (de add-on)
  * is dat het paneel in Home Assistant zelf, met de inlog van Home Assistant: het
  * adres van de app binnen Home Assistant werkt alleen voor wie daar al is
  * (21 oktober 2026). Anders de inlogpagina van de app.

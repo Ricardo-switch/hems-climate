@@ -1,11 +1,11 @@
 /*
- * Teksten voor elk huis (besluit 131). Smart Climate wordt openbaar (besluit
+ * Teksten voor elk huis (besluit 131). SunArc wordt openbaar (besluit
  * 118); wat de app zegt, moet kloppen in elk huis, niet alleen in het huis
  * waar het gemaakt is. Deze test leest de pagina's van de weergave, zonder
  * commentaar, en zoekt woorden die over één installatie gaan: de NAS, de
  * namen van omgevingsvariabelen, de manier van uitrollen, of namen uit dat
  * ene huis. De proefomgeving (index.html en app.js) telt niet mee: die is
- * voor wie aan Smart Climate werkt.
+ * voor wie aan SunArc werkt.
  */
 import { readFile, readdir } from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';

@@ -314,12 +314,12 @@ function welkomSkelet(tel) {
   const begin = `<a class="knop knop-licht wk-begin" href="#woning">${esc(t('inr.begin'))}${PIJL}</a>`;
   const terug = `<a class="wk-terug" href="toegang.html">${esc(t('inr.wk.backup'))}</a>`;
   if (tel) {
-    return `<span class="wk-merk"><i aria-hidden="true"></i>Smart Climate</span><div class="wk-podium" data-wk-podium aria-hidden="true"></div><div class="wk-getallen" data-wk-getallen></div>
+    return `<span class="wk-merk"><i aria-hidden="true"></i>SunArc</span><div class="wk-podium" data-wk-podium aria-hidden="true"></div><div class="wk-getallen" data-wk-getallen></div>
       <div class="wk-tekst">${woorden}</div>
       <div class="wk-doen">${begin}<div class="wk-onder"><span>${esc(t('inr.telStappen', { n: STAPPEN.length }))}</span>${terug}</div></div>`;
   }
   return `<div class="wk-podium" data-wk-podium aria-hidden="true"></div><svg class="wk-lijn" data-wk-lijn aria-hidden="true"></svg><div class="wk-labels" data-wk-labels></div>
-    <div class="wk-links"><span class="wk-merk"><i aria-hidden="true"></i>Smart Climate</span><div class="wk-midden">${woorden}<div class="wk-doen">${begin}${terug}</div></div><span class="wk-voet">${esc(t('inr.wk.voet', { n: STAPPEN.length }))}</span></div>
+    <div class="wk-links"><span class="wk-merk"><i aria-hidden="true"></i>SunArc</span><div class="wk-midden">${woorden}<div class="wk-doen">${begin}${terug}</div></div><span class="wk-voet">${esc(t('inr.wk.voet', { n: STAPPEN.length }))}</span></div>
     <div class="glas wk-zoekt" data-wk-zoekt aria-live="polite"><i aria-hidden="true"></i><span></span></div>`;
 }
 /** Wat er gevonden is, met hoeveel er tijdens het opbouwen al staat. */
@@ -1461,7 +1461,7 @@ async function bewaarVoorkeur(body) {
 }
 
 /*
- * Staat alles klaar? (besluit 179 en 190): wat Smart Climate in Home Assistant
+ * Staat alles klaar? (besluit 179 en 190): wat SunArc in Home Assistant
  * gebruikt, zoals bij Wat je huis kan. Oranje mist nog; in Home Assistant
  * opent een tik dat scherm.
  */

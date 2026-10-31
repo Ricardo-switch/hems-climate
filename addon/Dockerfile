@@ -56,7 +56,7 @@ ARG BUILD_ARCH
 ARG BUILD_VERSION
 LABEL \
   io.hass.type="addon" \
-  io.hass.name="Smart Climate" \
+  io.hass.name="SunArc" \
   io.hass.arch="${BUILD_ARCH}" \
   io.hass.version="${BUILD_VERSION}" \
   org.opencontainers.image.version="${BUILD_VERSION}" \

@@ -3,12 +3,12 @@ configuration:
     name: Control lights, scenes and blinds
     description: >-
       Turn lights, scenes and blinds on and off from the app. Off means look
-      only. Smart Climate does not operate your heating and air conditioners
+      only. SunArc does not operate your heating and air conditioners
       yet.
   ha_adres:
     name: Home Assistant address on your phone
     description: >-
-      Only needed for Smart Climate as a separate app through Tailscale, see
+      Only needed for SunArc as a separate app through Tailscale, see
       the documentation. For example https://homeassistant.your-tailnet.ts.net.
       Otherwise leave empty.
   hartslag_seconden:
@@ -25,5 +25,5 @@ configuration:
       Technical. Empty means 10 minutes; 0 turns it off.
 network:
   8100/tcp: >-
-    Smart Climate as a separate app on your phone, through Tailscale only.
+    SunArc as a separate app on your phone, through Tailscale only.
     Leave empty if you use the Home Assistant app.

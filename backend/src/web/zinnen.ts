@@ -2,7 +2,7 @@
  * De zinnen voor Assist (besluit 184), voor dit huis.
  *
  * Assist herkent alleen zinnen uit een bestand in `custom_sentences/<taal>/`
- * van Home Assistant. De integratie Smart Climate schrijft daar één eigen
+ * van Home Assistant. De integratie SunArc schrijft daar één eigen
  * bestand en houdt het bij; wat erin staat, komt van hier (`/api/assist`).
  * Zo komt een nieuwe zin, of een betere herkenning, met een gewone update van
  * de add-on, en hoeft de integratie zelf bijna nooit bij.
@@ -20,7 +20,7 @@ export const INTENTIE = 'SmartClimateVraag';
 
 const NU = [
   'wat (doe|doet) <sc> <nu>',
-  'wat (ben je|is smart climate) <nu> aan het doen',
+  'wat (ben je|is sunarc|is sun arc|is smart climate) <nu> aan het doen',
   "hoe staat [het] [er] [met] (het klimaat|het huis|de regeling|de airco's|de verwarming) [ervoor] <nu>",
   '(geef|vertel) [me] [een] [kort] (overzicht|status|update) [van] [het klimaat|het huis]',
   'klimaat status',
@@ -41,7 +41,7 @@ const WAAROM = [
   'uitleg <kamer>',
 ];
 const STRAKS = [
-  'wat (ga je|gaat smart climate|gaat de regeling) [straks|vanavond|vannacht|hierna|vandaag|zo] doen',
+  'wat (ga je|gaat sunarc|gaat sun arc|gaat smart climate|gaat de regeling) [straks|vanavond|vannacht|hierna|vandaag|zo] doen',
   'wat (is|zijn) [het|je] plan[nen] [voor] [straks|vanavond|vannacht|vandaag]',
   'wat komt er [straks|hierna]',
   'wanneer (ga je|gaat het|gaat de regeling) naar [de] (nacht|nachtstand|dag|dagstand)',
@@ -68,7 +68,7 @@ const VERWARMEN = [
   '(kan|wil) <sc> <kamer> [even] (verwarmen|opwarmen) [naar|tot] [{temperatuur} [graden]]',
   'laat <kamer> [even] (verwarmen|opwarmen) [naar|tot] [{temperatuur} [graden]]',
 ];
-const UIT = ['mag <kamer> uit', 'smart climate zet <kamer> uit', '(kan|mag) de airco <in_kamer> uit'];
+const UIT = ['mag <kamer> uit', '(sunarc|sun arc|smart climate) zet <kamer> uit', '(kan|mag) de airco <in_kamer> uit'];
 
 /*
  * Dezelfde vragen in het Engels (besluit 185, stap 9 deel 6). Ook hier geen
@@ -76,7 +76,7 @@ const UIT = ['mag <kamer> uit', 'smart climate zet <kamer> uit', '(kan|mag) de a
  * of "what is the temperature in the attic".
  */
 const NU_EN = [
-  'what (are you|is smart climate|is the control) doing <nu>',
+  'what (are you|is sunarc|is sun arc|is smart climate|is the control) doing <nu>',
   'how (is|are) (the climate|the house|the control|the air conditioners|the heating) doing <nu>',
   '(give|tell) me [a] [short] (overview|status|update) [of] [the climate|the house]',
   'climate status',
@@ -89,7 +89,7 @@ const WAAROM_EN = [
   'why is the (air conditioner|aircon|heating|thermostat) <in_kamer> [not] (running|cooling|heating|on|off) <nu>',
   'why is it [so] (warm|cold|hot|chilly) <in_kamer>',
   'why is (nothing|something) happening <in_kamer>',
-  'why (are you|is smart climate) [not] doing (anything|nothing) <in_kamer>',
+  'why (are you|is sunarc|is sun arc|is smart climate) [not] doing (anything|nothing) <in_kamer>',
   'what is (happening|going on) <in_kamer>',
   'how is <kamer> doing',
   '(explain|tell me) (what|why) [it] is (happening|running) <in_kamer>',
@@ -97,7 +97,7 @@ const WAAROM_EN = [
   'explain <kamer>',
 ];
 const STRAKS_EN = [
-  'what (are you|is smart climate|is the control) going to do [later|tonight|next|today]',
+  'what (are you|is sunarc|is sun arc|is smart climate|is the control) going to do [later|tonight|next|today]',
   'what (is|are) [the|your] plan[s] [for] [later|tonight|today]',
   'what (comes|is) next',
   'when (are you|is the control) going to [the] (night|day) [mode|setting]',
@@ -115,15 +115,15 @@ const ZON_EN = [
 const KOELEN_EN = [
   'cool [down] <kamer> [to {temperatuur} [degrees]]',
   'make <kamer> (cooler|colder)',
-  '(can|will) (you|smart climate) cool [down] <kamer> [to {temperatuur} [degrees]]',
+  '(can|will) (you|sunarc|sun arc|smart climate) cool [down] <kamer> [to {temperatuur} [degrees]]',
 ];
 const VERWARMEN_EN = [
   'heat [up] <kamer> [to {temperatuur} [degrees]]',
   'warm up <kamer> [to {temperatuur} [degrees]]',
   'make <kamer> warmer',
-  '(can|will) (you|smart climate) (heat|warm) [up] <kamer> [to {temperatuur} [degrees]]',
+  '(can|will) (you|sunarc|sun arc|smart climate) (heat|warm) [up] <kamer> [to {temperatuur} [degrees]]',
 ];
-const UIT_EN = ['can <kamer> [go] off', 'smart climate switch off <kamer>', '(can|may) the air conditioner <in_kamer> [go] off'];
+const UIT_EN = ['can <kamer> [go] off', '(sunarc|sun arc|smart climate) switch off <kamer>', '(can|may) the air conditioner <in_kamer> [go] off'];
 
 /** De zinnen en de woorden eromheen, per taal. */
 const TAAL = {
@@ -131,7 +131,7 @@ const TAAL = {
     regels: {
       kamer: '[de|het] {kamer}',
       in_kamer: '[in|op|van] [de|het] {kamer}',
-      sc: '(je|jij|smart climate|het systeem|de regeling|het klimaat)',
+      sc: '(je|jij|sunarc|sun arc|smart climate|het systeem|de regeling|het klimaat)',
       nu: '[nu|op dit moment|momenteel|eigenlijk]',
       panelen: '[de] (zonnepanelen|panelen)',
     },
@@ -142,7 +142,7 @@ const TAAL = {
     regels: {
       kamer: '[the] {kamer}',
       in_kamer: '[in|on|of] [the] {kamer}',
-      sc: '(you|smart climate|the system|the control|the climate)',
+      sc: '(you|sunarc|sun arc|smart climate|the system|the control|the climate)',
       nu: '[now|right now|at the moment|currently]',
       panelen: '[the] [solar] panels',
     },
@@ -178,7 +178,7 @@ export function zinnenVoor(lang: keyof typeof TAAL, kamers: readonly AssistKamer
           { sentences: t.zinnen.waarom, slots: { vraag: 'waarom' } },
           { sentences: t.zinnen.straks, slots: { vraag: 'straks' } },
           { sentences: t.zinnen.zon, slots: { vraag: 'zon' } },
-          // Een opdracht: tijdens het meekijken zegt Smart Climate wat hij zou doen. Er gaat niets naar de airco.
+          // Een opdracht: tijdens het meekijken zegt SunArc wat hij zou doen. Er gaat niets naar de airco.
           { sentences: t.zinnen.koelen, slots: { vraag: 'doe', wens: 'koelen' } },
           { sentences: t.zinnen.verwarmen, slots: { vraag: 'doe', wens: 'verwarmen' } },
           { sentences: t.zinnen.uit, slots: { vraag: 'doe', wens: 'uit' } },

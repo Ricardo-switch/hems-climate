@@ -21,7 +21,7 @@
 
   /**
    * Wat er nog mist: elk met waarom het telt en een knop ernaartoe. Alleen wat
-   * Smart Climate echt nodig heeft; wat erbij kan, staat bij Wat je huis kan.
+   * SunArc echt nodig heeft; wat erbij kan, staat bij Wat je huis kan.
    */
   function nogTeDoen(d) {
     const t = global.taal.t;
@@ -213,7 +213,7 @@
   }
 
   /**
-   * Alles wat Smart Climate voor je doet, per onderwerp, met een stand: werkt,
+   * Alles wat SunArc voor je doet, per onderwerp, met een stand: werkt,
    * kijkt mee (de schaduw, besluit 64: tot het zelf regelt), leert nog, staat
    * uit, vul in (een instelling mist) of nodig (er hoort iets bij). De regel
    * "nu" zegt wat het op dit moment doet. Alleen wat bij dit huis kan bestaan.

@@ -193,7 +193,7 @@ het logboek. Niet doen buiten een test.
 ### Plaatjes bij de Hue-scènes (besluit 100)
 
 De app toont bij een scène het plaatje uit `logs/scene-plaatjes/` met zijn naam;
-zonder plaatje een bolletje in de kleuren van de scène. Smart Climate levert de
+zonder plaatje een bolletje in de kleuren van de scène. SunArc levert de
 plaatjes niet mee: ze zijn van Philips Hue. Wie ze voor eigen gebruik wil, haalt
 bijvoorbeeld de verzameling van github.com/mattmon/hue-scene-icons op de NAS:
 

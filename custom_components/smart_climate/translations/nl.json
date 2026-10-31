@@ -2,22 +2,22 @@
   "config": {
     "step": {
       "user": {
-        "title": "Smart Climate",
-        "description": "Vul het adres en de sleutel in uit de app van Smart Climate, bij Instellingen › Bewoners en toegang › Sleutel voor de assistent. Met de add-on van Smart Climate gaat dit vanzelf.",
+        "title": "SunArc",
+        "description": "Vul het adres en de sleutel in uit de app van SunArc, bij Instellingen › Bewoners en toegang › Sleutel voor de assistent. Met de add-on van SunArc gaat dit vanzelf.",
         "data": { "adres": "Adres", "sleutel": "Sleutel" }
       },
       "hassio_confirm": {
-        "title": "Smart Climate",
-        "description": "De add-on Smart Climate is gevonden. Voeg hem toe, dan kan Assist Smart Climate vragen wat je huis doet."
+        "title": "SunArc",
+        "description": "De add-on SunArc is gevonden. Voeg hem toe, dan kan Assist SunArc vragen wat je huis doet."
       }
     },
     "error": {
-      "niet_bereikbaar": "Smart Climate is op dit adres niet te bereiken.",
+      "niet_bereikbaar": "SunArc is op dit adres niet te bereiken.",
       "sleutel": "De sleutel klopt niet."
     },
     "abort": {
-      "already_configured": "Smart Climate is al toegevoegd.",
-      "niet_bereikbaar": "Smart Climate is niet te bereiken.",
+      "already_configured": "SunArc is al toegevoegd.",
+      "niet_bereikbaar": "SunArc is niet te bereiken.",
       "sleutel": "De sleutel van de add-on wordt niet geaccepteerd."
     }
   }

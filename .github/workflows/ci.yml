@@ -172,7 +172,7 @@ jobs:
 
   # De integratie voor Home Assistant (besluit 184), in een echte Home Assistant:
   # toevoegen met de hand en ontdekt via de add-on, het zinnenbestand, en een
-  # gesproken zin die bij Smart Climate uitkomt.
+  # gesproken zin die bij SunArc uitkomt.
   integratie:
     name: de integratie in Home Assistant
     runs-on: ubuntu-latest

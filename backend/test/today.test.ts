@@ -3,7 +3,7 @@
  *
  * Een dag logboek die over twee dagbestanden loopt, want middernacht in
  * Amsterdam valt in het UTC-bestand van gisteren. Daarin: een nacht op het net,
- * twee uur zon, Smart Climate die de woonkamer een uur zou koelen, en het oude
+ * twee uur zon, SunArc die de woonkamer een uur zou koelen, en het oude
  * systeem dat de zolder een half uur laat koelen.
  */
 
@@ -110,7 +110,7 @@ describe('vandaag', () => {
     ]);
   });
 
-  it('weet wanneer een uitstelbaar apparaat draaide, en wanneer Smart Climate het zou starten', async () => {
+  it('weet wanneer een uitstelbaar apparaat draaide, en wanneer SunArc het zou starten', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'hems-today-'));
     cleanup.push(dir);
     // Wacht op zon tot 08:00, zou dan starten, de bewoner start hem om 08:20 zelf, klaar om 09:00.

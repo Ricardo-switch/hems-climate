@@ -2,7 +2,7 @@
  * Plaatjes bij de Hue-scènes (besluit 100, aangevuld).
  *
  * Home Assistant geeft de plaatjes van de Hue-app niet door, en ze zijn van
- * Philips Hue: Smart Climate levert ze niet mee. Wie ze heeft, zet ze in de map
+ * Philips Hue: SunArc levert ze niet mee. Wie ze heeft, zet ze in de map
  * `scene-plaatjes/` naast de dataset; de app toont dan bij een scène het plaatje
  * met zijn naam. Zonder plaatje blijven de kleuren (scene-colors.ts).
  *

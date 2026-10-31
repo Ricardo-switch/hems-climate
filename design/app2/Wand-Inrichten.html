@@ -17,7 +17,7 @@
    */
   .scherm { position: relative; width: 1280px; height: 800px; overflow: hidden; }
   .boven { position: absolute; left: 32px; right: 32px; top: 24px; display: flex; align-items: center; gap: 18px; }
-  .boven .logo { width: 36px; height: 36px; border-radius: 11px; background: conic-gradient(from 200deg, #6fd3ff, #8f86ff, #ff7a4d, #f7b548, #6ee7b7, #6fd3ff); }
+  .boven .logo { width: 36px; height: 36px; border-radius: 11px; background: url('../../frontend/kit/icoon-klein.svg') center / cover; }
   .boven b { font-family: var(--kop); font-size: 18px; }
   .stappen { margin-left: auto; display: flex; gap: 6px; align-items: center; }
   .stap { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--gedempt); }
@@ -65,7 +65,7 @@
 <body>
 <div class="scherm lucht lucht-dag">
   <div class="boven">
-    <span class="logo"></span><b>Smart Climate</b>
+    <span class="logo"></span><b>SunArc</b>
     <div class="stappen" id="stappen"></div>
   </div>
   <div class="podium" id="podium"></div>
@@ -74,12 +74,12 @@
   <section class="glas kaart" data-stand="welkom">
     <span class="klein">Welkom</span>
     <h1 class="kop-1" style="font-size: 40px">Laten we je huis neerzetten</h1>
-    <p class="lead">Smart Climate vond je Home Assistant. Wat het daar al weet, staat klaar; jij kijkt of het klopt. Het duurt een minuut of vijf.</p>
+    <p class="lead">SunArc vond je Home Assistant. Wat het daar al weet, staat klaar; jij kijkt of het klopt. Het duurt een minuut of vijf.</p>
     <div class="gevonden">
       <span><b>4</b>etages</span><span><b>10</b>ruimtes</span>
       <span><b>48</b>apparaten</span><span><b>3</b>om te verwarmen of koelen</span>
     </div>
-    <div class="tip">Er verandert niets in Home Assistant. Smart Climate kijkt eerst mee en zegt wat het zou doen.</div>
+    <div class="tip">Er verandert niets in Home Assistant. SunArc kijkt eerst mee en zegt wat het zou doen.</div>
     <div class="onder"><span class="knop-groot">Begin</span></div>
   </section>
 
@@ -102,7 +102,7 @@
   <section class="glas kaart" data-stand="warmte">
     <span class="klein">Stap 3 · Verwarmen en koelen</span>
     <h1 class="kop-2" style="margin: 0">Wat verwarmt en koelt er?</h1>
-    <p class="lead" style="font-size: 15px">Wat groen is, vond Smart Climate al. Vul aan wat er nog hangt; met de hand is ook goed.</p>
+    <p class="lead" style="font-size: 15px">Wat groen is, vond SunArc al. Vul aan wat er nog hangt; met de hand is ook goed.</p>
     <div>
       <div class="rij"><b>Woonkamer</b><div class="chips"><span class="chip ok">✓ Airco</span><span class="chip ok">✓ Cv met thermostaat</span><span class="chip ok">✓ Radiatorknop</span></div></div>
       <div class="rij"><b>Badkamer</b><div class="chips"><span class="chip ok">✓ Thermostaat badkamer</span><span class="chip">Wat hangt eraan? ▾</span></div></div>
@@ -129,7 +129,7 @@
   <section class="glas kaart" data-stand="zon">
     <span class="klein">Stap 5 · Zon en energie</span>
     <h1 class="kop-2" style="margin: 0">Je panelen en je aansluiting</h1>
-    <p class="lead" style="font-size: 15px">Wat Smart Climate al vond, staat er. Weet je iets niet, dan kan het later; het huis werkt toch.</p>
+    <p class="lead" style="font-size: 15px">Wat SunArc al vond, staat er. Weet je iets niet, dan kan het later; het huis werkt toch.</p>
     <div>
       <div class="rij"><b>Panelen</b><div class="chips"><span class="chip ok">✓ 12 panelen, 4,8 kWp</span><span class="chip">dak op het zuiden ▾</span></div></div>
       <div class="rij"><b>Hoofdzekering</b><div class="chips"><span class="chip aan">1 × 35 A</span><span class="chip">3 × 25 A</span><span class="chip">anders</span><span class="chip">weet ik niet</span></div></div>
@@ -145,7 +145,7 @@
   <section class="glas kaart" data-stand="klaar">
     <span class="klein">Klaar</span>
     <h1 class="kop-1" style="font-size: 40px">Je huis staat erin</h1>
-    <p class="lead">Smart Climate kijkt vanaf nu mee. Zo leert het je huis kennen:</p>
+    <p class="lead">SunArc kijkt vanaf nu mee. Zo leert het je huis kennen:</p>
     <div class="film"><span class="speel"></span><span class="titel">Hoe je huis leert · 1 minuut</span></div>
     <div class="tip">Daarna laten we je de app zien, in zeven stops van een paar seconden. Overslaan kan altijd; terugkijken bij het vraagteken op Thuis.</div>
     <div class="tip" style="background: rgba(247, 181, 72, 0.06); border: 1px solid rgba(247, 181, 72, 0.25)">Nog 2 dingen voor later: de stroomprijs en wat er in de hobbykamer hangt. Ze staan bij Instellingen, onder Nog te doen.</div>

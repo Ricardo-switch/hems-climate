@@ -30,7 +30,7 @@ const isAssistent = new URLSearchParams(location.search).get('groep') === 'assis
   if (!isAssistent && ASSISTENT.includes(h)) location.replace(`functies.html?groep=assistent#${h}`);
   else if (isAssistent && h && !ASSISTENT.includes(h)) location.replace(`functies.html#${h}`);
   if (isAssistent) {
-    document.title = `${t('groep.assistent')} · Smart Climate`;
+    document.title = `${t('groep.assistent')} · SunArc`;
     $$('h1[data-t="groep.functies"]').forEach((el) => {
       el.dataset.t = 'groep.assistent';
       el.textContent = t('groep.assistent');
@@ -132,7 +132,7 @@ function deurbel() {
  * kamer de lampen, scènes en screens, met een schakelaar om er een uit de app
  * te halen (dat is verbergen, zoals bij Kamers en indeling). Bij een screen of
  * hij zijn stand terugmeldt: alleen zo'n screen mag later in de regeling.
- * Smart Climate regelt licht en screens niet; dat doe je zelf.
+ * SunArc regelt licht en screens niet; dat doe je zelf.
  */
 function lichtPerKamer() {
   const lay = indeling?.indeling ?? indeling?.voorstel;
@@ -214,7 +214,7 @@ function haAdres() {
     return null;
   }
 }
-/** Waar Smart Climate in Tailscale staat: het adres dat al gebruikt is, of een voorstel uit dat van Home Assistant. */
+/** Waar SunArc in Tailscale staat: het adres dat al gebruikt is, of een voorstel uit dat van Home Assistant. */
 function tailscaleAdres() {
   if (startscherm?.adres) return startscherm.adres;
   const tailnet = /\.([a-z0-9-]+\.ts\.net)(?::\d+)?$/i.exec(haAdres() ?? '')?.[1];

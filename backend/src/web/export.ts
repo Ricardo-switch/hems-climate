@@ -311,9 +311,9 @@ export interface EntiteitRij {
   readonly verborgen: boolean;
   readonly categorie: string | null;
   /**
-   * Waar Smart Climate hem gebruikt: het pad in de configuratie of een
+   * Waar SunArc hem gebruikt: het pad in de configuratie of een
    * instelling, zoals `configuratie.zones[0].sensors[1]` of
-   * `functies.json.deurbel.camera`. Leeg: Smart Climate doet er niets mee.
+   * `functies.json.deurbel.camera`. Leeg: SunArc doet er niets mee.
    */
   readonly gebruikt: readonly string[];
 }
@@ -347,7 +347,7 @@ function verwijzingen(bronnen: Readonly<Record<string, unknown>>): Map<string, s
 
 /**
  * Alle entiteiten uit Home Assistant met hun apparaat, ruimte en etage, en
- * waar Smart Climate ze gebruikt (besluit 151). Van de stand alleen de waarde,
+ * waar SunArc ze gebruikt (besluit 151). Van de stand alleen de waarde,
  * de eenheid en de soort: de andere attributen kunnen een ligging of een naam
  * bevatten en zeggen weinig over hoe het huis werkt.
  */

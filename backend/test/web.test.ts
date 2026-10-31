@@ -249,7 +249,7 @@ describe('te doen (besluit 216)', () => {
   it('rekent de zon van vandaag op de eerste dag uit Home Assistant, net als Vandaag (30 oktober 2026)', async () => {
     const logDir = await mkdtemp(join(tmpdir(), 'hems-eerste-dag-'));
     cleanups.push(() => rm(logDir, { recursive: true, force: true }));
-    // Een lege map: Smart Climate draait net. Home Assistant kent wel de hele ochtend, 2 kW zon per vijf minuten.
+    // Een lege map: SunArc draait net. Home Assistant kent wel de hele ochtend, 2 kW zon per vijf minuten.
     const historie = async (van: number, tot: number) => {
       const zon = [];
       for (let t = van; t < Math.min(tot, Date.now()); t += 5 * 60_000) zon.push({ startMs: t, meanW: 2000 });
@@ -548,7 +548,7 @@ describe('de weergave leest alleen', () => {
     // De echte bestanden staan er, en het beta-manifest wijst naar de beta-iconen.
     const src = new URL('../../frontend/src/', import.meta.url);
     const manifest = JSON.parse(await readFile(new URL('manifest-beta.webmanifest', src), 'utf-8')) as { name: string; icons: { src: string }[] };
-    expect(manifest.name).toBe('Smart Climate beta');
+    expect(manifest.name).toBe('SunArc beta');
     for (const i of manifest.icons) expect(Object.values(BETA_ICOON)).toContain(i.src);
     for (const beta of Object.values(BETA_ICOON)) await expect(readFile(new URL(beta, src))).resolves.toBeTruthy();
   });
@@ -2179,7 +2179,7 @@ function gegevensStub(hoofd: () => string | null = () => null) {
     backup: async () => ({ soort: 'smart-climate-back-up' as const, versie: 1 as const, app: VERSIE, gemaakt: '2026-10-17T08:00:00.000Z', configuratie: null, bestanden: { 'comfort.json': { versie: 1 } } }),
     herstel: async (body: unknown) => {
       teller.herstel += 1;
-      return (body as { soort?: string }).soort === 'smart-climate-back-up' ? { ok: true as const, bestanden: ['comfort.json'], configuratie: 'bleef' } : { ok: false as const, status: 400, reden: 'dit is geen back-up van Smart Climate' };
+      return (body as { soort?: string }).soort === 'smart-climate-back-up' ? { ok: true as const, bestanden: ['comfort.json'], configuratie: 'bleef' } : { ok: false as const, status: 400, reden: 'dit is geen back-up van SunArc' };
     },
     opnieuw: async () => {
       teller.opnieuw += 1;

@@ -1,5 +1,5 @@
 /*
- * Het versienummer van Smart Climate (besluit 131), en wat er per versie nieuw
+ * Het versienummer van SunArc (besluit 131), en wat er per versie nieuw
  * is, in gewone taal voor de app.
  *
  * Het eerste getal gaat omhoog bij een grote stap: 1.0 is de dag dat het huis
@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.93.0';
+export const VERSIE = '0.94.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,30 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.94.0',
+    datum: '2026-10-31',
+    nieuw: [
+      'Smart Climate heet nu SunArc: Autonomous Residential Climate, met een eigen teken van de zon op de horizon',
+      'Een nieuw icoon voor je startscherm, en de add-on heeft een eigen icoon en logo in Home Assistant',
+    ],
+    beter: [
+      'Het teken staat bovenaan de zijbalk, bij Welkom, Inrichten en Inloggen, en aan het eind van de film',
+      'Assist verstaat ook "SunArc"; "Smart Climate" blijft werken',
+    ],
+    opgelost: ['Je spraakassistent "Smart Climate" en de update van de add-on worden met de nieuwe naam nog herkend; er komt geen tweede bij'],
+    en: {
+      nieuw: [
+        'Smart Climate is now called SunArc: Autonomous Residential Climate, with its own mark of the sun on the horizon',
+        'A new icon for your home screen, and the add-on has its own icon and logo in Home Assistant',
+      ],
+      beter: [
+        'The mark sits at the top of the sidebar, in Welcome, Setup and Sign in, and at the end of the film',
+        'Assist also understands "SunArc"; "Smart Climate" keeps working',
+      ],
+      opgelost: ['Your "Smart Climate" voice assistant and the add-on update are still recognised under the new name; no second one is added'],
+    },
+  },
   {
     versie: '0.93.0',
     datum: '2026-10-30',

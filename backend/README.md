@@ -1,6 +1,6 @@
 # @hems/backend — de kern
 
-De beslissingslogica van Smart Climate OS. Deze map bevat geen Home
+De beslissingslogica van SunArc OS. Deze map bevat geen Home
 Assistant-code: de kern kent geen entity-ID's, geen kamernamen en geen
 bewonersnamen. Een adapter vertaalt `DeviceRef` naar wat zijn platform gebruikt.
 

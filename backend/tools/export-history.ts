@@ -27,7 +27,7 @@ import {
 } from '../src/replay/dataset.js';
 
 /**
- * De entiteiten die de harness nodig heeft, van het huis waar Smart Climate
+ * De entiteiten die de harness nodig heeft, van het huis waar SunArc
  * ontstond (besluit 109). Onderzoeksgereedschap: dit staat bewust in tools/ en
  * niet in src/, zodat het niet in de dienst en niet in de add-on komt.
  *

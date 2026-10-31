@@ -620,7 +620,7 @@ describe('elk getal heeft een bron, in elke toestand', () => {
 describe('de stand per kamer voor de kaart (besluit 94)', () => {
   const room = (v: DecisionView, id: string) => residentRooms(config, v).find((r) => r.zoneId === id)!;
 
-  it('zegt kort wat Smart Climate zou doen, met het apparaat erbij', () => {
+  it('zegt kort wat SunArc zou doen, met het apparaat erbij', () => {
     // De airco staat nog uit: in de schaduw "zou" (besluit 124); als hij echt schakelt "koelt".
     const uit = { nest: 'heat@20', badkamer: 'off@18', 'ac-woonkamer': 'off', 'ac-zolder': 'off' };
     const r = room(view({ accepted: [coolOnSun], observed: uit }), 'zolder');
@@ -747,7 +747,7 @@ describe('het bewonerscontract voor Thuis en Waarom (besluit 94)', () => {
     }
   });
 
-  it('zegt per apparaat wat Smart Climate zou doen, en de rest op één regel', () => {
+  it('zegt per apparaat wat SunArc zou doen, en de rest op één regel', () => {
     const v = view({ accepted: [coolOnSun], rejected: [{ intent: { ...coolOnSun, zoneId: 'woonkamer', actuatorId: 'ac-woonkamer' }, blockedBy: 'insufficient_power_budget' }] });
     const b = residentView(config, v);
     expect(b.apparaten).toEqual([

@@ -1,5 +1,5 @@
 /*
- * Smart Climate, ontwerp 2: de stijlbasis.
+ * SunArc, ontwerp 2: de stijlbasis.
  *
  * De achtergrond is de lucht van dit moment; het huis staat erin. Al het
  * andere is rustig glas eromheen. Eén accent per betekenis: zon (opwek),
@@ -391,7 +391,8 @@ a.knop:not(.knop-licht) {
   height: 34px;
   border-radius: 11px;
   margin-bottom: 14px;
-  background: conic-gradient(from 210deg, var(--ijs), var(--violet), var(--zon), var(--ijs));
+  /* Het teken van SunArc (besluit 222), met vijf stralen: zo klein is negen een vlek. */
+  background: url('icoon-klein.svg') center / cover;
 }
 .balk a {
   width: 50px;

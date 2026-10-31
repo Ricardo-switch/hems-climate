@@ -2,13 +2,13 @@
  * Helemaal in huis (28 oktober 2026, besluit 203): verstaan en praten op je
  * eigen Home Assistant, met Whisper, Piper en openWakeWord. Die drie add-ons
  * installeert de bewoner zelf: de knop opent hun pagina in Home Assistant, en
- * Smart Climate krijgt er geen extra rechten voor. Staan ze erin, dan doet de
+ * SunArc krijgt er geen extra rechten voor. Staan ze erin, dan doet de
  * add-on na één tik van de beheerder de rest:
  *
  * 1. wat Home Assistant van die add-ons vond (Wyoming, "Nieuw apparaat
  *    gevonden") bevestigen, zodat ze als spraak naar tekst, stem en wekwoord
  *    in Home Assistant staan;
- * 2. een spraakassistent "Smart Climate" maken met die drie, in de taal van de
+ * 2. een spraakassistent "SunArc" maken met die drie, in de taal van de
  *    app, met "Hé huis" als dat wekwoord er al is;
  * 3. die bij Functies › Praten kiezen, en de stem op "helemaal in huis" zetten.
  *
@@ -29,8 +29,10 @@ export const ADDONS: readonly { readonly id: AddOnId; readonly slug: string; rea
   { id: 'openwakeword', slug: 'core_openwakeword', domein: 'wake_word', naam: /wake.?word/i },
 ];
 
-/** De naam van de spraakassistent die Smart Climate maakt. */
-export const NAAM = 'Smart Climate';
+/** De naam van de spraakassistent die SunArc maakt. */
+export const NAAM = 'SunArc';
+/** Een spraakassistent van vóór besluit 222 heet nog Smart Climate; die is ook van ons. */
+const eigen = (naam: string): boolean => naam === NAAM || naam === 'Smart Climate';
 /** Het eigen wekwoord, zoals openWakeWord het noemt. */
 export const WEKWOORD = 'he_huis';
 
@@ -39,7 +41,7 @@ export type AddOnStaat = 'aan' | 'gevonden' | 'nee';
 
 export interface InHuisStand {
   readonly addons: readonly { readonly id: AddOnId; readonly slug: string; readonly staat: AddOnStaat }[];
-  /** De spraakassistent die Smart Climate maakte, of null. */
+  /** De spraakassistent die SunArc maakte, of null. */
   readonly assistent: { readonly id: string; readonly wekwoord: string | null } | null;
   readonly bezig: boolean;
   /** Waarom het niet lukte, of null. */
@@ -116,7 +118,7 @@ export class InHuis {
 
   async stand(): Promise<InHuisStand> {
     const stromen = await this.#d.stromen().catch(() => []);
-    const assistent = (await this.#d.assistenten().catch(() => [])).find((a) => a.naam === NAAM) ?? null;
+    const assistent = (await this.#d.assistenten().catch(() => [])).find((a) => eigen(a.naam)) ?? null;
     return {
       addons: ADDONS.map((a) => ({ id: a.id, slug: a.slug, staat: entiteitVan(this.#d, a) ? 'aan' : stroomVan(stromen, a) ? 'gevonden' : 'nee' })),
       assistent: assistent ? { id: assistent.id, wekwoord: assistent.wekwoord } : null,
@@ -153,8 +155,8 @@ export class InHuis {
     if (!stt) throw new Error('Whisper staat nog niet in Home Assistant');
     if (!tts) throw new Error('Piper staat nog niet in Home Assistant');
 
-    // 2. Een bestaande "Smart Climate" blijft zoals hij is; anders een nieuwe.
-    const al = (await this.#d.assistenten()).find((a) => a.naam === NAAM);
+    // 2. Een bestaande "SunArc" (of "Smart Climate") blijft zoals hij is; anders een nieuwe.
+    const al = (await this.#d.assistenten()).find((a) => eigen(a.naam));
     let id = al?.id ?? null;
     if (id == null) {
       const ww = entiteitVan(this.#d, wekker!);

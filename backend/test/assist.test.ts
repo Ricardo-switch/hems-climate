@@ -13,7 +13,7 @@ import { exampleSite } from './site.js';
 describe('de kamers voor Assist (besluit 184)', () => {
   it('geeft per zone de naam en de kamers die erbij horen, als woorden', () => {
     const info = assistKamers(exampleSite, buildHouse(exampleSite, registers, states, null), '0.58.0');
-    expect(info).toMatchObject({ naam: 'Smart Climate', versie: '0.58.0', talen: ['nl', 'en'] });
+    expect(info).toMatchObject({ naam: 'SunArc', versie: '0.58.0', talen: ['nl', 'en'] });
     expect(info.kamers.map((k) => k.id)).toEqual(exampleSite.zones.map((z) => z.id));
     for (const k of info.kamers) {
       // Woorden, geen entiteiten, en zonder de tekens die in een zin van Assist iets betekenen.

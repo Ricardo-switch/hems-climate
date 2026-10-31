@@ -9,11 +9,14 @@ draai `npm run decisions:index` in `backend/`. Die zet de links onderaan. Een
 test eist dat elk besluit dat nog geldt hier genoemd wordt, en dat elke
 verwijzing bestaat.
 
-*Stand: 24 oktober 2026.*
+*Stand: 31 oktober 2026.*
 
 ## Waar het project staat
 
-- **Nu: meekijken.** Smart Climate draait op de NAS naast de oude YAML-regeling,
+- **De naam is SunArc** (sinds 31 oktober 2026; eerst Smart Climate): de zon
+  op de horizon met stralen in mint, ijs en violet. Wat je ziet heet zo; de
+  technische namen bleven ([222]).
+- **Nu: meekijken.** SunArc draait op de NAS naast de oude YAML-regeling,
   beslist elke ronde en legt vast wat hij zou doen. Klimaat en screens schakelt
   hij niet ([15], [28], [73]).
 - **Ernaast, nu al:** C, kamers en zones, en de app (F) groeien in de
@@ -65,7 +68,7 @@ verwijzing bestaat.
   ([14]).
 - **De assistent** is een vierde voorsteller, geen baas ([44]). Een opdracht
   wordt een ingreep met een eindtijd ([75]). Assist van Home Assistant vraagt
-  hem via de integratie Smart Climate, zonder YAML: via HACS of met een knop
+  hem via de integratie SunArc, zonder YAML: via HACS of met een knop
   in de app, en de add-on meldt zich vanzelf aan; de zinnen en de kamers komen
   uit de add-on ([91], [184]). In de add-on gaat hij vanzelf aan bij Klaar in
   Inrichten, terwijl de film speelt (of met één knop bij Toegang):
@@ -73,7 +76,7 @@ verwijzing bestaat.
   standaard van het apparaat zelf, ook het verstaan via de browser; helemaal in
   huis met Whisper, Piper en openWakeWord kan ook, en dan maakt één knop de
   spraakassistent ([203]).
-- **Zonwering is klimaat;** licht regelt Smart Climate niet, maar de app heeft
+- **Zonwering is klimaat;** licht regelt SunArc niet, maar de app heeft
   een knop voor lampen ([92], [97]).
 - **Op termijn:** een kastje met een verborgen Home Assistant en een dunne agent
   ([34]). Stap C loopt naast de schaduw en B ([96]).
@@ -102,7 +105,7 @@ verwijzing bestaat.
   met meer kamers koelt op de warmste en verwarmt op de koudste ([81]); bij twee
   meters in één kamer kiest de bewoner ([95]).
 - **Bij zon over:** eerst comfort, dan de batterij, dan de auto. Laadpaal en
-  batterij stuurt Smart Climate niet zelf ([85]). Wat er na comfort over is,
+  batterij stuurt SunArc niet zelf ([85]). Wat er na comfort over is,
   gaat in de volgorde van de lijst Op zon: kamers die op zon voorkoelen of
   opwarmen en apparaten zoals de droger door elkaar ([176]).
 - **De zonnesensor:** elk merk omvormer werkt; de app meet hoe snel de sensor is
@@ -148,7 +151,7 @@ verwijzing bestaat.
   ([58]); twee jaar ruw, daarna samengevat ([83]). Bij elk besluit is na te gaan
   welke versie het nam ([66]). De export is voor onderzoek: alleen de
   hoofdgebruiker, zonder namen en ligging, met de instellingen en alle
-  entiteiten en waar Smart Climate ze gebruikt ([151]).
+  entiteiten en waar SunArc ze gebruikt ([151]).
 - **Back-up en opnieuw beginnen:** een klein bestand met instellingen, wat het
   huis leerde en de configuratie; terugzetten start de dienst opnieuw. Opnieuw
   beginnen maakt eerst een back-up. Allebei alleen de hoofdgebruiker ([151]).
@@ -379,7 +382,7 @@ verwijzing bestaat.
   De wand neemt de weergave, het thema en de taal over van wie hij volgt ([199]).
   De film is een trailer van acht shots met een camera over het huis, en
   Inrichten begint met een groot welkom waarin het huis zich opbouwt ([200]).
-  In de app van Home Assistant staat Smart Climate standaard over het hele
+  In de app van Home Assistant staat SunArc standaard over het hele
   scherm, en Inrichten raadt de wand een eigen account aan ([202]).
   De kaart Camera's toont zoveel camera's als je kiest, met wat ze nu zien of
   wanneer het laatst, en een tik maakt het beeld groot en live ([201]).
@@ -729,4 +732,5 @@ verwijzing bestaat.
 [219]: DECISIONS.md#219-je-eigen-agendas-op-de-wand-als-je-thuis-bent
 [220]: DECISIONS.md#220-wat-een-nieuwe-gebruiker-tegenkwam
 [221]: DECISIONS.md#221-groepen-van-zigbee2mqtt-en-de-rest-van-de-beoordeling
+[222]: DECISIONS.md#222-sunarc-een-nieuwe-naam-en-een-eigen-teken
 <!-- links:einde -->

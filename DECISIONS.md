@@ -223,6 +223,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [218. Later uitvoeren, afvinken op uid, en de afgevinkte weghalen](#218-later-uitvoeren-afvinken-op-uid-en-de-afgevinkte-weghalen)
 - [219. Je eigen agenda's op de wand als je thuis bent](#219-je-eigen-agendas-op-de-wand-als-je-thuis-bent)
 - [221. Groepen van Zigbee2MQTT, en de rest van de beoordeling](#221-groepen-van-zigbee2mqtt-en-de-rest-van-de-beoordeling)
+- [222. SunArc: een nieuwe naam en een eigen teken](#222-sunarc-een-nieuwe-naam-en-een-eigen-teken)
 
 **Veiligheid**
 
@@ -10327,6 +10328,51 @@ beoordeling meteen.
   spraakassistent, dan openen twee knoppen openWakeWord en Spraakassistenten
   in Home Assistant. De dienst herstart geen add-on zelf.
 - **Versie 0.93.0.**
+
+---
+
+## 222. SunArc: een nieuwe naam en een eigen teken
+
+*Onderwerp: weergave · Status: geldig*
+
+31 oktober 2026. De bewoner liet drie logo's maken onder de naam SunARC en
+koos ontwerp 2, zonder de bogen eromheen: het lijkt het meest op de
+zonnewaaier van besluit 214. De stralen mogen ook bewegen als stem van de
+assistent, en daar mag hij rond. De naam: Sun voor de zon, arc voor de boog
+van de waaier, en ARC voor Autonomous Residential Climate. Keuzes van de
+bewoner: SunArc met die ondertitel, door voor eigen gebruik, en alles wat je
+ziet krijgt de nieuwe naam (schets `design/app2/Logo.html`).
+
+*Besluit:*
+
+- **Het teken** is een halve zon op de horizon met negen stralen van
+  ongelijke lengte, van links naar rechts mint, ijs en violet: de kleuren van
+  werkt, kijkt mee en leert in de zonnewaaier. Kleiner dan 48 pixels vijf
+  dikkere stralen, anders is het een vlek. `frontend/tools/iconen.cjs` maakt
+  alles uit één tekening: `kit/icoon.svg`, `kit/icoon-klein.svg`,
+  `kit/merk.svg`, de iconen van de app en de beta (met BETA eronder; dat
+  deed `beta-icoon.py`, dat is weg), en `icon.png`, `logo.png` en
+  `dark_logo.png` voor de add-on, die er nog geen had.
+- **Het teken staat** waar het gekleurde vierkantje stond: bovenaan de
+  zijbalk, bij Welkom, Inrichten, Inloggen en het begin, en groot aan het eind
+  van de film.
+- **De naam SunArc** staat overal waar je hem ziet: de app, de teksten in
+  beide talen, wat de assistent zegt, de add-on, de integratie voor Assist,
+  de README en de schetsen. De technische namen blijven: het domein
+  `smart_climate`, de slug `hems_climate`, de soort back-up en de repository.
+  Zo blijft een bestaande installatie werken zonder opnieuw toevoegen.
+- **Wat op naam zoekt, kent beide namen:** de update van de eigen add-on
+  (titel "SunArc" of "Smart Climate") en de spraakassistent die we maakten.
+  Anders zou een bestaande "Smart Climate" er een tweede naast krijgen.
+- **Assist verstaat** "sunarc" en "sun arc" in de zinnen die eerst "smart
+  climate" noemden; "smart climate" blijft ook werken.
+- De naam is niet vrij: een Iers zonne-energiebedrijf heet SunArc, en
+  Sunarc Technology in Denemarken maakt zonneglas. Voor eigen gebruik en als
+  open project is dat geen bezwaar; wordt het een product (besluit 34), dan
+  eerst het merkenregister nakijken.
+- Wat vóór deze versie gebeurde, houdt zijn naam: dit log, de lijst met wat er
+  nieuw was en de changelog zeggen Smart Climate.
+- **Versie 0.94.0.**
 
 ---
 

@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-const VINGER = { versie: '1.0.0', afdruk: '4d0ca0a93cdc36ae' };
+const VINGER = { versie: '1.1.0', afdruk: '2a4d537bddf29002' };
 
 const MAP = fileURLToPath(new URL('../../custom_components/smart_climate/', import.meta.url));
 

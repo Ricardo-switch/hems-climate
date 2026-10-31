@@ -1,5 +1,5 @@
 /*
- * De kamers voor Assist (besluit 184): wat de integratie van Smart Climate in
+ * De kamers voor Assist (besluit 184): wat de integratie van SunArc in
  * Home Assistant nodig heeft om de zinnen voor dit huis te schrijven. Per zone
  * de naam, en de namen van de kamers in de indeling die bij die zone horen
  * ("keuken" en "zithoek" bij de woonkamer), zodat "waarom is het zo warm in de
@@ -20,7 +20,7 @@ export interface AssistKamer {
 }
 
 export interface AssistInfo {
-  readonly naam: 'Smart Climate';
+  readonly naam: 'SunArc';
   readonly versie: string | null;
   /** In welke talen de dienst antwoordt. */
   readonly talen: readonly string[];
@@ -51,5 +51,5 @@ export function assistKamers(config: SiteConfig, huis: HouseReport | null, versi
     return { id: z.id, naam: z.name, woorden: [...woorden].sort() };
   });
   // Een bestand per taal (besluit 185): Assist in het Engels herkent dan ook Engelse zinnen.
-  return { naam: 'Smart Climate', versie, talen: ['nl', 'en'], kamers, zinnen: { nl: zinnenVoor('nl', kamers), en: zinnenVoor('en', kamers) } };
+  return { naam: 'SunArc', versie, talen: ['nl', 'en'], kamers, zinnen: { nl: zinnenVoor('nl', kamers), en: zinnenVoor('en', kamers) } };
 }

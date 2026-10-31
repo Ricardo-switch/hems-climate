@@ -1,4 +1,4 @@
-"""De integratie Smart Climate in een echte Home Assistant (besluit 184).
+"""De integratie SunArc in een echte Home Assistant (besluit 184).
 
 Draaien in een Linux-omgeving met ``pytest-homeassistant-custom-component``,
 vanuit de map van de repository: ``pytest tests/integratie``. De CI doet dat;

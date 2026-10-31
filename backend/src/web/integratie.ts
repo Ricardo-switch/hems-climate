@@ -1,5 +1,5 @@
 /*
- * De integratie Smart Climate neerzetten vanuit de add-on (besluit 184), voor
+ * De integratie SunArc neerzetten vanuit de add-on (besluit 184), voor
  * wie geen HACS heeft. Na een tik van de beheerder in de app kopieert de
  * add-on de map van de integratie (die in zijn image zit) naar
  * `custom_components/smart_climate` in de configuratie van Home Assistant, en

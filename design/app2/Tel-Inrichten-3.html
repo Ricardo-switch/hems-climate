@@ -18,7 +18,7 @@
   body { margin: 0; }
   .tel3 { width: 390px; min-height: 844px; display: flex; flex-direction: column; }
   .kop3 { padding: 18px 18px 6px; display: flex; align-items: center; gap: 12px; }
-  .logo { width: 30px; height: 30px; border-radius: 10px; background: conic-gradient(from 200deg, #6fd3ff, #8f86ff, #ff7a4d, #f7b548, #6ee7b7, #6fd3ff); flex: none; }
+  .logo { width: 30px; height: 30px; border-radius: 10px; background: url('../../frontend/kit/icoon-klein.svg') center / cover; flex: none; }
   .kop3 .waar { flex: 1; }
   .kop3 .waar b { display: block; font-size: 14px; }
   .kop3 .waar span { font-size: 12px; color: var(--gedempt); }
@@ -103,7 +103,7 @@
       model: { tijd: 'avond', etages, voordeur: {}, ...buiten },
     },
     zon: {
-      h: '5. Energie', stap: 'zon', kop: 'Waar liggen je panelen?', lead: 'Smart Climate meet zelf naar welke kant ze liggen. Jij zegt op welk dak en hoeveel.',
+      h: '5. Energie', stap: 'zon', kop: 'Waar liggen je panelen?', lead: 'SunArc meet zelf naar welke kant ze liggen. Jij zegt op welk dak en hoeveel.',
       inhoud: `<div class="lijst">${regel('huis', 'Huis, oostkant', 'kijkt naar 97°, helling 47°', '6', '', 'mint')}${regel('huis', 'Huis, westkant', 'kijkt naar 277°, helling 47°', '6', '', 'mint')}${regel('garage', 'Garage', 'plat dak', '+ Panelen', 'uit', 'ijs')}${regel('tuinhuis', 'Tuinhuis', 'plat dak', '+ Panelen', 'uit', 'ijs')}</div>`,
       model: { tijd: 'dag', zon: { stand: 0.6, aandeel: 0.7, panelen: 6, panelenLinks: 6 }, etages, voordeur: {}, net: true, ...buiten },
     },

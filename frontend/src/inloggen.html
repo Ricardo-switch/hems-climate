@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="only dark">
-<title>Inloggen · Smart Climate</title>
+<title>Inloggen · SunArc</title>
 <link rel="stylesheet" href="kit/kit.css">
 <link rel="stylesheet" href="basis.css">
 <link rel="manifest" href="manifest.webmanifest">
@@ -25,7 +25,7 @@
   .kaartje.wacht { visibility: hidden; }
   .kaartje { position: fixed; left: max(24px, 6vw); top: 50%; transform: translateY(-50%); width: min(420px, calc(100vw - 48px)); padding: 30px 30px 26px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box; }
   .merk { display: flex; align-items: center; gap: 12px; font-family: var(--kop); font-weight: 700; font-size: 20px; }
-  .merk i { width: 36px; height: 36px; border-radius: 11px; background: conic-gradient(from 200deg, #ff7a4d, #f7b548, #6ee7b7, #6fd3ff, #8f86ff, #ff7a4d); }
+  .merk i { width: 36px; height: 36px; border-radius: 11px; background: url('kit/icoon-klein.svg') center / cover; }
   h1 { margin: 6px 0 0; font-family: var(--kop); font-size: 36px; font-weight: 700; line-height: 1.08; letter-spacing: -0.02em; }
   p { margin: 0; font-size: 15.5px; line-height: 1.5; color: var(--zacht); }
   .hagknop { display: flex; align-items: center; justify-content: center; gap: 10px; height: 54px; border-radius: 16px; background: var(--tekst); color: var(--inkt, #0b1424); font-size: 17px; font-weight: 700; text-decoration: none; }
@@ -43,7 +43,7 @@
 <body class="lucht lucht-avond">
   <div class="silhouet" id="silhouet" aria-hidden="true"></div>
   <main class="glas kaartje wacht">
-    <span class="merk"><i aria-hidden="true"></i>Smart Climate</span>
+    <span class="merk"><i aria-hidden="true"></i>SunArc</span>
     <h1>Log in om je huis te zien</h1>
     <p>Met je account van Home Assistant. Daarna weet het huis wie je bent, en begroet het je met je naam.</p>
     <a class="hagknop" data-inloggen href="auth/login"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/><circle cx="12" cy="14" r="2"/></svg>Inloggen met Home Assistant</a>

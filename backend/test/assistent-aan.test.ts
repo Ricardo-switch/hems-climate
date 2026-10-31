@@ -65,6 +65,6 @@ describe('de assistent met één knop (besluit 202)', () => {
     expect(await voegToeViaFlow('b', 't', 'a', 's', al)).toEqual({ ok: true });
     let n = 0;
     const weg = (async () => new Response(JSON.stringify(n++ === 0 ? { flow_id: 'x', type: 'form' } : { type: 'form', errors: { base: 'niet_bereikbaar' } }))) as unknown as typeof fetch;
-    expect(await voegToeViaFlow('b', 't', 'a', 's', weg)).toEqual({ ok: false, reden: 'Home Assistant bereikt Smart Climate niet' });
+    expect(await voegToeViaFlow('b', 't', 'a', 's', weg)).toEqual({ ok: false, reden: 'Home Assistant bereikt SunArc niet' });
   });
 });

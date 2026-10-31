@@ -27,7 +27,7 @@
    */
   .scherm { position: relative; width: 1280px; height: 800px; overflow: hidden; }
   .boven { position: absolute; left: 28px; right: 28px; top: 20px; display: flex; align-items: center; gap: 16px; }
-  .logo { width: 34px; height: 34px; border-radius: 11px; background: conic-gradient(from 200deg, #6fd3ff, #8f86ff, #ff7a4d, #f7b548, #6ee7b7, #6fd3ff); flex: none; }
+  .logo { width: 34px; height: 34px; border-radius: 11px; background: url('../../frontend/kit/icoon-klein.svg') center / cover; flex: none; }
   .pad { flex: 1; display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; }
   .h { padding: 7px 10px 8px; border-radius: 14px; background: rgb(var(--wit) / 0.04); border: 1px solid transparent; min-width: 0; }
   .h b { display: block; font-size: 12.5px; font-weight: 700; color: var(--gedempt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -124,7 +124,7 @@
     <div class="podium" id="podium2" style="left: 90px; top: 60px"></div>
     <div class="waas"></div>
     <nav class="zijbalk"><span class="logo"></span><i></i><i></i><i></i><i></i><i></i><span class="los"></span><span class="naarha"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h5"/><path d="M14 15.5h7M18 12.5l3 3-3 3"/></svg></span><span class="bel"></span><i></i></nav>
-    <div class="glas ballon"><span class="stap">Rondleiding · 2 van 7</span><h2>Smart Climate over het hele scherm</h2><p>In de app van Home Assistant staat Smart Climate standaard over het hele scherm, zonder de balken van Home Assistant.</p><p>Wil je naar Home Assistant? Tik op deze knop in de zijbalk. Met dezelfde knop ben je weer terug. Op de telefoon staat hij rechtsboven, naast het tandwiel.</p><p style="font-size: 12.5px; color: var(--gedempt)">Liever met de balken? Zet het uit bij Jij › Weergave.</p><div class="knoppen"><span class="knop klein">Vorige</span><span class="knop klein licht">Volgende</span></div></div>
+    <div class="glas ballon"><span class="stap">Rondleiding · 2 van 7</span><h2>SunArc over het hele scherm</h2><p>In de app van Home Assistant staat SunArc standaard over het hele scherm, zonder de balken van Home Assistant.</p><p>Wil je naar Home Assistant? Tik op deze knop in de zijbalk. Met dezelfde knop ben je weer terug. Op de telefoon staat hij rechtsboven, naast het tandwiel.</p><p style="font-size: 12.5px; color: var(--gedempt)">Liever met de balken? Zet het uit bij Jij › Weergave.</p><div class="knoppen"><span class="knop klein">Vorige</span><span class="knop klein licht">Volgende</span></div></div>
   </div>
 </div>
 <script src="../../frontend/kit/huis.js"></script>
@@ -147,21 +147,21 @@
 
   const STANDEN = {
     assistent: {
-      stap: [7, 0], waar: '8. Klaar · Staat alles klaar?', kop: 'Staat alles klaar?', lead: 'Wat Smart Climate in Home Assistant gebruikt. Wat Smart Climate zelf kan klaarzetten, doet het bij Klaar.',
+      stap: [7, 0], waar: '8. Klaar · Staat alles klaar?', kop: 'Staat alles klaar?', lead: 'Wat SunArc in Home Assistant gebruikt. Wat SunArc zelf kan klaarzetten, doet het bij Klaar.',
       inhoud: `<div class="blok uitgelicht"><div class="kop"><span class="bol"></span><div><b>Praat met je huis</b><span>Gaat vanzelf aan bij Klaar, terwijl de film speelt.</span></div></div>
-          <ul class="stappen"><li><span class="s">1</span><span>De koppeling in Home Assistant zetten</span><small></small></li><li><span class="s">2</span><span>Home Assistant herstart, zo'n minuut</span><small></small></li><li><span class="s">3</span><span>Smart Climate toevoegen</span><small></small></li></ul></div>
+          <ul class="stappen"><li><span class="s">1</span><span>De koppeling in Home Assistant zetten</span><small></small></li><li><span class="s">2</span><span>Home Assistant herstart, zo'n minuut</span><small></small></li><li><span class="s">3</span><span>SunArc toevoegen</span><small></small></li></ul></div>
         ${klaarlijst(REST)}`,
     },
     bezig: {
-      stap: [7, 0], waar: '8. Klaar · Staat alles klaar?', kop: 'Staat alles klaar?', lead: 'Wat Smart Climate in Home Assistant gebruikt. Wat Smart Climate zelf kan klaarzetten, doet het bij Klaar.',
+      stap: [7, 0], waar: '8. Klaar · Staat alles klaar?', kop: 'Staat alles klaar?', lead: 'Wat SunArc in Home Assistant gebruikt. Wat SunArc zelf kan klaarzetten, doet het bij Klaar.',
       inhoud: `<div class="blok uitgelicht"><div class="kop"><span class="bol"></span><div><b>Praat met je huis</b><span>Even geduld: Home Assistant herstart. De app blijft open en gaat vanzelf verder.</span></div></div>
-          <ul class="stappen"><li><span class="s klaar">✓</span><span><b>De koppeling staat in Home Assistant</b></span><small>14:02</small></li><li><span class="s bezig"></span><span><b>Home Assistant herstart</b></span><small>nog zo'n 40 tellen</small></li><li><span class="s">3</span><span>Smart Climate toevoegen</span><small></small></li></ul></div>
+          <ul class="stappen"><li><span class="s klaar">✓</span><span><b>De koppeling staat in Home Assistant</b></span><small>14:02</small></li><li><span class="s bezig"></span><span><b>Home Assistant herstart</b></span><small>nog zo'n 40 tellen</small></li><li><span class="s">3</span><span>SunArc toevoegen</span><small></small></li></ul></div>
         ${klaarlijst(REST)}`,
     },
     stem: {
       stap: [7, 1], waar: '8. Klaar · De stem', kop: 'Hoe praat je huis?', lead: 'Kies waar de stem vandaan komt. Dat kan later ook, bij Functies › Praten.',
       inhoud: `<div class="keuze"><span class="rond"></span><div><b>Met dit apparaat <span class="label mint">Werkt meteen</span></b><p>De telefoon of tablet leest het antwoord voor en verstaat wat je zegt. Niets te installeren.</p></div></div>
-        <div class="keuze aan"><span class="rond"></span><div><b>Helemaal in huis <span class="label gedempt">Gevorderd</span></b><p>Verstaan en praten op je eigen Home Assistant, ook met "Hé huis". Installeer opent die add-on in Home Assistant; staan ze erin, dan maakt Smart Climate de spraakassistent zelf.</p>
+        <div class="keuze aan"><span class="rond"></span><div><b>Helemaal in huis <span class="label gedempt">Gevorderd</span></b><p>Verstaan en praten op je eigen Home Assistant, ook met "Hé huis". Installeer opent die add-on in Home Assistant; staan ze erin, dan maakt SunArc de spraakassistent zelf.</p>
           <div class="onder"><div class="addon"><div><b>Whisper</b><span>verstaat wat je zegt</span></div><span class="knop klein">Installeer</span></div><div class="addon"><div><b>Piper</b><span>de stem, in het Nederlands</span></div><span class="ok">✓ Staat erin</span></div><div class="addon"><div><b>openWakeWord</b><span>luistert naar "Hé huis"</span></div><span class="knop klein">Installeer</span></div></div></div></div>
         `,
     },

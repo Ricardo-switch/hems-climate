@@ -262,12 +262,12 @@ const ONDERWERPEN: readonly Onderwerp[] = [
     zwak: ['slim', 'slimme', 'smart'],
     nl: {
       antwoord:
-        'Smart Climate kijkt nu mee: het zegt wat het zou doen en leert van je huis, maar schakelt het klimaat nog niet zelf. Bij Wat je huis kan zie je per functie hoe het ervoor staat.',
+        'SunArc kijkt nu mee: het zegt wat het zou doen en leert van je huis, maar schakelt het klimaat nog niet zelf. Bij Wat je huis kan zie je per functie hoe het ervoor staat.',
       label: 'Naar Wat je huis kan',
     },
     en: {
       antwoord:
-        'Smart Climate is watching for now: it says what it would do and learns from your house, but does not switch the climate itself yet. What your house can do shows each function and where it stands.',
+        'SunArc is watching for now: it says what it would do and learns from your house, but does not switch the climate itself yet. What your house can do shows each function and where it stands.',
       label: 'Go to What your house can do',
     },
   },

@@ -16,7 +16,7 @@ import { NIEUW } from '../src/version.js';
 const update = (state: string, latest: string, extra: Record<string, unknown> = {}): HaEntityState => ({
   entity_id: 'update.smart_climate_update',
   state,
-  attributes: { title: 'Smart Climate', installed_version: '0.46.1', latest_version: latest, in_progress: false, ...extra },
+  attributes: { title: 'SunArc', installed_version: '0.46.1', latest_version: latest, in_progress: false, ...extra },
   last_changed: '2026-10-21T10:00:00Z',
   last_updated: '2026-10-21T10:00:00Z',
 });
@@ -41,6 +41,8 @@ describe('bijwerken (21 oktober 2026)', () => {
     const ander = { ...update('on', '2.0.0'), entity_id: 'update.iets_anders', attributes: { title: 'Iets anders' } };
     expect(eigenUpdate([ander, update('off', '0.46.1')])?.entity_id).toBe('update.smart_climate_update');
     expect(eigenUpdate([ander])).toBeNull();
+    // Vóór besluit 222 heette de add-on Smart Climate.
+    expect(eigenUpdate([ander, update('on', '0.94.0', { title: 'Smart Climate' })])?.entity_id).toBe('update.smart_climate_update');
   });
 
   it('zegt wat er klaarstaat, met alleen de versies na die van nu', () => {

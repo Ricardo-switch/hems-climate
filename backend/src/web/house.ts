@@ -219,7 +219,7 @@ export interface HouseDevice {
   /**
    * Een radiatorknop (besluit 126), zoals de Sonoff TRVZB: hoe hij gekoppeld is
    * (ZHA of Zigbee2MQTT), en hoe ver de klep open staat als hij dat meldt.
-   * Alleen kijken: tot stap B bedient Smart Climate geen klimaat.
+   * Alleen kijken: tot stap B bedient SunArc geen klimaat.
    */
   readonly radiatorknop?: { readonly koppeling: 'zha' | 'zigbee2mqtt' | 'anders'; readonly klepPct: number | null };
 }

@@ -2,7 +2,7 @@
  * Rookmelders (21 oktober 2026, schets Wand-Rook): de Nest Protect, en elke
  * melder die in Home Assistant een sensor voor rook of koolmonoxide heeft.
  *
- * Smart Climate leest alleen. Per melder: of hij rook, koolmonoxide of hitte
+ * SunArc leest alleen. Per melder: of hij rook, koolmonoxide of hitte
  * ziet, zijn batterij, wanneer hij voor het laatst getest is en wanneer hij
  * vervangen moet. Ziet er een iets, dan toont elk open scherm een alarm, zoals
  * bij aanbellen (besluit 107), en staat het bij Meldingen; afzetten doe je op

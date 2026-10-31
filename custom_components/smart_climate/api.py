@@ -1,7 +1,7 @@
-"""Vragen aan Smart Climate (besluit 184): de kamers voor de zinnen, en een vraag van Assist.
+"""Vragen aan SunArc (besluit 184): de kamers voor de zinnen, en een vraag van Assist.
 
 Alles leest alleen. Een opdracht als "koel de zolder naar 21" krijgt als
-antwoord wat Smart Climate zou doen; er gaat niets naar de airco.
+antwoord wat SunArc zou doen; er gaat niets naar de airco.
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ import aiohttp
 
 
 class SmartClimateFout(Exception):
-    """Smart Climate antwoordt niet, of weigert de sleutel."""
+    """SunArc antwoordt niet, of weigert de sleutel."""
 
 
 class SmartClimateApi:
@@ -35,10 +35,10 @@ class SmartClimateApi:
                     if antwoord.status == 401:
                         raise SmartClimateFout("de sleutel klopt niet")
                     if antwoord.status != 200:
-                        raise SmartClimateFout(f"Smart Climate gaf {antwoord.status}")
+                        raise SmartClimateFout(f"SunArc gaf {antwoord.status}")
                     return await antwoord.json()
         except (aiohttp.ClientError, TimeoutError) as fout:
-            raise SmartClimateFout(f"Smart Climate is niet te bereiken: {fout}") from fout
+            raise SmartClimateFout(f"SunArc is niet te bereiken: {fout}") from fout
 
     async def info(self) -> dict[str, Any]:
         """De naam, de versie en de kamers met hun woorden."""

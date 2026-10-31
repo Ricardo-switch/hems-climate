@@ -150,7 +150,7 @@ describe('de export voor de analyse (besluit 151)', () => {
     expect(v('{"entity_id":"device_tracker.jan_iphone","latitude":51.4416,"longitude":-5.47e1}')).toBe('{"entity_id":"device_tracker.bewoner_1_iphone","latitude":null,"longitude":null}');
   });
 
-  it('zegt per entiteit waar Smart Climate hem gebruikt', () => {
+  it('zegt per entiteit waar SunArc hem gebruikt', () => {
     const states = new Map([
       ['sensor.woonkamer_temperatuur', { entity_id: 'sensor.woonkamer_temperatuur', state: '20.5', attributes: { friendly_name: 'Woonkamer temperatuur', device_class: 'temperature', unit_of_measurement: '°C', latitude: 51 }, last_changed: '', last_updated: '' }],
       ['light.hal', { entity_id: 'light.hal', state: 'off', attributes: {}, last_changed: '', last_updated: '' }],

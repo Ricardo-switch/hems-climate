@@ -72,7 +72,7 @@ const DAGBESTAND = /^(?:decisions|history)-\d{4}-\d{2}-\d{2}\.ndjson(?:\.gz)?$/;
 export interface Backup {
   readonly soort: typeof BACKUP_SOORT;
   readonly versie: 1;
-  /** De versie van Smart Climate die hem maakte. */
+  /** De versie van SunArc die hem maakte. */
   readonly app: string;
   readonly gemaakt: string;
   /** De configuratie van het huis, met de bestandsnaam; null als er geen was. */
@@ -118,10 +118,10 @@ export function backupNaam(now: Date = new Date()): string {
  * maakt hem niet ongeldig: een nieuwere versie kan er meer in zetten.
  */
 export function leesBackup(body: unknown, controleer?: (config: unknown) => string | null): { ok: true; backup: Backup; overgeslagen: string[] } | { ok: false; reden: string } {
-  if (typeof body !== 'object' || body == null) return { ok: false, reden: 'dit is geen back-up van Smart Climate' };
+  if (typeof body !== 'object' || body == null) return { ok: false, reden: 'dit is geen back-up van SunArc' };
   const x = body as Record<string, unknown>;
-  if (x['soort'] !== BACKUP_SOORT) return { ok: false, reden: 'dit is geen back-up van Smart Climate' };
-  if (x['versie'] !== 1) return { ok: false, reden: 'deze back-up komt van een nieuwere versie; werk Smart Climate eerst bij' };
+  if (x['soort'] !== BACKUP_SOORT) return { ok: false, reden: 'dit is geen back-up van SunArc' };
+  if (x['versie'] !== 1) return { ok: false, reden: 'deze back-up komt van een nieuwere versie; werk SunArc eerst bij' };
   const ruw = x['bestanden'];
   if (typeof ruw !== 'object' || ruw == null || Array.isArray(ruw)) return { ok: false, reden: 'er staan geen instellingen in deze back-up' };
   const bestanden: Record<string, unknown> = {};

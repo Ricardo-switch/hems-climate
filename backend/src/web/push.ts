@@ -148,8 +148,8 @@ export function ontvangersVan(
 /** De proefmelding (besluit 183), in de taal die de bewoner koos. */
 export function proefTekst(taal: Lang): { titel: string; tekst: string } {
   return taal === 'en'
-    ? { titel: 'Test notification from Smart Climate', tekst: 'This is what a notification on your phone looks like.' }
-    : { titel: 'Proefmelding van Smart Climate', tekst: 'Zo ziet een melding op je telefoon eruit.' };
+    ? { titel: 'Test notification from SunArc', tekst: 'This is what a notification on your phone looks like.' }
+    : { titel: 'Proefmelding van SunArc', tekst: 'Zo ziet een melding op je telefoon eruit.' };
 }
 
 /** Wat er staat als een melding geen eigen woorden heeft voor weer goed. */
@@ -220,7 +220,7 @@ export function paneelVan(slug: string | null | undefined): string | null {
   return slug && /^[a-z0-9_]+$/.test(slug) ? `/${slug}` : null;
 }
 
-/** Een bericht als de velden van `notify.mobile_app_…`; `pad` opent Smart Climate in de app. */
+/** Een bericht als de velden van `notify.mobile_app_…`; `pad` opent SunArc in de app. */
 export function alsMelding(b: Bericht, pad: string | null): { title: string; message: string; data: Record<string, unknown> } {
   return {
     title: b.titel,

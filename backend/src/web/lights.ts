@@ -2,7 +2,7 @@
  * Licht bedienen vanuit de app (besluit 97): een lamp aan of uit, dimmen, warm
  * of koel wit, of alles uit in een kamer, op een etage of in het hele huis.
  *
- * Smart Climate regelt het licht niet (92); dit is een knop voor de bewoner,
+ * SunArc regelt het licht niet (92); dit is een knop voor de bewoner,
  * rechtstreeks naar Home Assistant. Het is de vierde smalle deur in de muur, en
  * daarom net zo smal als de andere:
  *

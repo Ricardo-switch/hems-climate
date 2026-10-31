@@ -2,22 +2,22 @@
   "config": {
     "step": {
       "user": {
-        "title": "Smart Climate",
-        "description": "Fill in the address and the key from the Smart Climate app, under Settings › Residents and access › Key for the assistant. With the Smart Climate add-on this happens by itself.",
+        "title": "SunArc",
+        "description": "Fill in the address and the key from the SunArc app, under Settings › Residents and access › Key for the assistant. With the SunArc add-on this happens by itself.",
         "data": { "adres": "Address", "sleutel": "Key" }
       },
       "hassio_confirm": {
-        "title": "Smart Climate",
-        "description": "The Smart Climate add-on was found. Add it, so Assist can ask Smart Climate what your home is doing."
+        "title": "SunArc",
+        "description": "The SunArc add-on was found. Add it, so Assist can ask SunArc what your home is doing."
       }
     },
     "error": {
-      "niet_bereikbaar": "Smart Climate cannot be reached at this address.",
+      "niet_bereikbaar": "SunArc cannot be reached at this address.",
       "sleutel": "The key is not correct."
     },
     "abort": {
-      "already_configured": "Smart Climate has already been added.",
-      "niet_bereikbaar": "Smart Climate cannot be reached.",
+      "already_configured": "SunArc has already been added.",
+      "niet_bereikbaar": "SunArc cannot be reached.",
       "sleutel": "The key from the add-on is not accepted."
     }
   }

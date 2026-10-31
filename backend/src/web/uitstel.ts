@@ -77,7 +77,7 @@ export class UitstelStore {
     const b = body as Record<string, unknown>;
     const id = b['id'];
     const d = (this.#options.config.deferrables ?? []).find((x) => x.id === id);
-    if (typeof id !== 'string' || d == null) return { ok: false, status: 404, reden: 'dat apparaat kent Smart Climate niet als uitstelbaar' };
+    if (typeof id !== 'string' || d == null) return { ok: false, status: 404, reden: 'dat apparaat kent SunArc niet als uitstelbaar' };
     const klaarVoor = b['klaarVoor'];
     if (klaarVoor !== null && (typeof klaarVoor !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(klaarVoor))) {
       return { ok: false, status: 400, reden: 'klaarVoor is een tijd als "18:00", of null' };

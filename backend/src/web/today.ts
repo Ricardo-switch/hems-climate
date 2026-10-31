@@ -4,7 +4,7 @@
  * De terugblik rekent over weken en draait elk kwartier; de live stroom kent
  * alleen het besluit van dit moment. Daartussen zat niets, en dat is precies
  * wat een scherm "vandaag" nodig heeft: de zon per kwartier, wanneer elk
- * apparaat draaide (volgens Smart Climate en volgens de huidige regeling), en
+ * apparaat draaide (volgens SunArc en volgens de huidige regeling), en
  * welke besluiten er vandaag vielen.
  *
  * Gelezen met dezelfde lezer als de terugblik (`readMoments`), zodat "draaide"
@@ -73,7 +73,7 @@ export interface TodayReport {
   }[];
   /**
    * De uitstelbare apparaten (besluit 98): wanneer ze vandaag werkelijk
-   * draaiden, en wanneer Smart Climate ze zou starten. In schaduwmodus start
+   * draaiden, en wanneer SunArc ze zou starten. In schaduwmodus start
    * hij niets, dus dat tweede is een voorstel, geen handeling.
    */
   readonly uitstelbaar: readonly {
@@ -83,7 +83,7 @@ export interface TodayReport {
   }[];
   /**
    * De boiler en de jacuzzi (besluit 186): wanneer ze vandaag stookten, en
-   * wanneer Smart Climate ze zou laten stoken.
+   * wanneer SunArc ze zou laten stoken.
    */
   readonly warmtebuffers: readonly {
     readonly id: string;
@@ -344,7 +344,7 @@ const FIVE_MIN_H = 5 / 60;
  * Vult de kwartieren zonder eigen meting aan uit de statistiek van Home
  * Assistant (17 oktober 2026).
  *
- * Het eigen logboek begint pas als Smart Climate draait. Een nieuwe installatie
+ * Het eigen logboek begint pas als SunArc draait. Een nieuwe installatie
  * zag daardoor 's middags "0,2 kWh opgewekt" en een zon die om vijf uur begon,
  * terwijl Home Assistant de hele dag kende. Een kwartier mét eigen meting blijft
  * zoals het is; de rest komt uit de gemiddelden per vijf minuten, en telt mee
