@@ -550,6 +550,11 @@
   .kiesblad .knopje::after { content: ''; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #dfe7ee; }
   .kiesblad .schakel[aria-checked='true'] .knopje { background: var(--mint); }
   .kiesblad .schakel[aria-checked='true'] .knopje::after { left: 23px; }
+  /* Een voorbeeld om te vragen is tekst tussen aanhalingstekens, geen knop (besluit 228). */
+  .dok .voorbeeld { flex: none; color: var(--zacht); font-size: 14.5px; font-weight: 600; text-decoration: none; padding: 6px 4px; }
+  .dok .voorbeeld::before { content: '“'; }
+  .dok .voorbeeld::after { content: '”'; }
+  .dok .voorbeeld:hover { color: var(--tekst); }
 </style>
 </head>
 <body class="lucht lucht-dag">
@@ -612,8 +617,8 @@
       <div class="dok">
         <a class="bol adem" href="assistent.html#nu" data-t-aria-label="thuis.vraagNu" style="width: 46px; height: 46px; flex: none"></a>
         <a class="vraag" href="assistent.html#typ"><span data-t="thuis.vraagTik"></span></a>
-        <a class="pil" href="assistent.html#nu"><span data-t="thuis.vraag.nu"></span></a>
-        <a class="pil" href="assistent.html#zon"><span data-t="thuis.vraag.zon"></span></a>
+        <a class="voorbeeld" href="assistent.html#nu"><span data-t="thuis.vraag.nu"></span></a>
+        <a class="voorbeeld" href="assistent.html#zon"><span data-t="thuis.vraag.zon"></span></a>
       </div>
     </main>
   </div>

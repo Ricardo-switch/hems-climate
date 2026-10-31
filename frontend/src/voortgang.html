@@ -23,9 +23,10 @@
   .terugje { font-size: 14px; font-weight: 600; color: var(--zacht); text-decoration: none; }
   .kopregel { display: flex; justify-content: space-between; align-items: end; gap: 24px; }
   .kopregel .lead { max-width: 60ch; margin-top: 6px; }
-  .legenda { display: flex; flex-wrap: wrap; gap: 8px; }
-  .legenda > span { display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px; border-radius: 999px; background: rgb(var(--wit) / 0.06); font-size: 13px; font-weight: 600; }
-  .legenda > span b { font-family: var(--kop); font-size: 15px; }
+  /* De tellers als tekst met een stipje (besluit 229), geen pillen. */
+  .legenda { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+  .legenda > span { display: inline-flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 600; color: var(--zacht); }
+  .legenda > span b { font-family: var(--kop); font-size: 15px; color: var(--tekst); }
 
   .veld { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 16px; min-height: 0; }
   .beeld { position: relative; min-height: 0; display: flex; align-items: end; justify-content: center; }
@@ -104,7 +105,7 @@
   #tel .waaierveld { margin: 4px -16px 0; }
   #tel .waaierveld svg { width: 100%; height: auto; aspect-ratio: 390 / 214; }
   #tel .legenda { justify-content: center; gap: 6px; margin-top: -2px; }
-  #tel .legenda > span { height: 30px; padding: 0 10px; font-size: 12.5px; gap: 6px; }
+  #tel .legenda > span { font-size: 13px; gap: 6px; }
   #tel .tik { text-align: center; font-size: 12.5px; color: var(--gedempt); margin: -4px 0 0; }
   #tel .kaart { padding: 14px 16px; border-radius: 22px; }
   #tel .as { grid-template-columns: 128px minmax(0, 1fr) 40px; }

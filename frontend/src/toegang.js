@@ -56,8 +56,10 @@ function delen() {
   // Een gast (besluit 151): alleen wie hij is en de versie; instellingen veranderen kan hij niet.
   if (isGast()) return [{ id: 'bewoners', titel: t('jij.kop'), zin: inlog, stand: sessie ? 'goed' : null }, versie];
   return [
-    { id: 'bewoners', titel: t('instellingen.bewoners'), zin: namen, stand: bewoners ? 'goed' : null },
-    ...(sleutel ? [{ id: 'assistent', titel: t('toegang.sleutel'), zin: t('toegang.voorHA'), stand: 'goed' }] : []),
+    // Bewoners opent meteen zijn eigen pagina (besluit 227): hier stond alleen een knop erheen.
+    { id: 'bewoners', href: 'bewoners.html', titel: t('instellingen.bewoners'), zin: namen, stand: bewoners ? 'goed' : null },
+    // De sleutel alleen als Home Assistant hem nog nodig heeft (besluit 227): in de add-on geeft SunArc hem zelf (besluit 202).
+    ...(sleutel && integratie?.toegevoegd !== true ? [{ id: 'assistent', titel: t('toegang.sleutel'), zin: t('toegang.voorHA'), stand: 'goed' }] : []),
     { id: 'gegevens', titel: t('toegang.gegevens'), zin: gegevens?.bestanden != null ? t('toegang.dagenBewaard', { n: gegevens.bestanden }) : '…', stand: gegevens ? 'goed' : null },
     versie,
   ];

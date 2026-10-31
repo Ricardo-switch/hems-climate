@@ -12,6 +12,7 @@ import type { LiveSnapshot } from '../adapters/homeassistant/shadow.js';
 import { TodayCache, withHistory, type TodayReport } from './today.js';
 import { SolarHistory, learnSolar } from './solar-learn.js';
 import type { YieldReport } from './yield.js';
+import type { accuJaar } from './accu.js';
 import { LANGS } from './assistant.js';
 import type { Lang } from './assistant.js';
 import type { Punt } from './kaart.js';
@@ -101,6 +102,8 @@ export class Diensten {
    */
   readonly yieldCache = new Map<string, { atMs: number; report: YieldReport }>();
   readonly yieldBusy = new Map<string, Promise<YieldReport | null>>();
+  /** De laatste batterijsom (besluit 230), met de meters waarmee hij is uitgerekend. */
+  accu: { sleutel: string; atMs: number; som: Awaited<ReturnType<typeof accuJaar>> } | null = null;
 
   /** Wie er kijkt (besluit 147): het account, of het een beheerder is, en de naam. Een gast is nooit beheerder. */
   async wie(req: IncomingMessage): Promise<Wie & { readonly naam: string }> {

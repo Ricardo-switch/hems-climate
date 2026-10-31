@@ -134,6 +134,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [126. Radiatorknoppen en ander klimaat buiten de configuratie: zien en vastleggen](#126-radiatorknoppen-en-ander-klimaat-buiten-de-configuratie-zien-en-vastleggen)
 - [127. Het weer van Open-Meteo, de batterijlijst, en een apparaat via twee koppelingen](#127-het-weer-van-open-meteo-de-batterijlijst-en-een-apparaat-via-twee-koppelingen)
 - [157. Hoe de panelen liggen, gemeten uit tien dagen opbrengst; de bewoner bevestigt](#157-hoe-de-panelen-liggen-gemeten-uit-tien-dagen-opbrengst-de-bewoner-bevestigt)
+- [230. Een thuisbatterij op je eigen uren](#230-een-thuisbatterij-op-je-eigen-uren)
 
 **Weergave**
 
@@ -228,6 +229,9 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [224. De assistent bij screens en tijden, en de zon als stem](#224-de-assistent-bij-screens-en-tijden-en-de-zon-als-stem)
 - [225. Sfeerzinnen: menselijker en wisselend](#225-sfeerzinnen-menselijker-en-wisselend)
 - [226. Rust op Thuis, Apparaten en Vandaag, en wat nu speelt bovenaan](#226-rust-op-thuis-apparaten-en-vandaag-en-wat-nu-speelt-bovenaan)
+- [227. Instellingen zonder doorlopen, en terug naar dezelfde stap van Inrichten](#227-instellingen-zonder-doorlopen-en-terug-naar-dezelfde-stap-van-inrichten)
+- [228. Minder bubbels](#228-minder-bubbels)
+- [229. Twee pagina's, rustiger: Wat je huis kan en Hoe ver je huis is](#229-twee-paginas-rustiger-wat-je-huis-kan-en-hoe-ver-je-huis-is)
 
 **Veiligheid**
 
@@ -10545,6 +10549,124 @@ straat zag je niet.
   moment zonder actie ("Thermostaat badkamer: doel 20°") zegt het doel niet
   nog eens eronder.
 - **Versie 0.97.0.**
+
+---
+
+## 227. Instellingen zonder doorlopen, en terug naar dezelfde stap van Inrichten
+
+*Onderwerp: weergave · Status: geldig*
+
+31 oktober 2026, het derde stuk van ronde 2 uit het rapport "SunArc
+polijsten", met punt 8 van de bewoner: wie vanuit Inrichten naar Home
+Assistant of naar een andere pagina gaat, moet op dezelfde stap terugkomen.
+
+*Besluit:*
+
+- **Een groep bij Instellingen** heeft geen "1 van 8" met Vorige en Volgende
+  meer. Doorlopen hoort bij Inrichten; in een groep is de lijst links de weg.
+  Bovenaan alleen wat mist, geen groen "4 klaar".
+- **De tegels bij Instellingen** krijgen alleen een pil als er iets mist; geen
+  groen "Klaar". De tegel Inrichten blijft, zoals de bewoner op 30 oktober
+  vroeg (0.90.1).
+- **Bewoners en toegang:** Bewoners opent meteen zijn eigen pagina (een deel
+  met `href`); daar stond alleen een knop erheen. De sleutel voor de
+  assistent staat er alleen nog als de integratie niet is toegevoegd; in de
+  add-on geeft SunArc hem zelf (besluit 202).
+- **Terug naar Inrichten:** Inrichten onthoudt per tabblad, een uur lang, bij
+  welke stap je wegging (`sessionStorage`). Een pagina die je daarvandaan
+  opent, toont "‹ Inrichten" in plaats van "‹ Instellingen", naar die stap.
+  Ga je met een knop naar Home Assistant en open je SunArc weer, dan komt de
+  app op die stap uit in plaats van op Thuis, één keer. Terug in Inrichten
+  is alles weer gewoon.
+- HACS blijft voorlopig: wie SunArc buiten de add-on draait, zet de integratie
+  daarmee neer.
+- **Versie 0.98.0.**
+
+---
+
+## 228. Minder bubbels
+
+*Onderwerp: weergave · Status: geldig*
+
+31 oktober 2026, het vierde stuk van ronde 2 uit het rapport "SunArc
+polijsten". De bewoner: "op veel plekken ben je geneigd al die klikbare
+bubbels te gebruiken". Dezelfde afgeronde knop stond voor een keuze, een stand,
+een voorbeeld en een etiket.
+
+*Besluit:*
+
+- **Eén keuze uit twee tot vier** is een segmentbalk: één vorm, de keuze licht
+  op. `app.segmenten(el)` zet de klasse `seg` op een `.chips`-rij met twee tot
+  vier knoppen waarvan er hooguit één aan staat; de knoppen houden hun gedrag.
+  Een rij waar je meer tegelijk kiest (`data-meer`, zoals de thermometers per
+  kamer) blijft zoals hij is. Inrichten doet het na elke stap.
+- **Iets aan of uit per ding:** de kaarten van de wand zijn schakelaars in twee
+  kolommen, in plaats van dertien knoppen.
+- **Een voorbeeld om te vragen** onderaan Thuis is tekst tussen
+  aanhalingstekens, geen knop.
+- **Een etiket op een apparaat** is gewone tekst in één regel: "Houdt op
+  temperatuur · filter 20%".
+- Kiezen uit veel was al een keuzelijst (de dag, de hoofdzekering). Wat je huis
+  kan en Hoe ver je huis is samenvoegen volgt apart.
+- **Versie 0.99.0.**
+
+---
+
+## 229. Twee pagina's, rustiger: Wat je huis kan en Hoe ver je huis is
+
+*Onderwerp: weergave · Status: geldig*
+
+31 oktober 2026, het laatste stuk van ronde 2 uit het rapport "SunArc
+polijsten". Het plan was de twee pagina's samen te voegen. Na de schets koos de
+bewoner anders: "ik mis de progressie meter en de suggesties ook nog. ik ben
+bang dat we beter 2 paginas kunnen behouden met wat slimme wijzigingen".
+
+*Besluit:*
+
+- **Beide pagina's blijven.** Wat je huis kan zegt per functie hoe het ervoor
+  staat (besluit 130); Hoe ver je huis is houdt de zonnewaaier en de weg naar zelf
+  regelen (besluit 214). De knop met de kleine waaier verbindt ze.
+- **De tellers bovenaan zijn tekst met een stipje,** geen pillen. Op Wat je
+  huis kan blijven ze een filter: een tik laat alleen die stand zien, en de
+  gekozen stand is onderstreept.
+- **Een stand in een regel** (werkt, kijkt mee, leert nog, staat uit) is een
+  stipje met een woord. Alleen wat iets van je vraagt, "vul in" en "iets
+  nodig", blijft een omlijnd etiket (besluit 228).
+- **Versie 0.100.0**, samen met besluit 230.
+
+---
+
+## 230. Een thuisbatterij op je eigen uren
+
+*Onderwerp: meten, data en analyse · Status: geldig*
+
+31 oktober 2026. De bewoner: "bij de batterij zie ik nu wel een maandelijks
+besparing maar ik zou wel een aanbevolen capaciteit accu willen zien erbij met
+hoeveel er ongeveer tekort kwam en waar de accu dan had bij kunnen springen".
+Tot nu toe rekende Wat je huis kan met één maand: het kleinste van wat er naar
+het net ging en wat ervan kwam, keer 0,85. Daaruit volgt geen maat, en ook niet
+wanneer.
+
+*Besluit:*
+
+- **De dienst rekent het afgelopen jaar per uur na** (`web/accu.ts`,
+  `api/accu`), uit de meters van het net. Per uur laadt de batterij met wat er
+  terugging (90% komt terug) en levert hij wat er van het net kwam, zolang hij
+  iets heeft. Laden en leveren gaan met hooguit de helft van zijn maat per uur,
+  en minstens 2,5 kW. Een heel jaar, zodat de zomer en de winter allebei
+  meetellen.
+- **De maten zijn 2,5, 5, 7,5, 10, 12,5, 15 en 20 kWh.** Aanbevolen is de
+  kleinste die minstens 90% doet van wat de grootste zou doen: groter levert
+  dan nauwelijks meer op.
+- **Het blad zegt:** welke maat past, wat hij gemiddeld per maand oplevert
+  vanaf 2027, hoeveel er van het net kwam, wat hij daarvan zelf had geleverd en
+  wat er dan nog tekortkwam, op hoeveel dagen hij leeg raakte, en wat de maat
+  erboven meer had gedaan. Daaronder per uur van de dag wanneer hij had
+  bijgesprongen.
+- **Een schatting.** Wat er binnen een uur heen en weer ging, ziet de meter
+  niet; zonder teruglevering is er geen som. Het jaar per uur is zwaar, dus de
+  dienst bewaart de som zes uur, of tot de meters veranderen.
+- **Versie 0.100.0**, samen met besluit 229.
 
 ---
 

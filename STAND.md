@@ -59,7 +59,8 @@ verwijzing bestaat.
 - **Twee applicaties:** het instrumentenpaneel en de bewonersapp ([29]). De
   schetsen in `design/app2/` (ontwerp 2) zijn de maatstaf voor de app, en de
   schets is de code: de app gebruikt dezelfde tekenmotor voor het huis ([71],
-  [104]).
+  [104]). Een keuze uit een paar is één balk, aan of uit is een schakelaar, en
+  een bubbel blijft voor wat mist ([228]).
 - **Elke opstelling werkt:** de regeling doet wat de opstelling toelaat en zegt
   wat ze daardoor niet kan ([70]). Geavanceerde functies volgen uit wat het huis
   heeft; ingrijpende vragen een bewuste keuze ([78]).
@@ -115,6 +116,9 @@ verwijzing bestaat.
   batterij stuurt SunArc niet zelf ([85]). Wat er na comfort over is,
   gaat in de volgorde van de lijst Op zon: kamers die op zon voorkoelen of
   opwarmen en apparaten zoals de droger door elkaar ([176]).
+- **Zonder thuisbatterij** rekent de app het afgelopen jaar per uur na: welke
+  maat past, wat er dan nog van het net kwam, en wanneer hij had bijgesprongen
+  ([230]).
 - **De zonnesensor:** elk merk omvormer werkt; de app meet hoe snel de sensor is
   ([89]).
 - **Sturen:** alleen wat afwijkt. Slimmere timing moet eerst in de replay winnen
@@ -271,7 +275,8 @@ verwijzing bestaat.
   bovenaan; **Comfort** zet je in de app, en de regeling neemt het meteen over;
   **Wat je huis kan** toont per functie hoe het ervoor staat ([130]), en
   **Hoe ver je huis is** laat het als zonnewaaier zien, met de weg naar zelf
-  regelen ([214]). Een nieuw
+  regelen ([214]); ze blijven twee pagina's, met de tellers als tekst ([229]).
+  Een nieuw
   huis begint zuinig (20° overdag, 16° 's nachts, de dag vanaf 7:00), binnen
   wat de apparaten kunnen, en bij Comfort, Functies en Jij kun je terug naar
   die standaard ([204]).
@@ -309,7 +314,9 @@ verwijzing bestaat.
   wat er in beeld staat; de balkjes zeggen wat nagelopen is en wat al klaar
   stond. Kamers samenvoegen tot één ruimte met zones, elk deel rond het huis
   apart, geen panelen of het aantal per kant, eerst het contract en dan de
-  prijzen met teruglevering vanaf 2027 ([158]).
+  prijzen met teruglevering vanaf 2027 ([158]). Vanuit een stap naar Home
+  Assistant of een andere pagina, en je komt op die stap terug; een groep bij
+  Instellingen heeft geen Volgende meer, alleen de lijst ([227]).
 - **Thuis op de telefoon** heeft de Assistent altijd in beeld, in een
   vraagbalk boven de tabs; de microfoon ernaast luistert meteen. Bovenin één
   regel knoppen, de kamers in één kaart, en daaronder Straks, het apparaat,
@@ -746,4 +753,8 @@ verwijzing bestaat.
 [224]: DECISIONS.md#224-de-assistent-bij-screens-en-tijden-en-de-zon-als-stem
 [225]: DECISIONS.md#225-sfeerzinnen-menselijker-en-wisselend
 [226]: DECISIONS.md#226-rust-op-thuis-apparaten-en-vandaag-en-wat-nu-speelt-bovenaan
+[227]: DECISIONS.md#227-instellingen-zonder-doorlopen-en-terug-naar-dezelfde-stap-van-inrichten
+[228]: DECISIONS.md#228-minder-bubbels
+[229]: DECISIONS.md#229-twee-paginas-rustiger-wat-je-huis-kan-en-hoe-ver-je-huis-is
+[230]: DECISIONS.md#230-een-thuisbatterij-op-je-eigen-uren
 <!-- links:einde -->

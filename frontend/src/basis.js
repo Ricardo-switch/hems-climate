@@ -1047,8 +1047,84 @@
   }
 
   /** Zet de navigatie, de stand en de klok voor een tab. */
+  /*
+   * Terug naar Inrichten (besluit 227). Wie vanuit een stap van Inrichten naar
+   * een andere pagina gaat, of naar een scherm in Home Assistant, komt op die stap
+   * terug. Inrichten bewaart de stap per tabblad, een uur lang.
+   */
+  const TERUG_INR = 'sc-inrichten-terug';
+  const TERUG_HA = 'sc-ha-terug';
+  function leesTerug(sleutel) {
+    try {
+      const w = JSON.parse(sessionStorage.getItem(sleutel) ?? 'null');
+      return w && w.tot > Date.now() ? w : null;
+    } catch {
+      return null;
+    }
+  }
+  function bewaarTerug(sleutel, stap) {
+    try {
+      sessionStorage.setItem(sleutel, JSON.stringify({ stap, tot: Date.now() + 3_600_000 }));
+    } catch {
+      // Zonder opslag gewoon zoals altijd.
+    }
+  }
+  /** De terugknop van een pagina: naar Inrichten als je daarvandaan kwam, anders naar Instellingen. */
+  function terugknop() {
+    const w = leesTerug(TERUG_INR);
+    return w ? { href: `inrichten.html${w.stap ? `#${w.stap}` : ''}`, sleutel: 'inr.terugNaar' } : { href: 'instellingen.html', sleutel: 'jij.terugInstellingen' };
+  }
+  function zetTerugknoppen() {
+    const k = terugknop();
+    if (k.sleutel === 'jij.terugInstellingen') return;
+    for (const a of $$('a.terugje[href="instellingen.html"]')) {
+      a.setAttribute('href', k.href);
+      a.setAttribute('data-t', k.sleutel);
+      a.textContent = global.t(k.sleutel);
+    }
+  }
+  /** Terug uit Home Assistant: open weer de stap van Inrichten waar je wegging, niet Thuis. */
+  function terugUitHA() {
+    const w = leesTerug(TERUG_HA);
+    if (!w || /inrichten\.html$/.test(location.pathname)) return false;
+    try {
+      sessionStorage.removeItem(TERUG_HA);
+    } catch {
+      // Dan blijft hij tot het uur om is.
+    }
+    location.replace(`inrichten.html${w.stap ? `#${w.stap}` : ''}`);
+    return true;
+  }
+
+  /** Inrichten onthoudt de stap: 'app' voor een andere pagina, 'ha' voor een scherm in Home Assistant. */
+  const onthoudInrichten = (soort, stap) => bewaarTerug(soort === 'ha' ? TERUG_HA : TERUG_INR, stap);
+  /** Weer in Inrichten: de terugknoppen gaan weer naar Instellingen. */
+  function vergeetInrichten() {
+    try {
+      sessionStorage.removeItem(TERUG_INR);
+      sessionStorage.removeItem(TERUG_HA);
+    } catch {
+      // Dan na een uur.
+    }
+  }
+
+  /**
+   * Minder bubbels (besluit 228): een rij van twee tot vier knoppen waarvan er één
+   * kan aanstaan, wordt een segmentbalk. Een rij met `data-meer` (meer tegelijk
+   * kiezen), of met een link of ander element erin, blijft zoals hij is.
+   */
+  function segmenten(root = document) {
+    for (const rij of root.querySelectorAll('.chips:not([data-meer])')) {
+      const k = [...rij.children];
+      const ok = k.length >= 2 && k.length <= 4 && k.every((x) => x.matches('button.chip[aria-pressed]')) && k.filter((x) => x.getAttribute('aria-pressed') === 'true').length <= 1;
+      rij.classList.toggle('seg', ok);
+    }
+  }
+
   function start(tab) {
+    if (terugUitHA()) return;
     zetNav(tab);
+    zetTerugknoppen();
     void leesHuisSoort(tab);
     telBalk(tab);
     // Volledig scherm in Home Assistant (besluit 155): de weg terug staat boven de bel.
@@ -1715,5 +1791,5 @@
     return Promise.resolve(false);
   }
 
-  global.app = { kanApparaatSpreken, zegMetApparaat, huisSoort, persoonlijk, $$, metLidwoord, nl, zet, esc, bijnaOp, klokVan, wanneer, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting, gebundeld, zicht, aanbellen, offline, online, inHA, volledigGekozen, zetVolledig, naarHA, zetWeergave, weergave: () => weergaveNu, zetThema, kleurVan, tekstKleur, houToegang, updateKlaar, bijwerkVenster, bijVerandering, kanInstalleren, geinstalleerd, installeer, naarHAScherm };
+  global.app = { kanApparaatSpreken, zegMetApparaat, huisSoort, persoonlijk, $$, metLidwoord, nl, zet, esc, bijnaOp, klokVan, wanneer, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting, gebundeld, zicht, aanbellen, offline, online, inHA, volledigGekozen, zetVolledig, naarHA, zetWeergave, weergave: () => weergaveNu, zetThema, kleurVan, tekstKleur, houToegang, updateKlaar, bijwerkVenster, bijVerandering, kanInstalleren, geinstalleerd, installeer, naarHAScherm, terugknop, onthoudInrichten, vergeetInrichten, segmenten };
 })(window);

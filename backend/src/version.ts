@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.97.0';
+export const VERSIE = '0.100.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,54 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.100.0',
+    datum: '2026-10-31',
+    nieuw: [
+      'Bij een thuisbatterij staat welke maat bij je huis past, wat er dan nog van het net kwam, en per uur wanneer hij had bijgesprongen, uit je eigen jaar',
+    ],
+    beter: [
+      "Wat je huis kan en Hoe ver je huis is blijven twee pagina's, rustiger: de tellers en de standen als tekst met een stipje",
+    ],
+    en: {
+      nieuw: [
+        'A home battery shows which size fits your home, what would still have come from the grid, and per hour when it would have stepped in, from your own year',
+      ],
+      beter: [
+        'What your house can do and How far your house is stay two pages, calmer: counts and states as text with a dot',
+      ],
+    },
+  },
+  {
+    versie: '0.99.0',
+    datum: '2026-10-31',
+    beter: [
+      'Minder losse knoppen: een keuze uit een paar is één balk, en de kaarten van de wand zijn schakelaars',
+      'Onderaan Thuis staan de voorbeeldvragen als tekst, en op Apparaten staan de etiketten in één regel',
+    ],
+    en: {
+      beter: [
+        'Fewer loose buttons: a choice between a few is one bar, and the wall cards are switches',
+        'At the bottom of Home the example questions are plain text, and Devices shows its tags on one line',
+      ],
+    },
+  },
+  {
+    versie: '0.98.0',
+    datum: '2026-10-31',
+    beter: [
+      'Ga je vanuit Inrichten naar Home Assistant of een andere pagina, dan kom je op dezelfde stap terug',
+      'Instellingen zonder "1 van 8" en Volgende, en alleen een pil bij wat mist',
+      'Bewoners opent meteen, en de sleutel voor de assistent staat er alleen als hij nog nodig is',
+    ],
+    en: {
+      beter: [
+        'Go from Set up to Home Assistant or another page, and you come back to the same step',
+        'Settings without "1 of 8" and Next, and a pill only for what is missing',
+        'Residents opens straight away, and the key for the assistant only shows when it is still needed',
+      ],
+    },
+  },
   {
     versie: '0.97.0',
     datum: '2026-10-31',

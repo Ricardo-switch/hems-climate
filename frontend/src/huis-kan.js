@@ -10,12 +10,12 @@
 
 const { $$, esc, haal } = app;
 
-const d = { site: null, huis: null, functies: null, energie: null, aansluiting: null, state: null, divergence: null, opbrengst: null, zon: null, klaar: null };
+const d = { site: null, huis: null, functies: null, energie: null, aansluiting: null, state: null, divergence: null, opbrengst: null, accu: null, zon: null, klaar: null };
 /** Laat alleen deze stand zien, of alles. */
 let filter = null;
 
 async function laadAlles() {
-  const deuren = { site: 'api/site', huis: 'api/huis', functies: 'api/functies', energie: 'api/energie', aansluiting: 'api/aansluiting', state: 'api/state', divergence: 'api/divergence', opbrengst: 'api/opbrengst?soort=maand', zon: 'api/zon', klaar: 'api/klaarzetten', sluip: 'api/sluipverbruik' };
+  const deuren = { site: 'api/site', huis: 'api/huis', functies: 'api/functies', energie: 'api/energie', aansluiting: 'api/aansluiting', state: 'api/state', divergence: 'api/divergence', opbrengst: 'api/opbrengst?soort=maand', accu: 'api/accu', zon: 'api/zon', klaar: 'api/klaarzetten', sluip: 'api/sluipverbruik' };
   const r = await Promise.allSettled(Object.values(deuren).map((p) => haal(p)));
   Object.keys(deuren).forEach((k, i) => {
     if (r[i].status === 'fulfilled') d[k] = r[i].value;
@@ -56,17 +56,39 @@ function meer() {
   return `<div class="glas meer"><span class="wanneer">${esc(t('kan.meer'))}</span>${lijst.map(regel).join('')}</div>`;
 }
 
+/**
+ * Wanneer de accu bijsprong (besluit 230): per uur van de dag wat hij gemiddeld
+ * leverde. Een staaf per uur, de hoogste vol; zes, twaalf en zes uur eronder.
+ */
+function bijspringen(uren) {
+  const top = Math.max(...uren, 0.1);
+  const staven = uren.map((k, h) => `<i style="height: ${Math.max(k > 0 ? 6 : 2, Math.round((k / top) * 100))}%"${k > 0 ? ' class="aan"' : ''} title="${String(h).padStart(2, '0')}:00 · ${app.nl(k)} kWh"></i>`).join('');
+  return `<div class="uren" role="img" aria-label="${esc(t('kan.accu.urenUitleg'))}">${staven}</div><div class="assen"><span>0</span><span>6</span><span>12</span><span>18</span><span>24</span></div>`;
+}
+
 function blad(x) {
-  const som = x.som
-    ? `<div class="som"><h4>${esc(t('kan.opleveren'))}</h4><div class="getal">± € ${x.som.euro} <small>${esc(t('kan.perMaand'))}</small></div>
-        <p class="mini" style="margin: 8px 0 0">${esc(t('kan.somZin', { maand: x.som.maand, terug: x.som.terugKwh, kwh: x.som.kwh }))}</p></div>`
+  const a = x.som;
+  const maat = (k) => app.nl(k, k % 1 ? 1 : 0);
+  // Een heel jaar heet zo; korter gemeten, dan het aantal dagen.
+  const zin = a
+    ? [
+        t(a.dagen >= 360 ? 'kan.accu.zinJaar' : 'kan.accu.zin', { dagen: a.dagen, net: app.nl(a.vanNetKwh, 0), gedekt: app.nl(a.gedektKwh, 0), tekort: app.nl(a.tekortKwh, 0), kwh: maat(a.kwh) }),
+        a.legeDagen ? t('kan.accu.leeg', { n: a.legeDagen, dagen: a.dagen }) : '',
+        a.groter ? (a.groter.meerKwh >= 1 ? t('kan.accu.groter', { kwh: maat(a.groter.kwh), meer: app.nl(a.groter.meerKwh, 0) }) : t('kan.accu.groterNiet')) : '',
+        t('kan.accu.schatting'),
+      ].filter(Boolean).join(' ')
+    : '';
+  const som = a
+    ? `<div class="som"><div class="somtop"><div><h4>${esc(t('kan.accu.past'))}</h4><div class="getal">${maat(a.kwh)} <small>kWh</small></div></div><div><h4>${esc(t('kan.opleveren'))}</h4><div class="getal">± € ${a.euro} <small>${esc(t('kan.perMaand'))}</small></div></div></div>
+        <p class="mini" style="margin: 8px 0 0">${esc(zin)}</p>
+        <h4 style="margin-top: 12px">${esc(t('kan.accu.wanneer'))}</h4>${bijspringen(a.uren)}</div>`
     : '';
   // Wat er nodig is, koop je zelf; dan is er geen knop, behalve naar wat het nu oplevert.
   const ga = x.stand === 'mis' ? t('kan.ga.mis') : x.stand === 'uit' ? t('kan.ga.uit') : x.stand === 'nodig' ? (x.som ? t('kan.ga.opbrengst') : null) : t('kan.ga.bekijken');
   // Waar het werkt (besluit 132): per kamer, en wat er nog kan als idee, niet als tekort.
   const waar = x.waar?.length
     ? `<div><h4>${esc(t('kan.waar'))}</h4><div class="waar">${x.waar.map((k) => `<div class="kamerkaart"><b>${esc(k.naam)}</b><span>${esc(k.wat)}</span></div>`).join('')}</div></div>`
-    : `<div class="nu"><span class="stand ${x.stand}">${esc(t('kan.nu'))}</span>${esc(x.nu)}</div>`;
+    : x.som ? '' : `<div class="nu"><span class="stand ${x.stand}">${esc(t('kan.nu'))}</span>${esc(x.nu)}</div>`;
   const idee = x.idee ? `<a class="kanook" href="${x.idee.href}"><span class="wanneer">${esc(t('kan.idee'))}</span><b>${esc(x.idee.titel)}</b><p>${esc(x.idee.zin)}, ${esc(x.idee.wint)}.</p><span class="knop">${esc(t(x.idee.soort === 'aan' ? 'kan.zetAan' : 'kan.bekijk'))}</span></a>` : '';
   return `<div class="bovenaan"><div><span class="stand ${x.stand}">${esc(x.label)}</span><h2 class="kop-2" style="margin-top: 10px">${esc(x.titel)}</h2><p class="lead" style="margin-top: 4px; max-width: 52ch">${esc(x.wat)}</p>${x.extra ? `<p class="mini" style="margin: 6px 0 0">${esc(x.extra)}</p>` : ''}</div><button type="button" class="sluit" data-sluit aria-label="${esc(t('algemeen.sluiten'))}">×</button></div>
     ${waar}

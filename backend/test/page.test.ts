@@ -49,7 +49,7 @@ import { UitstelStore } from '../src/web/uitstel.js';
 import { STANDAARD_TEL, VoorkeurenStore } from '../src/web/voorkeuren.js';
 import type { Opslag } from '../src/web/opslag.js';
 import { WeatherLog } from '../src/web/weather.js';
-import { EnergyStore, type EnergySource } from '../src/web/energy.js';
+import { EnergyStore, importFromPrefs, type EnergySource } from '../src/web/energy.js';
 import { ConnectionStore, connectionView, type FoundAppliance, type FoundPhase } from '../src/web/aansluiting.js';
 
 /**
@@ -667,8 +667,9 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     expect(await tel.locator('[data-delen]').isVisible()).toBe(false);
     expect(await tel.locator('[data-terug]').textContent()).toBe('‹ Energie');
     await shot('deel');
-    // Volgende vervangt het adres; terug gaat in één stap naar de lijst.
-    await tel.locator('[data-verder] a.volgende').click();
+    // Geen Volgende meer (besluit 227); een ander deel vervangt het adres, en terug gaat in één stap naar de lijst.
+    expect(await tel.locator('[data-verder] a').count()).toBe(0);
+    await p.evaluate("location.replace('#meters')");
     await expect.poll(() => new URL(p.url()).hash).toBe('#meters');
     await tel.locator('[data-terug]').click();
     await tel.locator('[data-terug]', { hasText: '‹ Instellingen' }).waitFor();
@@ -715,7 +716,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await shot('wand-hulp');
     await p.keyboard.press('Escape');
     expect(await naast.isVisible()).toBe(false);
-    await wand.locator('[data-verder] a.volgende').click();
+    await wand.locator('[data-delen] .deel[href="#meters"]').click();
     await expect.poll(() => new URL(p.url()).hash).toBe('#meters');
     expect(await p.evaluate<boolean>('document.documentElement.scrollHeight <= innerHeight + 1')).toBe(true);
     await p.goto(`${baseUrl}/energie.html#prijzen`);
@@ -743,7 +744,8 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await p.locator('#wand [data-delen] .deel').first().waitFor();
       await p.waitForTimeout(300);
       const ids = await p.locator('#wand [data-delen] .deel').evaluateAll((els) => els.map((e) => e.getAttribute('href') ?? ''));
-      for (const id of ids.filter((x) => x !== '#versie')) {
+      // Alleen de delen op deze pagina; Bewoners opent zijn eigen pagina (besluit 227).
+      for (const id of ids.filter((x) => x.startsWith('#') && x !== '#versie')) {
         await p.goto(`${baseUrl}/${pagina}.html${id}`);
         await p.locator('#wand [data-vorm] h2').first().waitFor();
         await p.waitForTimeout(200);
@@ -3472,9 +3474,11 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       expect(await p.locator('#wand [data-integratie]').count()).toBe(0);
       // Geladen maar nog niet toegevoegd (22 oktober 2026): zeg wat er nog moet.
       expect(await p.locator('#wand [data-vorm]').textContent()).toContain('Nog niet toegevoegd');
+      // Toegevoegd: dan is de sleutel niet meer nodig en verdwijnt het deel (besluit 227).
       integratieNu = { ...integratieNu, toegevoegd: true };
       await p.reload();
-      await p.locator('#wand [data-vorm]', { hasText: 'Toegevoegd.' }).waitFor();
+      await p.locator('#wand [data-delen] .deel').first().waitFor();
+      await expect.poll(() => p.locator('#wand [data-delen] .deel[href="#assistent"]').count()).toBe(0);
       expect(fouten).toEqual([]);
     } finally {
       integratieNu = { kan: true, staat: 'nee', versie: null, nieuw: VERSIE, geladen: null, toegevoegd: null };
@@ -3990,20 +3994,6 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     const huisNu = (await (await fetch(`${baseUrl}/api/huis`)).json()) as { etages: { ruimtes: { id: string; apparaten: unknown[] }[] }[] };
     const vol = huisNu.etages.flatMap((e) => e.ruimtes).sort((x, y) => y.apparaten.length - x.apparaten.length)[0]!;
     const paginas = ['thuis.html', 'vandaag.html', 'apparaten.html', 'opbrengst.html', 'assistent.html', `kamer.html#${encodeURIComponent(vol.id)}`, `indeling.html#${encodeURIComponent(vol.id)}`, 'instellingen.html', 'comfort.html', 'energie.html', 'functies.html', 'regeling.html', 'huis-kan.html', 'voortgang.html', 'toegang.html', 'bewoners.html', 'inrichten.html#warmte', 'inrichten.html#welkom'];
-    // Een lange titel bij Volgende breekt af, en valt er niet links af (21 oktober 2026: "leutel voor de assistent").
-    await p.goto(`${baseUrl}/toegang.html#bewoners`);
-    const volgendeTitel = p.locator('#tel .verder a.volgende b');
-    await volgendeTitel.waitFor();
-    expect(await volgendeTitel.textContent()).toContain('Sleutel voor de assistent');
-    expect(
-      await volgendeTitel.evaluate((el) => {
-        const r = el.ownerDocument.createRange();
-        r.selectNodeContents(el);
-        const knop = el.closest('a')!.getBoundingClientRect();
-        const tekst = r.getBoundingClientRect();
-        return tekst.left >= knop.left - 1 && tekst.right <= knop.right + 1;
-      }),
-    ).toBe(true);
     const vast: string[] = [];
     let geveegd = 0;
     for (const pagina of paginas) {
@@ -4171,6 +4161,32 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     expect(await knop.getAttribute('href')).toBe('voortgang.html');
     expect(await knop.textContent()).toContain('Hoe ver je huis is');
     await shot('voortgang-huiskan');
+    expect(fouten).toEqual([]);
+    await context.close();
+  }, 30_000);
+
+  /*
+   * Een thuisbatterij op je eigen uren (besluit 230): het blad zegt welke maat
+   * past, wat er dan nog van het net kwam, en wanneer hij had bijgesprongen.
+   */
+  it('zegt bij de thuisbatterij welke maat past en wanneer hij bijspringt', async () => {
+    if (energyStore.current == null) await energyStore.save(importFromPrefs(await ENERGY_SOURCE.prefs(), await ENERGY_SOURCE.meters()));
+    const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+    await context.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    await p.goto(`${baseUrl}/huis-kan.html#batterij`);
+    const som = p.locator('.som', { hasText: 'Past bij je huis' }).first();
+    await som.locator('.uren i.aan').first().waitFor();
+    expect(await som.textContent()).toMatch(/Past bij je huis\s*7,5 kWh[\s\S]*afgelopen jaar kwam er [\d.]+ kWh van het net[\s\S]*nog [\d.]+ kWh van het net/);
+    // Hij springt bij in de uren dat er van het net kwam, niet als de zon schijnt.
+    const aan = await som.locator('.uren i').evaluateAll((l) => l.map((i) => i.classList.contains('aan')));
+    expect(aan.slice(10, 15).some(Boolean)).toBe(false);
+    expect(aan.slice(18, 24).every(Boolean)).toBe(true);
+    if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-batterij.png') });
     expect(fouten).toEqual([]);
     await context.close();
   }, 30_000);
@@ -5027,4 +5043,34 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     expect(await vorm.textContent()).not.toMatch(/NAS/);
     await context.close();
   }, 20_000);
+
+  it('brengt je vanuit Inrichten terug op dezelfde stap, ook na Home Assistant (besluit 227)', async () => {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    // Een andere pagina vanuit een stap: de terugknop zegt Inrichten en gaat naar die stap.
+    await p.goto(`${baseUrl}/inrichten.html#warmte`);
+    await p.waitForTimeout(800);
+    await p.evaluate("app.onthoudInrichten('app', 'warmte')");
+    await p.goto(`${baseUrl}/toegang.html#versie`);
+    const terug = p.locator('#wand a.terugje').first();
+    await expect.poll(() => terug.textContent()).toBe('‹ Inrichten');
+    expect(await terug.getAttribute('href')).toBe('inrichten.html#warmte');
+    // Weer in Inrichten: elders weer gewoon naar Instellingen.
+    await p.goto(`${baseUrl}/inrichten.html#warmte`);
+    await p.waitForTimeout(800);
+    await p.goto(`${baseUrl}/toegang.html#versie`);
+    await expect.poll(() => p.locator('#wand a.terugje').first().getAttribute('href')).toBe('instellingen.html');
+    // Naar Home Assistant en terug: de app opent weer op de stap, niet op Thuis.
+    await p.goto(`${baseUrl}/inrichten.html#stem`);
+    await p.waitForTimeout(800);
+    await p.evaluate("app.onthoudInrichten('ha', 'stem')");
+    await p.goto(`${baseUrl}/thuis.html`);
+    await p.waitForURL(/inrichten\.html#stem$/);
+    // Een keer: daarna opent Thuis gewoon.
+    await p.goto(`${baseUrl}/thuis.html`);
+    await p.waitForTimeout(800);
+    expect(new URL(p.url()).pathname).toBe('/thuis.html');
+    await context.close();
+  }, 30_000);
 });

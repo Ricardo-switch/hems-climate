@@ -692,3 +692,13 @@ a.knop:not(.knop-licht) {
 @keyframes waaier-groei { from { transform: scale(0.42); opacity: 0; } }
 .waaier.stil .straal .vul { animation: none; }
 @media (prefers-reduced-motion: reduce) { .waaier .straal .vul { animation: none; } }
+
+/*
+ * Minder bubbels (besluit 228): één keuze uit twee tot vier is één balk, geen
+ * rij losse knoppen. De keuze licht op in de balk; de knoppen zelf houden hun
+ * gedrag (aria-pressed). `app.segmenten(el)` zet de klasse waar het kan.
+ */
+.chips.seg { display: inline-flex; flex-wrap: nowrap; gap: 0; padding: 3px; border-radius: 12px; background: rgb(var(--wit) / 0.06); max-width: 100%; }
+.chips.seg > .chip { flex: 1 1 auto; min-height: 30px; border-radius: 9px; background: transparent; color: var(--zacht); white-space: nowrap; justify-content: center; }
+.chips.seg > .chip.aan, .chips.seg > .chip[aria-pressed='true'] { background: rgb(var(--wit) / 0.14); color: var(--tekst); }
+.chips.seg > .chip:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
