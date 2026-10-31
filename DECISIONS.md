@@ -225,6 +225,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [219. Je eigen agenda's op de wand als je thuis bent](#219-je-eigen-agendas-op-de-wand-als-je-thuis-bent)
 - [221. Groepen van Zigbee2MQTT, en de rest van de beoordeling](#221-groepen-van-zigbee2mqtt-en-de-rest-van-de-beoordeling)
 - [222. SunArc: een nieuwe naam en een eigen teken](#222-sunarc-een-nieuwe-naam-en-een-eigen-teken)
+- [224. De assistent bij screens en tijden, en de zon als stem](#224-de-assistent-bij-screens-en-tijden-en-de-zon-als-stem)
 
 **Veiligheid**
 
@@ -10422,6 +10423,48 @@ een apparaat (AGPL-3.0). De bewoner koos AGPL-3.0.
   voorstappen nodig, of een afspraak met de maker. Voor eigen gebruik en als
   open project is het goed.
 - Geen nieuwe versie: er verandert niets aan de app.
+
+---
+
+## 224. De assistent bij screens en tijden, en de zon als stem
+
+*Onderwerp: weergave · Status: geldig*
+
+31 oktober 2026, ronde 1 uit het rapport "SunArc polijsten". De bewoner vroeg
+"de screens om half acht dicht" en kreeg "ik doe screens dicht om 09:00". Bij
+één screen ging het grote dicht zonder dat de assistent vroeg welke. Het
+gesprek stond niet meer in het logboek; nagespeeld met de drie schermen van
+het huis kwamen er vier oorzaken boven.
+
+*Besluit:*
+
+- **Aan elkaar geschreven werkwoorden:** "dichtdoen", "opendraaien",
+  "aandoen" en zo verder worden losse woorden voordat de woordzoeker leest.
+  Whisper schrijft ze vaak als één woord; dan ging de zin naar het taalmodel.
+  Ook "neerlaten" en "optrekken" zijn een richting.
+- **Half is een stand, geen tijd:** niet na "om" en niet voor een uur ("half
+  acht", "half 8"). Een tijd in de zin telt ook niet als stand in procenten.
+- **Twee screens in de genoemde kamer:** dan blijft het een vraag. Eerst pakte
+  "het screen in de woonkamer" het eerste screen van de kamer.
+- **Koos het taalmodel één screen** dat de zin niet noemt (ook niet verbogen,
+  zoals "het grote"), en zijn er meer, dan stelt de assistent dezelfde vraag
+  als de woordzoeker (`schermVaag`).
+- **Een opdracht met een tijd** die de woordzoeker niet leest: het taalmodel
+  krijgt de zin zonder de tijd en zegt alleen wát. De tijd houdt Gepland zelf
+  vast. Lukt dat niet, dan een vast antwoord ("Ik hoorde om 19:30, maar niet
+  wat er dan moet gebeuren"). Een vrije zin van het model met een eigen tijd
+  komt er bij zo'n opdracht nooit meer uit. Een vraag met een tijd ("wat doet
+  het licht om half acht") gaat gewoon door.
+- **Vanavond** was in orde: "vanavond om half acht" om 19:00 is vandaag. Het
+  rapport zei eerst anders; dat kwam door wereldtijd in de proef.
+- **De zon als stem** (schets `design/app2/Logo.html`): de bol wordt de zon met
+  twintig stralen. `kit/zon.js` tekent en beweegt hem: ademen in rust, het
+  geluid van de microfoon bij luisteren, een golf die ronddraait bij nadenken,
+  en de echte stem bij praten. Op de pagina Assistent en in het venster van "Hé
+  huis"; elders, zoals onderaan Thuis, Kamer, de deurbel, een herinnering en de
+  film, staat hij stil (`kit/zon.svg`). Met Minder beweging staan de stralen
+  stil. Een dicht venster rekent niet mee.
+- **Versie 0.95.0.**
 
 ---
 

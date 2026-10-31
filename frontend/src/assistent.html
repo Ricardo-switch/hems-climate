@@ -16,31 +16,19 @@
   /*
    * De assistent als gesprek (besluit 141, schets Wand-Assistent-Gesprek). Het
    * huis praat zelf: het begroet, vraagt hoe het kan helpen, leest zijn
-   * antwoord voor en vraagt of het nog iets kan doen. De bol leeft mee met de
+   * antwoord voor en vraagt of het nog iets kan doen. De zon leeft mee met de
    * stem, de woorden komen mee, en de kamer waar het over gaat licht op.
    * Bedienen met een zin (besluit 148, schets Wand-Assistent-Bedienen): een
    * kaartje per apparaat, en terwijl een scherm beweegt een eigen stopknop.
    */
   #wand main { position: relative; overflow: hidden; }
 
-  /* De bol. */
+  /* De zon. */
   .kern { position: relative; width: 300px; height: 300px; display: grid; place-items: center; flex: none; border: 0; background: none; padding: 0; cursor: pointer; color: inherit; }
   .kern:focus-visible { outline: 2px solid var(--tekst); outline-offset: 6px; border-radius: 50%; }
-  .bol { width: 150px; height: 150px; border-radius: 50%; position: relative; z-index: 2; background: radial-gradient(circle at 34% 28%, #ffffff 0%, #bfe3ff 16%, #6fb7ff 40%, #6a5cff 72%, #2a1f6b 100%); box-shadow: 0 0 60px rgba(111, 170, 255, 0.55), 0 0 140px rgba(143, 134, 255, 0.35), inset -18px -24px 40px rgba(20, 10, 70, 0.55); transition: transform 0.25s, box-shadow 0.4s, background 0.4s; animation: adem 5s ease-in-out infinite; }
-  @keyframes adem { 50% { transform: scale(1.035); } }
-  .ring { position: absolute; inset: 0; border-radius: 50%; border: 1px solid rgba(143, 196, 255, 0.18); }
-  .ring.r2 { inset: 22px; border-color: rgba(143, 196, 255, 0.28); }
-  .ring.r3 { inset: 44px; border: 1px dashed rgba(143, 196, 255, 0.3); }
-  .boog { position: absolute; inset: 10px; border-radius: 50%; border: 2px solid transparent; border-top-color: rgba(143, 196, 255, 0.55); border-right-color: rgba(143, 196, 255, 0.15); animation: draai 9s linear infinite; }
-  .boog.b2 { inset: 32px; border-top-color: transparent; border-left-color: rgba(183, 176, 255, 0.6); animation-duration: 14s; animation-direction: reverse; }
-  @keyframes draai { to { transform: rotate(360deg); } }
-  .golf { position: absolute; inset: 0; z-index: 1; opacity: 0; transition: opacity 0.4s; }
-  body[data-stand='praat'] .golf { opacity: 1; }
-  body[data-stand='praat'] .bol { animation: none; box-shadow: 0 0 80px rgba(111, 170, 255, 0.75), 0 0 200px rgba(143, 134, 255, 0.5), inset -18px -24px 40px rgba(20, 10, 70, 0.55); }
-  body[data-stand='denkt'] .boog { animation-duration: 1.6s; }
-  body[data-stand='denkt'] .boog.b2 { animation-duration: 2.4s; }
+  /* De zon als stem (besluit 224): kit/zon.js tekent en beweegt hem. */
+  .kern .zon { width: 100%; height: 100%; overflow: visible; }
   .tik { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); font-size: 12.5px; font-weight: 600; color: var(--gedempt); white-space: nowrap; z-index: 3; }
-  @media (prefers-reduced-motion: reduce) { .boog, .bol { animation: none !important; } }
 
   /* Wat het zegt. */
   .wie { font-size: 14px; font-weight: 600; color: var(--violet-t); display: flex; align-items: center; gap: 8px; }
@@ -131,11 +119,6 @@
   #tel .inhoud { padding: 14px 16px 200px; display: flex; flex-direction: column; gap: 14px; }
   #tel .boven { display: flex; align-items: center; gap: 14px; }
   #tel .kern { width: 132px; height: 132px; }
-  #tel .bol { width: 70px; height: 70px; }
-  #tel .ring.r2 { inset: 12px; }
-  #tel .ring.r3 { inset: 24px; }
-  #tel .boog { inset: 6px; }
-  #tel .boog.b2 { inset: 18px; }
   #tel .tik { bottom: -6px; font-size: 11.5px; }
   #tel .zegt { font-size: 25px; }
   #tel .suggesties { grid-template-columns: 1fr; }
@@ -150,10 +133,7 @@
     <main>
       <div class="eerder" data-eerder hidden></div>
       <button type="button" class="kern" data-kern data-t-aria-label="assistent.laatPraten">
-        <svg class="golf" viewBox="0 0 300 300" data-golf aria-hidden="true"></svg>
-        <span class="ring"></span><span class="ring r2"></span><span class="ring r3"></span>
-        <span class="boog"></span><span class="boog b2"></span>
-        <span class="bol"></span>
+        <svg class="zon" data-zon aria-hidden="true"></svg>
         <span class="tik" data-tik></span>
       </button>
       <div class="spraak" data-spraak aria-live="polite"></div>
@@ -174,10 +154,7 @@
     <div class="inhoud">
       <div class="boven">
         <button type="button" class="kern" data-kern data-t-aria-label="assistent.laatPraten">
-          <svg class="golf" viewBox="0 0 300 300" data-golf aria-hidden="true"></svg>
-          <span class="ring"></span><span class="ring r2"></span><span class="ring r3"></span>
-          <span class="boog"></span><span class="boog b2"></span>
-          <span class="bol"></span>
+          <svg class="zon" data-zon aria-hidden="true"></svg>
           <span class="tik" data-tik></span>
         </button>
         <span class="wie"><i></i><span data-t="assistent.jeHuis"></span></span>
@@ -202,6 +179,7 @@
   <script src="kit/taal.js"></script>
   <script src="kit/nav.js"></script>
   <script src="kit/huis.js"></script>
+  <script src="kit/zon.js"></script>
   <script src="basis.js"></script>
   <script src="huismodel.js"></script>
   <script src="luisteren.js"></script>

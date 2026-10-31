@@ -563,7 +563,8 @@ html.sc-stil::view-transition-group(*), html.sc-stil::view-transition-old(*), ht
 .td-kern .r1 { inset: 48px; }
 .td-kern .r2 { inset: 16px; opacity: 0.5; }
 .td-kern .r3 { inset: -14px; opacity: 0.22; }
-.td-bol { width: 160px; height: 160px; border-radius: 50%; background: radial-gradient(circle at 34% 28%, #ffffff 0%, #e2dcff 16%, #a99bff 42%, #5b4bd6 75%, #1d1450 100%); box-shadow: 0 0 80px rgba(143, 134, 255, 0.6), 0 0 180px rgba(143, 134, 255, 0.3); }
+/* De zon als stem (besluit 224), ook bij een herinnering. */
+.td-bol { width: 160px; height: 160px; background: url('kit/zon.svg') center / contain no-repeat; }
 .td-tekst { position: absolute; left: 40%; top: 28%; right: 5%; }
 .td-tekst small { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 700; color: #c3bdff; }
 .td-tekst small svg { width: 18px; height: 18px; }
