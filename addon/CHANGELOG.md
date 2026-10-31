@@ -1,5 +1,25 @@
 # Wat is er nieuw · What is new
 
+## 0.97.0
+
+*31 oktober 2026*
+
+**Beter**
+
+- Een kaart die iets meldt, zoals de droger die draait of de GFT aan de straat, staat bovenaan
+- Thuis is rustiger: geen sleutel en geen "Kijkt mee" meer, en wat het huis alleen zou doen gloeit niet oranje
+- Apparaten zegt "SunArc zou" één keer in plaats van op elke kaart, en noemt ook je panelen bij de stroom
+- Vandaag zegt het doel niet meer twee keer
+
+*English*
+
+**Improved**
+
+- A card with news, such as the dryer running or the bins going out, is at the top
+- Home is calmer: no spanner and no "Watching", and what the house only would do no longer glows orange
+- Devices says "SunArc would" once instead of on every card, and shows your panels in the power bar
+- Today no longer repeats the target
+
 ## 0.96.0
 
 *31 oktober 2026*

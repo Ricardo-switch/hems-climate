@@ -66,6 +66,8 @@
   function standVan(zoneId, state) {
     const k = state?.bewoner?.kamers?.find((x) => x.zoneId === zoneId);
     if (!k) return null;
+    // In de schaduw gebeurt "zou verwarmen" niet echt (besluit 226): rustig, geen oranje gloed in de kamer.
+    if ((k.soort === 'heat' || k.soort === 'cool') && k.klopt === false) return 'rust';
     return { cool: 'koelt', heat: 'warmt', wait: 'wacht', ok: 'goed' }[k.soort] ?? null;
   }
 

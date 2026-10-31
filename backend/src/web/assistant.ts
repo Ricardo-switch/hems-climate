@@ -1539,7 +1539,7 @@ function shortStatusOf(
     // naar 20°" die stil staat, verwarmt niet (25 oktober 2026, de wand zei het wel).
     const doet = snap.observedAction?.[running.actuatorId];
     const klopt = (snap.observed[running.actuatorId] ?? '').split('@')[0] === running.action && (doet == null || doet === (running.action === 'heat' ? 'heating' : 'cooling'));
-    return { soort: running.action, kort: `${(shadow && !klopt ? w.wouldRun : w.run)[running.action]}${onSun ? w.onSun : ''}`, actuatorId: running.actuatorId, klopt };
+    return { soort: running.action, kort: `${(shadow && !klopt ? w.wouldRun : w.run)[running.action]}${onSun ? w.onSun : ''}`, actuatorId: running.actuatorId, klopt: !shadow || klopt };
   }
   if (mine.some((i) => i.action === 'standby')) return { soort: 'wait', kort: w.parked, actuatorId: null };
   const wanting = pz != null && pz.demand !== 'none';

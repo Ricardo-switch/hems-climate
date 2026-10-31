@@ -227,6 +227,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [222. SunArc: een nieuwe naam en een eigen teken](#222-sunarc-een-nieuwe-naam-en-een-eigen-teken)
 - [224. De assistent bij screens en tijden, en de zon als stem](#224-de-assistent-bij-screens-en-tijden-en-de-zon-als-stem)
 - [225. Sfeerzinnen: menselijker en wisselend](#225-sfeerzinnen-menselijker-en-wisselend)
+- [226. Rust op Thuis, Apparaten en Vandaag, en wat nu speelt bovenaan](#226-rust-op-thuis-apparaten-en-vandaag-en-wat-nu-speelt-bovenaan)
 
 **Veiligheid**
 
@@ -10506,6 +10507,44 @@ van Google, sprak "app" uit als de letters E en P.
   hebben hun lidwoord al, en het samenvoegen zette er nog een voor. Dat gold ook
   voor "wacht op zon" en "worden gekoeld".
 - **Versie 0.96.0.**
+
+---
+
+## 226. Rust op Thuis, Apparaten en Vandaag, en wat nu speelt bovenaan
+
+*Onderwerp: weergave · Status: geldig*
+
+31 oktober 2026, het tweede stuk van ronde 2 uit het rapport "SunArc
+polijsten". Daarbij een punt van de bewoner: de kaart van een apparaat op zon
+en de kaart Te doen verschijnen pas als er iets is, en kwamen dan onderaan de
+kolom. Aan de wand schuift niemand, dus de droger die draait of de GFT aan de
+straat zag je niet.
+
+*Besluit:*
+
+- **Wat nu speelt, bovenaan:** een apparaat dat draait of wacht, Straks
+  (wachten op zon), en uit Te doen het afval vanaf vijf uur de avond ervoor tot
+  twaalf uur op de dag zelf, of een herinnering binnen twee uur. Dat kan met
+  CSS (`order`): de kaarten verhuizen niet in de pagina, dus je eigen volgorde
+  blijft, en tijdens het aanpassen staat alles op zijn eigen plek. Op de
+  telefoon komen ze direct onder het huis.
+- **Thuis:** de sleutel van Onderhoud is weg. De bel telt en toont dezelfde
+  batterijen en filters al (besluit 221). De pil "Kijkt mee" op de wand is ook
+  weg; de kop zegt het (besluit 225).
+- **Zou verwarmen is rustig:** een kamer die alleen in de schaduw iets zou
+  doen, gloeit niet meer oranje in het huis en in de lijst op de telefoon.
+  Oranje betekent "let op". In stap B, als het huis echt regelt, gloeit hij
+  weer. De dienst zet daarvoor `klopt` alleen in de schaduw kritisch.
+- **Apparaten:** "SunArc zou: …" staat één keer boven de kaarten als het op
+  twee of meer kaarten hetzelfde zou zijn ("SunArc zou bij 5 apparaten:
+  verwarmen naar 20°"). Zonder meter staat er rechtsboven niets meer in plaats
+  van "– geen meter". De kaart Toevoegen is op de wand alleen de kop. De
+  stroombalk noemt ook je panelen, en 's avonds, als de omvormer niets
+  doorgeeft, is wat van het net komt het huis.
+- **Vandaag:** het warmste moment van een kamer pas na drie uur meten. Een
+  moment zonder actie ("Thermostaat badkamer: doel 20°") zegt het doel niet
+  nog eens eronder.
+- **Versie 0.97.0.**
 
 ---
 

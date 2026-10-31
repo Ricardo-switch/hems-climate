@@ -1247,7 +1247,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await wand.locator('[data-gevoel-tik="te_koud"]').waitFor({ timeout: 10_000 });
       await expect.poll(() => wand.locator('[data-kop]').textContent(), { timeout: 10_000 }).not.toMatch(/^(Loading|Even laden)$/);
       const tekst = (await wand.innerText()).replace(/\s+/g, ' ');
-      for (const engels of ['Favourites', 'How does it feel now?', 'Too cold', 'Watching', 'What are you doing now?', 'Put the lights']) expect(tekst).toContain(engels);
+      for (const engels of ['Favourites', 'How does it feel now?', 'Too cold', 'What are you doing now?', 'Put the lights']) expect(tekst).toContain(engels);
       for (const nl of ['Favorieten', 'Hoe voelt het', 'Te koud', 'Kijkt mee', 'Goedemorgen', 'Goedemiddag', 'Goedenavond', 'Wat doe je nu', 'Zet hier lampen']) expect(tekst).not.toContain(nl);
       // De datum bovenin in het Engels, welke dag het ook is.
       expect(tekst).not.toMatch(/maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag/);
@@ -1483,13 +1483,9 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       { id: 'd-dimmer', naam: 'Hue dimmer switch', pct: 64, kamer: null, kamerId: null, leeg: false },
     ];
     await p.goto(`${baseUrl}/thuis.html`);
-    // Onderhoud (15 oktober): ingeklapt een sleutel, een tik klapt open, Bekijk gaat naar de knop in de kamer.
-    const sleutel = wand.locator('[data-onderhoud-knop]');
-    await expect.poll(() => sleutel.isVisible(), { timeout: 10_000 }).toBe(true);
-    await sleutel.click();
-    const open = wand.locator('.onderhoudtekst');
-    expect(await open.textContent()).toContain(`${kamer.naam}: batterij 7%`);
-    expect(await open.locator('a', { hasText: 'Bekijk' }).getAttribute('href')).toBe(`kamer.html#${encodeURIComponent(kamer.id)}/batterij-d-knop`);
+    // Onderhoud staat alleen bij de bel (besluit 226): geen sleutel meer op Thuis.
+    await wand.locator('[data-kop]').waitFor({ timeout: 10_000 });
+    expect(await wand.locator('[data-onderhoud-knop]').count()).toBe(0);
     // De hele lijst blijft achter het weer.
     await p.evaluate("location.hash = '#batterijen'; location.reload()");
     const lijst = wand.locator('#weer-wand');
@@ -2642,8 +2638,8 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     expect(await kamers.count()).toBe(metTemperatuur.length);
     expect(await kamers.first().getAttribute('href')).toBe(`kamer.html#${encodeURIComponent(metTemperatuur[0]!.id)}`);
 
-    // Onder de kamers, in deze volgorde: Straks, het apparaat, Hoe voelt het, Vandaag.
-    const volgorde = ['[data-kaart="kamers"]', '[data-straks]', '[data-apparaatkaart]', '[data-gevoel-kaart]', 'a[href="vandaag.html"]'];
+    // Wat nu speelt bovenaan (besluit 226): Straks en het apparaat, dan de kamers, Hoe voelt het, Vandaag.
+    const volgorde = ['[data-straks]', '[data-apparaatkaart]', '[data-kaart="kamers"]', '[data-gevoel-kaart]', 'a[href="vandaag.html"]'];
     const tops: number[] = [];
     for (const sel of volgorde) {
       const v = await vak(`#tel .inhoud > ${sel}`);

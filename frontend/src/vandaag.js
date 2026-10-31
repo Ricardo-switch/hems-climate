@@ -145,7 +145,8 @@ function momentVan(b) {
   const doel = sp != null ? `${nl(sp, Number.isInteger(sp) ? 0 : 1)}°` : null;
   const reden = (b.waarom[0] ?? '').split(': ').slice(1).join(': ');
   const kop = actie ? `${naam} ${DOET.has(actie) ? t(`vandaag.doet.${actie}`) : actie}` : hoofd(b.wat[0] ?? t('vandaag.besluit'));
-  const zin = [reden ? `${hoofd(reden)}.` : '', doel && actie !== 'uit' ? t('vandaag.doel', { doel }) : ''].filter(Boolean).join(' ');
+  // Zonder actie noemt de kop het doel al ("Thermostaat badkamer: doel 20°"); dan niet nog eens eronder (besluit 226).
+  const zin = [reden ? `${hoofd(reden)}.` : '', doel && actie && actie !== 'uit' ? t('vandaag.doel', { doel }) : ''].filter(Boolean).join(' ');
   return { tMs: b.tMs, kop, zin, kleur: KLEUR[actie] ?? 'var(--zacht)', actuatorId: b.redenen?.[0]?.actuatorId ?? null, naam, actie };
 }
 
@@ -320,7 +321,8 @@ function tekenTijdlijn(r, verwacht, lijst) {
       const band = z.goed.vanC != null && z.goed.totC != null ? `<rect x="${X0}" y="${yt(z.goed.totC).toFixed(1)}" width="${X1 - X0}" height="${(yt(z.goed.vanC) - yt(z.goed.totC)).toFixed(1)}" fill="#6EE7B7" opacity="0.07"/>` : '';
       const punten = z.kwartieren.map((c, q) => (c == null ? null : { tMs: r.vanMs + q * 15 * 60_000, c })).filter((p) => p && p.tMs >= tA);
       const lijn = punten.map((p, k) => `${k ? 'L' : 'M'} ${x(p.tMs).toFixed(1)} ${yt(p.c).toFixed(1)}`).join(' ');
-      const warmst = punten.reduce((a, b) => (b.c > (a?.c ?? -Infinity) ? b : a), null);
+      // Het warmste moment pas na een paar uur meten (besluit 226): in een vers huis lag hij voor elke kamer op het nu.
+      const warmst = punten.length >= 12 ? punten.reduce((a, b) => (b.c > (a?.c ?? -Infinity) ? b : a), null) : null;
       const goed = z.goed.vanC != null && z.goed.totC != null ? t('vandaag.goed', { van: nl(z.goed.vanC, 0), tot: nl(z.goed.totC, 0) }) : '';
       return `${band}<text x="0" y="${top + Math.min(20, zoneH / 2 + 4)}" class="rij">${esc(z.naam)}</text>${zoneH >= 40 ? `<text x="0" y="${top + 38}" class="sub">${esc(goed)}</text>` : ''}
         <path d="${lijn}" fill="none" stroke="#EEF3F7" stroke-width="2.2"/>
