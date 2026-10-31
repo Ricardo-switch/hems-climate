@@ -537,20 +537,38 @@ const AFSLUITERS = new Set([
   'klaar', 'tot ziens', 'tot zo', 'doei', 'dag', 'later', 'welterusten', 'slaap lekker', 'thats all', 'thats it', 'nothing', 'goodbye', 'bye', 'good night',
 ]);
 
+/** Hoe het huis afscheid neemt, met wat afwisseling (besluit 225). De eerste is de gewone. */
+const AFSCHEID = {
+  nl: {
+    slaap: ['Welterusten.', 'Welterusten, slaap lekker.', 'Slaap lekker.'],
+    dag: ['Tot ziens.', 'Tot straks.', 'Tot later.'],
+    dank: ['Graag gedaan.', 'Graag gedaan, hoor.', 'Fijn dat ik kon helpen.'],
+    rest: ['Prima. Ik ben er als je me nodig hebt.', 'Goed. Roep maar als er iets is.', 'Prima. Zeg maar "Hé huis" als je me nodig hebt.'],
+  },
+  en: {
+    slaap: ['Good night.', 'Good night, sleep well.', 'Sleep well.'],
+    dag: ['Goodbye.', 'See you later.', 'Bye for now.'],
+    dank: ['You are welcome.', 'Happy to help.', 'Any time.'],
+    rest: ['All right. I am here when you need me.', 'Okay. Just call if anything comes up.', 'All right. Say "Hé huis" when you need me.'],
+  },
+} as const;
+
 /**
  * "Oké bedankt" of "dat was het" (21 oktober 2026): het gesprek is klaar. Het
  * huis zegt iets terug en luistert niet verder. Null als het geen afsluiter is.
+ * Welke variant, wisselt per uur (besluit 225).
  */
-export function afsluiter(ruw: string, lang: Lang): string | null {
+export function afsluiter(ruw: string, lang: Lang, nuMs: number = Date.now()): string | null {
   const woorden = gewoon(ruw).split(' ').filter((w) => w !== '');
   if (woorden.length === 0 || woorden.length > 6) return null;
   const rest = woorden.filter((w) => !VULWOORDEN.has(w)).join(' ');
   if (!AFSLUITERS.has(rest)) return null;
-  const nl = lang === 'nl';
-  if (/welterusten|slaap lekker|good night/.test(rest)) return nl ? 'Welterusten.' : 'Good night.';
-  if (/tot ziens|tot zo|doei|^dag$|later|goodbye|bye/.test(rest)) return nl ? 'Tot ziens.' : 'Goodbye.';
-  if (/dank|bedankt|thank|merci/.test(rest)) return nl ? 'Graag gedaan.' : 'You are welcome.';
-  return nl ? 'Prima. Ik ben er als je me nodig hebt.' : 'All right. I am here when you need me.';
+  const a = AFSCHEID[lang];
+  const kies = (lijst: readonly string[]) => lijst[Math.floor(nuMs / 3_600_000) % lijst.length]!;
+  if (/welterusten|slaap lekker|good night/.test(rest)) return kies(a.slaap);
+  if (/tot ziens|tot zo|doei|^dag$|later|goodbye|bye/.test(rest)) return kies(a.dag);
+  if (/dank|bedankt|thank|merci/.test(rest)) return kies(a.dank);
+  return kies(a.rest);
 }
 
 /* ---------------------------------------------------------------- kiezen */

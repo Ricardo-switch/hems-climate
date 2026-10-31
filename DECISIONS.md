@@ -226,6 +226,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [221. Groepen van Zigbee2MQTT, en de rest van de beoordeling](#221-groepen-van-zigbee2mqtt-en-de-rest-van-de-beoordeling)
 - [222. SunArc: een nieuwe naam en een eigen teken](#222-sunarc-een-nieuwe-naam-en-een-eigen-teken)
 - [224. De assistent bij screens en tijden, en de zon als stem](#224-de-assistent-bij-screens-en-tijden-en-de-zon-als-stem)
+- [225. Sfeerzinnen: menselijker en wisselend](#225-sfeerzinnen-menselijker-en-wisselend)
 
 **Veiligheid**
 
@@ -10465,6 +10466,46 @@ het huis kwamen er vier oorzaken boven.
   film, staat hij stil (`kit/zon.svg`). Met Minder beweging staan de stralen
   stil. Een dicht venster rekent niet mee.
 - **Versie 0.95.0.**
+
+---
+
+## 225. Sfeerzinnen: menselijker en wisselend
+
+*Onderwerp: weergave · Status: geldig*
+
+31 oktober 2026, het begin van ronde 2 uit het rapport "SunArc polijsten". De
+bewoner wilde de sfeerzinnen menselijker en dynamischer: de kop en de zin op
+Thuis, en wat de assistent zegt als hij begint en afsluit. En Chirp, de stem
+van Google, sprak "app" uit als de letters E en P.
+
+*Besluit:*
+
+- **De kop op Thuis** volgt het dagdeel en het weer: "Frisse ochtend", "Warme
+  middag", "Rustige avond", "Het huis slaapt". Er zijn een paar varianten, en
+  die wisselen per drie uur. Zo zegt Thuis niet elke dag hetzelfde, maar
+  flikkert de kop ook niet.
+- **Meer kamers in de schaduw:** eronder één samenvatting in plaats van
+  "Zolder: zou verwarmen." per kamer. Bijvoorbeeld: "Binnen 18 tot 19,8°,
+  buiten 11°. Vier kamers zijn kouder dan je wilt. Het huis kijkt nog mee." De
+  kamers zelf staan al in het huis.
+- **Eén kamer in de schaduw:** "De zolder is fris" of "De woonkamer is warm",
+  met de getallen eronder, in plaats van "De zolder zou verwarmen".
+- **Niets te doen:** wat de panelen geven en hoe het buiten is ("Je panelen
+  geven 1,2 kW. Geen kamer heeft iets nodig. Buiten is het 11°."), in plaats
+  van "Er draait niets" en "Geen zon, en geen kamer heeft iets nodig".
+- Wat iets meldt, blijft zoals het was: een kamer die echt verwarmd wordt, de
+  droger, wachten op zon, een storing.
+- **De assistent begint** met je naam, de kop van dat moment en een vraag die
+  per uur wisselt: "Goedemiddag, Ricardo. Frisse middag. Wat kan ik voor je
+  doen?". **Hij sluit af** met drie varianten per soort ("Graag gedaan, hoor.",
+  "Welterusten, slaap lekker.", "Goed. Roep maar als er iets is.").
+- **Hardop:** de klankregels voor Piper ("ep", "erko", "geevel") gelden alleen
+  nog voor Piper en andere Wyoming-stemmen. Chirp en de stem van je toestel
+  krijgen "app" en "airco" zoals ze zijn. "cee vee" blijft voor iedereen.
+- **Opgelost:** bij twee of meer kamers stond er "de de zolder". De namen
+  hebben hun lidwoord al, en het samenvoegen zette er nog een voor. Dat gold ook
+  voor "wacht op zon" en "worden gekoeld".
+- **Versie 0.96.0.**
 
 ---
 

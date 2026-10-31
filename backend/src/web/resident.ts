@@ -19,7 +19,7 @@ import type { Command, DeferrableExplanation, DeferrableStateCode } from '../cor
 import { FALLBACK_PROGRAM_MIN } from '../core/deferrable.js';
 import type { Deferrable, SiteConfig } from '../core/model.js';
 import { SHORT, cap, residentRooms, withArticle, type DecisionView, type Lang, type ResidentRoom } from './assistant.js';
-import { clockIn, nextLocalTime } from './today.js';
+import { clockIn, nextLocalTime, partsIn } from './today.js';
 import { residentBuffers, type ResidentBuffer } from './buffers-bewoner.js';
 import { BASIS_ZONDER_METER_W } from './energy.js';
 
@@ -155,8 +155,9 @@ const HEAD = {
     // Zonder slimme regeling (besluit 194): geen kamers om naar te kijken.
     nothingSunNoRooms: 'De zon schijnt, en er hoeft niets te draaien.',
     nothingDarkNoRooms: 'Geen zon, en er hoeft niets te draaien.',
-    and: ' en de ',
-    comma: ', de ',
+    // De namen hebben hun lidwoord al (withArticle): eerst stond er "de de zolder" (31 oktober 2026).
+    and: ' en ',
+    comma: ', ',
     towards: 'naar',
     would: (what: string, why: string) => `zou ${what}, maar ${why}`,
     quiet: (names: string) => `${names}: niets te doen`,
@@ -201,8 +202,8 @@ const HEAD = {
     nothingDark: 'No sun, and no room needs anything.',
     nothingSunNoRooms: 'The sun is shining, and nothing needs to run.',
     nothingDarkNoRooms: 'No sun, and nothing needs to run.',
-    and: ' and the ',
-    comma: ', the ',
+    and: ' and ',
+    comma: ', ',
     towards: 'at',
     would: (what: string, why: string) => `would be ${what}, but ${why}`,
     quiet: (names: string) => `${names}: nothing to do`,
@@ -223,10 +224,64 @@ const HEAD = {
   },
 } as const;
 
+/*
+ * De sfeer van de kop (besluit 225): naar het dagdeel en het weer, en wisselend
+ * per drie uur, zodat Thuis niet elke dag hetzelfde zegt en ook niet flikkert.
+ * Eronder een samenvatting in plaats van "Zolder: zou verwarmen." per kamer; de
+ * kamers zelf staan al in het huis.
+ */
+type Dagdeel = 'nacht' | 'ochtend' | 'middag' | 'avond';
+const SFEER = {
+  nl: {
+    koud: { nacht: ['Koele nacht'], ochtend: ['Frisse ochtend', 'Koude start van de dag'], middag: ['Frisse middag', 'Het mag wat warmer'], avond: ['Koele avond', 'Het mag wat warmer'] },
+    warm: { nacht: ['Warme nacht'], ochtend: ['Warme ochtend'], middag: ['Warme middag', 'Het mag wat koeler'], avond: ['Warme avond', 'Het mag wat koeler'] },
+    rustig: { nacht: ['Rustige nacht', 'Het huis slaapt'], ochtend: ['Rustige ochtend', 'Alles op temperatuur'], middag: ['Alles op temperatuur', 'Rustig in huis'], avond: ['Rustige avond', 'Alles op temperatuur'] },
+    zon: ['Alles op temperatuur', 'Zon op het dak', 'Rustig in huis'],
+    fris: (room: string) => `${cap(room)} is fris`,
+    warmKamer: (room: string) => `${cap(room)} is warm`,
+    binnen: (lo: string, hi: string) => (lo === hi ? `Binnen ${lo}°` : `Binnen ${lo} tot ${hi}°`),
+    buiten: (b: string) => `buiten ${b}°`,
+    kouder: (kamers: string, veel: boolean) => `${cap(kamers)} ${veel ? 'zijn' : 'is'} kouder dan je wilt.`,
+    warmer: (kamers: string, veel: boolean) => `${cap(kamers)} ${veel ? 'zijn' : 'is'} warmer dan je wilt.`,
+    gemengd: 'Een paar kamers zijn kouder of warmer dan je wilt.',
+    tel: (n: number) => `${['', 'Eén', 'Twee', 'Drie', 'Vier', 'Vijf', 'Zes', 'Zeven', 'Acht', 'Negen', 'Tien'][n] ?? n} kamers`,
+    kijkt: ['Het huis kijkt nog mee.', 'Het huis kijkt mee en leert.'],
+    panelen: (kw: string) => `Je panelen geven ${kw} kW.`,
+    niets: 'Geen kamer heeft iets nodig.',
+    buitenZin: (b: string) => `Buiten is het ${b}°.`,
+  },
+  en: {
+    koud: { nacht: ['A cool night'], ochtend: ['A crisp morning', 'A chilly start'], middag: ['A crisp afternoon', 'It could be warmer'], avond: ['A cool evening', 'It could be warmer'] },
+    warm: { nacht: ['A warm night'], ochtend: ['A warm morning'], middag: ['A warm afternoon', 'It could be cooler'], avond: ['A warm evening', 'It could be cooler'] },
+    rustig: { nacht: ['A quiet night', 'The house is asleep'], ochtend: ['A quiet morning', 'All at temperature'], middag: ['All at temperature', 'All quiet at home'], avond: ['A quiet evening', 'All at temperature'] },
+    zon: ['All at temperature', 'Sun on the roof', 'All quiet at home'],
+    fris: (room: string) => `${cap(room)} is chilly`,
+    warmKamer: (room: string) => `${cap(room)} is warm`,
+    binnen: (lo: string, hi: string) => (lo === hi ? `Inside ${lo}°` : `Inside ${lo} to ${hi}°`),
+    buiten: (b: string) => `outside ${b}°`,
+    kouder: (kamers: string, veel: boolean) => `${cap(kamers)} ${veel ? 'are' : 'is'} colder than you like.`,
+    warmer: (kamers: string, veel: boolean) => `${cap(kamers)} ${veel ? 'are' : 'is'} warmer than you like.`,
+    gemengd: 'A few rooms are colder or warmer than you like.',
+    tel: (n: number) => `${['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten'][n] ?? n} rooms`,
+    kijkt: ['The house is still watching.', 'The house is watching and learning.'],
+    panelen: (kw: string) => `Your panels give ${kw} kW.`,
+    niets: 'No room needs anything.',
+    buitenZin: (b: string) => `It is ${b}° outside.`,
+  },
+} as const;
+
+/** Het dagdeel in het huis zelf. */
+function dagdeelVan(ms: number, tz: string): Dagdeel {
+  const h = partsIn(ms, tz).h;
+  return h < 6 ? 'nacht' : h < 12 ? 'ochtend' : h < 18 ? 'middag' : 'avond';
+}
+/** Een van de varianten, dezelfde voor drie uur: wisselend, maar zonder te flikkeren. */
+const kies = <T>(lijst: readonly T[], ms: number): T => lijst[Math.floor(ms / 10_800_000) % lijst.length]!;
+
 const round1 = (n: number) => Math.round(n * 10) / 10;
 const decimal = (n: number, lang: Lang) => (lang === 'nl' ? String(round1(n)).replace('.', ',') : String(round1(n)));
 
-/** "woonkamer", "zolder" → "woonkamer en de zolder". */
+/** "de woonkamer", "de zolder" → "de woonkamer en de zolder": de namen hebben hun lidwoord al. */
 function joinRooms(names: readonly string[], lang: Lang): string {
   if (names.length <= 1) return names[0] ?? '';
   const w = HEAD[lang];
@@ -244,18 +299,31 @@ export function residentHeadline(config: SiteConfig, snap: DecisionView, rooms: 
   const active = named.filter(({ r }) => r.soort === 'cool' || r.soort === 'heat');
   const waiting = named.filter(({ r }) => r.soort === 'wait');
   if (e.failsafe.active) return { boven, titel: w.fault[0], zin: w.fault[1] };
+  const s = SFEER[lang];
+  const deel = dagdeelVan(snap.atMs, config.timezone);
+  const buiten = e.outdoorTemperatureC != null ? decimal(e.outdoorTemperatureC, lang) : null;
   if (active.length > 0) {
     // In de schaduw "zou", tenzij het echte apparaat al doet wat het besluit wil (besluit 188).
     const echt = !shadow || active.every(({ r }) => r.klopt);
     const zelfde = active.every(({ r }) => r.soort === active[0]!.r.soort);
+    const koel = active[0]!.r.soort === 'cool';
+    // Meer kamers in de schaduw (besluit 225): de sfeer van het moment, en eronder één samenvatting.
+    if (active.length > 1 && shadow && !(echt && zelfde)) {
+      const temps = active.map(({ r }) => e.perZone.find((z) => z.zoneId === r.zoneId)?.temperatureC).filter((t): t is number => t != null);
+      const binnen = temps.length ? s.binnen(decimal(Math.min(...temps), lang), decimal(Math.max(...temps), lang)) : null;
+      const kamers = active.length > 3 ? s.tel(active.length) : joinRooms(active.map(({ name }) => mid(name)), lang);
+      const wat = !zelfde ? s.gemengd : koel ? s.warmer(kamers, true) : s.kouder(kamers, true);
+      const getal = binnen ? `${binnen}${buiten != null ? `, ${s.buiten(buiten)}` : ''}.` : null;
+      return { boven, titel: kies(zelfde ? (koel ? s.warm : s.koud)[deel] : [w.manyWould], snap.atMs), zin: [getal, wat, kies(s.kijkt, snap.atMs)].filter((x) => x != null).join(' ') };
+    }
     const titel =
       active.length === 1
-        ? (echt ? w.one : w.oneWould)(mid(active[0]!.name), active[0]!.r.soort === 'cool')
+        ? echt
+          ? w.one(mid(active[0]!.name), koel)
+          : (koel ? s.warmKamer : s.fris)(mid(active[0]!.name))
         : !shadow
           ? w.many
-          : echt && zelfde
-            ? w.manyReal(joinRooms(active.map(({ name }) => mid(name)), lang), active[0]!.r.soort === 'cool')
-            : w.manyWould;
+          : w.manyReal(joinRooms(active.map(({ name }) => mid(name)), lang), koel);
     // Eén kamer: de kop zegt het al, dus eronder hoe warm het er is en wat het doel is.
     const een = active.length === 1 ? e.perZone.find((z) => z.zoneId === active[0]!.r.zoneId) : undefined;
     const getallen =
@@ -279,7 +347,13 @@ export function residentHeadline(config: SiteConfig, snap: DecisionView, rooms: 
   }
   const solar = e.solarProductionW;
   const zonder = config.zones.length === 0;
-  const zin = solar != null && solar > 30 ? (zonder ? w.nothingSunNoRooms : w.nothingSun) : zonder ? w.nothingDarkNoRooms : w.nothingDark;
+  const zonOp = solar != null && solar > 30;
+  // Niets te doen (besluit 225): wat de panelen geven en hoe het buiten is, in plaats van "Geen zon, en …".
+  const zin = zonder
+    ? zonOp
+      ? w.nothingSunNoRooms
+      : w.nothingDarkNoRooms
+    : [zonOp ? s.panelen(decimal(solar / 1000, lang)) : null, s.niets, buiten != null ? s.buitenZin(buiten) : null].filter((x) => x != null).join(' ');
   // Geen kamer heeft iets nodig, maar de droger draait: dan niet "Er draait niets" (besluit 166).
   const naam = (id: string) => config.deferrables?.find((x) => x.id === id)?.name ?? id;
   const draait = (e.deferrables ?? []).filter((d) => d.state === 'running' && d.doneSinceMs == null).map((d) => naam(d.id));
@@ -287,7 +361,7 @@ export function residentHeadline(config: SiteConfig, snap: DecisionView, rooms: 
   // Klaar met drogen, maar nog tegen kreuken: dan "De droger is klaar" (besluit 167).
   const klaar = (e.deferrables ?? []).filter((d) => d.state === 'running' && d.doneSinceMs != null).map((d) => naam(d.id));
   if (klaar.length > 0) return { boven, titel: w.done(joinRooms(klaar.map((n) => mid(n)), lang), klaar.length > 1), zin };
-  return { boven, titel: w.nothing, zin };
+  return { boven, titel: kies(zonOp ? s.zon : s.rustig[deel], snap.atMs), zin };
 }
 
 export function residentFlows(snap: DecisionView, metMeter = true): ResidentFlows {

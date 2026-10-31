@@ -635,7 +635,8 @@ describe('de stand per kamer voor de kaart (besluit 94)', () => {
     expect([r.kort, r.klopt]).toEqual(['Koelt op zon', true]);
     expect(residentView(config, view({ accepted: [coolOnSun] })).kop.titel).toBe('De zolder wordt gekoeld');
     const uit = { nest: 'heat@20', badkamer: 'off@18', 'ac-woonkamer': 'off', 'ac-zolder': 'off' };
-    expect(residentView(config, view({ accepted: [coolOnSun], observed: uit })).kop.titel).toBe('De zolder zou koelen');
+    // In de schaduw zegt de kop hoe het er is (besluit 225); de getallen staan eronder.
+    expect(residentView(config, view({ accepted: [coolOnSun], observed: uit })).kop.titel).toBe('De zolder is warm');
   });
 
   it('wacht op zon, of zegt waarom het wacht', () => {
@@ -702,10 +703,31 @@ describe('het bewonerscontract voor Thuis en Waarom (besluit 94)', () => {
     expect(residentView(config, v, 'nl', false).kop.titel).toBe('De zolder wordt gekoeld');
   });
 
-  it('zegt "er draait niets" als geen kamer iets wil', () => {
+  it('zegt hoe het in huis is als geen kamer iets wil: de zon, en buiten (besluit 225)', () => {
     const kop = residentView(config, view({ explanation: explanation({ perZone: explanation().perZone.map((z) => ({ ...z, demand: 'none', reason: 'zone_satisfied' })) }) })).kop;
-    expect(kop.titel).toBe('Er draait niets');
-    expect(kop.zin).toBe('Geen kamer heeft iets nodig.');
+    expect(['Alles op temperatuur', 'Zon op het dak', 'Rustig in huis']).toContain(kop.titel);
+    expect(kop.zin).toBe('Je panelen geven 1,8 kW. Geen kamer heeft iets nodig. Buiten is het 17°.');
+    // 's Nachts, zonder zon: rustig, en het dagdeel in de kop.
+    const nacht = Date.parse('2026-10-05T01:30:00Z');
+    const stil = residentView(config, view({ atMs: nacht, explanation: explanation({ solarProductionW: 0, outdoorTemperatureC: 8, perZone: explanation().perZone.map((z) => ({ ...z, demand: 'none', reason: 'zone_satisfied' })) }) })).kop;
+    expect(['Rustige nacht', 'Het huis slaapt']).toContain(stil.titel);
+    expect(stil.zin).toBe('Geen kamer heeft iets nodig. Buiten is het 8°.');
+  });
+
+  it('vat meer kamers in de schaduw samen, met de sfeer van het moment (besluit 225)', () => {
+    const perZone = explanation().perZone.map((z) => (z.zoneId === 'woonkamer' ? { ...z, temperatureC: 23.4, targetC: 22, demand: 'cool' as const, reason: 'zone_above_setpoint' as const } : z));
+    const v = (atMs: number) => view({ atMs, explanation: explanation({ perZone }), accepted: [coolOnSun, { ...coolOnSun, zoneId: 'woonkamer', actuatorId: 'ac-woonkamer' }], observed: { nest: 'heat@20', badkamer: 'off@18', 'ac-woonkamer': 'off', 'ac-zolder': 'off' } });
+    const kop = residentView(config, v(AT)).kop;
+    expect(['Warme middag', 'Het mag wat koeler']).toContain(kop.titel);
+    expect(kop.zin).toMatch(/^Binnen 23,4 tot 24,3°, buiten 17°\. De (woonkamer en de zolder|zolder en de woonkamer) zijn warmer dan je wilt\. Het huis kijkt (nog mee|mee en leert)\.$/);
+    expect(kop.zin).not.toMatch(/zou koelen/);
+    // Wisselend per drie uur, maar binnen die drie uur hetzelfde: geen flikkering.
+    // Twee blokken van drie uur in de middag: 14:00 en 17:00 in Nederland.
+    const blok = Date.parse('2026-10-05T12:00:00Z');
+    expect(residentView(config, v(blok + 60_000)).kop.titel).toBe(residentView(config, v(blok + 170 * 60_000)).kop.titel);
+    expect(residentView(config, v(blok + 60_000)).kop.titel).not.toBe(residentView(config, v(blok + 10_800_000 + 60_000)).kop.titel);
+    // In het Engels net zo.
+    expect(['A warm afternoon', 'It could be cooler']).toContain(residentView(config, v(AT), 'en').kop.titel);
   });
 
   it('zegt dat de droger draait, niet "er draait niets" (besluit 166)', () => {
@@ -713,7 +735,7 @@ describe('het bewonerscontract voor Thuis en Waarom (besluit 94)', () => {
     const perZone = explanation().perZone.map((z) => ({ ...z, demand: 'none' as const, reason: 'zone_satisfied' as const }));
     const kop = residentView(met, view({ explanation: explanation({ perZone, deferrables: [{ id: 'droger', state: 'running', reason: 'program_running' }] }) })).kop;
     expect(kop.titel).toBe('De droger draait');
-    expect(kop.zin).toBe('Geen kamer heeft iets nodig.');
+    expect(kop.zin).toBe('Je panelen geven 1,8 kW. Geen kamer heeft iets nodig. Buiten is het 17°.');
   });
 
   it('zegt dat de droger klaar is als hij nog tegen kreuken draait (besluit 167)', () => {

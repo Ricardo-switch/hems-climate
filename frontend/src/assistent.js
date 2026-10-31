@@ -91,6 +91,16 @@ function groet() {
   return namen.length ? `${tijd}, ${namen.length > 1 ? `${namen.slice(0, -1).join(', ')} ${taal.t('algemeen.en')} ${namen.at(-1)}` : namen[0]}` : tijd;
 }
 
+/*
+ * Wat het huis zegt als je begint (besluit 225): je naam, de kop van dit moment
+ * ("Frisse middag", "De droger draait"), en een vraag die per uur wisselt.
+ */
+const VRAGEN = ['assistent.vraag1', 'assistent.vraag2', 'assistent.vraag3'];
+function welkom() {
+  const kop = state?.bewoner?.kop?.titel;
+  return [`${groet()}.`, kop ? `${kop}.` : '', taal.t(VRAGEN[Math.floor(Date.now() / 3_600_000) % VRAGEN.length])].filter(Boolean).join(' ');
+}
+
 const zoneNaam = (id) => huismodel.zoneNaam(id, huisData);
 
 /* ------------------------------------------------------------ de vragen */
@@ -601,8 +611,8 @@ function spraakHtml() {
   if (stand === 'praat' && zegtNu != null && zegtNu !== nu?.antwoord) return `${wie(taal.t('assistent.praat'))}<p class="zegt loopt" data-zegt>${woordHtml(zegtNu)}</p>`;
   if (stand === 'begin' || !nu) {
     const kop = state?.bewoner?.kop;
-    const tekst = taal.t('assistent.welkom', { groet: groet() });
-    return `${wie(taal.t('assistent.jeHuis'))}<p class="zegt" data-zegt>${woordHtml(tekst)}</p>${kop ? `<p class="klein-zegt">${esc([kop.titel, kop.zin].filter(Boolean).join('. ').replace(/\.\./g, '.'))}</p>` : ''}`;
+    // De kop zit al in de begroeting; eronder alleen de zin.
+    return `${wie(taal.t('assistent.jeHuis'))}<p class="zegt" data-zegt>${woordHtml(welkom())}</p>${kop?.zin ? `<p class="klein-zegt">${esc(kop.zin)}</p>` : ''}`;
   }
   const jij = `<p class="jij">${esc(taal.t('assistent.jij'))}: <b>${esc(nu.label)}</b></p>`;
   if (stand === 'denkt') return `${wie(taal.t('assistent.denkt'))}${jij}<p class="zegt" style="color: var(--gedempt)">${esc(taal.t('kamer.kijken'))}</p>`;
@@ -762,7 +772,7 @@ document.addEventListener('click', (e) => {
     // De bol: het huis begroet je, of herhaalt het laatste antwoord.
     if (nu?.antwoord && stand === 'verder') return void zeg(nu.antwoord, nu.gesproken ?? nu.antwoord);
     stand = 'begin';
-    void zeg(taal.t('assistent.welkom', { groet: groet() })).then(() => {
+    void zeg(welkom()).then(() => {
       stand = 'begin';
       teken();
     });

@@ -1,5 +1,33 @@
 # Wat is er nieuw · What is new
 
+## 0.96.0
+
+*31 oktober 2026*
+
+**Beter**
+
+- De kop op Thuis volgt het dagdeel en het weer, zoals "Frisse ochtend" of "Rustige avond", en wisselt een paar keer per dag
+- Eronder één samenvatting in plaats van "zou verwarmen" per kamer
+- De assistent begroet je met je naam en hoe het nu is, en wisselt zijn vraag en zijn afscheid af
+- Chirp en de stem van je toestel zeggen "app" en "airco" weer gewoon
+
+**Opgelost**
+
+- Bij twee kamers stond er "de de zolder"
+
+*English*
+
+**Improved**
+
+- The heading on Home follows the time of day and the weather, such as "A crisp morning" or "A quiet evening", and changes a few times a day
+- Below it one summary instead of "would heat" per room
+- The assistant greets you by name with how things are now, and varies its question and its goodbye
+- Chirp and your device voice say "app" and "airco" normally again
+
+**Fixed**
+
+- With two rooms the text said "the the attic"
+
 ## 0.95.0
 
 *31 oktober 2026*
