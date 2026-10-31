@@ -1,5 +1,21 @@
 # Wat is er nieuw · What is new
 
+## 0.99.0
+
+*31 oktober 2026*
+
+**Beter**
+
+- Minder losse knoppen: een keuze uit een paar is één balk, en de kaarten van de wand zijn schakelaars
+- Onderaan Thuis staan de voorbeeldvragen als tekst, en op Apparaten staan de etiketten in één regel
+
+*English*
+
+**Improved**
+
+- Fewer loose buttons: a choice between a few is one bar, and the wall cards are switches
+- At the bottom of Home the example questions are plain text, and Devices shows its tags on one line
+
 ## 0.98.0
 
 *31 oktober 2026*

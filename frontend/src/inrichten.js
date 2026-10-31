@@ -802,7 +802,7 @@ function metenStap() {
     const chips = hier.map((b) => knop(`data-meet="${esc(b.id)}" data-meetkamer="${esc(r.id)}"`, `${b.naam} · ${nl(b.c)}°`, gekozen.has(b.id))).join('');
     // Zonder eigen thermometer in de kamer: alleen waarmee hij nu meet.
     const nu = r.meetMet?.length ? `<span class="zacht">${esc(t(chips ? 'inr.meet.nu' : 'inr.meet.met', { namen: lijstje(r.meetMet) }))}</span>` : '';
-    return rij(r.naam, chips + (nu || (chips ? '' : `<span class="zacht">${esc(t('inr.meet.geen'))}</span>`)));
+    return rij(r.naam, chips + (nu || (chips ? '' : `<span class="zacht">${esc(t('inr.meet.geen'))}</span>`))).replace('<div class="chips">', '<div class="chips" data-meer>');
   });
   return {
     waar: waarVan('meten'),
@@ -1439,7 +1439,7 @@ function wandStap() {
   const taal = v?.tel?.taal ?? 'auto';
   const instellen = v
     ? `${wandje}
-       ${rij(t('inr.kaarten'), WAND_KAARTEN.map((k) => knop(`data-wkaart="${k}"`, t(`inr.kaart.${k}`), kaarten.includes(k))).join(''))}
+       ${`<div class="schakelblok"><b>${esc(t('inr.kaarten'))}</b><div class="kolom schakels">${WAND_KAARTEN.map((k) => schakel(`data-wkaart="${k}"`, t(`inr.kaart.${k}`), kaarten.includes(k))).join('')}</div></div>`}
        ${n ? rij(t('inr.alsNiemand'), knop('data-wnacht', t('inr.nachtsUit', { van: n.van, tot: n.tot }), n.nacht === true)) : ''}
        ${v.scherm ? '' : rij(t('jij.taal.kop'), ['auto', 'nl', 'en'].map((x) => knop(`data-wtaal="${x}"`, t(`jij.taal.${x}`), taal === x)).join(''))}`
     : '';
@@ -1786,6 +1786,7 @@ function tekenNu() {
       <div class="voet">${links || '<span></span>'}${rechts}</div>`;
     const rijen = el.querySelector('.rijen');
     if (rijen && was) rijen.scrollTop = was;
+    app.segmenten(el);
   });
   markeerMeer();
   // Een kamer die open gaat, schuift in beeld.

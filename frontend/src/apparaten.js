@@ -271,7 +271,8 @@ function klimaatKaart({ a, r }) {
   const dag = meter
     ? `<div class="vandaag">${vandaagKop}<b>${esc(t('apparaten.eigenZon', { kwh: nl(meter.kwh), pct: zonPct }))}</b></div><div class="verdeel"><i style="width: ${zonPct}%; background: var(--zon)"></i><i style="width: ${100 - zonPct}%; background: #8796a8"></i></div>`
     : `<div class="vandaag">${vandaagKop}<b>${esc(aanMs > 0 ? t('apparaten.aan', { duur: uren(aanMs) }) : t('apparaten.nietAan'))}</b></div>`;
-  const labels = [a.klimaat?.rol ? `<span class="label${a.klimaat.rol === 'zon' ? ' zon' : ''}">${esc(ROL(a.klimaat.rol))}</span>` : '', a.klimaat?.filter?.pct != null ? `<span class="label">${esc(t('apparaten.filter', { pct: a.klimaat.filter.pct }))}</span>` : ''].join('');
+  // Gewone tekst in één regel, geen etiketjes (besluit 228): "Houdt op temperatuur · filter 20%".
+  const labels = [a.klimaat?.rol ? ROL(a.klimaat.rol) : '', a.klimaat?.filter?.pct != null ? t('apparaten.filter', { pct: a.klimaat.filter.pct }) : ''].filter(Boolean).join(' · ');
   const el = document.createElement('a');
   el.className = 'glas app';
   el.href = `kamer.html#${encodeURIComponent(r.id)}/${encodeURIComponent(a.id)}`;
@@ -282,7 +283,7 @@ function klimaatKaart({ a, r }) {
     <div class="kopje"><span class="ik${a.klimaat?.kanKoelen ? '' : ' warm'}">${a.klimaat?.kanKoelen ? IK.airco : IK.warm}</span><div><b>${esc(a.naam)}</b><span class="mini">${esc(r.naam)}</span></div><div class="kw">${kw}</div></div>
     <div class="stand"><i style="background: ${stand[1]}"></i>${esc(stand[0])}</div>
     ${zin ? `<p class="mini zin">${esc(zin)}</p>` : ''}
-    ${labels ? `<div class="labels">${labels}</div>` : ''}
+    ${labels ? `<p class="mini etiket">${esc(labels)}</p>` : ''}
     ${dag}`;
   return el;
 }

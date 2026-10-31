@@ -1108,6 +1108,19 @@
     }
   }
 
+  /**
+   * Minder bubbels (besluit 228): een rij van twee tot vier knoppen waarvan er één
+   * kan aanstaan, wordt een segmentbalk. Een rij met `data-meer` (meer tegelijk
+   * kiezen), of met een link of ander element erin, blijft zoals hij is.
+   */
+  function segmenten(root = document) {
+    for (const rij of root.querySelectorAll('.chips:not([data-meer])')) {
+      const k = [...rij.children];
+      const ok = k.length >= 2 && k.length <= 4 && k.every((x) => x.matches('button.chip[aria-pressed]')) && k.filter((x) => x.getAttribute('aria-pressed') === 'true').length <= 1;
+      rij.classList.toggle('seg', ok);
+    }
+  }
+
   function start(tab) {
     if (terugUitHA()) return;
     zetNav(tab);
@@ -1778,5 +1791,5 @@
     return Promise.resolve(false);
   }
 
-  global.app = { kanApparaatSpreken, zegMetApparaat, huisSoort, persoonlijk, $$, metLidwoord, nl, zet, esc, bijnaOp, klokVan, wanneer, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting, gebundeld, zicht, aanbellen, offline, online, inHA, volledigGekozen, zetVolledig, naarHA, zetWeergave, weergave: () => weergaveNu, zetThema, kleurVan, tekstKleur, houToegang, updateKlaar, bijwerkVenster, bijVerandering, kanInstalleren, geinstalleerd, installeer, naarHAScherm, terugknop, onthoudInrichten, vergeetInrichten };
+  global.app = { kanApparaatSpreken, zegMetApparaat, huisSoort, persoonlijk, $$, metLidwoord, nl, zet, esc, bijnaOp, klokVan, wanneer, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting, gebundeld, zicht, aanbellen, offline, online, inHA, volledigGekozen, zetVolledig, naarHA, zetWeergave, weergave: () => weergaveNu, zetThema, kleurVan, tekstKleur, houToegang, updateKlaar, bijwerkVenster, bijVerandering, kanInstalleren, geinstalleerd, installeer, naarHAScherm, terugknop, onthoudInrichten, vergeetInrichten, segmenten };
 })(window);

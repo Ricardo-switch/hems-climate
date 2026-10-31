@@ -229,6 +229,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [225. Sfeerzinnen: menselijker en wisselend](#225-sfeerzinnen-menselijker-en-wisselend)
 - [226. Rust op Thuis, Apparaten en Vandaag, en wat nu speelt bovenaan](#226-rust-op-thuis-apparaten-en-vandaag-en-wat-nu-speelt-bovenaan)
 - [227. Instellingen zonder doorlopen, en terug naar dezelfde stap van Inrichten](#227-instellingen-zonder-doorlopen-en-terug-naar-dezelfde-stap-van-inrichten)
+- [228. Minder bubbels](#228-minder-bubbels)
 
 **Veiligheid**
 
@@ -10578,6 +10579,34 @@ Assistant of naar een andere pagina gaat, moet op dezelfde stap terugkomen.
 - HACS blijft voorlopig: wie SunArc buiten de add-on draait, zet de integratie
   daarmee neer.
 - **Versie 0.98.0.**
+
+---
+
+## 228. Minder bubbels
+
+*Onderwerp: weergave · Status: geldig*
+
+31 oktober 2026, het vierde stuk van ronde 2 uit het rapport "SunArc
+polijsten". De bewoner: "op veel plekken ben je geneigd al die klikbare
+bubbels te gebruiken". Dezelfde afgeronde knop stond voor een keuze, een stand,
+een voorbeeld en een etiket.
+
+*Besluit:*
+
+- **Eén keuze uit twee tot vier** is een segmentbalk: één vorm, de keuze licht
+  op. `app.segmenten(el)` zet de klasse `seg` op een `.chips`-rij met twee tot
+  vier knoppen waarvan er hooguit één aan staat; de knoppen houden hun gedrag.
+  Een rij waar je meer tegelijk kiest (`data-meer`, zoals de thermometers per
+  kamer) blijft zoals hij is. Inrichten doet het na elke stap.
+- **Iets aan of uit per ding:** de kaarten van de wand zijn schakelaars in twee
+  kolommen, in plaats van dertien knoppen.
+- **Een voorbeeld om te vragen** onderaan Thuis is tekst tussen
+  aanhalingstekens, geen knop.
+- **Een etiket op een apparaat** is gewone tekst in één regel: "Houdt op
+  temperatuur · filter 20%".
+- Kiezen uit veel was al een keuzelijst (de dag, de hoofdzekering). Wat je huis
+  kan en Hoe ver je huis is samenvoegen volgt apart.
+- **Versie 0.99.0.**
 
 ---
 

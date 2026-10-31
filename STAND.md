@@ -59,7 +59,8 @@ verwijzing bestaat.
 - **Twee applicaties:** het instrumentenpaneel en de bewonersapp ([29]). De
   schetsen in `design/app2/` (ontwerp 2) zijn de maatstaf voor de app, en de
   schets is de code: de app gebruikt dezelfde tekenmotor voor het huis ([71],
-  [104]).
+  [104]). Een keuze uit een paar is één balk, aan of uit is een schakelaar, en
+  een bubbel blijft voor wat mist ([228]).
 - **Elke opstelling werkt:** de regeling doet wat de opstelling toelaat en zegt
   wat ze daardoor niet kan ([70]). Geavanceerde functies volgen uit wat het huis
   heeft; ingrijpende vragen een bewuste keuze ([78]).
@@ -749,4 +750,5 @@ verwijzing bestaat.
 [225]: DECISIONS.md#225-sfeerzinnen-menselijker-en-wisselend
 [226]: DECISIONS.md#226-rust-op-thuis-apparaten-en-vandaag-en-wat-nu-speelt-bovenaan
 [227]: DECISIONS.md#227-instellingen-zonder-doorlopen-en-terug-naar-dezelfde-stap-van-inrichten
+[228]: DECISIONS.md#228-minder-bubbels
 <!-- links:einde -->
