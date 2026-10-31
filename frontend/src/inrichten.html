@@ -233,7 +233,8 @@
   .regel .ik svg { width: 18px; height: 18px; }
   .regel .tekst, .bewoner .tekst, .klaarregel .tekst { min-width: 0; }
   .regel .tekst b { display: block; font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .regel .tekst span { display: block; font-size: 12px; color: var(--gedempt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* Een zin onder een regel mag twee regels lang zijn; afgekapt halverwege een woord las als een fout (31 oktober 2026). */
+  .regel .tekst span { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font-size: 12px; color: var(--gedempt); overflow: hidden; }
   .regel .rechts { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 700; color: var(--zacht); white-space: nowrap; }
   .regel .rechts.mint { color: var(--mint-t); }
   .regel .rechts.ijs { color: var(--ijs-t); }
@@ -246,6 +247,7 @@
   .schakel[aria-checked="true"]::after { transform: translateX(16px); background: #0b2a1f; }
   .schakel:disabled { opacity: 0.4; cursor: default; }
   /* Een eigen account voor de wand (besluit 202): waarom, en hoe in drie stappen. */
+  .regel + .accblok { margin-top: 10px; }
   .accblok { display: flex; flex-direction: column; gap: 10px; flex: none; padding: 14px 16px; border-radius: 18px; background: rgb(var(--wit) / 0.05); border: 1px solid rgb(var(--wit) / 0.08); }
   .accblok > b { font-size: 15px; }
   .acckop { display: flex; align-items: center; gap: 12px; }
