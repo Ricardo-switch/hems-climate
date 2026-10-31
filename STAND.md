@@ -77,7 +77,9 @@ verwijzing bestaat.
   huis met Whisper, Piper en openWakeWord kan ook, en dan maakt één knop de
   spraakassistent ([203]). De stem is de zon van het teken, met stralen die
   luisteren, nadenken en praten. Noemt een zin niet welk screen, dan vraagt hij
-  het; bij een tijd zegt het taalmodel alleen wát, nooit wanneer ([224]).
+  het; bij een tijd zegt het taalmodel alleen wát, nooit wanneer ([224]). Hij
+  begroet met je naam en de kop van dat moment, en wisselt zijn vraag en zijn
+  afscheid af; de klankregels voor Piper gelden alleen voor Piper ([225]).
 - **Zonwering is klimaat;** licht regelt SunArc niet, maar de app heeft
   een knop voor lampen ([92], [97]).
 - **Op termijn:** een kastje met een verborgen Home Assistant en een dunne agent
@@ -740,4 +742,5 @@ verwijzing bestaat.
 [222]: DECISIONS.md#222-sunarc-een-nieuwe-naam-en-een-eigen-teken
 [223]: DECISIONS.md#223-de-licentie-agpl-30
 [224]: DECISIONS.md#224-de-assistent-bij-screens-en-tijden-en-de-zon-als-stem
+[225]: DECISIONS.md#225-sfeerzinnen-menselijker-en-wisselend
 <!-- links:einde -->

@@ -118,10 +118,10 @@ export class Stem {
   }
 
   async zeg(tekst: string, lang: Lang = 'nl', vast?: Vast): Promise<Geluid> {
-    // Zoals hij klinkt (besluit 142): eenheden voluit, tijden in woorden.
-    const zin = uitspraak(tekst, lang).slice(0, MAX_ZEG);
-    if (zin === '') throw new Error('niets te zeggen');
     const stem = vast?.engine ?? this.naam;
+    // Zoals hij klinkt (besluit 142): eenheden voluit, tijden in woorden; de klankregels alleen voor Piper (besluit 225).
+    const zin = uitspraak(tekst, lang, stem).slice(0, MAX_ZEG);
+    if (zin === '') throw new Error('niets te zeggen');
     if (stem == null) throw new Error('geen lokale stem in Home Assistant');
     const sleutel = `${stem}|${vast?.voice ?? (await this.taalVoor(lang)).voice ?? ''}|${lang}|${zin}`;
     const al = this.#bewaard.get(sleutel);

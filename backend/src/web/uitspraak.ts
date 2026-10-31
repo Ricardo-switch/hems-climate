@@ -23,11 +23,17 @@ export function tijdInWoorden(uur: number, minuut: number): string {
   return `${MINUTEN[60 - m]} voor ${u(uur + 1)}`;
 }
 
-/** Woorden die Piper anders uitspreekt dan je ze zegt. */
-const KLANK: readonly (readonly [RegExp, string])[] = [
+/** Afkortingen die elke stem anders zou spellen. */
+const KLANK: readonly (readonly [RegExp, string])[] = [[/\bcv\b/gi, 'cee vee']];
+
+/**
+ * Woorden die Piper anders uitspreekt dan je ze zegt. Alleen voor Piper (en
+ * andere Wyoming-stemmen): Chirp van Google las "ep" als de letters E en P, en
+ * zegt "app" en "airco" zelf goed (31 oktober 2026, besluit 225).
+ */
+const PIPER: readonly (readonly [RegExp, string])[] = [
   [/\bairco's\b/gi, "erko's"],
   [/\bairco\b/gi, 'erko'],
-  [/\bcv\b/gi, 'cee vee'],
   // App op zijn Engels, zoals je het zegt (besluit 166): Piper zei "ap".
   [/\bapp(s?)\b/gi, 'ep$1'],
   // Gevel met een lange e, niet als het voorvoegsel ge-: voorgeevel, niet voorge-vel.
@@ -60,8 +66,15 @@ function inHetEngels(tekst: string): string {
   return s.replace(/\s+/g, ' ').trim();
 }
 
-/** Een zin zoals hij hardop klinkt, in de taal van de app. */
-export function uitspraak(tekst: string, lang: 'nl' | 'en' = 'nl'): string {
+/** Is dit een stem die de klankregels voor Piper nodig heeft? */
+export const isPiper = (stem: string | null | undefined): boolean => stem != null && /piper|wyoming/i.test(stem);
+
+/**
+ * Een zin zoals hij hardop klinkt, in de taal van de app. `stem` is de stem van
+ * Home Assistant die hem uitspreekt (`tts.piper`); alleen Piper krijgt de
+ * klankregels hierboven. Zonder stem (de pagina, de stem van het toestel) niet.
+ */
+export function uitspraak(tekst: string, lang: 'nl' | 'en' = 'nl', stem: string | null = null): string {
   if (lang === 'en') return inHetEngels(tekst);
   let s = tekst;
   // Tijden, maar niet in een reeks cijfers of een datum.
@@ -87,5 +100,6 @@ export function uitspraak(tekst: string, lang: 'nl' | 'en' = 'nl'): string {
     .replace(/(\d)\s?%/g, '$1 procent');
   s = s.replace(/±\s?/g, 'ongeveer ');
   for (const [re, klank] of KLANK) s = s.replace(re, klank);
+  if (isPiper(stem)) for (const [re, klank] of PIPER) s = s.replace(re, klank);
   return s.replace(/\s+/g, ' ').trim();
 }

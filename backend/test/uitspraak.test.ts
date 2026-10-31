@@ -22,21 +22,28 @@ describe('de uitspraak (besluit 142)', () => {
 
   it('zegt eenheden voluit, en airco zoals het klinkt', () => {
     expect(uitspraak('Je dak leverde 9,3 kWh, het meeste om 13:45.')).toBe('Je dak leverde 9 komma 3 kilowattuur, het meeste om kwart voor twee.');
-    expect(uitspraak('Het huis haalt 2,6 kW van het net, de airco zolder 300 W.')).toBe('Het huis haalt 2 komma 6 kilowatt van het net, de erko zolder 300 watt.');
+    expect(uitspraak('Het huis haalt 2,6 kW van het net, de airco zolder 300 W.', 'nl', 'tts.piper')).toBe('Het huis haalt 2 komma 6 kilowatt van het net, de erko zolder 300 watt.');
     expect(uitspraak('Het is 22,3° in de wasruimte, en 55% kwam van je dak.')).toBe('Het is 22 komma 3 graden in de wasruimte, en 55 procent kwam van je dak.');
-    expect(uitspraak('De airco’s kostten € 0,45 en € 62,18, en € 3.')).toBe('De erko’s kostten 45 cent en 62 euro 18, en 3 euro.');
-    expect(uitspraak("Airco's en de cv: 13,5 m³ gas.")).toBe("erko's en de cee vee: 13 komma 5 kuub gas.");
+    expect(uitspraak('De airco’s kostten € 0,45 en € 62,18, en € 3.', 'nl', 'tts.piper')).toBe('De erko’s kostten 45 cent en 62 euro 18, en 3 euro.');
+    expect(uitspraak("Airco's en de cv: 13,5 m³ gas.", 'nl', 'tts.piper')).toBe("erko's en de cee vee: 13 komma 5 kuub gas.");
     // Een komma tussen woorden blijft een pauze; een getal met een komma krijgt hem hardop.
     expect(uitspraak('Boven 19,5°, beneden 21,25°, en 3, 4 of 5.')).toBe('Boven 19 komma 5 graden, beneden 21 komma 25 graden, en 3, 4 of 5.');
   });
 
   it('zegt gevel met een lange e', () => {
-    expect(uitspraak('De zon staat nu op de voorgevel en de zijgevels.')).toBe('De zon staat nu op de voorgeevel en de zij geevels.');
-    expect(uitspraak('Gevel en achtergevel, maar een gevelde boom blijft.')).toBe('geevel en achter geevel, maar een gevelde boom blijft.');
+    expect(uitspraak('De zon staat nu op de voorgevel en de zijgevels.', 'nl', 'tts.piper')).toBe('De zon staat nu op de voorgeevel en de zij geevels.');
+    expect(uitspraak('Gevel en achtergevel, maar een gevelde boom blijft.', 'nl', 'tts.piper')).toBe('geevel en achter geevel, maar een gevelde boom blijft.');
   });
 
   it('zegt app op zijn Engels (besluit 166)', () => {
-    expect(uitspraak('Dat stel je in de app in. Apps en een appel.')).toBe('Dat stel je in de ep in. eps en een appel.');
+    expect(uitspraak('Dat stel je in de app in. Apps en een appel.', 'nl', 'tts.piper')).toBe('Dat stel je in de ep in. eps en een appel.');
+  });
+
+  it('geeft de klankregels alleen aan Piper; Chirp en het toestel zeggen app en airco zelf goed (besluit 225)', () => {
+    const zin = 'Dat stel je in de app in; de airco op de voorgevel en de cv.';
+    expect(uitspraak(zin, 'nl', 'tts.google_cloud')).toBe('Dat stel je in de app in; de airco op de voorgevel en de cee vee.');
+    expect(uitspraak(zin)).toBe('Dat stel je in de app in; de airco op de voorgevel en de cee vee.');
+    expect(uitspraak(zin, 'nl', 'tts.wyoming_piper')).toBe('Dat stel je in de ep in; de erko op de voorgeevel en de cee vee.');
   });
 
   it('laat gewone tekst met rust', () => {

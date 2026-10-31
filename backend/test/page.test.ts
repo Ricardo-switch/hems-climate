@@ -1290,7 +1290,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
         ['vandaag.html', /Yesterday[\s\S]*Today[\s\S]*Tomorrow/],
         ['apparaten.html', /Devices[\s\S]*(Add a device|No sun|to spare)/],
         ['opbrengst.html', /Day[\s\S]*Week[\s\S]*Month[\s\S]*Year/],
-        ['assistent.html', /How can I help you/],
+        ['assistent.html', /How can I help you|What can I do for you|Go ahead, I am listening/],
         // Deel 3: Instellingen en de pagina's erachter.
         ['instellingen.html', /Settings[\s\S]*What your house can do/],
         ['jij.html', /How the app looks[\s\S]*Theme and colour/],
@@ -3692,7 +3692,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     };
     // Het begin: een begroeting en vragen die nu ergens over gaan.
     await p.goto(`${baseUrl}/assistent.html`);
-    await p.locator('#wand [data-zegt]', { hasText: 'Waarmee kan ik je helpen?' }).waitFor({ timeout: 10_000 });
+    await p.locator('#wand [data-zegt]', { hasText: /Waarmee kan ik je helpen\?|Wat kan ik voor je doen\?|Zeg het maar\./ }).waitFor({ timeout: 10_000 });
     await p.locator('#wand [data-sug]').first().waitFor();
     expect(await p.locator('#wand [data-sug]').count()).toBeGreaterThanOrEqual(3);
     expect(await p.locator('#wand [data-suggesties]').textContent()).not.toMatch(/de beneden|de Beneden/);
@@ -3713,7 +3713,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     expect(((await p.locator('#wand .feiten').textContent().catch(() => '')) ?? '').replace(/kWh|kW/g, '')).not.toMatch(/[a-z][A-Z]|_/);
     await shot('as-verder');
     await p.locator('#wand [data-nee]').click();
-    await p.locator('#wand [data-zegt]', { hasText: 'Ik ben er als je me nodig hebt' }).waitFor();
+    await p.locator('#wand [data-zegt]', { hasText: /als je me nodig hebt|als er iets is/ }).waitFor();
     expect(await p.evaluate('document.scrollingElement.scrollHeight <= innerHeight')).toBe(true);
     expect(fouten).toEqual([]);
     await context.close();

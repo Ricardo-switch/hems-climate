@@ -76,12 +76,16 @@ describe('woordzoeker', () => {
   });
 
   it('sluit het gesprek af met oké bedankt of dat was het (21 oktober 2026)', () => {
-    expect(afsluiter('Oké, bedankt!', 'nl')).toBe('Graag gedaan.');
-    expect(afsluiter('dank je wel huis', 'nl')).toBe('Graag gedaan.');
-    expect(afsluiter('Dat was het.', 'nl')).toBe('Prima. Ik ben er als je me nodig hebt.');
-    expect(afsluiter('Nee, dank je', 'nl')).toBe('Graag gedaan.');
-    expect(afsluiter('oké', 'nl')).toBe('Prima. Ik ben er als je me nodig hebt.');
-    expect(afsluiter('Welterusten', 'nl')).toBe('Welterusten.');
+    // Om middernacht (wereldtijd) de gewone zinnen; het uur erna een andere (besluit 225).
+    expect(afsluiter('Oké, bedankt!', 'nl', 0)).toBe('Graag gedaan.');
+    expect(afsluiter('dank je wel huis', 'nl', 0)).toBe('Graag gedaan.');
+    expect(afsluiter('Dat was het.', 'nl', 0)).toBe('Prima. Ik ben er als je me nodig hebt.');
+    expect(afsluiter('Nee, dank je', 'nl', 0)).toBe('Graag gedaan.');
+    expect(afsluiter('oké', 'nl', 0)).toBe('Prima. Ik ben er als je me nodig hebt.');
+    expect(afsluiter('Welterusten', 'nl', 0)).toBe('Welterusten.');
+    expect(afsluiter('Welterusten', 'nl', 3_600_000)).toBe('Welterusten, slaap lekker.');
+    expect(afsluiter('oké', 'nl', 2 * 3_600_000)).toBe('Prima. Zeg maar "Hé huis" als je me nodig hebt.');
+    expect(afsluiter('thanks', 'en', 3_600_000)).toBe('Happy to help.');
     expect(afsluiter('Oké, doe het licht uit', 'nl')).toBeNull();
     expect(afsluiter('stop', 'nl')).toBeNull();
     expect(afsluiter('Hoe warm is het boven?', 'nl')).toBeNull();
