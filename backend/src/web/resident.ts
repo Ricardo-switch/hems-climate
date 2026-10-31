@@ -8,7 +8,7 @@
  * - **de kop**: "Het huis wacht op zon", met een zin eronder;
  * - **de stromen** in de tekening, in kW en zo afgerond dat ze optellen: zon
  *   plus net is wat het huis gebruikt, en dat is de airco plus de rest;
- * - **wat Smart Climate per apparaat zou doen**, met de reden;
+ * - **wat SunArc per apparaat zou doen**, met de reden;
  * - **wat een besluit deed en waarom**, voor de tijdlijn van Waarom.
  *
  * De pagina tekent en kiest de plek; rekenen en formuleren gebeurt hier, met
@@ -45,7 +45,7 @@ export interface ResidentFlows {
   readonly aircoKw: number;
   /** Het huis zonder de airco's. */
   readonly huisKw: number | null;
-  /** Wat Smart Climate voor de airco's op zon gepland heeft. */
+  /** Wat SunArc voor de airco's op zon gepland heeft. */
   readonly geplandKw: number;
   /**
    * Zonder slimme meter (besluit 196): wat er van de zon over is, geschat als
@@ -124,7 +124,7 @@ const HEAD = {
   nl: {
     now: 'Nu',
     chosen: ' (gekozen)',
-    fault: ['Er is een storing', 'Een meting is onbetrouwbaar; Smart Climate zet de hulpapparaten veilig uit.'],
+    fault: ['Er is een storing', 'Een meting is onbetrouwbaar; SunArc zet de hulpapparaten veilig uit.'],
     one: (room: string, cool: boolean) => `${cap(room)} wordt ${cool ? 'gekoeld' : 'verwarmd'}`,
     many: 'Het huis wordt geregeld',
     // Tijdens de schaduw gebeurt het niet echt (besluit 124).
@@ -178,7 +178,7 @@ const HEAD = {
   en: {
     now: 'Now',
     chosen: ' (chosen)',
-    fault: ['There is a fault', 'A measurement is unreliable; Smart Climate switches the helper units off safely.'],
+    fault: ['There is a fault', 'A measurement is unreliable; SunArc switches the helper units off safely.'],
     one: (room: string, cool: boolean) => `${cap(room)} is being ${cool ? 'cooled' : 'heated'}`,
     many: 'The house is being managed',
     oneWould: (room: string, cool: boolean) => `${cap(room)} would ${cool ? 'cool' : 'heat'}`,

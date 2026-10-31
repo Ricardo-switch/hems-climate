@@ -46,7 +46,7 @@ describe('wat de bel weet (meldingen-bron.ts)', () => {
   it('noemt wiens comfort er geldt, en een update alleen in de add-on', () => {
     const bron = meldingenBron(invoer({ profiel: { id: 'p-noor', name: 'Noor', reason: 'thuis' }, hoofd: { id: 'p-ricardo', naam: 'Ricardo' } }))!;
     expect(bron.comfort).toEqual({ id: 'p-noor', naam: 'Noor', waarom: 'thuis', hoofdNaam: 'Ricardo', hoofd: false });
-    const update: HaEntityState = { entity_id: 'update.smart_climate_update', state: 'on', attributes: { title: 'Smart Climate', latest_version: 'v9.9.9' }, last_changed: '', last_updated: '' };
+    const update: HaEntityState = { entity_id: 'update.smart_climate_update', state: 'on', attributes: { title: 'SunArc', latest_version: 'v9.9.9' }, last_changed: '', last_updated: '' };
     const met = new Map(states).set(update.entity_id, update);
     expect(meldingenBron(invoer({ states: met }))!.update).toBeNull();
     expect(meldingenBron(invoer({ states: met, addOn: true }))!.update).toEqual({ nieuw: '9.9.9', nu: VERSIE });

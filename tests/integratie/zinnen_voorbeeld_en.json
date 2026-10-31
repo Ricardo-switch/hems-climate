@@ -3,7 +3,7 @@
   "expansion_rules": {
     "kamer": "[the] {kamer}",
     "in_kamer": "[in|on|of] [the] {kamer}",
-    "sc": "(you|smart climate|the system|the control|the climate)",
+    "sc": "(you|sunarc|sun arc|smart climate|the system|the control|the climate)",
     "nu": "[now|right now|at the moment|currently]",
     "panelen": "[the] [solar] panels"
   },
@@ -12,7 +12,7 @@
       "data": [
         {
           "sentences": [
-            "what (are you|is smart climate|is the control) doing <nu>",
+            "what (are you|is sunarc|is sun arc|is smart climate|is the control) doing <nu>",
             "how (is|are) (the climate|the house|the control|the air conditioners|the heating) doing <nu>",
             "(give|tell) me [a] [short] (overview|status|update) [of] [the climate|the house]",
             "climate status",
@@ -30,7 +30,7 @@
             "why is the (air conditioner|aircon|heating|thermostat) <in_kamer> [not] (running|cooling|heating|on|off) <nu>",
             "why is it [so] (warm|cold|hot|chilly) <in_kamer>",
             "why is (nothing|something) happening <in_kamer>",
-            "why (are you|is smart climate) [not] doing (anything|nothing) <in_kamer>",
+            "why (are you|is sunarc|is sun arc|is smart climate) [not] doing (anything|nothing) <in_kamer>",
             "what is (happening|going on) <in_kamer>",
             "how is <kamer> doing",
             "(explain|tell me) (what|why) [it] is (happening|running) <in_kamer>",
@@ -43,7 +43,7 @@
         },
         {
           "sentences": [
-            "what (are you|is smart climate|is the control) going to do [later|tonight|next|today]",
+            "what (are you|is sunarc|is sun arc|is smart climate|is the control) going to do [later|tonight|next|today]",
             "what (is|are) [the|your] plan[s] [for] [later|tonight|today]",
             "what (comes|is) next",
             "when (are you|is the control) going to [the] (night|day) [mode|setting]",
@@ -71,7 +71,7 @@
           "sentences": [
             "cool [down] <kamer> [to {temperatuur} [degrees]]",
             "make <kamer> (cooler|colder)",
-            "(can|will) (you|smart climate) cool [down] <kamer> [to {temperatuur} [degrees]]"
+            "(can|will) (you|sunarc|sun arc|smart climate) cool [down] <kamer> [to {temperatuur} [degrees]]"
           ],
           "slots": {
             "vraag": "doe",
@@ -83,7 +83,7 @@
             "heat [up] <kamer> [to {temperatuur} [degrees]]",
             "warm up <kamer> [to {temperatuur} [degrees]]",
             "make <kamer> warmer",
-            "(can|will) (you|smart climate) (heat|warm) [up] <kamer> [to {temperatuur} [degrees]]"
+            "(can|will) (you|sunarc|sun arc|smart climate) (heat|warm) [up] <kamer> [to {temperatuur} [degrees]]"
           ],
           "slots": {
             "vraag": "doe",
@@ -93,7 +93,7 @@
         {
           "sentences": [
             "can <kamer> [go] off",
-            "smart climate switch off <kamer>",
+            "(sunarc|sun arc|smart climate) switch off <kamer>",
             "(can|may) the air conditioner <in_kamer> [go] off"
           ],
           "slots": {

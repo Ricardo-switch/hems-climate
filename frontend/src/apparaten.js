@@ -108,7 +108,7 @@ function kaart(d) {
   }
   void rest;
   const draaide = (spans?.draaide ?? []).reduce((som, x) => som + (x.totMs - x.vanMs), 0);
-  // Draait hij, dan zette de bewoner hem aan: Smart Climate start nog niets zelf (de schaduw,
+  // Draait hij, dan zette de bewoner hem aan: SunArc start nog niets zelf (de schaduw,
   // besluit 64). Dan niet "Start op zon", dat las alsof de zon hem startte (25 oktober 2026).
   const label = d.stand === 'running' && !d.doorSmartClimate ? `<span class="label">${esc(t('apparaten.zelfGestart'))}</span>` : `<span class="label zon">${esc(t('apparaten.startOpZon'))}</span>`;
   const el = document.createElement('section');
@@ -255,7 +255,7 @@ function klimaatKaart({ a, r }) {
   const standLaag = stand[0].toLowerCase();
   const rest = bew?.tekst?.toLowerCase().startsWith(standLaag) ? bew.tekst.slice(standLaag.length).replace(/^[\s·,.;:–-]+/, '') : bew?.tekst;
   // Twee doelen bij één thermostaat (30 oktober 2026): bovenaan wat het apparaat zelf zegt ("Automatisch naar 18°"),
-  // eronder wat Smart Climate zou doen. Doet het apparaat het niet zelf, dan zegt de zin van wie hij is.
+  // eronder wat SunArc zou doen. Doet het apparaat het niet zelf, dan zegt de zin van wie hij is.
   const vanSC = rest && !doet && bew?.soort !== 'wait' ? t('apparaten.zouKiezen', { wat: rest }) : rest ? `${huismodel.metHoofdletter(rest)}.` : '';
   const zin = bew?.tekst
     ? [vanSC, wacht ? t('apparaten.begintBij', { kw: nl(wacht.intent.budgetW / 1000) }) : ''].filter(Boolean).join(' ')

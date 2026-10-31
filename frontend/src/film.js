@@ -552,7 +552,7 @@
     .film-slot { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; padding-top: 19vh; text-align: center; }
     .film-slot.aan { display: flex; }
     .film-slot .merk { display: flex; align-items: center; gap: 22px; animation: film-in 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
-    .film-slot .merk i { width: 84px; height: 84px; border-radius: 26px; background: conic-gradient(from 200deg, #ff7a4d, #f7b548, #6ee7b7, #6fd3ff, #8f86ff, #ff7a4d); box-shadow: 0 0 80px rgba(111, 211, 255, 0.35); }
+    .film-slot .merk i { width: 84px; height: 84px; border-radius: 26px; background: url('kit/icoon.svg') center / cover; box-shadow: 0 0 80px rgba(247, 181, 72, 0.3); }
     .film-slot .merk b { font-family: var(--kop); font-weight: 800; font-size: clamp(52px, 8vw, 104px); letter-spacing: -0.045em; line-height: 1; }
     .film-slot p { margin: 20px 0 0; font-family: var(--kop); font-weight: 600; font-size: clamp(22px, 2.6vw, 34px); color: var(--zacht); animation: film-in 0.9s 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
     .film-slot .knoppen { margin-top: 34px; display: flex; gap: 12px; animation: film-in 0.9s 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
@@ -639,7 +639,7 @@
       <div class="film-waas" data-film-waas></div>
       <div class="film-woord" aria-live="polite" data-film-tekst></div>
       <div class="film-ui" aria-live="polite" data-film-ui></div>
-      <div class="film-slot" data-film-slot><div class="merk"><i aria-hidden="true"></i><b>Smart Climate</b></div><p>${esc(tk('film.slot.zin'))}</p><div class="knoppen"><button type="button" data-film-thuis>${esc(tk('film.slot.thuis'))}</button><button type="button" data-film-opnieuw>${esc(tk('film.slot.opnieuw'))}</button></div></div>
+      <div class="film-slot" data-film-slot><div class="merk"><i aria-hidden="true"></i><b>SunArc</b></div><p>${esc(tk('film.slot.zin'))}</p><div class="knoppen"><button type="button" data-film-thuis>${esc(tk('film.slot.thuis'))}</button><button type="button" data-film-opnieuw>${esc(tk('film.slot.opnieuw'))}</button></div></div>
       <div class="film-flits" data-film-flits></div>
       <div class="film-balk"><button type="button" data-film-pauze aria-label="${esc(tk('film.pauze'))}">❚❚</button><div class="film-tellen" role="progressbar" aria-label="${esc(tk('film.voortgang'))}" aria-valuemin="0" aria-valuemax="100" data-film-tellen></div><button type="button" data-film-geluid aria-pressed="${geluidAan}">${esc(tk(geluidAan ? 'film.geluidAan' : 'film.geluidUit'))}</button><button type="button" data-film-klaar>${esc(tk('rond.overslaan'))}</button></div>`;
     document.body.append(el);

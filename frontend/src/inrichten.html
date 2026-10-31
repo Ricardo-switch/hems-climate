@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="only dark">
-<title>Inrichten · Smart Climate</title>
+<title>Inrichten · SunArc</title>
 <link rel="stylesheet" href="kit/kit.css">
 <link rel="stylesheet" href="basis.css">
 <link rel="manifest" href="manifest.webmanifest">
@@ -24,7 +24,7 @@
   .bovenbalk { display: flex; align-items: center; gap: 16px; }
   .bovenbalk .stappen { flex: 1; min-width: 0; }
   .merk { display: flex; align-items: center; gap: 12px; font-family: var(--kop); font-weight: 600; font-size: 20px; color: var(--tekst); text-decoration: none; }
-  .merk i { width: 34px; height: 34px; border-radius: 10px; background: conic-gradient(from 200deg, #ff7a4d, #f7b548, #6ee7b7, #6fd3ff, #8f86ff, #ff7a4d); display: block; }
+  .merk i { width: 34px; height: 34px; border-radius: 10px; background: url('kit/icoon-klein.svg') center / cover; display: block; }
   /*
    * Het pad (besluit 190, schets Wand-Inrichten-3): acht hoofdstukken naast
    * het logo, elk met zijn naam en een streepje per stap.
@@ -359,7 +359,7 @@
   #wand { position: relative; }
   #wand .welkom-groot { position: absolute; inset: 0; overflow: hidden; }
   .welkom-groot .wk-merk { display: flex; align-items: center; gap: 12px; font-family: var(--kop); font-weight: 600; font-size: 19px; }
-  .welkom-groot .wk-merk i { width: 34px; height: 34px; border-radius: 10px; background: conic-gradient(from 200deg, #ff7a4d, #f7b548, #6ee7b7, #6fd3ff, #8f86ff, #ff7a4d); display: block; }
+  .welkom-groot .wk-merk i { width: 34px; height: 34px; border-radius: 10px; background: url('kit/icoon-klein.svg') center / cover; display: block; }
   .welkom-groot .wk-hallo { font-size: 17px; font-weight: 700; color: var(--mint-t); letter-spacing: 0.02em; }
   /* Licht: het verloop is te zacht op een lichte lucht, dan één donkere kleur. */
   .sc-licht .welkom-groot .wk-kop em { background: none; color: var(--gloed-t); }
@@ -429,7 +429,7 @@
   #tel .inhoud { padding: 14px 0 0; display: flex; flex-direction: column; min-height: 100dvh; }
   #tel .inhoud > .kaart { flex: 1 0 auto; }
   #tel .kop3 { display: flex; align-items: center; gap: 12px; padding: 4px 18px 6px; }
-  #tel .kop3 .logo { flex: none; width: 30px; height: 30px; border-radius: 10px; background: conic-gradient(from 200deg, #ff7a4d, #f7b548, #6ee7b7, #6fd3ff, #8f86ff, #ff7a4d); }
+  #tel .kop3 .logo { flex: none; width: 30px; height: 30px; border-radius: 10px; background: url('kit/icoon-klein.svg') center / cover; }
   #tel .telwaar { flex: 1; min-width: 0; }
   #tel .telwaar b { display: block; font-size: 14px; }
   #tel .telwaar span { font-size: 12px; color: var(--gedempt); }
@@ -457,7 +457,7 @@
 </head>
 <body class="lucht lucht-dag">
   <div id="wand" class="wand">
-    <div class="bovenbalk"><a class="merk" href="thuis.html" aria-label="Smart Climate"><i aria-hidden="true"></i></a><nav class="stappen" data-t-aria-label="inr.hoofdstukken" data-stappen></nav></div>
+    <div class="bovenbalk"><a class="merk" href="thuis.html" aria-label="SunArc"><i aria-hidden="true"></i></a><nav class="stappen" data-t-aria-label="inr.hoofdstukken" data-stappen></nav></div>
     <div class="veldje">
       <div class="podium" data-podium="wand"></div>
       <section class="glas kaart" data-kaart aria-live="polite"></section>

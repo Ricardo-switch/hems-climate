@@ -1,6 +1,6 @@
 # Universeel: wat nog op dit huis leunt
 
-Smart Climate is gebouwd in één huis. Voor de add-on (besluiten 53, 77, 91)
+SunArc is gebouwd in één huis. Voor de add-on (besluiten 53, 77, 91)
 moet alles wat per huis verschilt een instelling zijn die de app wegschrijft,
 met een voorstel uit Home Assistant (besluit 109). Dit is de stand na een
 grondige controle van de code op 8 oktober 2026, bijgewerkt op 21 oktober
@@ -87,7 +87,7 @@ hier een voorstel voor.
    groeit mee met punt 5.
 10. ~~**Het wekwoord "Hé huis"**~~ Gedaan op 21 oktober (besluit 177): het gaat
     mee in de add-on, die het in de map van openWakeWord zet.
-11. **Assist van Home Assistant** vraagt Smart Climate via YAML. Het adres staat
+11. **Assist van Home Assistant** vraagt SunArc via YAML. Het adres staat
     sinds besluit 177 in de app, zonder NAS; een eigen koppeling zonder YAML
     volgt (besluit 91).
 12. ~~**Apparaten op zon**~~ Gedaan op 21 oktober (besluit 178): ook LG ThinQ,

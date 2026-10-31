@@ -1,6 +1,6 @@
-# Smart Climate (Home Assistant add-on)
+# SunArc (Home Assistant add-on)
 
-Klimaat en zon in één app. Smart Climate kijkt mee met je verwarming, airco's
+Klimaat en zon in één app. SunArc kijkt mee met je verwarming, airco's
 en zonnepanelen, legt elk besluit vast en laat zien wat het huis zou doen.
 Klimaat en screens schakelt hij nog niet; lampen, scènes en schermen bedien je
 wel vanuit de app (besluiten 97, 100 en 121).
@@ -21,7 +21,7 @@ verwacht. Zie besluit 34 in `DECISIONS.md` voor waarom die vorm er is.
 1. **Instellingen → Add-ons → Add-on store**, rechtsboven de drie puntjes →
    **Repositories**, en voeg toe:
    `https://github.com/Ricardo-switch/hems-climate`
-2. Kies **Smart Climate** en **Installeren**. De Pi bouwt niets: GitHub heeft
+2. Kies **SunArc** en **Installeren**. De Pi bouwt niets: GitHub heeft
    het image al klaargezet voor aarch64 (Raspberry Pi) en amd64.
 3. **Starten**, en zet **In zijbalk tonen** aan.
 
@@ -49,7 +49,7 @@ add-ons*. Bijwerken is hetzelfde commando, gevolgd door **Herbouwen**.
 
 Gewoon starten. Er hoeft nog niets klaar te staan.
 
-Open **Smart Climate** in de zijbalk. Een leeg huis begint met een welkom: de
+Open **SunArc** in de zijbalk. Een leeg huis begint met een welkom: de
 add-on leest Home Assistant uit (etages, ruimtes, apparaten, sensoren) en zet
 het huis neer. Eén knop gaat naar **Inrichten**, waar je per stap nakijkt wat
 hij vond; je kunt ook een back-up terugzetten (besluit 154). Tot de
@@ -60,8 +60,8 @@ Bij de eerste start zet de add-on ook het wekwoord **Hé huis** klaar in
 `/share/openwakeword` (besluit 177). Herstart daarna één keer de
 openWakeWord-add-on; dan staat `he_huis` bij Instellingen › Spraakassistenten.
 
-Wil je Assist van Home Assistant zelf vragen aan Smart Climate laten stellen,
-installeer dan de integratie Smart Climate: via HACS, of met de knop in de app
+Wil je Assist van Home Assistant zelf vragen aan SunArc laten stellen,
+installeer dan de integratie SunArc: via HACS, of met de knop in de app
 bij Instellingen › Bewoners en toegang › Sleutel voor de assistent (besluit
 184). De add-on meldt zich daarna vanzelf aan; geen YAML. Daarvoor mag de
 add-on in de configuratie van Home Assistant schrijven, en dat doet hij alleen
@@ -114,13 +114,13 @@ op Thuis; de cijfers en de datasetmeter staan op `index.html`.
 ### Met één tik vanaf het startscherm
 
 In de app van Home Assistant op Android kun je een snelkoppeling maken die
-meteen Smart Climate opent:
+meteen SunArc opent:
 
-1. Open Smart Climate in Home Assistant in een browser. Het adres eindigt op
+1. Open SunArc in Home Assistant in een browser. Het adres eindigt op
    iets als `/a1b2c3d4_hems_climate`; dat laatste stuk, met de `/`, is het pad.
 2. In de app van Home Assistant: **Instellingen › Companion-app ›
    Snelkoppelingen beheren**, en maak een **vastgezette** snelkoppeling: naam
-   *Smart Climate*, soort *Dashboard*, het pad uit stap 1, en een icoon naar
+   *SunArc*, soort *Dashboard*, het pad uit stap 1, en een icoon naar
    keuze (bijvoorbeeld `mdi:home-thermometer`).
 3. Zet hem op je startscherm.
 
@@ -131,7 +131,7 @@ eromheen. Dit vraagt de Tailscale-add-on op dezelfde Home Assistant. De app
 komt alleen in je eigen tailnet; Funnel of een portforward is niet nodig en
 hoort er niet bij (besluit 108).
 
-1. **Smart Climate › Configuratie.** Vul bij *ha_adres* het adres in waarop je
+1. **SunArc › Configuratie.** Vul bij *ha_adres* het adres in waarop je
    telefoon Home Assistant opent, bijvoorbeeld
    `https://homeassistant.<tailnet>.ts.net` of `http://100.x.y.z:8123`. Vul
    onder *Netwerk* bij `8100/tcp` de poort `8100` in. Opslaan en herstarten. In
@@ -161,7 +161,7 @@ hoort er niet bij (besluit 108).
    log in via Home Assistant, en kies in het menu **App installeren**.
 
 Opent het adres niet, werk dan Tailscale op je telefoon bij. Het adres van de
-Pi met `:8100` geeft bewust alleen "Open Smart Climate via het adres in
+Pi met `:8100` geeft bewust alleen "Open SunArc via het adres in
 Tailscale".
 
 ## Prestaties

@@ -39,9 +39,9 @@ const READ_COMMANDS: ReadonlySet<string> = new Set([
   'config/auth/list',
   // Wat er nieuw is in de nieuwste versie van de add-on (21 oktober 2026).
   'update/release_notes',
-  // Welke versie van de integratie Smart Climate Home Assistant geladen heeft (besluit 184).
+  // Welke versie van de integratie SunArc Home Assistant geladen heeft (besluit 184).
   'manifest/get',
-  // Of de integratie Smart Climate ook is toegevoegd (22 oktober 2026).
+  // Of de integratie SunArc ook is toegevoegd (22 oktober 2026).
   'config_entries/get',
   // Wanneer de camera's het laatst beweging zagen (besluit 201): de historie van hun melders.
   'history/history_during_period',

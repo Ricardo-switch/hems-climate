@@ -20,13 +20,15 @@ import type { Nieuw } from '../version.js';
 import type { Lang } from './assistant.js';
 
 /** De naam van de add-on, zoals Home Assistant hem als titel van de update geeft. */
-export const ADDON_NAAM = 'Smart Climate';
+export const ADDON_NAAM = 'SunArc';
+/** Tot versie 0.94.0 heette de add-on Smart Climate (besluit 222); een oude update herkent hij ook. */
+const NAMEN: readonly unknown[] = [ADDON_NAAM, 'Smart Climate'];
 
 /** De update-entiteit van de eigen add-on, of null. */
 export function eigenUpdate(states: Iterable<HaEntityState>): HaEntityState | null {
   for (const s of states) {
     if (!/^update\.[a-z0-9_]+$/.test(s.entity_id)) continue;
-    if (s.attributes['title'] === ADDON_NAAM) return s;
+    if (NAMEN.includes(s.attributes['title'])) return s;
   }
   return null;
 }

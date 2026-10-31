@@ -52,6 +52,10 @@ $bestanden = @(
   @{ Van = 'addon/run.sh';                 Naar = 'run.sh' }
   @{ Van = 'addon/README.md';              Naar = 'README.md' }
   @{ Van = 'addon/DOCS.md';                Naar = 'DOCS.md' }
+  # Het teken van SunArc (besluit 222), gemaakt met frontend/tools/iconen.cjs.
+  @{ Van = 'addon/icon.png';               Naar = 'icon.png' }
+  @{ Van = 'addon/logo.png';               Naar = 'logo.png' }
+  @{ Van = 'addon/dark_logo.png';          Naar = 'dark_logo.png' }
   @{ Van = 'addon/translations/nl.yaml';   Naar = 'translations/nl.yaml' }
   @{ Van = 'addon/translations/en.yaml';   Naar = 'translations/en.yaml' }
   @{ Van = '.dockerignore';                Naar = '.dockerignore' }

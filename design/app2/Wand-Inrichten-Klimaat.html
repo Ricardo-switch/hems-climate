@@ -9,7 +9,7 @@
 <style>
   /*
    * Wat elk apparaat kan (schets, 23 oktober 2026). Hoofdstuk Klimaat van
-   * Inrichten, de stap "Wat elk apparaat doet". Smart Climate kijkt per
+   * Inrichten, de stap "Wat elk apparaat doet". SunArc kijkt per
    * apparaat wat Home Assistant ervan geeft (de standen, het bereik, of hij
    * zegt wat hij doet, of hij de kamer meet, een eigen stroommeter, een
    * filter) en wat het van de koppeling weet (LG ThinQ, Google Nest, ZHA,
@@ -33,7 +33,7 @@
    */
   .scherm { position: relative; width: 1280px; height: 800px; overflow: hidden; }
   .boven { position: absolute; left: 32px; right: 32px; top: 24px; display: flex; align-items: center; gap: 18px; }
-  .boven .logo { width: 36px; height: 36px; border-radius: 11px; background: conic-gradient(from 200deg, #6fd3ff, #8f86ff, #ff7a4d, #f7b548, #6ee7b7, #6fd3ff); }
+  .boven .logo { width: 36px; height: 36px; border-radius: 11px; background: url('../../frontend/kit/icoon-klein.svg') center / cover; }
   .boven b { font-family: var(--kop); font-size: 18px; }
   .stappen { margin-left: auto; display: flex; gap: 6px; align-items: center; }
   .stap { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--gedempt); }
@@ -105,7 +105,7 @@
 <body>
 <div class="scherm lucht lucht-dag">
   <div class="boven">
-    <span class="logo"></span><b>Smart Climate</b>
+    <span class="logo"></span><b>SunArc</b>
     <div class="stappen" id="stappen"></div>
   </div>
   <div class="podium" id="podium"></div>
@@ -124,11 +124,11 @@
         <div class="punten">
           <div class="punt ok"><i>✓</i><span><b>Koelen en verwarmen</b><small>Van 16° tot 30°, en ook drogen.</small></span></div>
           <div class="punt ok"><i>✓</i><span><b>Eigen stroommeter</b><small>Nu 5 W: hij staat uit. Zo klopt wat hij kost.</small></span></div>
-          <div class="punt om"><i></i><span><b>Zegt niet wat hij doet</b><small>Smart Climate ziet aan de stroommeter of hij draait.</small></span></div>
+          <div class="punt om"><i></i><span><b>Zegt niet wat hij doet</b><small>SunArc ziet aan de stroommeter of hij draait.</small></span></div>
           <div class="punt ok"><i>✓</i><span><b>Filter</b><small>Nog 650 uur draaien tot de volgende schoonmaak.</small></span></div>
           <div class="punt ok"><i>✓</i><span><b>Meet de kamer</b><small>Hij meet zelf 19°; de woonkamer meet met de Nest.</small></span></div>
         </div>
-        <div class="weet"><b>Goed om te weten:</b> hij staat twee keer in Home Assistant. Smart Climate stuurt via LG ThinQ en leest de stroom uit SmartThinQ. Een opdracht gaat via de cloud van LG en duurt soms een paar seconden.</div>
+        <div class="weet"><b>Goed om te weten:</b> hij staat twee keer in Home Assistant. SunArc stuurt via LG ThinQ en leest de stroom uit SmartThinQ. Een opdracht gaat via de cloud van LG en duurt soms een paar seconden.</div>
         <div class="rol"><b>Wat hij doet</b><span class="seg"><span>Op temperatuur</span><span class="aan">Op zon</span><span>Kijkt mee</span></span></div>
       </div>
 
@@ -137,11 +137,11 @@
         <div class="kop"><b>Thermostaat badkamer</b><span>Tuya</span></div>
         <div class="punten">
           <div class="punt ok"><i>✓</i><span><b>Meet de kamer</b><small>Nu 17,5°.</small></span></div>
-          <div class="punt om"><i></i><span><b>Zegt dat hij ook koelt</b><small>Aan heet bij hem "verwarmen en koelen". Smart Climate gebruikt hem alleen om te verwarmen.</small></span></div>
-          <div class="punt om"><i></i><span><b>Geeft 0° tot 80° op</b><small>Dat kan niet kloppen. Smart Climate houdt 16° tot 22° aan.</small>
+          <div class="punt om"><i></i><span><b>Zegt dat hij ook koelt</b><small>Aan heet bij hem "verwarmen en koelen". SunArc gebruikt hem alleen om te verwarmen.</small></span></div>
+          <div class="punt om"><i></i><span><b>Geeft 0° tot 80° op</b><small>Dat kan niet kloppen. SunArc houdt 16° tot 22° aan.</small>
             <div class="chips"><span class="chip veld">16° ▾</span><span class="chip veld">22° ▾</span></div></span></div>
-          <div class="punt om"><i></i><span><b>Zegt niet of hij stookt</b><small>Smart Climate leidt het af uit de temperatuur. Dat werkt, alleen een paar minuten later.</small></span></div>
-          <div class="punt vraag"><i>?</i><span><b>Wat verwarmt hij?</b><small>Dat zegt hij niet. Bij elektrisch rekent Smart Climate de stroom mee.</small>
+          <div class="punt om"><i></i><span><b>Zegt niet of hij stookt</b><small>SunArc leidt het af uit de temperatuur. Dat werkt, alleen een paar minuten later.</small></span></div>
+          <div class="punt vraag"><i>?</i><span><b>Wat verwarmt hij?</b><small>Dat zegt hij niet. Bij elektrisch rekent SunArc de stroom mee.</small>
             <div class="chips"><span class="chip">De cv-ketel</span><span class="chip">Elektrisch</span><span class="chip">Weet ik niet</span></div></span></div>
         </div>
         <div class="rol"><b>Wat hij doet</b><span class="seg"><span class="aan">Op temperatuur</span><span>Op zon</span><span>Kijkt mee</span></span></div>
@@ -166,12 +166,12 @@
         <div class="kop"><b>Airco hobbykamer</b><span>via infrarood (SmartIR)</span></div>
         <div class="punten">
           <div class="punt ok"><i>✓</i><span><b>Koelen en verwarmen</b><small>Van 16° tot 30°.</small></span></div>
-          <div class="punt nee"><i>–</i><span><b>Zegt niets terug</b><small>Of de airco een opdracht hoorde, weet Smart Climate niet. Het stuurt hooguit eens per kwartier en kijkt aan de kamer of het werkte.</small></span></div>
+          <div class="punt nee"><i>–</i><span><b>Zegt niets terug</b><small>Of de airco een opdracht hoorde, weet SunArc niet. Het stuurt hooguit eens per kwartier en kijkt aan de kamer of het werkte.</small></span></div>
           <div class="punt om"><i></i><span><b>Meet de kamer niet</b><small>Kies een thermometer in de hobbykamer.</small>
             <div class="chips"><span class="chip veld">Thermometer hobbykamer ▾</span></div></span></div>
-          <div class="punt om"><i></i><span><b>Geen eigen stroommeter</b><small>Smart Climate rekent met 0,8 kW als hij draait.</small></span></div>
+          <div class="punt om"><i></i><span><b>Geen eigen stroommeter</b><small>SunArc rekent met 0,8 kW als hij draait.</small></span></div>
         </div>
-        <div class="weet"><b>Goed om te weten bij infrarood:</b> pak je de afstandsbediening, dan weet Smart Climate dat niet. Op zon helpen werkt goed; op temperatuur houden kan, maar minder precies.</div>
+        <div class="weet"><b>Goed om te weten bij infrarood:</b> pak je de afstandsbediening, dan weet SunArc dat niet. Op zon helpen werkt goed; op temperatuur houden kan, maar minder precies.</div>
         <div class="rol"><b>Wat hij doet</b><span class="seg"><span>Op temperatuur</span><span class="aan">Op zon</span><span>Kijkt mee</span></span></div>
       </div>
     </div>

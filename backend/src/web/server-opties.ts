@@ -49,7 +49,7 @@ import type { KlimaatBrug } from './klimaatbrug.js';
 export interface Version {
   /** Het versienummer (besluit 131), uit de code zelf. */
   readonly nummer: string;
-  /** Hoe Smart Climate draait: als add-on in Home Assistant, of op een eigen server. */
+  /** Hoe SunArc draait: als add-on in Home Assistant, of op een eigen server. */
   readonly installatie: 'add-on' | 'server';
   /** Korte commit-hash, of `onbekend`. */
   readonly commit: string;
@@ -146,7 +146,7 @@ export interface WebOptions {
    * beheerder de app nu opent.
    */
   readonly sleutelAdres?: string;
-  /** Wat er in Home Assistant klaarstaat voor de functies van Smart Climate (besluit 179). */
+  /** Wat er in Home Assistant klaarstaat voor de functies van SunArc (besluit 179). */
   /** In de taal van de app (besluit 185). */
   readonly klaarzetten?: (lang?: Lang) => Promise<readonly KlaarPunt[]>;
   /** Levert het laatste besluit, of null zolang er nog niet gerekend is. */

@@ -104,7 +104,7 @@ export class BufferStore {
     const b = body as Record<string, unknown>;
     const id = b['id'];
     const h = (this.#options.config.heatStores ?? []).find((x) => x.id === id);
-    if (typeof id !== 'string' || h == null) return { ok: false, status: 404, reden: 'dat apparaat kent Smart Climate niet als warmtebuffer' };
+    if (typeof id !== 'string' || h == null) return { ok: false, status: 404, reden: 'dat apparaat kent SunArc niet als warmtebuffer' };
     const t = this.#now();
     const klaarOm = b['klaarOm'];
     if (klaarOm !== null && (!isGetal(klaarOm) || klaarOm <= t || klaarOm > t + MAX_AHEAD_MS)) {

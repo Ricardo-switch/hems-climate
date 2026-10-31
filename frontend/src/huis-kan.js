@@ -1,5 +1,5 @@
 /*
- * Wat je huis kan (besluit 130, schets Wand-Huis-kan). Alles wat Smart Climate
+ * Wat je huis kan (besluit 130, schets Wand-Huis-kan). Alles wat SunArc
  * voor je doet, per onderwerp, en hoe het ervoor staat: werkt, kijkt mee, leert
  * nog, staat uit, vul in, of wat er nodig is. Links het huis met aanwijzers, en
  * wat er het meeste bij zou opleveren, gerekend met je eigen meters. Een tik
@@ -77,7 +77,7 @@ function blad(x) {
 }
 
 /*
- * Klaarzetten in Home Assistant (besluit 179): wat Smart Climate er gebruikt,
+ * Klaarzetten in Home Assistant (besluit 179): wat SunArc er gebruikt,
  * per groep, en of het er staat. Groen staat klaar, oranje mist voor de
  * regeling, grijs maakt een functie mogelijk. Een tik opent dat scherm van
  * Home Assistant; buiten Home Assistant staat erbij waar het is.

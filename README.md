@@ -1,4 +1,8 @@
-<h1 align="center">Smart Climate</h1>
+<p align="center"><img src="frontend/kit/merk.svg" alt="" width="180"></p>
+
+<h1 align="center">SunArc</h1>
+
+<p align="center"><sub>AUTONOMOUS RESIDENTIAL CLIMATE</sub></p>
 
 <p align="center"><b>Klimaat en zon in één app, voor Home Assistant.</b><br>
 Je huis denkt mee met de zon: het kijkt naar je verwarming, airco's en zonnepanelen,<br>
@@ -12,11 +16,11 @@ en zegt bij elk besluit waarom.</p>
 
 ## Wat is het?
 
-Smart Climate is een add-on voor Home Assistant met een eigen app voor de tablet aan de muur en voor je telefoon. Het haalt je huis uit Home Assistant (etages, kamers, apparaten, sensoren) en tekent het als een opengewerkt poppenhuis. Daarin zie je in één oogopslag wat er gebeurt: waar het warm is, wat er draait en hoeveel zon je panelen leveren.
+SunArc is een add-on voor Home Assistant met een eigen app voor de tablet aan de muur en voor je telefoon. Het haalt je huis uit Home Assistant (etages, kamers, apparaten, sensoren) en tekent het als een opengewerkt poppenhuis. Daarin zie je in één oogopslag wat er gebeurt: waar het warm is, wat er draait en hoeveel zon je panelen leveren.
 
 Achter de app zit een regeling die elke ronde beslist wat het huis zou moeten doen. Comfort eerst, en zon die over is, gaat naar je eigen huis voordat hij het net op gaat. Bij elk besluit staat waarom, in gewone taal.
 
-**Eerlijk over de stand van nu:** Smart Climate kijkt mee. Het beslist en legt alles vast, maar schakelt je verwarming en airco's nog niet. Echt regelen komt pas na een volledige winter meekijken, met een bewijsrapport dat het beter doet dan je huidige regeling. Lampen, scènes en schermen bedien je wel al vanuit de app.
+**Eerlijk over de stand van nu:** SunArc kijkt mee. Het beslist en legt alles vast, maar schakelt je verwarming en airco's nog niet. Echt regelen komt pas na een volledige winter meekijken, met een bewijsrapport dat het beter doet dan je huidige regeling. Lampen, scènes en schermen bedien je wel al vanuit de app.
 
 ## Wat het kan
 
@@ -70,7 +74,7 @@ Achter de app zit een regeling die elke ronde beslist wat het huis zou moeten do
 - **Echt regelen** van verwarming en airco's, na een winter meekijken met dertig winterdagen bewijs.
 - Tarieven per uur en prognoses, en een thermisch model dat leert hoe je huis afkoelt en opwarmt.
 
-Een thuisbatterij en een laadpaal laat Smart Climate zien, maar stuurt het niet zelf.
+Een thuisbatterij en een laadpaal laat SunArc zien, maar stuurt het niet zelf.
 
 ## Installeren
 
@@ -80,21 +84,21 @@ Je hebt Home Assistant met add-ons nodig (Home Assistant OS of Supervised), op e
    ```
    https://github.com/Ricardo-switch/hems-climate
    ```
-2. Kies **Smart Climate** → **Installeren**, en daarna **Starten**. Zet **In zijbalk tonen** aan.
-3. Open Smart Climate in de zijbalk. Een nieuw huis begint met een welkom: je huis groeit uit wat Home Assistant kent, en met één knop ga je inrichten. Dat duurt ongeveer tien minuten.
+2. Kies **SunArc** → **Installeren**, en daarna **Starten**. Zet **In zijbalk tonen** aan.
+3. Open SunArc in de zijbalk. Een nieuw huis begint met een welkom: je huis groeit uit wat Home Assistant kent, en met één knop ga je inrichten. Dat duurt ongeveer tien minuten.
 
 Updates komen via Home Assistant. Zet op de add-on-pagina **Automatisch bijwerken** aan als dat vanzelf moet.
 
-### Assist vraagt Smart Climate
+### Assist vraagt SunArc
 
-Wil je Smart Climate ook vragen via Assist van Home Assistant ("waarom draait de zolder?", "wat doe je nu?"), dan heb je de integratie **Smart Climate** nodig. Geen YAML: de add-on meldt zich vanzelf aan.
+Wil je SunArc ook vragen via Assist van Home Assistant ("waarom draait de zolder?", "wat doe je nu?"), dan heb je de integratie **SunArc** nodig. Geen YAML: de add-on meldt zich vanzelf aan.
 
-- **Met HACS:** kies in HACS de drie puntjes → **Eigen repositories**, voeg `https://github.com/Ricardo-switch/hems-climate` toe als **Integratie**, installeer **Smart Climate** en herstart Home Assistant.
-- **Zonder HACS:** open Smart Climate → **Instellingen → Bewoners en toegang → Sleutel voor de assistent** en tik op **Zet de integratie in Home Assistant**. Herstart daarna Home Assistant.
+- **Met HACS:** kies in HACS de drie puntjes → **Eigen repositories**, voeg `https://github.com/Ricardo-switch/hems-climate` toe als **Integratie**, installeer **SunArc** en herstart Home Assistant.
+- **Zonder HACS:** open SunArc → **Instellingen → Bewoners en toegang → Sleutel voor de assistent** en tik op **Zet de integratie in Home Assistant**. Herstart daarna Home Assistant.
 
-Home Assistant toont dan **Nieuw apparaat gevonden: Smart Climate**; klik op **Toevoegen**. Dat doe je één keer: een update van Smart Climate vraagt daarna geen herstart, want de zinnen en de antwoorden komen uit de add-on. De integratie heeft een eigen versie, die alleen omhoog gaat als hij zelf verandert. De integratie houdt de zinnen en de kamers van je huis zelf bij. Alles leest alleen: een opdracht als "koel de zolder naar 21" krijgt als antwoord wat Smart Climate zou doen.
+Home Assistant toont dan **Nieuw apparaat gevonden: SunArc**; klik op **Toevoegen**. Dat doe je één keer: een update van SunArc vraagt daarna geen herstart, want de zinnen en de antwoorden komen uit de add-on. De integratie heeft een eigen versie, die alleen omhoog gaat als hij zelf verandert. De integratie houdt de zinnen en de kamers van je huis zelf bij. Alles leest alleen: een opdracht als "koel de zolder naar 21" krijgt als antwoord wat SunArc zou doen.
 
-Werkt het met jouw apparaten? Smart Climate werkt met wat je huis heeft. Een airco, een thermostaat, een slimme meter, panelen van elk merk: het doet wat jouw opstelling toelaat, en zegt bij **Wat je huis kan** wat het daardoor (nog) niet kan.
+Werkt het met jouw apparaten? SunArc werkt met wat je huis heeft. Een airco, een thermostaat, een slimme meter, panelen van elk merk: het doet wat jouw opstelling toelaat, en zegt bij **Wat je huis kan** wat het daardoor (nog) niet kan.
 
 ## Hoe het werkt
 
@@ -127,7 +131,7 @@ Er is nog geen licentie gekozen. Tot die er is, mag je kijken en meedenken, maar
 <details>
 <summary><b>In English</b></summary>
 
-**Smart Climate** is a Home Assistant add-on with its own app for a wall tablet and your phone. It draws your home as a 3D dollhouse from what Home Assistant already knows, and decides around the clock what your heating, air conditioners and solar surplus should do, explaining every decision in plain words. Today it runs in *shadow mode*: it decides and records everything, but does not switch climate devices yet; lights, scenes and blinds can already be controlled from the app. Real control comes after a full winter of evidence. Everything runs locally. The app speaks Dutch and English.
+**SunArc** is a Home Assistant add-on with its own app for a wall tablet and your phone. It draws your home as a 3D dollhouse from what Home Assistant already knows, and decides around the clock what your heating, air conditioners and solar surplus should do, explaining every decision in plain words. Today it runs in *shadow mode*: it decides and records everything, but does not switch climate devices yet; lights, scenes and blinds can already be controlled from the app. Real control comes after a full winter of evidence. Everything runs locally. The app speaks Dutch and English.
 
-Install: add `https://github.com/Ricardo-switch/hems-climate` as an add-on repository in Home Assistant and install **Smart Climate** (aarch64 and amd64).
+Install: add `https://github.com/Ricardo-switch/hems-climate` as an add-on repository in Home Assistant and install **SunArc** (aarch64 and amd64).
 </details>

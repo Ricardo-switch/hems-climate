@@ -98,11 +98,11 @@ export class WebServer {
       this.#eigen = createServer((req, res) => {
         if (!viaTailscale(req)) {
           res.writeHead(421, { 'content-type': 'text/plain; charset=utf-8' });
-          res.end('Open Smart Climate via het adres in Tailscale (https://….ts.net).\n');
+          res.end('Open SunArc via het adres in Tailscale (https://….ts.net).\n');
           return;
         }
         this.#d.toegang.set(req, eigen.access);
-        // Het adres waarop Smart Climate in Tailscale staat, voor de knop Op je startscherm.
+        // Het adres waarop SunArc in Tailscale staat, voor de knop Op je startscherm.
         this.#d.eigenAdres = `https://${String(req.headers.host).replace(/:443$/, '')}`;
         verzoek(req, res);
       });

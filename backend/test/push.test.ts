@@ -151,7 +151,7 @@ describe('wat er wanneer naar de telefoon gaat', () => {
     const tel: Telefoon = { id: 'd', naam: 'Pixel 8', dienst: 'mobile_app_pixel_8', account: 'u' };
     const uit = ontvangersVan(b, { meldingen: () => STANDAARD_MELDINGEN, taal: () => 'en' }, [tel]);
     expect(uit).toEqual([{ account: 'u', keus: STANDAARD_MELDINGEN, telefoon: tel, taal: 'en' }]);
-    expect(proefTekst('nl').titel).toBe('Proefmelding van Smart Climate');
-    expect(proefTekst('en').titel).toBe('Test notification from Smart Climate');
+    expect(proefTekst('nl').titel).toBe('Proefmelding van SunArc');
+    expect(proefTekst('en').titel).toBe('Test notification from SunArc');
   });
 });

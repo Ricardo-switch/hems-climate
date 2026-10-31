@@ -301,7 +301,7 @@ try {
     console.log('  NOG GEEN INSTALLATIE INGESTELD');
     console.log('─'.repeat(64));
     console.log('  Er is geen configuratie gevonden, dus er wordt nog niets geregeld.');
-    console.log('  Open het paneel Smart Climate in Home Assistant; daar staat wat');
+    console.log('  Open het paneel SunArc in Home Assistant; daar staat wat');
     console.log('  er in huis is gevonden en kun je het bevestigen.');
     console.log('─'.repeat(64));
   } else if (error instanceof ConfigError) {
@@ -1089,7 +1089,7 @@ const telefoons = (): Telefoon[] => {
   }
   return telefoonsNu;
 };
-/** Waar een tik op de melding naartoe gaat: Smart Climate in de app van Home Assistant. */
+/** Waar een tik op de melding naartoe gaat: SunArc in de app van Home Assistant. */
 let paneelPad: string | null = null;
 if (version.installatie === 'add-on' && process.env['SUPERVISOR_TOKEN']) {
   void fetch('http://supervisor/addons/self/info', { headers: { authorization: `Bearer ${process.env['SUPERVISOR_TOKEN']}` } })
@@ -1305,7 +1305,7 @@ client.on('stateChanged', (state: HaEntityState) => {
 
 /*
  * Licht bedienen (besluit 97): alleen de lampen die het huis toont, en alleen
- * aan en uit. Smart Climate regelt het licht niet (92); dit is een knop.
+ * aan en uit. SunArc regelt het licht niet (92); dit is een knop.
  */
 if (startup.lights.withoutIngress) {
   console.warn('LET OP: licht bedienen staat aan zonder Ingress ervoor.');
@@ -1485,7 +1485,7 @@ async function integratieStand() {
 /*
  * De integratie in Home Assistant (besluit 184): de add-on meldt zich aan bij
  * de Supervisor, met zijn adres in het netwerk van Home Assistant en de
- * sleutel. Home Assistant toont dan "Nieuw apparaat gevonden: Smart Climate",
+ * sleutel. Home Assistant toont dan "Nieuw apparaat gevonden: SunArc",
  * als de integratie er staat. Alleen in de add-on.
  */
 if (sleutel && version.installatie === 'add-on' && webPort != null && process.env['SUPERVISOR_TOKEN']) {
@@ -1602,7 +1602,7 @@ function stilzetten(): void {
 }
 /** Stopt de dienst; `run.sh` en Docker starten hem opnieuw. */
 function herstart(): void {
-  console.log('Smart Climate start opnieuw (besluit 151).');
+  console.log('SunArc start opnieuw (besluit 151).');
   setTimeout(() => process.exit(OPNIEUW_STARTEN), 3_000);
   void (web?.stop() ?? Promise.resolve()).finally(() => process.exit(OPNIEUW_STARTEN));
 }
@@ -1613,14 +1613,14 @@ async function analyseVoorExport(): Promise<AnalyseExtra> {
   const leesmij = [
     '# Export voor de analyse',
     '',
-    `Smart Climate ${VERSIE} (${version.installatie}), gemaakt op ${new Date().toISOString()}.`,
+    `SunArc ${VERSIE} (${version.installatie}), gemaakt op ${new Date().toISOString()}.`,
     '',
     '- `decisions-*.ndjson`: per dag elk besluit van de arbiter, met de uitleg.',
     '- `history-*.ndjson`: per dag de ruwe standen waarmee een besluit opnieuw te nemen is.',
     '- `runs.ndjson`: welke versie wanneer draaide. `gevoel.ndjson`: wat bewoners aangaven.',
     '- `analyse/instellingen.json`: de configuratie en alles wat in de app is ingesteld of geleerd.',
     '- `analyse/entiteiten.json`: alle entiteiten uit Home Assistant met apparaat, ruimte en etage;',
-    '  `gebruikt` zegt waar Smart Climate ze gebruikt, als pad in de configuratie of een instelling.',
+    '  `gebruikt` zegt waar SunArc ze gebruikt, als pad in de configuratie of een instelling.',
     '',
     'Namen van bewoners zijn vervangen door "Bewoner 1", "Bewoner 2" (in een id `bewoner_1`).',
     'Een ligging (latitude, longitude) staat er niet in.',
@@ -1662,7 +1662,7 @@ const gegevens =
             // Halverwege mis: opnieuw starten met wat er staat, want de regeling staat al stil.
             console.error(`Terugzetten mislukt: ${String(error)}`);
             herstart();
-            return { ok: false as const, status: 500, reden: 'terugzetten lukte niet helemaal; Smart Climate start opnieuw' };
+            return { ok: false as const, status: 500, reden: 'terugzetten lukte niet helemaal; SunArc start opnieuw' };
           }
         },
         opnieuw: async () => {
@@ -1675,7 +1675,7 @@ const gegevens =
           } catch (error) {
             console.error(`Opnieuw beginnen mislukt: ${String(error)}`);
             herstart();
-            return { ok: false as const, status: 500, reden: 'opnieuw beginnen lukte niet helemaal; Smart Climate start opnieuw' };
+            return { ok: false as const, status: 500, reden: 'opnieuw beginnen lukte niet helemaal; SunArc start opnieuw' };
           }
         },
         configWeg: onboarding != null && site != null,

@@ -49,13 +49,13 @@ describe('de spraakassistenten bij Functies', () => {
         preferred_pipeline: 'a',
         pipelines: [
           { id: 'a', name: 'Home Assistant', language: 'nl', stt_engine: null, wake_word_entity: null, wake_word_id: null },
-          { id: 'b', name: 'Smart Climate', language: 'nl', stt_engine: 'stt.faster_whisper', stt_language: 'nl', wake_word_entity: 'wake_word.openwakeword', wake_word_id: 'he_huis' },
+          { id: 'b', name: 'SunArc', language: 'nl', stt_engine: 'stt.faster_whisper', stt_language: 'nl', wake_word_entity: 'wake_word.openwakeword', wake_word_id: 'he_huis' },
           { name: 'zonder id' },
         ],
       }),
     ).toEqual([
       { id: 'a', naam: 'Home Assistant', wekwoord: null, spraakNaarTekst: false, taal: 'nl', voorkeur: true },
-      { id: 'b', naam: 'Smart Climate', wekwoord: 'he_huis', spraakNaarTekst: true, taal: 'nl', voorkeur: false },
+      { id: 'b', naam: 'SunArc', wekwoord: 'he_huis', spraakNaarTekst: true, taal: 'nl', voorkeur: false },
     ]);
     expect(spraakKeuzes(null)).toEqual([]);
   });

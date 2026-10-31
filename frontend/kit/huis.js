@@ -1,5 +1,5 @@
 /*
- * Smart Climate, ontwerp 2: het huis in 3D.
+ * SunArc, ontwerp 2: het huis in 3D.
  *
  * Tekent het huis als een opengewerkt poppenhuis, schuin van voren (een
  * axonometrie, geen echte 3D-motor: licht genoeg voor een tablet aan de muur).

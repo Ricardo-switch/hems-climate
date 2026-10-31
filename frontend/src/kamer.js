@@ -4,7 +4,7 @@
  * in de kamer is. Een tik op een apparaat opent zijn eigen blad.
  *
  * Wat werkt en wat niet, eerlijk: lampen, scènes en schermen bedien je echt
- * (besluiten 97, 100 en 121). Klimaat schakelt Smart Climate tot stap B niet;
+ * (besluiten 97, 100 en 121). Klimaat schakelt SunArc tot stap B niet;
  * dat blad zegt wat het huis zou doen, in de woorden van de assistent (75).
  * De regeling doet niets met de schermen.
  *
@@ -172,7 +172,7 @@ function tekenNu() {
   });
   $$('[data-naam]').forEach((el) => (el.textContent = kamer.naam));
   $$('[data-zin]').forEach((el) => (el.textContent = kamer.status?.zin ?? (kamer.lampenAan ? t('kamer.lampenAan', { n: kamer.lampenAan }) : '')));
-  document.title = `${kamer.naam} · Smart Climate`;
+  document.title = `${kamer.naam} · SunArc`;
 
   // Naast elkaar van beneden naar boven, buiten achteraan (besluit 131).
   const etages = huismodel.etagesNaast(huisData.etages).filter((e) => (e.ruimtes ?? []).length);
@@ -393,7 +393,7 @@ function rookmelderBlad(d) {
 
 const kopVan = (d, toon, rechts = '') => `<div class="bladkop"><div><h2 class="kop-2">${esc(d.naam)}</h2><p class="klein ${toon}" style="margin: 4px 0 0">${esc(standTekst(d))}</p></div>${rechts}</div>`;
 
-/** De strook van vandaag voor een klimaatapparaat: wanneer het draaide, en licht wanneer Smart Climate het zou doen. */
+/** De strook van vandaag voor een klimaatapparaat: wanneer het draaide, en licht wanneer SunArc het zou doen. */
 function strookVandaag(d, kleur) {
   const a = (vandaag?.apparaten ?? []).find((x) => x.actuatorId === d.actuatorId);
   if (!vandaag || !a) return '';

@@ -436,7 +436,7 @@
    * Rook, koolmonoxide of hitte (21 oktober 2026, schets Wand-Rook): op elke
    * pagina, zoals aanbellen, rood en schermvullend, met de kamer en wat de
    * andere melders zien. Sluiten haalt het weg tot een melder iets nieuws ziet;
-   * ziet niemand meer iets, dan gaat het vanzelf weg. Smart Climate zet het
+   * ziet niemand meer iets, dan gaat het vanzelf weg. SunArc zet het
    * alarm zelf niet uit: dat doe je op de melder.
    */
   /** Wat een melder ziet: rook, co of hitte; als kop en in een zin (teksten.*.js). */
@@ -838,7 +838,7 @@
    * De app van Home Assistant kleurt de statusbalk en de balk onderin naar het
    * thema van Home Assistant (`--app-header-background-color` en
    * `--primary-background-color`), en leest die opnieuw bij het bericht
-   * `theme-update`. Zolang Smart Climate volledig scherm heeft, zet de app die
+   * `theme-update`. Zolang SunArc volledig scherm heeft, zet de app die
    * twee op het document van Home Assistant; daarna komt het thema terug. Dat
    * terugzetten leeft bij Home Assistant zelf, want deze pagina is dan al weg
    * als je het paneel verlaat. Alleen in de app van Home Assistant.

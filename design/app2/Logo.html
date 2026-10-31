@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Logo · de zon met stralen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Het logo van SunArc (schets, 31 oktober 2026). Ontwerp 2 van de bewoner, zonder de
+   * bogen eromheen: een zon op de horizon met stralen van ongelijke lengte. Het
+   * is de zonnewaaier van Hoe ver je huis is, teruggebracht tot een teken, en
+   * de stralen bewegen als de assistent luistert of praat. Eén tekenfunctie
+   * (merk) voor alles: het grote logo, het icoon, de kleine maten en de
+   * equalizer.
+   */
+  body { margin: 0; width: 1280px; background: radial-gradient(1200px 700px at 30% 0%, #1b2547 0%, var(--inkt) 60%); color: var(--tekst); font-family: var(--romp); }
+  .vel { padding: 56px 64px 72px; display: flex; flex-direction: column; gap: 64px; }
+  h2 { font-family: var(--kop); font-size: 30px; font-weight: 700; margin: 0 0 6px; letter-spacing: -0.01em; }
+  .uitleg { color: var(--zacht); font-size: 16px; line-height: 1.5; margin: 0 0 24px; max-width: 760px; }
+  .klein { color: var(--gedempt); font-size: 13px; }
+  .glas { background: var(--glas); border: 1px solid var(--glas-rand); border-radius: 28px; }
+
+  /* De opening: het logo groot */
+  .held { display: grid; grid-template-columns: 1fr 380px; gap: 48px; align-items: center; min-height: 560px; }
+  .held .beeld { position: relative; display: flex; flex-direction: column; align-items: center; }
+  .held svg.merk { width: 640px; height: auto; }
+  .woord { font-family: var(--kop); font-weight: 700; font-size: 84px; letter-spacing: -0.035em; line-height: 1; margin-top: 18px; }
+  .woord .twee { color: var(--zacht); font-weight: 600; }
+  .onder { font-size: 18px; color: var(--zacht); margin-top: 14px; letter-spacing: 0.01em; }
+  .onder.arc { font-size: 15px; letter-spacing: 0.2em; text-transform: uppercase; }
+  .onder.arc b { color: var(--tekst); }
+  .held ol { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 22px; }
+  .held li b { display: block; font-family: var(--kop); font-size: 19px; margin-bottom: 4px; }
+  .held li span { color: var(--zacht); font-size: 15px; line-height: 1.5; }
+  .held li { padding-left: 18px; border-left: 3px solid var(--k, var(--mint)); }
+
+  /* De naam */
+  .namen { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+  .naam { padding: 34px 24px 28px; display: flex; flex-direction: column; align-items: center; }
+  .naam svg { width: 190px; height: auto; }
+  .naam .w { font-family: var(--kop); font-weight: 700; font-size: 54px; letter-spacing: -0.035em; line-height: 1; margin-top: 14px; white-space: nowrap; }
+  .naam .w span { color: var(--zacht); font-weight: 600; }
+  .naam .o { margin-top: 12px; font-size: 14px; color: var(--zacht); }
+  .naam .o.arc { letter-spacing: 0.14em; text-transform: uppercase; font-size: 12px; }
+  .naam .o.arc b { color: var(--tekst); }
+
+  /* Waar het vandaan komt */
+  .herkomst { display: grid; grid-template-columns: 1fr 64px 1fr 64px 1fr; align-items: center; gap: 8px; }
+  .uitsnede { height: 250px; border-radius: 22px; overflow: hidden; position: relative; border: 1px solid var(--glas-rand); }
+  .uitsnede img { position: absolute; }
+  .uitsnede figcaption, .kaart figcaption { position: absolute; left: 16px; bottom: 12px; font-size: 13px; color: var(--zacht); background: rgba(9, 15, 28, 0.7); padding: 4px 10px; border-radius: 99px; }
+  .pijl { text-align: center; color: var(--gedempt); font-size: 28px; }
+  .kaart { height: 250px; border-radius: 22px; display: grid; place-items: center; position: relative; }
+  .kaart svg { width: 300px; height: auto; }
+
+  /* Maten */
+  .maten { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .maten .glas { padding: 28px 24px; display: flex; align-items: flex-end; gap: 20px; }
+  .maten .noot { grid-column: 1 / -1; margin: 0; }
+  .maten .licht { background: #eef3f8; border-color: rgba(15, 27, 45, 0.08); color: #0f1b2d; }
+  .maten .licht .klein { color: #5a6a7e; }
+  .maat { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .icoon { display: block; }
+
+  /* In gebruik */
+  .gebruik { display: grid; grid-template-columns: 420px 1fr; gap: 20px; }
+  .scherm { padding: 28px; }
+  .thuisscherm { width: 300px; margin: 0 auto; border-radius: 40px; padding: 46px 22px 30px; background: linear-gradient(170deg, #2d3f7a, #6b4f86 55%, #b06a5a); display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px 10px; }
+  .app { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 11px; color: #fff; }
+  .app i { width: 54px; height: 54px; border-radius: 14px; background: rgba(255, 255, 255, 0.22); display: block; }
+  .app svg { width: 54px; height: 54px; }
+  .rijen { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .rij { padding: 22px 24px; display: flex; align-items: center; gap: 18px; }
+  .nav-mock { width: 84px; height: 220px; border-radius: 26px; background: rgba(9, 15, 28, 0.6); border: 1px solid var(--glas-rand); display: flex; flex-direction: column; align-items: center; padding-top: 14px; gap: 18px; }
+  .nav-mock .tab { width: 26px; height: 26px; border-radius: 8px; border: 2px solid var(--gedempt); opacity: 0.6; }
+  .ha-winkel { display: flex; gap: 14px; align-items: center; padding: 14px 16px; border-radius: 14px; background: #1c1c1c; color: #e1e1e1; font-family: Roboto, system-ui, sans-serif; width: 100%; }
+  .ha-winkel b { display: block; font-size: 15px; font-weight: 500; }
+  .ha-winkel span { font-size: 13px; color: #9b9b9b; }
+  .ha-logo { width: 100%; height: 120px; border-radius: 14px; background: #1c1c1c; display: flex; align-items: center; justify-content: center; gap: 14px; }
+  .ha-logo .w { font-family: var(--kop); font-weight: 700; font-size: 26px; white-space: nowrap; letter-spacing: -0.03em; }
+  .naast { display: flex; align-items: center; gap: 16px; }
+  .naast .w { font-family: var(--kop); font-weight: 700; font-size: 28px; letter-spacing: -0.03em; white-space: nowrap; }
+  .rijen > * { min-width: 0; }
+
+  /* De equalizer */
+  .eq { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; }
+  .eq .glas { padding: 26px 22px 22px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .eq svg { width: 100%; max-width: 230px; height: auto; }
+  .eq b { font-family: var(--kop); font-size: 18px; }
+  .eq p { margin: 0; text-align: center; color: var(--zacht); font-size: 14px; line-height: 1.45; }
+  .stip { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; vertical-align: 1px; }
+  .eq-groot { margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .eq-groot .glas { padding: 30px; display: flex; align-items: center; gap: 30px; }
+  .eq-groot svg { width: 230px; flex: none; height: auto; }
+  .eq.rond svg { max-width: 200px; }
+  .zin { font-family: var(--kop); font-size: 30px; font-weight: 700; line-height: 1.15; letter-spacing: -0.01em; }
+  .zin em { font-style: normal; color: var(--gedempt); }
+
+  /* Ernaast */
+  .vergelijk { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .vergelijk .glas { padding: 28px; display: flex; align-items: center; gap: 26px; }
+  .vergelijk img, .vergelijk svg { width: 120px; height: 120px; flex: none; }
+  .vergelijk ul { margin: 0; padding-left: 18px; color: var(--zacht); line-height: 1.6; font-size: 15px; }
+</style>
+</head>
+<body>
+<div class="vel">
+
+  <!-- 1. Het logo -->
+  <section class="held">
+    <div class="beeld">
+      <svg class="merk" data-merk="held" viewBox="0 0 120 64" role="img" aria-label="Het logo: een zon op de horizon met negen stralen"></svg>
+      <div class="woord">Sun<span class="twee">Arc</span></div>
+      <div class="onder arc"><b>A</b>utonomous <b>R</b>esidential <b>C</b>limate</div>
+    </div>
+    <ol>
+      <li style="--k: var(--zon)"><b>SunArc</b><span>De zon in het midden, en arc: de boog van de waaier. ARC staat voor Autonomous Residential Climate, een huis dat zijn klimaat zelf regelt.</span></li>
+      <li style="--k: var(--zon)"><b>Een zon die opkomt boven je huis</b><span>Zoals de zonnewaaier: de zon op de horizon, en elke straal is iets wat je huis doet.</span></li>
+      <li style="--k: var(--mint)"><b>Werkt, kijkt mee, leert</b><span>Van links naar rechts mint, ijs en violet: dezelfde drie kleuren als in de app, in dezelfde volgorde.</span></li>
+      <li style="--k: var(--ijs)"><b>Ongelijke stralen</b><span>Niet elke straal is even ver, net als in je huis. Daardoor kunnen ze ook bewegen: dan is het de stem van de assistent.</span></li>
+    </ol>
+  </section>
+
+  <!-- 2. Waar het vandaan komt -->
+  <section>
+    <h2>Waar het vandaan komt</h2>
+    <p class="uitleg">Het teken is geen nieuw plaatje naast de app. Het is de zonnewaaier van Hoe ver je huis is, teruggebracht tot negen stralen, en de ring van de assistent als hij luistert.</p>
+    <div class="herkomst">
+      <figure class="uitsnede" style="margin:0"><img src="screens/Wand-Voortgang.png" alt="" style="width: 1100px; left: -110px; top: -150px;"><figcaption>Hoe ver je huis is</figcaption></figure>
+      <div class="pijl">→</div>
+      <figure class="kaart glas" style="margin:0"><svg data-merk="herkomst" viewBox="0 0 120 64" role="img" aria-label="Het logo"></svg><figcaption>Het logo</figcaption></figure>
+      <div class="pijl">→</div>
+      <figure class="uitsnede" style="margin:0"><img src="screens/Wand-Assistent-Gesprek-luistert.png" alt="" style="width: 860px; left: -60px; top: -30px;"><figcaption>De assistent luistert</figcaption></figure>
+    </div>
+  </section>
+
+  <!-- 3. Maten -->
+  <section>
+    <h2>Groot en klein</h2>
+    <p class="uitleg">Vanaf 48 pixels negen stralen. Kleiner worden het er vijf, dikker en zonder gloed, zodat het op 16 pixels nog een zon is en geen vlek.</p>
+    <div class="maten">
+      <div class="glas" data-maten="donker"></div>
+      <div class="glas licht" data-maten="licht"></div>
+      <p class="klein noot">In pixels. 32 en kleiner: vijf stralen.</p>
+    </div>
+  </section>
+
+  <!-- 4. In gebruik -->
+  <section>
+    <h2>Waar je het ziet</h2>
+    <p class="uitleg">Het icoon op je telefoon, bovenaan de zijbalk van de app, en in de winkel van Home Assistant. Daar heeft de add-on nu nog geen eigen icoon.</p>
+    <div class="gebruik">
+      <div class="glas scherm">
+        <div class="thuisscherm" data-thuisscherm></div>
+        <p class="klein" style="text-align:center; margin: 16px 0 0">Op je startscherm, tussen andere apps</p>
+      </div>
+      <div class="rijen">
+        <div class="glas rij">
+          <div class="nav-mock"><svg data-icoon="56" width="56" height="56"></svg><span class="tab"></span><span class="tab"></span><span class="tab"></span><span class="tab"></span></div>
+          <div><b style="font-family: var(--kop); font-size: 18px">Zijbalk van de app</b><p class="klein" style="margin: 6px 0 0; line-height: 1.5">Waar nu het gekleurde vierkantje staat. Wand en telefoon.</p></div>
+        </div>
+        <div class="glas rij" style="flex-direction: column; align-items: flex-start">
+          <b style="font-family: var(--kop); font-size: 18px">Winkel van Home Assistant</b>
+          <div class="ha-winkel"><svg data-icoon="56" width="56" height="56"></svg><div><b>SunArc</b><span>Autonomous Residential Climate</span></div></div>
+          <p class="klein" style="margin: 0">icon.png, 128 × 128</p>
+        </div>
+        <div class="glas rij" style="flex-direction: column; align-items: flex-start">
+          <b style="font-family: var(--kop); font-size: 18px">Kop van de add-on</b>
+          <div class="ha-logo"><svg data-merk="ha" viewBox="0 0 120 64" width="96" height="51" style="overflow: visible"></svg><span class="w">SunArc</span></div>
+          <p class="klein" style="margin: 0">logo.png, 250 × 100</p>
+        </div>
+        <div class="glas rij" style="flex-direction: column; align-items: flex-start; gap: 18px">
+          <b style="font-family: var(--kop); font-size: 18px">Naast elkaar en licht</b>
+          <div class="naast"><svg data-merk="naast" viewBox="0 0 120 64" width="80" height="43" style="overflow: visible"></svg><span class="w">SunArc</span></div>
+          <div class="naast" style="background:#f4f7fa; color:#0f1b2d; padding: 10px 18px; border-radius: 14px"><svg data-merk="naast-licht" viewBox="0 0 120 64" width="80" height="43" style="overflow: visible"></svg><span class="w">SunArc</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. De equalizer -->
+  <section>
+    <h2>De stralen als stem van de assistent</h2>
+    <p class="uitleg">Dezelfde zon, dezelfde negen stralen. Ze bewegen anders per moment, zodat je zonder te lezen ziet wat de assistent doet. Ze lopen hier echt.</p>
+    <div class="eq">
+      <div class="glas"><svg data-eq="rust" viewBox="0 0 120 64"></svg><b><span class="stip" style="background: var(--gedempt)"></span>Wacht</b><p>De stralen ademen langzaam. Zo staat hij op de tab Assistent.</p></div>
+      <div class="glas"><svg data-eq="luistert" viewBox="0 0 120 64"></svg><b><span class="stip" style="background: var(--mint)"></span>Luistert</b><p>Elke straal volgt je stem, zoals een equalizer.</p></div>
+      <div class="glas"><svg data-eq="denkt" viewBox="0 0 120 64"></svg><b><span class="stip" style="background: var(--violet)"></span>Denkt na</b><p>Een golf loopt van links naar rechts over de stralen, en weer terug.</p></div>
+      <div class="glas"><svg data-eq="praat" viewBox="0 0 120 64"></svg><b><span class="stip" style="background: var(--zon)"></span>Praat</b><p>De stralen springen op de lettergrepen; de zon gloeit mee.</p></div>
+    </div>
+    <h2 style="margin-top: 40px; font-size: 24px">Of rond, voor de assistent</h2>
+    <p class="uitleg">Op de pagina Assistent is de hele zon te zien, met de stralen rondom, waar nu de groene bol staat. Het logo blijft de halve zon op de horizon; de assistent is dezelfde zon, maar dan helemaal op.</p>
+    <div class="eq rond">
+      <div class="glas"><svg data-rond="rust" viewBox="0 0 120 120"></svg><b><span class="stip" style="background: var(--gedempt)"></span>Wacht</b></div>
+      <div class="glas"><svg data-rond="luistert" viewBox="0 0 120 120"></svg><b><span class="stip" style="background: var(--mint)"></span>Luistert</b></div>
+      <div class="glas"><svg data-rond="denkt" viewBox="0 0 120 120"></svg><b><span class="stip" style="background: var(--violet)"></span>Denkt na</b></div>
+      <div class="glas"><svg data-rond="praat" viewBox="0 0 120 120"></svg><b><span class="stip" style="background: var(--zon)"></span>Praat</b></div>
+    </div>
+    <div class="eq-groot">
+      <div class="glas"><svg data-rond="luistert" data-groot viewBox="0 0 120 120"></svg><div><span class="klein" style="color: var(--mint)">● Ik luister</span><div class="zin">Waarom is het warm <em>op zolder…</em></div></div></div>
+      <div class="glas"><svg data-rond="praat" data-groot viewBox="0 0 120 120"></svg><div><span class="klein" style="color: var(--zon)">● Hé huis</span><div class="zin" style="font-size: 21px">De zon staat sinds twee uur op het dakraam. De screen gaat om drie uur dicht.</div></div></div>
+    </div>
+  </section>
+
+  <!-- 6. Ernaast -->
+  <section>
+    <h2>Naast het icoon van nu</h2>
+    <div class="vergelijk">
+      <div class="glas"><img src="../../frontend/src/icoon-512.png" alt="Het icoon van nu"><ul><li>Een huisje: dat hebben heel veel apps</li><li>Het verloop zegt niets over wat de app doet</li></ul></div>
+      <div class="glas"><svg data-icoon="120" width="120" height="120"></svg><ul><li>Alleen van deze app: de zon, de stralen, de drie kleuren</li><li>Hetzelfde teken in de app, op het icoon en bij de assistent</li></ul></div>
+    </div>
+  </section>
+</div>
+
+<script>
+'use strict';
+/*
+ * merk(svg, o): de zon op de horizon met n stralen.
+ *   n         aantal stralen (9, of 5 voor kleine maten)
+ *   lengtes   0..1 per straal, links naar rechts
+ *   licht     kleuren voor een lichte achtergrond
+ *   gloed     de gloed achter de zon (alleen op donker, vanaf ongeveer 48 px)
+ *   lijn      de horizon naast de zon
+ *   dik       breedte van een straal in eenheden van de viewBox (120 × 64)
+ */
+const NS = 'http://www.w3.org/2000/svg';
+let teller = 0;
+const KLEUREN = {
+  donker: ['#6ee7b7', '#6fd3ff', '#8f86ff'],
+  licht: ['#18a774', '#1597d1', '#6a5de8'],
+};
+const STANDAARD = { 9: [0.56, 0.82, 0.68, 0.94, 1, 0.86, 0.66, 0.8, 0.54], 5: [0.7, 0.95, 1, 0.9, 0.68] };
+
+const el = (naam, attr, ouder) => {
+  const e = document.createElementNS(NS, naam);
+  for (const [k, v] of Object.entries(attr)) e.setAttribute(k, v);
+  if (ouder) ouder.appendChild(e);
+  return e;
+};
+const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+function meng(stops, t) {
+  const d = t * (stops.length - 1);
+  const i = Math.min(stops.length - 2, Math.floor(d));
+  const a = hex(stops[i]), b = hex(stops[i + 1]), f = d - i;
+  return `rgb(${a.map((x, k) => Math.round(x + (b[k] - x) * f)).join(' ')})`;
+}
+
+function merk(svg, o = {}) {
+  const n = o.n ?? 9;
+  const id = `m${++teller}`;
+  const cx = 60, cy = 60, zon = 17;
+  const r0 = n === 9 ? 24 : 25, R = 57;
+  const dik = o.dik ?? (n === 9 ? 6.2 : 9.5);
+  const stops = o.licht ? KLEUREN.licht : KLEUREN.donker;
+  svg.innerHTML = '';
+  const defs = el('defs', {}, svg);
+  const zg = el('radialGradient', { id: `${id}z`, cx: '50%', cy: '100%', r: '100%' }, defs);
+  el('stop', { offset: '0', 'stop-color': '#ffe7ad' }, zg);
+  el('stop', { offset: '0.55', 'stop-color': '#f7b548' }, zg);
+  el('stop', { offset: '1', 'stop-color': '#e58a3a' }, zg);
+  if (o.gloed) {
+    const gg = el('radialGradient', { id: `${id}g`, cx: '50%', cy: '100%', r: '50%' }, defs);
+    el('stop', { offset: '0', 'stop-color': '#f7b548', 'stop-opacity': '0.42' }, gg);
+    el('stop', { offset: '1', 'stop-color': '#f7b548', 'stop-opacity': '0' }, gg);
+    el('rect', { x: 0, y: 4, width: 120, height: 56, fill: `url(#${id}g)`, class: 'gloed' }, svg);
+  }
+  if (o.lijn) {
+    const lg = el('linearGradient', { id: `${id}l`, x1: '0', x2: '1' }, defs);
+    const kl = o.licht ? '15 27 45' : '255 255 255';
+    el('stop', { offset: '0', 'stop-color': `rgb(${kl} / 0)` }, lg);
+    el('stop', { offset: '0.5', 'stop-color': `rgb(${kl} / ${o.licht ? 0.35 : 0.4})` }, lg);
+    el('stop', { offset: '1', 'stop-color': `rgb(${kl} / 0)` }, lg);
+    el('rect', { x: 0, y: cy - 0.4, width: 120, height: 0.8, fill: `url(#${id}l)` }, svg);
+  }
+  const stralen = [];
+  for (let i = 0; i < n; i++) {
+    const hoek = 180 - (180 / (n + 1)) * (i + 1);
+    const kleur = meng(stops, i / (n - 1));
+    const gr = el('linearGradient', { id: `${id}s${i}`, gradientUnits: 'userSpaceOnUse' }, defs);
+    el('stop', { offset: '0', 'stop-color': kleur, 'stop-opacity': o.licht ? '0.75' : '0.55' }, gr);
+    el('stop', { offset: '1', 'stop-color': kleur }, gr);
+    const lijn = el('line', { stroke: `url(#${id}s${i})`, 'stroke-width': dik, 'stroke-linecap': 'round' }, svg);
+    stralen.push({ hoek, gr, lijn });
+  }
+  const zonpad = el('path', { d: `M${cx - zon} ${cy}A${zon} ${zon} 0 0 1 ${cx + zon} ${cy}Z`, fill: `url(#${id}z)` }, svg);
+  // De lengtes zetten; de equalizer roept dit elk beeld opnieuw aan.
+  function zet(lengtes, gloei = 0) {
+    stralen.forEach((s, i) => {
+      const a = (s.hoek * Math.PI) / 180;
+      const l = Math.max(0.12, Math.min(1, lengtes[i]));
+      const r1 = r0 + dik / 2, r2 = r1 + l * (R - r1 - dik / 2);
+      const p = (r) => [cx + r * Math.cos(a), cy - r * Math.sin(a)];
+      const [x1, y1] = p(r1), [x2, y2] = p(r2);
+      for (const [e, v] of [[s.lijn, { x1, y1, x2, y2 }], [s.gr, { x1, y1, x2, y2 }]]) for (const [k, w] of Object.entries(v)) e.setAttribute(k, w.toFixed(2));
+    });
+    zonpad.style.filter = gloei ? `brightness(${1 + gloei * 0.18})` : '';
+  }
+  zet(o.lengtes ?? STANDAARD[n]);
+  return zet;
+}
+
+/*
+ * rond(svg): de hele zon met n stralen rondom, voor de assistent. Links mint,
+ * boven en onder ijs, rechts violet: gespiegeld, zodat de bovenkant de halve
+ * zon van het logo is.
+ */
+function rond(svg, o = {}) {
+  const n = o.n ?? 20;
+  const id = `r${++teller}`;
+  const c = 60, zon = 19, r0 = 26, R = 58, dik = o.dik ?? 4.6;
+  svg.innerHTML = '';
+  const defs = el('defs', {}, svg);
+  const gg = el('radialGradient', { id: `${id}g` }, defs);
+  el('stop', { offset: '0', 'stop-color': '#f7b548', 'stop-opacity': '0.34' }, gg);
+  el('stop', { offset: '1', 'stop-color': '#f7b548', 'stop-opacity': '0' }, gg);
+  el('circle', { cx: c, cy: c, r: 58, fill: `url(#${id}g)` }, svg);
+  const zg = el('radialGradient', { id: `${id}z`, cx: '42%', cy: '38%', r: '70%' }, defs);
+  el('stop', { offset: '0', 'stop-color': '#ffe7ad' }, zg);
+  el('stop', { offset: '0.5', 'stop-color': '#f7b548' }, zg);
+  el('stop', { offset: '1', 'stop-color': '#e58a3a' }, zg);
+  const stralen = [];
+  for (let i = 0; i < n; i++) {
+    const hoek = 180 - (360 / n) * i;
+    const a = (hoek * Math.PI) / 180;
+    const kleur = meng(KLEUREN.donker, (1 + Math.cos(a)) / 2);
+    const gr = el('linearGradient', { id: `${id}s${i}`, gradientUnits: 'userSpaceOnUse' }, defs);
+    el('stop', { offset: '0', 'stop-color': kleur, 'stop-opacity': '0.5' }, gr);
+    el('stop', { offset: '1', 'stop-color': kleur }, gr);
+    const lijn = el('line', { stroke: `url(#${id}s${i})`, 'stroke-width': dik, 'stroke-linecap': 'round' }, svg);
+    stralen.push({ a, gr, lijn });
+  }
+  const bol = el('circle', { cx: c, cy: c, r: zon, fill: `url(#${id}z)` }, svg);
+  function zet(lengtes, gloei = 0) {
+    stralen.forEach((s, i) => {
+      const l = Math.max(0.1, Math.min(1, lengtes[i]));
+      const r1 = r0 + dik / 2, r2 = r1 + l * (R - r1 - dik / 2);
+      const x1 = c + r1 * Math.cos(s.a), y1 = c - r1 * Math.sin(s.a);
+      const x2 = c + r2 * Math.cos(s.a), y2 = c - r2 * Math.sin(s.a);
+      for (const e of [s.lijn, s.gr]) for (const [k, w] of Object.entries({ x1, y1, x2, y2 })) e.setAttribute(k, w.toFixed(2));
+    });
+    bol.setAttribute('r', (zon * (1 + gloei * 0.06)).toFixed(2));
+    bol.style.filter = gloei ? `brightness(${1 + gloei * 0.18})` : '';
+  }
+  zet(Array.from({ length: n }, (_, i) => STANDAARD[9][i % 9]));
+  return zet;
+}
+
+/* Het icoon: een donker vlak met het teken iets onder het midden. */
+function icoon(svg, px, licht = false) {
+  const id = `i${++teller}`;
+  svg.setAttribute('viewBox', '0 0 100 100');
+  const n = px < 48 ? 5 : 9;
+  const r = 22.4;
+  svg.innerHTML = '';
+  const defs = el('defs', {}, svg);
+  const bg = el('linearGradient', { id: `${id}b`, x1: '0', y1: '0', x2: '0', y2: '1' }, defs);
+  el('stop', { offset: '0', 'stop-color': licht ? '#ffffff' : '#1d2a4d' }, bg);
+  el('stop', { offset: '1', 'stop-color': licht ? '#e6edf5' : '#0b1424' }, bg);
+  el('rect', { width: 100, height: 100, rx: r, fill: `url(#${id}b)` }, svg);
+  if (!licht && px >= 48) {
+    const gg = el('radialGradient', { id: `${id}g`, cx: '50%', cy: '66%', r: '42%' }, defs);
+    el('stop', { offset: '0', 'stop-color': '#f7b548', 'stop-opacity': '0.3' }, gg);
+    el('stop', { offset: '1', 'stop-color': '#f7b548', 'stop-opacity': '0' }, gg);
+    el('rect', { width: 100, height: 100, rx: r, fill: `url(#${id}g)` }, svg);
+  }
+  // Klein: het teken groter in het vlak, anders is het op 16 pixels een stip.
+  const plek = px < 48 ? { x: 3, y: 22, width: 94, height: 50.1 } : { x: 7, y: 25, width: 86, height: 45.9 };
+  const g = el('svg', { ...plek, viewBox: '0 0 120 64', overflow: 'visible' }, svg);
+  merk(g, { n, licht });
+}
+
+/* De maten, op donker en op licht. */
+for (const kant of ['donker', 'licht']) {
+  const vak = document.querySelector(`[data-maten="${kant}"]`);
+  for (const px of [120, 64, 48, 32, 24, 16]) {
+    const m = vak.appendChild(document.createElement('div'));
+    m.className = 'maat';
+    const s = el('svg', { width: px, height: px, class: 'icoon' }, m);
+    icoon(s, px, kant === 'licht');
+    const t = document.createElement('span');
+    t.className = 'klein';
+    t.textContent = `${px}`;
+    m.appendChild(t);
+  }
+}
+document.querySelectorAll('[data-icoon]').forEach((s) => icoon(s, +s.dataset.icoon));
+
+merk(document.querySelector('[data-merk="held"]'), { gloed: true, lijn: true });
+merk(document.querySelector('[data-merk="herkomst"]'), { gloed: true, lijn: true });
+merk(document.querySelector('[data-merk="ha"]'), { gloed: true });
+merk(document.querySelector('[data-merk="naast"]'), {});
+merk(document.querySelector('[data-merk="naast-licht"]'), { licht: true });
+
+/* Het startscherm: elf grijze apps en de onze. */
+const thuis = document.querySelector('[data-thuisscherm]');
+['Klok', 'Foto’s', 'Agenda', 'Weer', 'Kaarten', 'SunArc', 'Muziek', 'Notities', 'Bank', 'Mail', 'Camera', 'Home'].forEach((naam) => {
+  const a = thuis.appendChild(document.createElement('div'));
+  a.className = 'app';
+  if (naam === 'SunArc') icoon(el('svg', { width: 54, height: 54 }, a), 54);
+  else a.appendChild(document.createElement('i'));
+  a.appendChild(document.createTextNode(naam));
+});
+
+/* De equalizer: vier manieren van bewegen op dezelfde negen stralen. */
+const basis = STANDAARD[9];
+const ruis = (t, z) => (Math.sin(t * 1.7 + z) + Math.sin(t * 2.9 + z * 1.3) + Math.sin(t * 4.3 + z * 0.7)) / 3;
+const BEWEGING = {
+  rust: (t, i) => basis[i] * (0.9 + 0.1 * Math.sin(t * 1.1 + i * 0.8)),
+  luistert: (t, i) => {
+    const stem = 0.55 + 0.45 * Math.max(0, ruis(t * 1.6, 0));
+    return 0.3 + stem * (0.45 + 0.35 * ruis(t * 6, i * 2.1) + 0.2 * basis[i]);
+  },
+  denkt: (t, i) => {
+    const fase = (Math.sin(t * 2.2) * 0.5 + 0.5) * 8;
+    return 0.3 + 0.7 * Math.exp(-((fase - i) ** 2) / 2.4);
+  },
+  praat: (t, i) => {
+    const greep = Math.max(0, Math.sin(t * 8.5)) ** 0.6 * (0.6 + 0.4 * Math.max(0, ruis(t, 3)));
+    const vorm = 1 - (Math.abs(i - 4) / 4) * 0.45;
+    return 0.28 + greep * vorm * (0.75 + 0.25 * ruis(t * 5, i));
+  },
+};
+const lopers = [...document.querySelectorAll('[data-eq]')].map((s) => {
+  const soort = s.dataset.eq;
+  return { soort, zet: merk(s, { gloed: true, lijn: s.hasAttribute('data-groot') }) };
+});
+/* Rond: dezelfde vier standen, rondom. Denkt na draait de golf rond. */
+const N = 20;
+const rondje = (d) => Math.min(Math.abs(d), N - Math.abs(d));
+const RONDOM = {
+  rust: (t, i) => 0.5 + 0.1 * Math.sin(t * 1.1 + i * 0.9),
+  luistert: (t, i) => {
+    const stem = 0.55 + 0.45 * Math.max(0, ruis(t * 1.6, 0));
+    return 0.25 + stem * (0.5 + 0.4 * ruis(t * 6, i * 2.3));
+  },
+  denkt: (t, i) => 0.3 + 0.65 * Math.exp(-(rondje(i - ((t * 7) % N)) ** 2) / 4),
+  praat: (t, i) => {
+    const greep = Math.max(0, Math.sin(t * 8.5)) ** 0.6 * (0.6 + 0.4 * Math.max(0, ruis(t, 3)));
+    return 0.25 + greep * (0.55 + 0.35 * ruis(t * 5, i * 1.7));
+  },
+};
+for (const s of document.querySelectorAll('[data-rond]')) {
+  const soort = s.dataset.rond;
+  const zet = rond(s);
+  lopers.push({ soort, zet, n: N, beweging: RONDOM });
+}
+const stil = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function loop(ms) {
+  const t = ms / 1000;
+  for (const l of lopers) {
+    const lengtes = Array.from({ length: l.n ?? 9 }, (_, i) => (l.beweging ?? BEWEGING)[l.soort](t, i));
+    const gloei = l.soort === 'praat' ? Math.max(0, Math.sin(t * 8.5)) : 0;
+    l.zet(lengtes, gloei);
+  }
+  if (!stil) requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

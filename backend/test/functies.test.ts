@@ -115,7 +115,7 @@ describe('de keuzes controleren (besluit 109)', () => {
   });
 
   it('kiest alleen een spraakassistent die Home Assistant kent (besluit 150)', () => {
-    const metSpraak = { ...g, spraakassistenten: [{ id: 'smart_climate', naam: 'Smart Climate', wekwoord: 'he_huis', spraakNaarTekst: true, taal: 'nl', voorkeur: false }] };
+    const metSpraak = { ...g, spraakassistenten: [{ id: 'smart_climate', naam: 'SunArc', wekwoord: 'he_huis', spraakNaarTekst: true, taal: 'nl', voorkeur: false }] };
     expect(controleer({ ...goed, praten: { taalmodel: null, bedienen: true, spraak: 'smart_climate' } }, metSpraak)).toMatchObject({ ok: true, functies: { praten: { spraak: 'smart_climate' } } });
     expect(controleer({ ...goed, praten: { taalmodel: null, bedienen: true, spraak: 'bestaat_niet' } }, metSpraak).ok).toBe(false);
     // Waar de stem vandaan komt (besluit 203): het apparaat of in huis, en verstaan via de browser ja of nee.

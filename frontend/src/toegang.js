@@ -28,7 +28,7 @@ let integratieZin = '';
 let opslag = null;
 /** Wat er gevraagd wordt: null, 'opnieuw', of { backup, naam } om terug te zetten. */
 let bevestig = null;
-/** Een melding bij je gegevens, zoals "Smart Climate start opnieuw". */
+/** Een melding bij je gegevens, zoals "SunArc start opnieuw". */
 let melding = null;
 
 async function laadAlles() {
@@ -99,7 +99,7 @@ function bewonersVorm() {
 
 /**
  * De sleutel voor de assistent van Home Assistant (besluit 147), alleen voor
- * een beheerder. Sinds besluit 184 gaat het via de integratie Smart Climate:
+ * een beheerder. Sinds besluit 184 gaat het via de integratie SunArc:
  * met de add-on meldt die zich vanzelf; anders vul je hier het adres en de
  * sleutel in. Geen YAML meer.
  */
@@ -129,7 +129,7 @@ const eenmalig = () => `<p class="mini" style="margin: 0">${esc(t('toegang.eenma
 
 /**
  * Of de integratie ook is toegevoegd (22 oktober 2026): met alleen de bestanden
- * kan Assist Smart Climate nog niet vragen.
+ * kan Assist SunArc nog niet vragen.
  */
 function toegevoegdZin(i) {
   if (i.toegevoegd === true) return `<p class="klein" style="margin: 0">${t('toegang.toegevoegd')}</p>`;
@@ -138,7 +138,7 @@ function toegevoegdZin(i) {
 }
 
 /*
- * De assistent met één knop (besluit 202): in de add-on zet Smart Climate de
+ * De assistent met één knop (besluit 202): in de add-on zet SunArc de
  * integratie neer, herstart Home Assistant en voegt hem toe. Zolang het loopt,
  * kijkt de pagina elke drie tellen waar het is.
  */
@@ -225,7 +225,7 @@ function gegevensVorm() {
 }
 
 /**
- * Wacht tot Smart Climate weer antwoordt na opnieuw starten, en laadt dan de
+ * Wacht tot SunArc weer antwoordt na opnieuw starten, en laadt dan de
  * pagina; zonder `naar` deze pagina opnieuw. Naar dezelfde pagina met een #
  * springen laadt niets: dan bleef "start opnieuw…" staan met de oude stand.
  */

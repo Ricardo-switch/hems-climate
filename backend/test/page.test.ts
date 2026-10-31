@@ -349,7 +349,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
           // Bijwerken (21 oktober 2026): een Home Assistant die een nieuwere versie klaar heeft.
           bijwerken: {
             view: async (mag: boolean) =>
-              updateView(VERSIE, updateNu.klaar ? { entity_id: 'update.smart_climate_update', state: 'on', attributes: { title: 'Smart Climate', latest_version: '9.9.9', in_progress: updateNu.installeer > 0 }, last_changed: '', last_updated: '' } : null, changelog([{ versie: '9.9.9', datum: '2026-10-22', nieuw: ['Iets nieuws voor de wand'], opgelost: ['Een fout weg'] }]), mag),
+              updateView(VERSIE, updateNu.klaar ? { entity_id: 'update.smart_climate_update', state: 'on', attributes: { title: 'SunArc', latest_version: '9.9.9', in_progress: updateNu.installeer > 0 }, last_changed: '', last_updated: '' } : null, changelog([{ versie: '9.9.9', datum: '2026-10-22', nieuw: ['Iets nieuws voor de wand'], opgelost: ['Een fout weg'] }]), mag),
             installeer: async () => {
               if (!updateNu.klaar) return { ok: false, reden: 'er staat geen nieuwe versie klaar' };
               updateNu.installeer += 1;
@@ -2111,7 +2111,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
         aangezet += 1;
         stand = { ...stand, staat: 'add-on', versie: VERSIE, aanzetten: { bezig: true, stap: 'herstarten', klaar: ['neerzetten'], fout: null, herstartMs: Date.now() } };
       } else if (stand.aanzetten.bezig && ++vragenNa >= 2) {
-        // Na twee keer vragen is Home Assistant terug en is Smart Climate toegevoegd.
+        // Na twee keer vragen is Home Assistant terug en is SunArc toegevoegd.
         stand = { ...stand, geladen: VERSIE, toegevoegd: true, aanzetten: { ...rust, klaar: ['neerzetten', 'herstarten', 'toevoegen'] } };
       }
       await route.fulfill({ status: route.request().method() === 'POST' ? 202 : 200, contentType: 'application/json', body: JSON.stringify(stand) });

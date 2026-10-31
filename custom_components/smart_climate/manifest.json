@@ -1,6 +1,6 @@
 {
   "domain": "smart_climate",
-  "name": "Smart Climate",
+  "name": "SunArc",
   "codeowners": ["@Ricardo-switch"],
   "config_flow": true,
   "dependencies": ["conversation"],
@@ -9,5 +9,5 @@
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/Ricardo-switch/hems-climate/issues",
   "requirements": [],
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

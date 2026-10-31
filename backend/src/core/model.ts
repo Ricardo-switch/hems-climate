@@ -319,7 +319,7 @@ export interface GridLimits {
 }
 
 /**
- * Een apparaat dat één programma draait en dan stopt, en dat Smart Climate op
+ * Een apparaat dat één programma draait en dan stopt, en dat SunArc op
  * zon laat beginnen (besluit 98).
  */
 export interface Deferrable {

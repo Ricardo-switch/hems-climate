@@ -27,7 +27,7 @@
    */
   .scherm { position: relative; width: 1280px; height: 800px; overflow: hidden; }
   .boven { position: absolute; left: 28px; right: 28px; top: 20px; display: flex; align-items: center; gap: 16px; }
-  .logo { width: 34px; height: 34px; border-radius: 11px; background: conic-gradient(from 200deg, #6fd3ff, #8f86ff, #ff7a4d, #f7b548, #6ee7b7, #6fd3ff); flex: none; }
+  .logo { width: 34px; height: 34px; border-radius: 11px; background: url('../../frontend/kit/icoon-klein.svg') center / cover; flex: none; }
   .pad { flex: 1; display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; }
   .h { padding: 7px 10px 8px; border-radius: 14px; background: rgb(var(--wit) / 0.04); border: 1px solid transparent; min-width: 0; }
   .h b { display: block; font-size: 12.5px; font-weight: 700; color: var(--gedempt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -182,7 +182,7 @@
 
   const STANDEN = {
     welkom: {
-      waar: 'Welkom', kop: 'Laten we je huis neerzetten', lead: 'Smart Climate vond je Home Assistant. Wat het daar al weet, staat klaar; jij kijkt of het klopt. Zo’n tien minuten.',
+      waar: 'Welkom', kop: 'Laten we je huis neerzetten', lead: 'SunArc vond je Home Assistant. Wat het daar al weet, staat klaar; jij kijkt of het klopt. Zo’n tien minuten.',
       inhoud: `<div class="tellen">${[['3', 'etages'], ['10', 'kamers'], ['32', 'apparaten'], ['5', 'om te verwarmen of koelen'], ['12', 'panelen'], ['2', 'camera’s']].map(([g, w]) => `<div class="teller"><b>${g}</b><span>${w}</span></div>`).join('')}</div>
         <div class="tip">Het huis links groeit mee: bij elk hoofdstuk komt er iets bij. Wat je overslaat, staat aan het eind bij Nog te doen.</div>`,
       knop: 'Begin', terugTekst: '',
@@ -281,7 +281,7 @@
       model: { tijd: 'avond', etages: lampen(etagesKaal), voordeur: {}, ...buiten, labels: [] },
     },
     ha: {
-      waar: '8. Klaar · Klaarzetten', kop: 'Staat alles klaar?', lead: 'Wat Smart Climate in Home Assistant gebruikt. Oranje mist nog; een tik opent dat scherm van Home Assistant.',
+      waar: '8. Klaar · Klaarzetten', kop: 'Staat alles klaar?', lead: 'Wat SunArc in Home Assistant gebruikt. Oranje mist nog; een tik opent dat scherm van Home Assistant.',
       inhoud: `<div class="lijst" style="gap: 0">
         ${[['var(--mint)', 'Locatie en tijdzone', 'voor de zon, het weer en de gevels', ''], ['var(--gloed)', 'Etages en ruimtes', '7 apparaten staan nog in geen ruimte', 'Open'], ['var(--gloed)', 'Een persoon per bewoner', '3 personen hebben nog geen account', 'Open'], ['var(--mint)', 'Thermostaten en airco’s', '7 apparaten voor verwarmen of koelen', ''], ['var(--mint)', 'De slimme meter en de omvormer', 'van en naar het net, en de opbrengst', ''], ['var(--mint)', 'Lampen, screens en camera’s', '29 lampen, 5 schermen, 2 camera’s', ''], ['var(--mint)', 'Het wekwoord', '“Hé huis” staat bij een spraakassistent', ''], ['var(--mint)', 'Een bewegingsmelder', 'de wand wordt wakker als er iemand langsloopt', '']]
           .map(([kleur, t1, t2, knop]) => `<div class="klaarregel"><i style="background: ${kleur}"></i><div><b>${t1}</b><span>${t2}</span></div><em>${knop}</em></div>`).join('')}
@@ -290,7 +290,7 @@
       model: { tijd: 'nacht', zon: { panelen: 6, panelenLinks: 6 }, etages: lampen(etagesApparaten), voordeur: {}, buitenunit: { aan: false, aantal: 2 }, net: true, ...buiten, tuin: { ...buiten.tuin, tuinhuisAan: true, overstekAan: true } },
     },
     zon: {
-      waar: '5. Energie · Panelen', kop: 'Waar liggen je panelen?', lead: 'Smart Climate meet zelf naar welke kant ze liggen. Jij zegt op welk dak en hoeveel.',
+      waar: '5. Energie · Panelen', kop: 'Waar liggen je panelen?', lead: 'SunArc meet zelf naar welke kant ze liggen. Jij zegt op welk dak en hoeveel.',
       inhoud: `<div class="lijst">
         ${regel('huis', 'Huis, oostkant', 'kijkt naar 97°, helling 47°', '6', '', 'mint')}
         ${regel('huis', 'Huis, westkant', 'kijkt naar 277°, helling 47°', '6', '', 'mint')}
@@ -337,7 +337,7 @@
       model: { tijd: 'avond', zon: { panelen: 6, panelenLinks: 6 }, etages: lampen(etagesApparaten), voordeur: {}, buitenunit: { aan: false, aantal: 2 }, net: true, ...buiten, tuin: { ...buiten.tuin, tuinhuisAan: true, overstekAan: true } },
     },
     klaar: {
-      waar: '8. Klaar', kop: 'Je huis staat erin', lead: 'Smart Climate kijkt nu mee en leert je huis kennen. Na dertig winterdagen kan het zelf regelen.',
+      waar: '8. Klaar', kop: 'Je huis staat erin', lead: 'SunArc kijkt nu mee en leert je huis kennen. Na dertig winterdagen kan het zelf regelen.',
       inhoud: `<div style="display: flex; gap: 8px; flex-wrap: wrap"><span class="stand werkt">Werkt 9</span><span class="stand kijkt">Kijkt mee 8</span><span class="stand kijkt">Leert nog 2</span><span class="stand nodig">Iets nodig 3</span></div>
         <div class="lijst">${regel('thermo', 'Nog te doen', 'Thermostaat badkamer: stookt hij?', '1', '', 'zon')}${regel('meter', 'Wat je huis kan', 'alles op een rij, met wat er nog bij kan', '›')}</div>
         <div class="tip">Kijk de film van een minuut: de assistent praat, de etages schuiven open en de apparaten komen voorbij.</div>`,

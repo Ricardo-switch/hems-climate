@@ -5,7 +5,7 @@
  * Per dag, week, maand of jaar: wat het huis gebruikte, waar het vandaan kwam
  * en wat het kostte. De cijfers komen uit de statistiek van Home Assistant, met
  * de meters en prijzen uit de instellingen van de app (`energy.ts`). Zo gaat de
- * terugblik ook over de tijd van vóór Smart Climate.
+ * terugblik ook over de tijd van vóór SunArc.
  *
  * Wat de meters zeggen en wat hier volgt:
  *

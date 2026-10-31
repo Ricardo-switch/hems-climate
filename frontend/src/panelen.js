@@ -320,7 +320,7 @@ const ligging = (() => {
 
   /**
    * Zonnepanelen 3.0 (besluit 187, schets Wand-Energie-Panelen-3): het huis met
-   * de gemeten ligging, per dak het aantal panelen, en wat Smart Climate meet.
+   * de gemeten ligging, per dak het aantal panelen, en wat SunArc meet.
    * `o.plekken`: de andere daken die het huis heeft (garage, carport,
    * tuinhuis); `o.elders`: hoeveel panelen daar liggen. Zelf aanpassen gaat
    * naar wat er al was: de kant, het aantal, en Aanpassen.

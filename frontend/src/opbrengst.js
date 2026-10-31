@@ -4,7 +4,7 @@
  * het: wat er van je eigen dak kwam, de kosten, de sankey op schaal, per
  * apparaat en per dag.
  *
- * Eerlijk: "wat Smart Climate scheelde" staat er pas als het huis zelf
+ * Eerlijk: "wat SunArc scheelde" staat er pas als het huis zelf
  * schakelt (stap B); in de schaduw valt er niets te schelen. Een lopende
  * periode heet niet "76% minder" dan een volle: de vorige staat er als getal.
  */

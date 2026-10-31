@@ -17,7 +17,7 @@ set -euo pipefail
 CONFIG_DIR=/config
 LOG_DIR=/share/hems/shadow
 
-bashio::log.info "Smart Climate"
+bashio::log.info "SunArc"
 
 # De configuratie hoort bij de installatie, niet bij de code (besluit 21).
 #
@@ -32,7 +32,7 @@ HEEFT_CONFIG=1
 if ! compgen -G "${CONFIG_DIR}/sites/*.json" > /dev/null; then
   HEEFT_CONFIG=0
   bashio::log.info "Nog geen configuratie in ${CONFIG_DIR}/sites/"
-  bashio::log.info "Open het paneel Smart Climate; daar staat wat er in huis is"
+  bashio::log.info "Open het paneel SunArc; daar staat wat er in huis is"
   bashio::log.info "gevonden en kun je het bevestigen."
 fi
 
@@ -161,5 +161,5 @@ while true; do
     wait "${pid}" || code=$?
   fi
   [ "${code}" -eq 75 ] || exit "${code}"
-  bashio::log.info "Smart Climate start opnieuw."
+  bashio::log.info "SunArc start opnieuw."
 done

@@ -1,7 +1,7 @@
 {
-  "name": "Smart Climate beta",
+  "name": "SunArc beta",
   "short_name": "SC beta",
-  "description": "De beta van Smart Climate, op de NAS: wat er nieuw is, voordat het naar de Pi gaat.",
+  "description": "De beta van SunArc, op de NAS: wat er nieuw is, voordat het naar de Pi gaat.",
   "lang": "nl",
   "start_url": "thuis.html",
   "scope": "./",

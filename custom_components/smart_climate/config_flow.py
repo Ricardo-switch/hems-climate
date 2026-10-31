@@ -1,8 +1,8 @@
-"""Smart Climate toevoegen (besluit 184): ontdekt via de add-on, of met de hand.
+"""SunArc toevoegen (besluit 184): ontdekt via de add-on, of met de hand.
 
 Ontdekt: de add-on meldt zich bij de Supervisor met zijn adres en de sleutel;
 Home Assistant toont "Nieuw apparaat gevonden" en je klikt op Toevoegen. Met
-de hand (Smart Climate niet als add-on): het adres en de sleutel uit de app,
+de hand (SunArc niet als add-on): het adres en de sleutel uit de app,
 bij Instellingen › Bewoners en toegang › Sleutel voor de assistent.
 """
 
@@ -32,7 +32,7 @@ def _netjes(adres: str) -> str:
 
 
 class SmartClimateFlow(ConfigFlow, domain=DOMAIN):
-    """Eén Smart Climate per Home Assistant."""
+    """Eén SunArc per Home Assistant."""
 
     VERSION = 1
 
@@ -54,7 +54,7 @@ class SmartClimateFlow(ConfigFlow, domain=DOMAIN):
             if fout is None:
                 await self.async_set_unique_id(DOMAIN)
                 self._abort_if_unique_id_configured(updates=data)
-                return self.async_create_entry(title="Smart Climate", data=data)
+                return self.async_create_entry(title="SunArc", data=data)
             fouten["base"] = fout
         schema = vol.Schema({vol.Required(CONF_ADRES): str, vol.Required(CONF_SLEUTEL): str})
         return self.async_show_form(step_id="user", data_schema=schema, errors=fouten)
@@ -75,5 +75,5 @@ class SmartClimateFlow(ConfigFlow, domain=DOMAIN):
             fout = await self._probeer(self._ontdekt[CONF_ADRES], self._ontdekt[CONF_SLEUTEL])
             if fout is not None:
                 return self.async_abort(reason=fout)
-            return self.async_create_entry(title="Smart Climate", data=self._ontdekt)
+            return self.async_create_entry(title="SunArc", data=self._ontdekt)
         return self.async_show_form(step_id="hassio_confirm")

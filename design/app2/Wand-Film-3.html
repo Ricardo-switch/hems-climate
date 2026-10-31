@@ -59,7 +59,7 @@
   .slot { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 150px; z-index: 2; text-align: center; }
   .slot.aan { display: flex; }
   .slot .merk { display: flex; align-items: center; gap: 22px; animation: in 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
-  .slot .merk i { width: 84px; height: 84px; border-radius: 26px; background: conic-gradient(from 200deg, #ff7a4d, #f7b548, #6ee7b7, #6fd3ff, #8f86ff, #ff7a4d); box-shadow: 0 0 80px rgba(111, 211, 255, 0.35); }
+  .slot .merk i { width: 84px; height: 84px; border-radius: 26px; background: url('../../frontend/kit/icoon.svg') center / cover; box-shadow: 0 0 80px rgba(111, 211, 255, 0.35); }
   .slot .merk b { font-family: var(--kop); font-weight: 800; font-size: 104px; letter-spacing: -0.045em; line-height: 1; }
   .slot p { margin: 20px 0 0; font-family: var(--kop); font-weight: 600; font-size: 34px; color: var(--zacht); animation: in 0.9s 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
   .slot .knoppen { margin-top: 34px; display: flex; gap: 12px; animation: in 0.9s 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
@@ -93,7 +93,7 @@
   <div class="woord" id="woord"></div>
   <div class="ui" id="ui"></div>
   <div class="slot" id="slot">
-    <div class="merk"><i aria-hidden="true"></i><b>Smart Climate</b></div>
+    <div class="merk"><i aria-hidden="true"></i><b>SunArc</b></div>
     <p>Je huis kijkt mee.</p>
     <div class="knoppen"><span class="knop-groot">Naar je huis</span><span class="knop-zacht">Nog een keer</span></div>
   </div>
@@ -128,7 +128,7 @@
     { naam: '2 · Je huis', lucht: 'ochtend', huis: { tijd: 'ochtend', zon: zon(0.18, 0.2), etages: etages(), ...buiten }, tekst: { kicker: 'Dit is je huis', groot: '9', zin: 'kamers, 36 apparaten. Gevonden in Home Assistant.' }, cam: [[0.75, [640, 420], [760, 460]], [0.95, [640, 410], [880, 470]]] },
     // De etages: de 1e verdieping op hoogte, de begane grond vaag eronder en de zolder erboven, zoals Kamer.
     { naam: '3 · De etages', lucht: 'ochtend', huis: { tijd: 'ochtend', zon: zon(0.25, 0.3), zonderDak: true, lagen: { onder: 1, boven: 1 }, etages: [{ naam: '1e verdieping', erBoven: true, kamers: [k('Badkamer', { temp: '18,5°', stand: 'warmt', apparaten: [{ soort: 'radiator' }] }), k('Hobbykamer', { temp: '19,2°', apparaten: [] }), k('Slaapkamer Matts', { temp: '18,9°', apparaten: [] }), k('Slaapkamer Mylan', { temp: '19,0°', apparaten: [] })] }] }, tekst: { kicker: 'Elke etage', groot: 'Elke kamer', zin: 'zijn eigen temperatuur, op zijn eigen tijd.' }, cam: [[0.8, [640, 400], [930, 470]], [0.95, [640, 390], [960, 470]]] },
-    { naam: '4 · Je dak', lucht: 'dag', huis: { tijd: 'dag', zon: zon(0.5, 0.9), etages: etages(), ...buiten, stromen: [{ van: 'zon', naar: 'huis', sterkte: 0.8 }] }, tekst: { kicker: 'Gisteren, van je eigen dak', groot: '4,8 kWh', kleur: 'var(--zon)', zin: 'Smart Climate weet wat je panelen doen.' }, cam: [[1.3, [640, 300], [960, 470]], [1.7, [650, 290], [990, 470]]] },
+    { naam: '4 · Je dak', lucht: 'dag', huis: { tijd: 'dag', zon: zon(0.5, 0.9), etages: etages(), ...buiten, stromen: [{ van: 'zon', naar: 'huis', sterkte: 0.8 }] }, tekst: { kicker: 'Gisteren, van je eigen dak', groot: '4,8 kWh', kleur: 'var(--zon)', zin: 'SunArc weet wat je panelen doen.' }, cam: [[1.3, [640, 300], [960, 470]], [1.7, [650, 290], [990, 470]]] },
     // De apparaten: de kaarten uit de app zweven naast de zolder.
     { naam: '5 · De apparaten', lucht: 'dag', huis: { tijd: 'dag', zon: zon(0.62, 0.8), etages: etages({ zolder: 'warmt' }), ...buiten, stromen: [{ van: 'zon', naar: 'kamer:Zolder', sterkte: 0.8 }] }, tekst: null, apparaten: true, cam: [[1.6, [660, 320], [470, 470]], [1.9, [670, 330], [450, 480]]] },
     // De assistent praat: de bol, en de woorden lopen mee met wat hij zegt.

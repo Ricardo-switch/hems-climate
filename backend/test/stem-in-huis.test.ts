@@ -59,7 +59,7 @@ describe('helemaal in huis (besluit 203)', () => {
     expect(h.bevestigd).toEqual(['f1', 'f2', 'f3']);
     expect(h.gemaakt).toEqual([
       {
-        name: 'Smart Climate',
+        name: 'SunArc',
         language: 'nl',
         conversation_engine: 'conversation.home_assistant',
         conversation_language: 'nl',
@@ -87,9 +87,18 @@ describe('helemaal in huis (besluit 203)', () => {
     expect(h.gemaakt[0]).toMatchObject({ language: 'en', tts_language: 'en_GB', wake_word_entity: null, wake_word_id: null });
   });
 
-  it('een bestaande "Smart Climate" blijft zoals hij is, en wordt gekozen', async () => {
-    const h = huis({ entiteiten: [{ id: 'stt.faster_whisper', naam: 'w' }, { id: 'tts.piper', naam: 'p' }], assistenten: [{ id: 'p-oud', naam: 'Smart Climate', wekwoord: null }] });
+  it('een bestaande "SunArc" blijft zoals hij is, en wordt gekozen', async () => {
+    const h = huis({ entiteiten: [{ id: 'stt.faster_whisper', naam: 'w' }, { id: 'tts.piper', naam: 'p' }], assistenten: [{ id: 'p-oud', naam: 'SunArc', wekwoord: null }] });
     await new InHuis(h.deuren).start('nl');
+    expect(h.gemaakt).toEqual([]);
+    expect(h.gekozen).toEqual(['p-oud']);
+  });
+
+  it('een spraakassistent van vóór de nieuwe naam ("Smart Climate") is ook van ons (besluit 222)', async () => {
+    const h = huis({ entiteiten: [{ id: 'stt.faster_whisper', naam: 'w' }, { id: 'tts.piper', naam: 'p' }], assistenten: [{ id: 'p-oud', naam: 'Smart Climate', wekwoord: null }] });
+    const inHuis = new InHuis(h.deuren);
+    expect((await inHuis.stand()).assistent?.id).toBe('p-oud');
+    await inHuis.start('nl');
     expect(h.gemaakt).toEqual([]);
     expect(h.gekozen).toEqual(['p-oud']);
   });

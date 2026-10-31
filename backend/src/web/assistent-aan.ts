@@ -3,7 +3,7 @@
  * stappen in Home Assistant waren, doet de add-on na één tik van de
  * beheerder zelf:
  *
- * 1. de integratie Smart Climate neerzetten (besluit 184);
+ * 1. de integratie SunArc neerzetten (besluit 184);
  * 2. Home Assistant herstarten, als hij die versie nog niet geladen heeft;
  * 3. de integratie toevoegen, met het adres en de sleutel van de add-on.
  *
@@ -106,5 +106,5 @@ export async function voegToeViaFlow(basis: string, token: string, adres: string
   const uit = (await stap.json()) as { type?: string; reason?: string; errors?: Record<string, string> };
   if (uit.type === 'create_entry' || (uit.type === 'abort' && uit.reason === 'already_configured')) return { ok: true };
   const fout = uit.errors?.['base'] ?? uit.reason ?? 'onbekend';
-  return { ok: false, reden: fout === 'niet_bereikbaar' ? 'Home Assistant bereikt Smart Climate niet' : fout === 'sleutel' ? 'de sleutel klopt niet' : `toevoegen lukte niet (${fout})` };
+  return { ok: false, reden: fout === 'niet_bereikbaar' ? 'Home Assistant bereikt SunArc niet' : fout === 'sleutel' ? 'de sleutel klopt niet' : `toevoegen lukte niet (${fout})` };
 }

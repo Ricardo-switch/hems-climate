@@ -3,7 +3,7 @@
   "expansion_rules": {
     "kamer": "[de|het] {kamer}",
     "in_kamer": "[in|op|van] [de|het] {kamer}",
-    "sc": "(je|jij|smart climate|het systeem|de regeling|het klimaat)",
+    "sc": "(je|jij|sunarc|sun arc|smart climate|het systeem|de regeling|het klimaat)",
     "nu": "[nu|op dit moment|momenteel|eigenlijk]",
     "panelen": "[de] (zonnepanelen|panelen)"
   },
@@ -13,7 +13,7 @@
         {
           "sentences": [
             "wat (doe|doet) <sc> <nu>",
-            "wat (ben je|is smart climate) <nu> aan het doen",
+            "wat (ben je|is sunarc|is sun arc|is smart climate) <nu> aan het doen",
             "hoe staat [het] [er] [met] (het klimaat|het huis|de regeling|de airco's|de verwarming) [ervoor] <nu>",
             "(geef|vertel) [me] [een] [kort] (overzicht|status|update) [van] [het klimaat|het huis]",
             "klimaat status",
@@ -44,7 +44,7 @@
         },
         {
           "sentences": [
-            "wat (ga je|gaat smart climate|gaat de regeling) [straks|vanavond|vannacht|hierna|vandaag|zo] doen",
+            "wat (ga je|gaat sunarc|gaat sun arc|gaat smart climate|gaat de regeling) [straks|vanavond|vannacht|hierna|vandaag|zo] doen",
             "wat (is|zijn) [het|je] plan[nen] [voor] [straks|vanavond|vannacht|vandaag]",
             "wat komt er [straks|hierna]",
             "wanneer (ga je|gaat het|gaat de regeling) naar [de] (nacht|nachtstand|dag|dagstand)",
@@ -95,7 +95,7 @@
         {
           "sentences": [
             "mag <kamer> uit",
-            "smart climate zet <kamer> uit",
+            "(sunarc|sun arc|smart climate) zet <kamer> uit",
             "(kan|mag) de airco <in_kamer> uit"
           ],
           "slots": {
