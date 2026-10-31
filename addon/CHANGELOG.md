@@ -1,5 +1,39 @@
 # Wat is er nieuw · What is new
 
+## 0.95.0
+
+*31 oktober 2026*
+
+**Nieuw**
+
+- De assistent heeft de zon als stem: de stralen ademen, luisteren mee, draaien als hij nadenkt en springen als hij praat
+
+**Beter**
+
+- De assistent verstaat "dichtdoen", "opendraaien" en "neerlaten", ook als één woord
+- Noem je niet welk screen, dan vraagt hij welke; ook als er in de kamer twee hangen
+- Een opdracht met een tijd houdt altijd die tijd; begrijpt hij niet wat, dan zegt hij dat eerlijk
+
+**Opgelost**
+
+- "Om half acht" werd soms gelezen als een screen dat half dichtgaat
+
+*English*
+
+**New**
+
+- The assistant has the sun as its voice: the rays breathe, listen along, turn while it thinks and jump when it speaks
+
+**Improved**
+
+- The assistant understands Dutch verbs such as "dichtdoen" and "opendraaien", also written as one word
+- If you do not say which screen, it asks which one; also when a room has two
+- A command with a time always keeps that time; if it does not understand what, it says so
+
+**Fixed**
+
+- "Om half acht" (half past seven) was sometimes read as a screen going half closed
+
 ## 0.94.1
 
 *31 oktober 2026*

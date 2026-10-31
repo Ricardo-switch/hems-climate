@@ -544,7 +544,7 @@
     .film-ass { position: absolute; left: 6vw; top: 50%; transform: translateY(-50%); width: min(560px, 46vw); }
     .film-ass .vraag { font-size: 18px; color: var(--zacht); font-weight: 600; animation: film-in 0.6s both; }
     .film-ass .rij { display: flex; align-items: center; gap: 26px; margin-top: 22px; }
-    .film-ass .bol { width: 120px; height: 120px; flex: none; border-radius: 50%; background: radial-gradient(circle at 34% 28%, #ffffff 0%, #bfe3ff 16%, #6fb7ff 40%, #6a5cff 72%, #2a1f6b 100%); box-shadow: 0 0 80px rgba(111, 170, 255, 0.75), 0 0 200px rgba(143, 134, 255, 0.5), inset -18px -24px 40px rgba(20, 10, 70, 0.55); animation: film-praat 0.5s ease-in-out infinite alternate; }
+    .film-ass .bol { width: 120px; height: 120px; flex: none; background: url('kit/zon.svg') center / contain no-repeat; animation: film-praat 0.5s ease-in-out infinite alternate; }
     @keyframes film-praat { from { transform: scale(1); } to { transform: scale(1.06); } }
     .film-ass .zegt { margin: 0; font-family: var(--kop); font-weight: 600; font-size: clamp(24px, 3vw, 40px); line-height: 1.12; letter-spacing: -0.01em; }
     .film-ass .w { color: rgba(255, 255, 255, 0.24); animation: film-woord 0.2s forwards; }

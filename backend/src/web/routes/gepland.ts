@@ -11,13 +11,16 @@ import { deelVan, herkenDelen, samen, type Stap } from '../brein.js';
 import type { Diensten } from '../diensten.js';
 import { isAnnuleer, isGeplandVraag, leesPlanTijd, type PlanTijd } from '../gepland.js';
 import { klok } from '../klimaatbrug.js';
-import { herkenOpdracht, type Bedienbaar } from '../opdracht.js';
+import { herkenOpdracht, type Bedienbaar, type Herkend } from '../opdracht.js';
 import type { Herinnering, Herinneringen } from '../tedoen.js';
 import { uitspraak } from '../uitspraak.js';
 import { dagWoord } from './tedoen.js';
 
 /** Wat later kan: licht, scènes en schermen. Het klimaat niet (dat regelt de klimaatbrug zelf). */
 const LATER_MAG = new Set(['api/licht', 'api/scene', 'api/scherm']);
+/** Een zin die iets wil laten doen, en geen vraag: dan beantwoordt het taalmodel hem niet vrij (besluit 224). */
+const VRAAG = /^(waarom|wanneer|hoe|wat|welke|staat|staan|is|zijn|why|when|how|what|which)\b/;
+const BEDIEN = /\b(lamp|lampen|licht|lichten|verlichting|spots?|plafonniere|scene|sfeer|screens?|schermen?|zonnescherm|rolluik|dicht|open|aan|uit|zakken|omlaag|omhoog|neer|light|lights|blinds?|close|on|off|lower|raise)\b/;
 
 const nl = (lang: Lang) => lang === 'nl';
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -71,6 +74,7 @@ export async function planZin(
   laatsteScherm: string | null,
   naamVan: (account: string) => string | null,
   nuMs = Date.now(),
+  denkLater: ((rest: string) => Promise<{ readonly stappen: readonly Stap[] } | { readonly vraag: Extract<Herkend, { ok: false }> } | null>) | null = null,
 ): Promise<Record<string, unknown> | null> {
   if (isGeplandVraag(tekst)) return antwoord(geplandZin(await store.gepland(), nuMs, tz, lang), lang);
   if (isAnnuleer(tekst)) {
@@ -82,19 +86,31 @@ export async function planZin(
   const p = leesPlanTijd(tekst, nuMs, tz, d.options.location?.() ?? null);
   if (p == null || p.rest === '') return null;
   const rest = p.rest.replace(/^(?:kun je|kan je|wil je|wilt u|can you|could you|please) /, '');
+  // Doorvragen (welke screen?): de keuzes houden de tijd vast.
+  const doorvraag = (h: Extract<Herkend, { ok: false }>) => {
+    const bij = tijdWoorden(p, nuMs, tz, lang);
+    return antwoord(h.antwoord, lang, h.keuze ? { keuze: h.keuze.map((k) => ({ ...k, tekst: `${k.tekst} ${bij}` })) } : {});
+  };
   // Wat er moet gebeuren: één opdracht, of meer in één zin.
   let stappen: readonly Stap[];
   const delen = herkenDelen(rest, lijst, lang, laatsteScherm);
   if (delen) stappen = samen(delen.map(deelVan)).stappen;
   else {
     const h = herkenOpdracht(rest, lijst, lang, laatsteScherm);
-    if (h == null) return null;
-    if (!h.ok) {
-      // Doorvragen (welke screen?): de keuzes houden de tijd vast.
-      const bij = tijdWoorden(p, nuMs, tz, lang);
-      return antwoord(h.antwoord, lang, h.keuze ? { keuze: h.keuze.map((k) => ({ ...k, tekst: `${k.tekst} ${bij}` })) } : {});
-    }
-    stappen = deelVan(h.opdracht).stappen;
+    if (h == null) {
+      // Een opdracht met een tijd die de woordzoeker niet leest (besluit 224): het
+      // taalmodel zegt alleen wát, de tijd houden we hier. Lukt dat niet, dan een
+      // vast antwoord, en nooit een zin van het model met een eigen tijd.
+      if (!BEDIEN.test(rest) || VRAAG.test(rest)) return null;
+      const doen = denkLater ? await denkLater(rest).catch(() => null) : null;
+      if (doen && 'vraag' in doen) return doorvraag(doen.vraag);
+      if (!doen?.stappen.length) {
+        const wanneer = tijdWoorden(p, nuMs, tz, lang);
+        return antwoord(nl(lang) ? `Ik hoorde ${wanneer}, maar niet wat er dan moet gebeuren. Zeg bijvoorbeeld: ${wanneer} de screens dicht.` : `I heard ${wanneer}, but not what should happen then. Say for example: ${wanneer} close the screens.`, lang);
+      }
+      stappen = doen.stappen;
+    } else if (!h.ok) return doorvraag(h);
+    else stappen = deelVan(h.opdracht).stappen;
   }
   if (!stappen.length || !stappen.every((s) => LATER_MAG.has(s.pad))) {
     return antwoord(nl(lang) ? 'Dat kan ik nog niet voor later plannen; alleen licht, scènes en schermen.' : 'I cannot plan that for later yet; only lights, scenes and screens.', lang);

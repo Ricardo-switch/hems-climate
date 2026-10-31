@@ -358,11 +358,10 @@ a.knop:not(.knop-licht) {
   border-color: transparent;
 }
 
-/* De bol van de assistent. */
+/* De assistent: de zon als stem, in rust (besluit 224). Groot en bewegend tekent kit/zon.js hem. */
 .bol {
   border-radius: 50%;
-  background: radial-gradient(circle at 34% 30%, #fff 0, #a9eaff 18%, #6fd3ff 42%, #8f86ff 78%, #2b2266 100%);
-  box-shadow: 0 0 28px rgba(111, 211, 255, 0.45), 0 0 64px rgba(143, 134, 255, 0.3);
+  background: url('zon.svg') center / contain no-repeat;
   flex: none;
 }
 

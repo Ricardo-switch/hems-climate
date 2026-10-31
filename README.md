@@ -124,7 +124,15 @@ Het werk gaat naar `beta`. De CI controleert elke push (typecheck, lint, tests, 
 
 ## Licentie
 
-Er is nog geen licentie gekozen. Tot die er is, mag je kijken en meedenken, maar is de code nog niet vrij te gebruiken.
+SunArc is vrije software onder de [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0). Je mag het gebruiken, aanpassen en delen. Wie een aangepaste versie verspreidt, of hem als dienst of op een apparaat aanbiedt, deelt de broncode onder dezelfde licentie.
+
+De naam SunArc en het teken vallen niet onder deze licentie.
+
+Van anderen, elk met een eigen licentie:
+
+- [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) van Kazuhiko Arase, MIT: de QR-code bij Bewoners.
+- De letters [Bricolage Grotesque](https://fonts.google.com/specimen/Bricolage+Grotesque) en [Figtree](https://fonts.google.com/specimen/Figtree), SIL Open Font License 1.1.
+- De twee voorstappen van het wekwoord uit [openWakeWord](https://github.com/dscripka/openWakeWord) (`melspectrogram.onnx` en `embedding_model.onnx`), CC BY-NC-SA 4.0: niet voor commercieel gebruik.
 
 ---
 

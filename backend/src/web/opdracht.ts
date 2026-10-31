@@ -478,10 +478,20 @@ const ALLEMAAL = /\b(screens|schermen|rolluiken|zonneschermen|markiezen|allebei|
 
 type SchermWat = { readonly actie: SchermActie; readonly waarde: number | null };
 
+/**
+ * "Half" als stand, niet als tijd (besluit 224): "het screen half" wel, maar
+ * "om half acht" of "half 8" niet. Anders werd "doe de screens om half acht
+ * dicht" een screen dat half dichtgaat.
+ */
+const HALF = /(?<!\bom )\bhalf\b(?! (?:een|twee|drie|vier|vijf|zes|zeven|acht|negen|tien|elf|twaalf|\d+)\b)|\bhalfweg\b|\bhalverwege\b/;
+/** Een tijd in de zin ("om half acht", "half 8", "om 19 30"): geen stand, dus weg voordat het getal gelezen wordt. */
+const UUR = '(?:een|twee|drie|vier|vijf|zes|zeven|acht|negen|tien|elf|twaalf|\\d{1,2})';
+const TIJD = new RegExp(`\\bom (?:half |kwart over |kwart voor )?${UUR}(?: \\d{2})?(?: uur)?\\b|\\b(?:half|kwart over|kwart voor) ${UUR}\\b|\\b${UUR} uur\\b`, 'g');
+
 /** Wat er met een scherm moet gebeuren, of null als het er niet in staat. */
 function schermWat(tekst: string, zonnescherm: boolean, omlaag: boolean, omhoog: boolean, namen: readonly string[]): SchermWat | null {
-  const n = getal(tekst, namen);
-  if (/\bhalf\b|\bhalfweg\b|\bhalverwege\b/.test(tekst)) return { actie: 'stand', waarde: 50 };
+  const n = getal(tekst.replace(TIJD, ' '), namen);
+  if (HALF.test(tekst)) return { actie: 'stand', waarde: 50 };
   if (n != null && n > 0 && n < 100) return { actie: 'stand', waarde: n };
   if (zonnescherm) {
     // Een zonnescherm vouw je uit en klap je in.
@@ -607,6 +617,31 @@ export function kiesUit(ruw: string, opties: readonly Optie[]): Optie | null {
 }
 
 /**
+ * Koos het taalmodel één scherm terwijl je zin er geen noemt (besluit 224)? Dan
+ * de vraag die de woordzoeker ook stelt: "groot of klein, of allebei?". Null
+ * als de zin het scherm noemt, "allebei" zegt, of er maar één van die soort is.
+ */
+export function schermVaag(ruw: string, opdracht: Opdracht, b: Bedienbaar, lang: Lang): Herkend | null {
+  if (opdracht.soort !== 'scherm') return null;
+  const s = b.schermen.find((x) => x.id === opdracht.body['id']);
+  const actie = opdracht.body['actie'] as SchermActie | undefined;
+  if (!s || actie == null || actie === 'stop') return null;
+  const tekst = gewoon(ruw);
+  if (ALLEMAAL.test(tekst) || beste(tekst, b.schermen)?.id === s.id) return null;
+  const soort = b.schermen.filter((x) => x.zonnescherm === s.zonnescherm);
+  if (soort.length < 2) return null;
+  // Het woord dat het verschil maakt, ook verbogen: "het grote screen" noemt "Screen groot".
+  const stam = (w: string) => w.replace(/e$/, '').replace(/(.)\1$/, '$1').replace(/([aeiou])\1/g, '$1');
+  const woorden = tekst.split(' ').map(stam);
+  const eigen = onderscheid(soort.map((x) => x.naam))[soort.indexOf(s)] ?? '';
+  if (eigen && gewoon(eigen).split(' ').every((w) => woorden.includes(stam(w)))) return null;
+  const pct = opdracht.body['standPct'];
+  const wat = watWoord({ actie, waarde: typeof pct === 'number' ? pct : null }, lang === 'nl');
+  const h = herkenOpdracht(`${s.zonnescherm ? 'zonnescherm' : 'screen'} ${wat}`, b, lang);
+  return h && !h.ok ? h : null;
+}
+
+/**
  * Leest een opdracht in eigen woorden. Null als het geen opdracht is (dan is
  * het een vraag, of iets voor het taalmodel). `laatsteScherm` is het scherm dat
  * de pagina net liet bewegen, voor een kale "stop".
@@ -620,6 +655,8 @@ export function herkenOpdracht(ruw: string, b: Bedienbaar, lang: Lang, laatsteSc
   // "Nee, gewoon licht" (besluit 209): dan niet nog eens naar de sfeerverlichting vragen.
   const gewoonLicht = /\b(gewoon|just)\b/.test(tekst);
   tekst = tekst.replace(/\b(gewoon|just)\b/g, ' ').replace(/\s+/g, ' ').trim();
+  // Aan elkaar geschreven werkwoorden (besluit 224): "dichtdoen", "opendraaien", "aandoen". Whisper schrijft ze vaak als één woord.
+  tekst = tekst.replace(/\b(dicht|open|aan|uit)(doen|draaien|maken|rollen|trekken|zetten)\b/g, '$1 $2');
 
   // Stop: een genoemd scherm, het scherm dat net bewoog, of het enige van die soort.
   if (STOP.test(tekst) || (/\bstop\b/.test(tekst) && SCHERM_WOORD.test(tekst))) {
@@ -641,8 +678,8 @@ export function herkenOpdracht(ruw: string, b: Bedienbaar, lang: Lang, laatsteSc
   }
 
   // "naar beneden" en "naar boven" zijn een richting, geen kamer.
-  const omlaag = /\bnaar beneden\b|\bomlaag\b|\bneer\b|\bzakken\b|\bdown\b|\blower\b/.test(tekst);
-  const omhoog = /\bnaar boven\b|\bomhoog\b|\bup\b|\braise\b/.test(tekst);
+  const omlaag = /\bnaar beneden\b|\bomlaag\b|\bneer\b|\bneerlaten\b|\bzakken\b|\bdown\b|\blower\b/.test(tekst);
+  const omhoog = /\bnaar boven\b|\bomhoog\b|\boptrekken\b|\bup\b|\braise\b/.test(tekst);
   tekst = tekst.replace(/\bnaar (beneden|boven)\b/g, ' ').replace(/\s+/g, ' ').trim();
 
   // Een scherm: genoemd, of een woord voor scherm.
@@ -652,11 +689,13 @@ export function herkenOpdracht(ruw: string, b: Bedienbaar, lang: Lang, laatsteSc
   }
   if (scherm || (SCHERM_WOORD.test(tekst) && b.schermen.length)) {
     const zonnescherm = /\b(zonnescherm|zonneschermen|zonwering|markies|luifel|awning|awnings)\b/.test(tekst);
-    const kandidaten = scherm ? [scherm] : b.schermen.filter((s) => (zonnescherm ? s.zonnescherm : !s.zonnescherm));
+    let kandidaten = scherm ? [scherm] : b.schermen.filter((s) => (zonnescherm ? s.zonnescherm : !s.zonnescherm));
     // Wat er moet gebeuren, los van welk scherm: dan kan het ook voor allemaal of als keuze.
     const wat = schermWat(tekst, kandidaten[0]?.zonnescherm === true, omlaag, omhoog, [scherm?.naam ?? '', scherm?.kamer ?? '']);
-    // Bij twee de kamer die genoemd wordt.
-    const s = kandidaten.length === 1 ? kandidaten[0]! : kandidaten.find((x) => treffer(tekst, x.kamer) > 0) ?? null;
+    // Bij twee de kamer die genoemd wordt. Hangen er in die kamer ook twee, dan blijft het een vraag (besluit 224).
+    const inKamer = kandidaten.length > 1 ? kandidaten.filter((x) => treffer(tekst, x.kamer) > 0) : [];
+    if (inKamer.length > 1) kandidaten = inKamer;
+    const s = kandidaten.length === 1 ? kandidaten[0]! : inKamer.length === 1 ? inKamer[0]! : null;
     if (s == null) {
       if (!kandidaten.length || wat == null) return null;
       // Meervoud of "allebei" (besluit 211): "doe de screens naar beneden" doet ze allemaal.

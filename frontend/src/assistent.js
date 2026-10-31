@@ -312,25 +312,18 @@ function stopPraten() {
   }
 }
 
-/** De stralen rond de bol: van de echte stem, of een rustige golf zonder. */
+/*
+ * De zon als stem (besluit 224): zijn stralen volgen de echte stem als die er
+ * is, anders een rustige golf. kit/zon.js tekent; hier komt alleen het niveau
+ * per straal vandaan, en de stand.
+ */
 const STRALEN = 72;
+let stemNiveaus = null;
 function tekenGolf(niveaus) {
-  for (const svg of $$('[data-golf]')) {
-    if (!svg.childElementCount) {
-      const lijnen = Array.from({ length: STRALEN }, () => '<line stroke="url(#gl)" stroke-width="2.6" stroke-linecap="round"/>').join('');
-      svg.innerHTML = `<defs><linearGradient id="gl" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8fc4ff"/><stop offset="1" stop-color="#b7b0ff"/></linearGradient></defs>${lijnen}`;
-    }
-    const r0 = 92;
-    svg.querySelectorAll('line').forEach((l, i) => {
-      const a = (i / STRALEN) * Math.PI * 2 - Math.PI / 2;
-      const len = 6 + (niveaus[i] ?? 0) * 46;
-      l.setAttribute('x1', (150 + Math.cos(a) * r0).toFixed(1));
-      l.setAttribute('y1', (150 + Math.sin(a) * r0).toFixed(1));
-      l.setAttribute('x2', (150 + Math.cos(a) * (r0 + len)).toFixed(1));
-      l.setAttribute('y2', (150 + Math.sin(a) * (r0 + len)).toFixed(1));
-    });
-  }
+  stemNiveaus = niveaus;
 }
+const zonStand = () => (document.body.classList.contains('sc-luistert') ? 'luistert' : stand === 'denkt' ? 'denkt' : stand === 'praat' ? 'praat' : 'rust');
+$$('[data-zon]').forEach((svg) => window.zon.leef(svg, { stand: zonStand, niveau: () => window.luisteren?.niveau() ?? 0, niveaus: () => (stand === 'praat' ? stemNiveaus : null) }));
 
 function leefMee(bijWoord) {
   const stil = matchMedia('(prefers-reduced-motion: reduce)').matches;

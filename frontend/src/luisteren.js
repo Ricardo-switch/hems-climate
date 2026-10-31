@@ -230,12 +230,7 @@
   .sc-laag { position: absolute; inset: 0; z-index: 60; display: none; background: radial-gradient(ellipse at 30% 45%, rgba(16, 40, 48, 0.86), rgba(6, 10, 20, 0.92) 70%); backdrop-filter: blur(8px); color: var(--tekst); }
   .sc-laag.open { display: block; }
   .sc-laag .kern { position: absolute; left: 150px; top: 200px; width: 320px; height: 320px; display: grid; place-items: center; }
-  .sc-laag .bol { width: 160px; height: 160px; border-radius: 50%; position: relative; z-index: 2; background: radial-gradient(circle at 34% 28%, #ffffff 0%, #c9fff0 16%, #6ee7b7 42%, #2f8f8a 75%, #103a40 100%); box-shadow: 0 0 70px rgba(110, 231, 183, 0.55), 0 0 160px rgba(110, 231, 183, 0.25), inset -18px -24px 40px rgba(5, 40, 40, 0.55); transition: background 0.4s, box-shadow 0.4s, transform 0.15s; }
-  .sc-laag[data-stand='denkt'] .bol, .sc-laag[data-stand='antwoord'] .bol { background: radial-gradient(circle at 34% 28%, #ffffff 0%, #bfe3ff 16%, #6fb7ff 40%, #6a5cff 72%, #2a1f6b 100%); box-shadow: 0 0 60px rgba(111, 170, 255, 0.55), 0 0 140px rgba(143, 134, 255, 0.35), inset -18px -24px 40px rgba(20, 10, 70, 0.55); }
-  .sc-laag .ring { position: absolute; border-radius: 50%; border: 2px solid rgba(110, 231, 183, 0.5); inset: 60px; }
-  .sc-laag[data-stand='luistert'] .ring { animation: sc-golf 1.8s ease-out infinite; }
-  .sc-laag[data-stand='luistert'] .ring.r2 { animation-delay: 0.9s; }
-  @keyframes sc-golf { from { transform: scale(0.9); opacity: 0.8; } to { transform: scale(1.5); opacity: 0; } }
+  .sc-laag .kern .zon { width: 100%; height: 100%; overflow: visible; }
   .sc-laag .tekst { position: absolute; left: 520px; top: 214px; width: 640px; }
   .sc-laag .wie { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 9px; color: var(--mint); }
   .sc-laag .wie i { width: 9px; height: 9px; border-radius: 50%; background: currentColor; display: block; box-shadow: 0 0 10px currentColor; }
@@ -253,7 +248,6 @@
   .sc-laag .knopje { height: 52px; padding: 0 24px; border-radius: 999px; border: 0; background: rgba(255, 255, 255, 0.1); color: var(--tekst); font: inherit; font-weight: 700; font-size: 16px; cursor: pointer; }
   .sc-laag .hint { font-size: 14.5px; color: var(--gedempt); }
   .sc-laag .privacy { position: absolute; right: 30px; top: 26px; font-size: 12.5px; color: var(--gedempt); }
-  @media (prefers-reduced-motion: reduce) { .sc-laag .ring { animation: none !important; } }
   body.sc-luistert .dok .bol { box-shadow: 0 0 0 3px #0b1424, 0 0 0 5px var(--mint), 0 0 14px rgba(110, 231, 183, 0.6); }
   `;
 
@@ -269,9 +263,10 @@
     laag.className = 'sc-laag';
     laag.setAttribute('role', 'dialog');
     laag.setAttribute('aria-live', 'polite');
-    laag.innerHTML = `<div class="privacy">${esc(tk('luisteren.privacy'))}</div><div class="kern" aria-hidden="true"><div class="ring"></div><div class="ring r2"></div><div class="bol" data-bol></div></div><div class="tekst" data-tekst></div><div class="onder"><button type="button" class="knopje" data-sluit>${esc(tk('kamer.scherm.stop'))}</button><span class="hint" data-hint></span></div>`;
+    laag.innerHTML = `<div class="privacy">${esc(tk('luisteren.privacy'))}</div><div class="kern" aria-hidden="true"><svg class="zon" data-zon></svg></div><div class="tekst" data-tekst></div><div class="onder"><button type="button" class="knopje" data-sluit>${esc(tk('kamer.scherm.stop'))}</button><span class="hint" data-hint></span></div>`;
     laag.querySelector('[data-sluit]').addEventListener('click', () => sluit());
     wand.appendChild(laag);
+    zonErbij(laag.querySelector('[data-zon]'));
     return laag;
   }
 
@@ -320,15 +315,25 @@
   let half = '';
   let halfKeer = 0;
 
-  /** De bol leeft mee met je stem, zolang het huis luistert. */
+  /*
+   * De zon als stem (besluit 224): kit/zon.js tekent hem en laat hem meeleven met
+   * je stem zolang het huis luistert, met een golf als het nadenkt en springend
+   * als het antwoordt. Staat zon.js nog niet in de pagina, dan halen we hem erbij.
+   */
+  const ZON_STAND = { luistert: 'luistert', denkt: 'denkt', antwoord: 'praat' };
+  function zonErbij(svg) {
+    if (!svg) return;
+    const start = () => global.zon.leef(svg, { stand: () => ZON_STAND[laag?.dataset.stand] ?? 'rust', niveau: () => mic?.niveau ?? browserNiveau });
+    if (global.zon) return void start();
+    const s = document.createElement('script');
+    s.src = 'kit/zon.js';
+    s.onload = start;
+    document.head.appendChild(s);
+  }
+
+  /** De zon leeft zelf mee (zonErbij); hier alleen het oude ritme stoppen. */
   function leefMee() {
     cancelAnimationFrame(niveauRaf);
-    const stap = () => {
-      const bol = laag?.querySelector('[data-bol]');
-      if (bol && laag.dataset.stand === 'luistert') bol.style.transform = `scale(${1 + (mic?.niveau ?? 0) * 0.25})`;
-      niveauRaf = requestAnimationFrame(stap);
-    };
-    niveauRaf = requestAnimationFrame(stap);
   }
 
   function sluit() {

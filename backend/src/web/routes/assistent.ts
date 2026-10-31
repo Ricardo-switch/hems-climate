@@ -12,7 +12,7 @@ import { brugVraag, brugZone, klok } from '../klimaatbrug.js';
 import type { SiteConfig } from '../../core/model.js';
 import { uitspraak } from '../uitspraak.js';
 import { afsluiter, begrijp, isHalf, isRuis, MAX_TEKST, verbeter } from '../woordzoeker.js';
-import { bedienbaar, herkenOpdracht, kiesUit, type Bedienbaar, type Herkend, type Optie } from '../opdracht.js';
+import { bedienbaar, herkenOpdracht, kiesUit, schermVaag, type Bedienbaar, type Herkend, type Opdracht, type Optie } from '../opdracht.js';
 import { controleerZin, inEigenWoorden, PROEF_MS, WACHT_MS, type Vraag } from '../taalmodel.js';
 import { dagRegels, deelVan, denk, herkenDelen, isTerug, samen, terugVan, type Deel, type Situatie, type Stap } from '../brein.js';
 import type { Fact } from '../assistant.js';
@@ -216,7 +216,23 @@ export async function assistentRoutes(d: Diensten, v: Verzoek): Promise<boolean>
       }
       // Later uitvoeren (besluit 218): "zet over vijf minuten de lamp aan", "na zonsondergang de screens dicht".
       if (tedoen && lijst && !viaSleutel) {
-        const g = await planZin(d, tedoen.herinneringen, tekst, lijst, await d.bezoeker(req), config.timezone, lang, url.searchParams.get('scherm'), tedoen.naamVan).catch(() => null);
+        // Wat de woordzoeker bij een tijd niet leest, vraagt hij het taalmodel: alleen wát, nooit wanneer (besluit 224).
+        const denkLater =
+          model == null
+            ? null
+            : async (rest: string) => {
+                const zones = config.zones.map((z) => ({ id: z.id, naam: z.name }));
+                const plan = await denk(model, rest, lijst, zones, await situatieVoor(d, config, lang), d.gesprekken.van(id), klimaatKamers(d, config), lang);
+                if (plan.soort !== 'doen') return null;
+                const ops = plan.stappen.map((s) => (s.soort === 'opdracht' && s.herkend.ok ? s.herkend.opdracht : null));
+                if (!ops.length || ops.some((o) => o == null)) return null;
+                for (const o of ops as Opdracht[]) {
+                  const vaag = schermVaag(tekst, o, lijst, lang);
+                  if (vaag && !vaag.ok) return { vraag: vaag };
+                }
+                return { stappen: samen((ops as Opdracht[]).map(deelVan)).stappen };
+              };
+        const g = await planZin(d, tedoen.herinneringen, tekst, lijst, await d.bezoeker(req), config.timezone, lang, url.searchParams.get('scherm'), tedoen.naamVan, Date.now(), denkLater).catch(() => null);
         if (g) return stuur({ body: g, terug: null });
       }
       // Meer in één zin (besluit 213): "screens dicht en de lamp aan", elk deel apart.
@@ -235,6 +251,11 @@ export async function assistentRoutes(d: Diensten, v: Verzoek): Promise<boolean>
           // Eén opdracht met een vraag terug (de sfeerverlichting?) gaat zoals bij de woordzoeker.
           const enig = plan.stappen.length === 1 ? plan.stappen[0]! : null;
           if (enig?.soort === 'opdracht' && !enig.herkend.ok) return stuur(await opdrachtAntwoord(d, enig.herkend, tekst, lang, woorden, leeg));
+          // Koos het model één screen dat je niet noemde, dan vragen welke (besluit 224).
+          for (const s of plan.stappen) {
+            const vaag = s.soort === 'opdracht' && s.herkend.ok ? schermVaag(tekst, s.herkend.opdracht, leeg, lang) : null;
+            if (vaag) return stuur(await opdrachtAntwoord(d, vaag, tekst, lang, woorden, leeg));
+          }
           const stukken: Deel[] = [];
           const nee: string[] = [];
           const brug = klimaatBrugVoor(d, config, tekst);

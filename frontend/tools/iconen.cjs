@@ -6,6 +6,7 @@
 //   frontend/kit/icoon.svg          het icoon met negen stralen (48 px en groter)
 //   frontend/kit/icoon-klein.svg    vijf stralen, voor de zijbalk en kleiner
 //   frontend/kit/merk.svg           het teken zonder vlak
+//   frontend/kit/zon.svg            de zon als stem in rust, voor de kleine bollen
 //   frontend/src/icoon-*.png        de app, ook maskable en de beta met een label
 //   addon/icon.png, addon/logo.png  de add-on in Home Assistant
 //   custom_components/smart_climate/brand/  de integratie (de assistent) in Home Assistant
@@ -93,8 +94,27 @@ function vierkant() {
 `;
 }
 
+/** De zon als stem in rust (besluit 224): rond, twintig stralen, voor de kleine bollen. kit/zon.js laat hem bewegen. */
+function rond() {
+  const n = 20, c = 60, zon = 19, r0 = 26, R = 58, dik = 4.6;
+  const defs = ['<radialGradient id="z" cx="42%" cy="38%" r="70%"><stop offset="0" stop-color="#ffe7ad"/><stop offset="0.5" stop-color="#f7b548"/><stop offset="1" stop-color="#e58a3a"/></radialGradient>'];
+  const lijnen = [];
+  for (let i = 0; i < n; i++) {
+    const a = ((180 - (360 / n) * i) * Math.PI) / 180;
+    const l = [0.56, 0.82, 0.68, 0.94, 1, 0.86, 0.66, 0.8, 0.54][i % 9] * 0.92;
+    const ri = r0 + dik / 2, ru = ri + l * (R - ri - dik / 2);
+    const [x1, y1, x2, y2] = [c + ri * Math.cos(a), c - ri * Math.sin(a), c + ru * Math.cos(a), c - ru * Math.sin(a)].map(r2);
+    const kleur = meng((1 + Math.cos(a)) / 2);
+    defs.push(`<linearGradient id="s${i}" gradientUnits="userSpaceOnUse" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"><stop offset="0" stop-color="${kleur}" stop-opacity="0.5"/><stop offset="1" stop-color="${kleur}"/></linearGradient>`);
+    lijnen.push(`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="url(#s${i})" stroke-width="${dik}" stroke-linecap="round"/>`);
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><defs>${defs.join('')}</defs>${lijnen.join('')}<circle cx="${c}" cy="${c}" r="${zon}" fill="url(#z)"/></svg>
+`;
+}
+
 (async () => {
   const schrijf = (p, s) => fs.writeFileSync(path.join(wortel, p), s);
+  schrijf('frontend/kit/zon.svg', rond());
   schrijf('frontend/kit/icoon.svg', icoon());
   schrijf('frontend/kit/icoon-klein.svg', icoon({ n: 5 }));
   schrijf('frontend/kit/merk.svg', teken('t'));
