@@ -1,5 +1,27 @@
 # Wat is er nieuw · What is new
 
+## 0.94.1
+
+*31 oktober 2026*
+
+**Opgelost**
+
+- De assistent in Home Assistant heeft het teken van SunArc, op licht en donker
+- Het tabblad in de browser en de app op je startscherm halen het nieuwe icoon op
+- Het logo van de add-on is ook op het donkere thema leesbaar
+- In de zijbalk van Home Assistant staat de zon op de horizon
+- Bij Inrichten › Een eigen account staat de regel van je tablet niet meer tegen het blok eronder, en de zin eronder is heel
+
+*English*
+
+**Fixed**
+
+- The assistant in Home Assistant shows the SunArc mark, in light and dark
+- The browser tab and the app on your home screen fetch the new icon
+- The add-on logo is readable in the dark theme too
+- The Home Assistant sidebar shows the sun on the horizon
+- In Setup › An own account, the row for your tablet no longer touches the block below, and its sentence is no longer cut off
+
 ## 0.94.0
 
 *31 oktober 2026*

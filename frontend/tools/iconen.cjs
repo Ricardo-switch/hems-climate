@@ -7,7 +7,8 @@
 //   frontend/kit/icoon-klein.svg    vijf stralen, voor de zijbalk en kleiner
 //   frontend/kit/merk.svg           het teken zonder vlak
 //   frontend/src/icoon-*.png        de app, ook maskable en de beta met een label
-//   addon/icon.png, addon/logo.png, addon/dark_logo.png  de add-on in Home Assistant
+//   addon/icon.png, addon/logo.png  de add-on in Home Assistant
+//   custom_components/smart_climate/brand/  de integratie (de assistent) in Home Assistant
 // De PNG's tekent de Chromium van Playwright uit backend/.
 const fs = require('fs');
 const path = require('path');
@@ -73,10 +74,23 @@ function teken(id) {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 64"><defs>${m.defs}</defs>${m.teken}</svg>\n`;
 }
 
-/** De kop van de add-on: het teken met de naam, 250 × 100 op een doorzichtige grond; donker zet lichte letters. */
-function logo(donker) {
-  const m = merk('l', 9, { gloed: donker });
-  return `<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700&display=swap"><style>html,body{margin:0;background:transparent}div{width:250px;height:100px;display:flex;align-items:center;gap:10px;justify-content:center}span{font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:40px;letter-spacing:-0.035em;color:${donker ? '#eef3f7' : '#0f1b2d'}}span b{font-weight:700;color:${donker ? '#b8c4cf' : '#46566a'}}</style></head><body><div><svg width="96" height="51" viewBox="0 0 120 64" style="overflow:visible"><defs>${m.defs}</defs>${m.teken}</svg><span>Sun<b>Arc</b></span></div></body></html>`;
+/**
+ * Het teken met de naam, 250 × 100 op een doorzichtige grond. De add-on heeft
+ * één logo voor licht en donker: Sun in zon, Arc in ijs, allebei leesbaar op
+ * wit en op zwart. De integratie heeft er twee (`logo.png` en `dark_logo.png`).
+ */
+const LETTERS = { beide: ['#e0962c', '#3d9fd6'], licht: ['#0f1b2d', '#46566a'], donker: ['#eef3f7', '#b8c4cf'] };
+function logo(soort) {
+  const m = merk('l', 9, { gloed: soort === 'donker' });
+  const [sun, arc] = LETTERS[soort];
+  return `<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700&display=swap"><style>html,body{margin:0;background:transparent}div{width:250px;height:100px;display:flex;align-items:center;gap:10px;justify-content:center}span{font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:40px;letter-spacing:-0.035em;color:${sun}}span b{font-weight:700;color:${arc}}</style></head><body><div><svg width="96" height="51" viewBox="0 0 120 64" style="overflow:visible"><defs>${m.defs}</defs>${m.teken}</svg><span>Sun<b>Arc</b></span></div></body></html>`;
+}
+
+/** Het teken alleen, vierkant op een doorzichtige grond: het icoon van de integratie, op licht en donker. */
+function vierkant() {
+  const m = merk('v', 9);
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs>${m.defs}</defs><svg x="3" y="24" width="94" height="50.13" viewBox="0 0 120 64" overflow="visible">${m.teken}</svg></svg>
+`;
 }
 
 (async () => {
@@ -86,8 +100,8 @@ function logo(donker) {
   schrijf('frontend/kit/merk.svg', teken('t'));
 
   const browser = await chromium.launch();
-  const png = async (inhoud, p, w, h = w, html = false) => {
-    const page = await browser.newPage({ viewport: { width: w, height: h } });
+  const png = async (inhoud, p, w, h = w, html = false, dichtheid = 1) => {
+    const page = await browser.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: dichtheid });
     await page.setContent(html ? inhoud : `<style>html,body{margin:0;background:transparent}svg{display:block;width:${w}px;height:${h}px}</style>${inhoud}`);
     await page.evaluate(() => document.fonts.ready);
     await page.screenshot({ path: path.join(wortel, p), omitBackground: true });
@@ -100,7 +114,15 @@ function logo(donker) {
     await png(icoon({ beta, maskable: true }), `frontend/src/${voor}-512-maskable.png`, 512);
   }
   await png(icoon(), 'addon/icon.png', 128);
-  await png(logo(false), 'addon/logo.png', 250, 100, true);
-  await png(logo(true), 'addon/dark_logo.png', 250, 100, true);
+  await png(logo('beide'), 'addon/logo.png', 250, 100, true);
+  // De integratie (Home Assistant 2026.3 en later leest `brand/` in de integratie zelf).
+  const brand = 'custom_components/smart_climate/brand';
+  fs.mkdirSync(path.join(wortel, brand), { recursive: true });
+  await png(vierkant(), `${brand}/icon.png`, 256);
+  await png(vierkant(), `${brand}/icon@2x.png`, 512);
+  await png(logo('licht'), `${brand}/logo.png`, 250, 100, true, 1);
+  await png(logo('licht'), `${brand}/logo@2x.png`, 250, 100, true, 2);
+  await png(logo('donker'), `${brand}/dark_logo.png`, 250, 100, true, 1);
+  await png(logo('donker'), `${brand}/dark_logo@2x.png`, 250, 100, true, 2);
   await browser.close();
 })();

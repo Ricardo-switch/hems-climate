@@ -10374,6 +10374,23 @@ ziet krijgt de nieuwe naam (schets `design/app2/Logo.html`).
   nieuw was en de changelog zeggen Smart Climate.
 - **Versie 0.94.0.**
 
+*Aangevuld (0.94.1, 31 oktober 2026):* de bewoner zag het oude teken nog bij
+de assistent en in de browser.
+
+- **De integratie** heeft een map `brand/` met `icon.png`, `logo.png` en
+  `dark_logo.png` (ook `@2x`). Home Assistant leest die sinds 2026.3 uit de
+  integratie zelf; zonder stond de assistent er zonder logo. Integratie 1.2.0.
+- **De add-on** heeft één `logo.png` die op licht en donker leesbaar is (Sun
+  in zon, Arc in ijs). Home Assistant kent bij een add-on geen
+  `dark_logo.png`; die was in 0.94.0 een vergissing en is weg.
+- **De browser** hield het oude icoon vast, omdat het adres gelijk bleef. De
+  iconen heten nu `icoon-192.png?v=sunarc`, ook in het manifest, zodat een
+  tabblad en een geïnstalleerde app het nieuwe ophalen. De cijferpagina had nog
+  een thermometer en een oranje stip; die heeft nu het teken.
+- **De zijbalk van Home Assistant** kent alleen standaardiconen: daar staat nu
+  `mdi:weather-sunset`, de zon op de horizon.
+- **Versie 0.94.1.**
+
 ---
 
 ## Wat nog een besluit wacht
