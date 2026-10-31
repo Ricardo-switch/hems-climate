@@ -228,6 +228,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [224. De assistent bij screens en tijden, en de zon als stem](#224-de-assistent-bij-screens-en-tijden-en-de-zon-als-stem)
 - [225. Sfeerzinnen: menselijker en wisselend](#225-sfeerzinnen-menselijker-en-wisselend)
 - [226. Rust op Thuis, Apparaten en Vandaag, en wat nu speelt bovenaan](#226-rust-op-thuis-apparaten-en-vandaag-en-wat-nu-speelt-bovenaan)
+- [227. Instellingen zonder doorlopen, en terug naar dezelfde stap van Inrichten](#227-instellingen-zonder-doorlopen-en-terug-naar-dezelfde-stap-van-inrichten)
 
 **Veiligheid**
 
@@ -10545,6 +10546,38 @@ straat zag je niet.
   moment zonder actie ("Thermostaat badkamer: doel 20°") zegt het doel niet
   nog eens eronder.
 - **Versie 0.97.0.**
+
+---
+
+## 227. Instellingen zonder doorlopen, en terug naar dezelfde stap van Inrichten
+
+*Onderwerp: weergave · Status: geldig*
+
+31 oktober 2026, het derde stuk van ronde 2 uit het rapport "SunArc
+polijsten", met punt 8 van de bewoner: wie vanuit Inrichten naar Home
+Assistant of naar een andere pagina gaat, moet op dezelfde stap terugkomen.
+
+*Besluit:*
+
+- **Een groep bij Instellingen** heeft geen "1 van 8" met Vorige en Volgende
+  meer. Doorlopen hoort bij Inrichten; in een groep is de lijst links de weg.
+  Bovenaan alleen wat mist, geen groen "4 klaar".
+- **De tegels bij Instellingen** krijgen alleen een pil als er iets mist; geen
+  groen "Klaar". De tegel Inrichten blijft, zoals de bewoner op 30 oktober
+  vroeg (0.90.1).
+- **Bewoners en toegang:** Bewoners opent meteen zijn eigen pagina (een deel
+  met `href`); daar stond alleen een knop erheen. De sleutel voor de
+  assistent staat er alleen nog als de integratie niet is toegevoegd; in de
+  add-on geeft SunArc hem zelf (besluit 202).
+- **Terug naar Inrichten:** Inrichten onthoudt per tabblad, een uur lang, bij
+  welke stap je wegging (`sessionStorage`). Een pagina die je daarvandaan
+  opent, toont "‹ Inrichten" in plaats van "‹ Instellingen", naar die stap.
+  Ga je met een knop naar Home Assistant en open je SunArc weer, dan komt de
+  app op die stap uit in plaats van op Thuis, één keer. Terug in Inrichten
+  is alles weer gewoon.
+- HACS blijft voorlopig: wie SunArc buiten de add-on draait, zet de integratie
+  daarmee neer.
+- **Versie 0.98.0.**
 
 ---
 

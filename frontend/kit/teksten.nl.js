@@ -966,6 +966,7 @@
   'jij.kop': 'Jij',
   'jij.ditScherm': 'Dit scherm',
   'jij.terugInstellingen': '‹ Instellingen',
+  'inr.terugNaar': '‹ Inrichten',
   'jij.terugJij': '‹ Jij',
   'jij.gast': 'Je kijkt mee als gast. Van een gast wordt niets bewaard, dus er is geen profiel.',
   'jij.uiterlijk': 'Hoe de app eruitziet',
@@ -1121,7 +1122,6 @@
   'instellingen.inloggen': 'Inloggen',
   'instellingen.versie': 'Versie',
   'instellingen.mist': '{n} mist',
-  'instellingen.klaar': 'Klaar',
   'instellingen.zoek': 'Zoek een instelling, zoals "zekering"',
   'instellingen.zoekLabel': 'Zoek een instelling',
   'instellingen.nietsGevonden': 'Niets gevonden. Probeer een ander woord, zoals "prijs" of "deurbel".',
@@ -1234,9 +1234,6 @@
 
   // Elke groep achter het tandwiel (groep.js)
   'groep.ermist': 'er mist iets',
-  'groep.klaar': '{n} klaar',
-  'groep.vorige': '‹ Vorige',
-  'groep.volgende': 'Volgende ›',
   'groep.bewaren': 'Bewaren…',
   'groep.bewaard': 'Bewaard',
   'groep.nietBewaard': 'Niet bewaard',

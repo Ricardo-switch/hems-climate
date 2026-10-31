@@ -181,7 +181,8 @@ function groepen() {
           ? `<span class="stand kijkt">${esc(t(nagelopen() ? 'instellingen.inr.verder' : 'instellingen.inr.begin'))}</span>`
           : n
             ? `<span class="stand mis">${esc(t('instellingen.mist', { n }))}</span>`
-            : `<span class="stand werkt">${esc(t('instellingen.klaar'))}</span>`
+            : // Wat klaar is, zegt niets extra (besluit 227): alleen wat mist krijgt een pil.
+              ''
       }</div>
     </a>`;
   }).join('');

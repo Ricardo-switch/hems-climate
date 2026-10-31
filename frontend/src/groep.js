@@ -93,12 +93,13 @@
   /** Het deel uit het adres, of null. */
   function gekozen(delen) {
     const id = decodeURIComponent(location.hash.slice(1));
-    return delen.some((d) => !d.kop && d.id === id) ? id : null;
+    return delen.some((d) => !d.kop && !d.href && d.id === id) ? id : null;
   }
 
   /** Het deel uit het adres, of het bovenste. */
   function actief(delen) {
-    return gekozen(delen) ?? volgorde(delen).find((d) => !d.kop && !d.erbij)?.id ?? null;
+    // Een deel dat naar een eigen pagina gaat (`href`, besluit 227), staat nooit open.
+    return gekozen(delen) ?? volgorde(delen).find((d) => !d.kop && !d.erbij && !d.href)?.id ?? null;
   }
 
   let vorigNu;
@@ -121,31 +122,27 @@
         ? `<h4>${esc(d.kop)}</h4>`
         : d.erbij
           ? `<a class="deel erbij${d.id === nu ? ' nu' : ''}" href="#${encodeURIComponent(d.id)}" ${d.id === nu ? 'aria-current="page"' : ''}>${esc(d.titel)}</a>`
-          : `<a class="deel${d.id === nu ? ' nu' : ''}${d.stand === 'mist' ? ' mist' : ''}" href="#${encodeURIComponent(d.id)}" ${d.id === nu ? 'aria-current="page"' : ''}>${icoonVan(d)}<b>${esc(d.titel)}</b><span class="zin">${esc(d.zin ?? '')}</span><span class="eind">${stip(d)}<span class="pijl" aria-hidden="true">›</span></span></a>`))
+          : `<a class="deel${d.id === nu ? ' nu' : ''}${d.stand === 'mist' ? ' mist' : ''}" href="${d.href ? esc(d.href) : `#${encodeURIComponent(d.id)}`}" ${d.id === nu ? 'aria-current="page"' : ''}>${icoonVan(d)}<b>${esc(d.titel)}</b><span class="zin">${esc(d.zin ?? '')}</span><span class="eind">${stip(d)}<span class="pijl" aria-hidden="true">›</span></span></a>`))
       .join('');
     $$('[data-delen]').forEach((el) => (el.innerHTML = html));
 
     // Bovenaan in één oogopslag hoe de groep ervoor staat.
     const echt = rij.filter((d) => !d.kop && !d.erbij);
     const mist = echt.filter((d) => d.stand === 'mist').length;
-    const klaar = echt.filter((d) => d.stand === 'goed').length;
-    const samen = echt.every((d) => d.stand == null) ? '' : `${mist ? `<span class="mis">${esc(t('instellingen.mist', { n: mist }))}</span>` : ''}${klaar ? `<span class="goed">${esc(t('groep.klaar', { n: klaar }))}</span>` : ''}`;
+    // Alleen wat mist (besluit 227): een groen "4 klaar" naast elke kop zei niets wat je nodig had.
+    const samen = mist ? `<span class="mis">${esc(t('instellingen.mist', { n: mist }))}</span>` : '';
     $$('[data-samen]').forEach((el) => (el.innerHTML = samen));
-
-    // Onderaan door naar het vorige of volgende deel, in de volgorde van de lijst.
-    const i = echt.findIndex((d) => d.id === nu);
-    const stap = (d, soort) => (d
-      ? `<a class="${soort}" href="#${encodeURIComponent(d.id)}" data-stap><small>${esc(t(`groep.${soort}`))}</small><b>${esc(d.titel)}${stip(d)}</b></a>`
-      : `<span class="${soort}"></span>`);
-    const verder = echt.length > 1 && i >= 0 ? `<span class="waar">${esc(t('instellingen.vanTotaal', { a: i + 1, b: echt.length }))}</span>${stap(echt[i - 1], 'vorige')}${stap(echt[i + 1], 'volgende')}` : '';
-    $$('[data-verder]').forEach((el) => (el.innerHTML = verder));
+    // Geen "1 van 8" met Vorige en Volgende meer (besluit 227): doorlopen hoort bij Inrichten; hier is de lijst links de weg.
+    $$('[data-verder]').forEach((el) => (el.innerHTML = ''));
 
     // De telefoon: eerst de lijst, een deel als eigen scherm met terug naar de groep.
     document.documentElement.classList.toggle('deel-open', open);
     const naam = document.querySelector('#tel h1')?.textContent?.trim() ?? '';
     $$('#tel [data-terug]').forEach((el) => {
-      el.textContent = open ? `‹ ${naam}` : t('jij.terugInstellingen');
-      el.setAttribute('href', open ? location.pathname + location.search : 'instellingen.html');
+      // Vanuit Inrichten terug naar die stap (besluit 227), anders naar Instellingen.
+      const k = global.app.terugknop();
+      el.textContent = open ? `‹ ${naam}` : t(k.sleutel);
+      el.setAttribute('href', open ? location.pathname + location.search : k.href);
     });
     if (nu !== vorigNu) {
       $$('[data-waarvoor-vak].open').forEach(sluitWaarvoor);

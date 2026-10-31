@@ -961,6 +961,7 @@
   'jij.kop': 'You',
   'jij.ditScherm': 'This screen',
   'jij.terugInstellingen': '‹ Settings',
+  'inr.terugNaar': '‹ Set up',
   'jij.terugJij': '‹ You',
   'jij.gast': 'You are watching as a guest. Nothing is kept for a guest, so there is no profile.',
   'jij.uiterlijk': 'How the app looks',
@@ -1116,7 +1117,6 @@
   'instellingen.inloggen': 'Signing in',
   'instellingen.versie': 'Version',
   'instellingen.mist': '{n} missing',
-  'instellingen.klaar': 'All set',
   'instellingen.zoek': 'Search a setting, like "fuse"',
   'instellingen.zoekLabel': 'Search a setting',
   'instellingen.nietsGevonden': 'Nothing found. Try another word, like "price" or "doorbell".',
@@ -1229,9 +1229,6 @@
 
   // Every group behind the cog (groep.js)
   'groep.ermist': 'something is missing',
-  'groep.klaar': '{n} done',
-  'groep.vorige': '‹ Previous',
-  'groep.volgende': 'Next ›',
   'groep.bewaren': 'Saving…',
   'groep.bewaard': 'Saved',
   'groep.nietBewaard': 'Not saved',

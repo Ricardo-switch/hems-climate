@@ -1,5 +1,23 @@
 # Wat is er nieuw · What is new
 
+## 0.98.0
+
+*31 oktober 2026*
+
+**Beter**
+
+- Ga je vanuit Inrichten naar Home Assistant of een andere pagina, dan kom je op dezelfde stap terug
+- Instellingen zonder "1 van 8" en Volgende, en alleen een pil bij wat mist
+- Bewoners opent meteen, en de sleutel voor de assistent staat er alleen als hij nog nodig is
+
+*English*
+
+**Improved**
+
+- Go from Set up to Home Assistant or another page, and you come back to the same step
+- Settings without "1 of 8" and Next, and a pill only for what is missing
+- Residents opens straight away, and the key for the assistant only shows when it is still needed
+
 ## 0.97.0
 
 *31 oktober 2026*

@@ -2000,6 +2000,8 @@ document.addEventListener('click', async (e) => {
     return;
   }
   if (el.dataset.haPad) {
+    // Terug uit Home Assistant op deze stap (besluit 227).
+    app.onthoudInrichten('ha', location.hash.slice(1));
     app.naarHAScherm(el.dataset.haPad);
     return;
   }
@@ -2541,4 +2543,13 @@ addEventListener('hashchange', () => {
 });
 
 app.start('instellingen');
+// Weer in Inrichten (besluit 227): de terugknoppen elders gaan weer naar Instellingen. Een link naar een
+// andere pagina onthoudt deze stap, zodat die pagina "‹ Inrichten" zegt.
+app.vergeetInrichten();
+document.addEventListener('click', (e) => {
+  const a = e.target.closest?.('a[href]');
+  const href = a?.getAttribute('href') ?? '';
+  if (!a || href.startsWith('#') || /^[a-z]+:/i.test(href) || /^inrichten\.html/.test(href)) return;
+  app.onthoudInrichten('app', location.hash.slice(1));
+}, true);
 void laad();

@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.97.0';
+export const VERSIE = '0.98.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,22 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.98.0',
+    datum: '2026-10-31',
+    beter: [
+      'Ga je vanuit Inrichten naar Home Assistant of een andere pagina, dan kom je op dezelfde stap terug',
+      'Instellingen zonder "1 van 8" en Volgende, en alleen een pil bij wat mist',
+      'Bewoners opent meteen, en de sleutel voor de assistent staat er alleen als hij nog nodig is',
+    ],
+    en: {
+      beter: [
+        'Go from Set up to Home Assistant or another page, and you come back to the same step',
+        'Settings without "1 of 8" and Next, and a pill only for what is missing',
+        'Residents opens straight away, and the key for the assistant only shows when it is still needed',
+      ],
+    },
+  },
   {
     versie: '0.97.0',
     datum: '2026-10-31',

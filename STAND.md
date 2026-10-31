@@ -309,7 +309,9 @@ verwijzing bestaat.
   wat er in beeld staat; de balkjes zeggen wat nagelopen is en wat al klaar
   stond. Kamers samenvoegen tot één ruimte met zones, elk deel rond het huis
   apart, geen panelen of het aantal per kant, eerst het contract en dan de
-  prijzen met teruglevering vanaf 2027 ([158]).
+  prijzen met teruglevering vanaf 2027 ([158]). Vanuit een stap naar Home
+  Assistant of een andere pagina, en je komt op die stap terug; een groep bij
+  Instellingen heeft geen Volgende meer, alleen de lijst ([227]).
 - **Thuis op de telefoon** heeft de Assistent altijd in beeld, in een
   vraagbalk boven de tabs; de microfoon ernaast luistert meteen. Bovenin één
   regel knoppen, de kamers in één kaart, en daaronder Straks, het apparaat,
@@ -746,4 +748,5 @@ verwijzing bestaat.
 [224]: DECISIONS.md#224-de-assistent-bij-screens-en-tijden-en-de-zon-als-stem
 [225]: DECISIONS.md#225-sfeerzinnen-menselijker-en-wisselend
 [226]: DECISIONS.md#226-rust-op-thuis-apparaten-en-vandaag-en-wat-nu-speelt-bovenaan
+[227]: DECISIONS.md#227-instellingen-zonder-doorlopen-en-terug-naar-dezelfde-stap-van-inrichten
 <!-- links:einde -->
