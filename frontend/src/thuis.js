@@ -199,7 +199,6 @@ function tekenNu() {
   const namen = huismodel.groetWie(bewoners);
   $$('[data-groet]').forEach((el) => (el.innerHTML = namen.length ? `${esc(groet)}, ${namen.map((n) => `<b data-kleur="${esc(app.kleurVan(n.id))}">${esc(n.naam)}</b>`).reduce((acc, n, i, a) => (i === 0 ? n : `${acc}${i === a.length - 1 ? ` ${esc(t('algemeen.en'))} ` : ', '}${n}`), '')}` : esc(groet)));
   tekenGeldt();
-  tekenOnderhoud();
   if (blad === 'batterij' && $$('[data-weer]').some((x) => !x.hidden)) tekenBatterijen();
   if (blad === 'buiten' && buitenKeuze && $$('[data-weer]').some((x) => !x.hidden)) tekenBuiten();
   const wandPodium = document.getElementById('podium-wand');
@@ -228,30 +227,9 @@ function tekenNu() {
 }
 
 /*
- * Onderhoud (15 oktober 2026): een batterij onder de 10% (besluit 122) of een
- * airco-filter dat bijna vol is (besluit 129). Ingeklapt een sleutel; een tik
- * klapt hem open met wat er te doen is en Bekijk. Niets te doen: niets te zien.
- * Het getal staat alleen bij de bel, die dezelfde batterijen en filters telt
- * (besluit 221). Op de telefoon staat de sleutel naast de bel, en een tik opent
- * meteen de lijst: openklappen past daar niet in de kopregel.
+ * Onderhoud (besluit 226): batterijen en filters staan alleen nog bij de bel,
+ * die ze al telde (besluit 221). De sleutel op Thuis zei hetzelfde nog eens.
  */
-let onderhoudOpen = false;
-function onderhoudLijst() {
-  const leeg = (huisData?.batterijen ?? []).filter((b) => bijnaOp(b.pct, 'batterij', huisData)).map((b) => ({ tekst: t('thuis.onderhoud.batterij', { wie: b.kamer ?? b.naam, pct: b.pct }), lang: t('thuis.onderhoud.batterijLang', { naam: b.naam, pct: b.pct }), href: b.kamerId ? `kamer.html#${encodeURIComponent(b.kamerId)}/${encodeURIComponent(`batterij-${b.id}`)}` : null }));
-  const vol = (huisData?.filters ?? []).map((f) => ({ tekst: t('thuis.onderhoud.filter', { naam: f.naam, pct: f.pct }), lang: t('thuis.onderhoud.filterLang', { naam: f.naam, pct: f.pct }), href: `kamer.html#${encodeURIComponent(f.kamerId)}/${encodeURIComponent(f.id)}` }));
-  return [...leeg, ...vol];
-}
-function tekenOnderhoud() {
-  const lijst = onderhoudLijst();
-  if (!lijst.length) onderhoudOpen = false;
-  const eerste = lijst[0];
-  const bekijk = lijst.length === 1 && eerste.href ? `<a href="${esc(eerste.href)}">${esc(t('thuis.bekijk'))}</a>` : `<button type="button" data-onderhoud-alles>${esc(t('thuis.bekijk'))}</button>`;
-  $$('[data-onderhoud]').forEach((el) => {
-    el.hidden = lijst.length === 0;
-    if (!lijst.length) return;
-    el.innerHTML = `<button type="button" class="pil onderhoudknop" data-onderhoud-knop aria-expanded="${onderhoudOpen}" aria-label="${esc(t('thuis.onderhoud.label', { n: lijst.length }))}"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/></svg></button>${onderhoudOpen && !el.closest('#tel') ? `<span class="pil onderhoudtekst" title="${esc(lijst.map((x) => x.lang).join(', '))}"><span>${esc(lijst.length === 1 ? eerste.tekst : `${eerste.tekst} +${lijst.length - 1}`)}</span>${bekijk}</span>` : ''}`;
-  });
-}
 
 /** Vandaag staat op de wand rechts, en op de telefoon onderaan (besluit 159). */
 /*
@@ -368,6 +346,8 @@ function tekenApparaat() {
     kaarten.forEach((k) => (k.hidden = true));
     return;
   }
+  // Een apparaat dat draait of wacht, speelt nu: bovenaan de kaarten (besluit 226).
+  kaarten.forEach((k) => k.classList.add('nu'));
   const s = (vandaag?.uitstelbaar ?? []).find((u) => u.id === d.id)?.draaide?.at(-1);
   const nu = Date.now();
   // Klaar met drogen, ook al draait de trommel nog tegen kreuken (besluit 167): dat zegt de dienst.
@@ -401,7 +381,10 @@ function tekenStraks() {
   zet('[data-straks-kop]', t(wacht.intent.action === 'heat' ? 'thuis.straks.warm' : 'thuis.straks.koel', { zone, kw: getal(wacht.intent.budgetW / 1000) }));
   const over = Math.max(0, state.explanation?.budget?.availableW ?? 0);
   zet('[data-straks-zin]', `${over >= 50 ? t('thuis.straks.over', { kw: getal(over / 1000) }) : t('thuis.straks.geenZon')} ${t('thuis.straks.vanzelf')}`);
-  kaarten.forEach((k) => (k.hidden = false));
+  kaarten.forEach((k) => {
+    k.hidden = false;
+    k.classList.add('nu');
+  });
 }
 
 /*
@@ -1096,17 +1079,6 @@ document.addEventListener('click', (e) => {
   if (e.target.closest('[data-modus]') && !eigen.bewerkt) void openModus();
 });
 
-// Onderhoud: openklappen, en bij meer dan één de lijst met batterijen en filters.
-document.addEventListener('click', (e) => {
-  if (e.target.closest('[data-onderhoud-knop]')) {
-    // Op de telefoon meteen de lijst (besluit 221).
-    if (e.target.closest('#tel')) return openWeer(document.querySelector('#tel [data-buiten]'), 'batterij');
-    onderhoudOpen = !onderhoudOpen;
-    tekenOnderhoud();
-  } else if (e.target.closest('[data-onderhoud-alles]')) {
-    openWeer(document.querySelector(`${app.zicht()} [data-buiten]`), 'batterij');
-  }
-});
 document.querySelector('[data-weer-achter]').addEventListener('click', sluitWeer);
 // Het weer van morgen opent het weer, behalve tijdens het aanpassen.
 document.addEventListener('click', (e) => {
@@ -1117,7 +1089,7 @@ document.addEventListener('click', (e) => {
 document.addEventListener('pointerdown', (e) => {
   const open = $$('[data-weer]').some((b) => !b.hidden);
   // Een tik op een ander deel buiten opent dat deel, dus niet eerst dicht.
-  if (open && !e.target.closest('[data-weer], [data-buiten], [data-onderhoud], .podium .sc-tik')) sluitWeer();
+  if (open && !e.target.closest('[data-weer], [data-buiten], .podium .sc-tik')) sluitWeer();
 });
 // Op de telefoon: het blad naar beneden vegen.
 const telBlad = document.getElementById('weer-tel');

@@ -64,6 +64,10 @@
   #tel .verdeling { margin-top: 0; }
 
   .sectie { font-size: 13px; font-weight: 700; color: var(--gedempt); margin: 8px 2px 0; }
+  /* Wat SunArc bij meer apparaten hetzelfde zou doen, één keer (besluit 226). */
+  /* Toevoegen op de wand alleen de kop: de uitleg viel onder de rand (besluit 226). */
+  #wand .app.nieuw .zin { display: none; }
+  .zousamen { margin: 4px 0 0; font-size: 14.5px; color: var(--zacht); max-width: 64ch; }
 </style>
 </head>
 <body class="lucht lucht-dag">
@@ -71,7 +75,7 @@
     <nav class="balk" id="balk" data-t-aria-label="nav.hoofdmenu"></nav>
     <main>
       <div class="kop">
-        <div><h1 class="kop-1"><span data-t="nav.apparaten"></span></h1><p class="lead" style="max-width: 64ch; margin-top: 8px"><span data-t="apparaten.lead"></span></p></div>
+        <div><h1 class="kop-1"><span data-t="nav.apparaten"></span></h1><p class="lead" style="max-width: 64ch; margin-top: 8px"><span data-t="apparaten.lead"></span></p><p class="lead zousamen" data-zou-samen hidden></p></div>
         <div class="glas zonchip" data-zonchip></div>
       </div>
       <div class="raster" data-apparaten></div>
@@ -86,6 +90,7 @@
         <a class="pil" data-t-aria-label="nav.instellingen" data-tandwiel></a>
       </div>
       <div class="glas zonchip" data-zonchip></div>
+      <p class="zousamen" data-zou-samen hidden></p>
       <div data-apparaten style="display: flex; flex-direction: column; gap: 12px"></div>
       <section class="glas verdeling" data-verdeling></section>
     </div>

@@ -190,7 +190,9 @@ verwijzing bestaat.
   carport of het tuinhuis; de kaarten op de wand smal of breed; op de telefoon
   één bovenbalk; Zonnepanelen en Wat je huis kan opnieuw, en Alles wissen bij
   de meldingen ([187]). In de schaduw zegt een kamer "Verwarmt" als het echte
-  apparaat al doet wat het besluit wil ([188]). Een smalle kaart op de wand is
+  apparaat al doet wat het besluit wil ([188]); wat het alleen zou doen gloeit
+  niet oranje, een kaart die iets meldt staat bovenaan, en Apparaten zegt
+  "SunArc zou" één keer ([226]). Een smalle kaart op de wand is
   een tegel zoals in de schets, en er is een kaart Boiler ([189]). Inrichten
   heeft acht hoofdstukken en het huis groeit mee op zijn eiland, met wat voor
   huis, afwezig en vakantie, op zon en klaarzetten ([190]). Het eiland is de
@@ -743,4 +745,5 @@ verwijzing bestaat.
 [223]: DECISIONS.md#223-de-licentie-agpl-30
 [224]: DECISIONS.md#224-de-assistent-bij-screens-en-tijden-en-de-zon-als-stem
 [225]: DECISIONS.md#225-sfeerzinnen-menselijker-en-wisselend
+[226]: DECISIONS.md#226-rust-op-thuis-apparaten-en-vandaag-en-wat-nu-speelt-bovenaan
 <!-- links:einde -->

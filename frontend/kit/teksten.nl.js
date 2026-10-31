@@ -125,7 +125,6 @@
   'thuis.groet.middag': 'Goedemiddag',
   'thuis.groet.avond': 'Goedenavond',
   'thuis.inrichten': 'Inrichten',
-  'thuis.kijktMee': 'Kijkt mee',
   'thuis.wandAanpassen': 'De wand aanpassen',
   'thuis.uitleg': 'Zo werkt het huis',
   'thuis.nuKlein': 'nu',
@@ -755,11 +754,11 @@
   'apparaten.rol.kijken': 'Alleen kijken',
   'apparaten.wachtZon': 'Wacht op zon',
   'apparaten.zouKiezen': 'SunArc zou: {wat}.',
+  'apparaten.zouSamen': 'SunArc zou bij {n} apparaten: {wat}.',
   'apparaten.onbekend': 'Onbekend',
   'apparaten.onbekendKlein': 'onbekend',
   'apparaten.begintBij': 'Begint vanzelf bij {kw} kW.',
   'apparaten.kwNu': 'kW nu',
-  'apparaten.geenMeter': 'geen meter',
   'apparaten.eigenZon': '{kwh} kWh, {pct}% eigen zon',
   'apparaten.aan': '{duur} aan',
   'apparaten.nietAan': 'niet aan geweest',
@@ -789,6 +788,7 @@
   'apparaten.terugNet': 'Terug naar het net',
   'apparaten.waarHeen': 'Waar de stroom nu heen gaat',
   'apparaten.watGebruikt': 'Wat het huis nu gebruikt',
+  'apparaten.vanPanelen': 'Van je panelen',
   'apparaten.vanNet': 'Van het net',
 
   // Opbrengst (opbrengst.js)

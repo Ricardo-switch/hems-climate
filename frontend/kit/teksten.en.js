@@ -120,7 +120,6 @@
   'thuis.groet.middag': 'Good afternoon',
   'thuis.groet.avond': 'Good evening',
   'thuis.inrichten': 'Set up',
-  'thuis.kijktMee': 'Watching',
   'thuis.wandAanpassen': 'Customise the wall screen',
   'thuis.uitleg': 'How the house works',
   'thuis.nuKlein': 'now',
@@ -750,11 +749,11 @@
   'apparaten.rol.kijken': 'Watch only',
   'apparaten.wachtZon': 'Waiting for sun',
   'apparaten.zouKiezen': 'SunArc would: {wat}.',
+  'apparaten.zouSamen': 'For {n} devices SunArc would: {wat}.',
   'apparaten.onbekend': 'Unknown',
   'apparaten.onbekendKlein': 'unknown',
   'apparaten.begintBij': 'Starts by itself at {kw} kW.',
   'apparaten.kwNu': 'kW now',
-  'apparaten.geenMeter': 'no meter',
   'apparaten.eigenZon': '{kwh} kWh, {pct}% own sun',
   'apparaten.aan': 'on for {duur}',
   'apparaten.nietAan': 'has not been on',
@@ -784,6 +783,7 @@
   'apparaten.terugNet': 'Back to the grid',
   'apparaten.waarHeen': 'Where the electricity is going now',
   'apparaten.watGebruikt': 'What the house is using now',
+  'apparaten.vanPanelen': 'From your panels',
   'apparaten.vanNet': 'From the grid',
 
   // Energy (opbrengst.js)

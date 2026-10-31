@@ -260,7 +260,8 @@ function klimaatKaart({ a, r }) {
   const zin = bew?.tekst
     ? [vanSC, wacht ? t('apparaten.begintBij', { kw: nl(wacht.intent.budgetW / 1000) }) : ''].filter(Boolean).join(' ')
     : doel && !standLaag.includes(doel) && !(a.radiatorknop && a.standCode !== 'uit' && a.standCode !== 'geen-verbinding') ? t('vandaag.doel', { doel }) : '';
-  const kw = a.klimaat?.vermogenW != null ? `${nl(a.klimaat.vermogenW / 1000)}<span>${esc(t('apparaten.kwNu'))}</span>` : `–<span>${esc(t('apparaten.geenMeter'))}</span>`;
+  // Zonder meter niets rechtsboven (besluit 226): een streepje met "geen meter" zei alleen wat er niet is.
+  const kw = a.klimaat?.vermogenW != null ? `${nl(a.klimaat.vermogenW / 1000)}<span>${esc(t('apparaten.kwNu'))}</span>` : '';
   // Vandaag: uit de kWh-meter van het apparaat (Opbrengst), anders hoe lang het aan stond.
   const meter = (opbrengst?.apparaten ?? []).find((m) => m.id === a.klimaat?.energieMeter);
   const aan = (vandaag?.apparaten ?? []).find((x) => x.actuatorId === id)?.huidig ?? [];
@@ -275,6 +276,8 @@ function klimaatKaart({ a, r }) {
   el.className = 'glas app';
   el.href = `kamer.html#${encodeURIComponent(r.id)}/${encodeURIComponent(a.id)}`;
   el.dataset.actief = String(doet || bew?.soort === 'wait');
+  // Alleen "SunArc zou: …": dan kan hij samen met de andere kaarten bovenaan (besluit 226).
+  if (vanSC && zin === vanSC && rest && !doet && bew?.soort !== 'wait') el.dataset.zou = rest;
   el.innerHTML = `
     <div class="kopje"><span class="ik${a.klimaat?.kanKoelen ? '' : ' warm'}">${a.klimaat?.kanKoelen ? IK.airco : IK.warm}</span><div><b>${esc(a.naam)}</b><span class="mini">${esc(r.naam)}</span></div><div class="kw">${kw}</div></div>
     <div class="stand"><i style="background: ${stand[1]}"></i>${esc(stand[0])}</div>
@@ -331,7 +334,7 @@ function nietOpZon(a) {
 
 function toevoegen() {
   const el = document.createElement('a');
-  el.className = 'glas app niet';
+  el.className = 'glas app niet nieuw';
   el.href = 'regeling.html#opzon';
   el.innerHTML = `
     <div class="boven"><svg class="ring" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 20v24M20 32h24" stroke="#7F8E9C" stroke-width="3" stroke-linecap="round"/><circle cx="32" cy="32" r="27" fill="none" stroke="rgba(255,255,255,0.14)" stroke-width="2" stroke-dasharray="4 6"/></svg><div><b>${esc(t('apparaten.toevoegen'))}</b><span class="klein">${esc(t('apparaten.toevoegenWat'))}</span></div></div>
@@ -368,7 +371,8 @@ function tekenVerdeling() {
   const s = state?.bewoner?.stromen ?? {};
   const delen = [
     [t('apparaten.deAircos'), s.aircoKw ?? 0, 'var(--ijs)'],
-    [t('apparaten.restHuis'), s.huisKw ?? 0, '#B8C4CF'],
+    // 's Avonds geeft de omvormer niets door: dan is wat van het net komt het huis (besluit 226).
+    [t('apparaten.restHuis'), s.huisKw ?? Math.max(0, (s.netKw ?? 0) - (s.aircoKw ?? 0)), '#B8C4CF'],
     [t('apparaten.terugNet'), Math.max(0, -(s.netKw ?? 0)), 'var(--mint)'],
   ].filter(([, kw]) => kw >= 0.05);
   const totaal = delen.reduce((som, [, kw]) => som + kw, 0);
@@ -377,12 +381,30 @@ function tekenVerdeling() {
   const balk = totaal > 0 ? delen.map(([, kw, kleur]) => `<i style="width: ${((kw / totaal) * 100).toFixed(1)}%; background: ${kleur}"></i>`).join('') : '';
   const legenda = [
     ...delen.map(([naam, kw, kleur]) => `<span><span class="stip" style="background: ${kleur}"></span>${esc(naam)} <b>${nl(kw)} kW</b></span>`),
+    // Waar het vandaan komt: ook je panelen, niet alleen het net (besluit 226).
+    (s.zonKw ?? 0) >= 0.05 ? `<span><span class="stip" style="background: var(--zon)"></span>${esc(t('apparaten.vanPanelen'))} <b>${nl(s.zonKw)} kW</b></span>` : '',
     vanNet >= 0.05 ? `<span><span class="stip" style="background: var(--gloed)"></span>${esc(t('apparaten.vanNet'))} <b>${nl(vanNet)} kW</b></span>` : '',
   ].join('');
   $$('[data-verdeling]').forEach((el) => (el.innerHTML = `<h2 class="kop-3">${esc(titel)}</h2><div class="balkje" aria-hidden="true">${balk}</div><div class="legenda">${legenda}</div>`));
 }
 
 /* ------------------------------------------------------------ tekenen */
+
+/*
+ * Wat SunArc zou doen, één keer (besluit 226): zeggen twee of meer kaarten
+ * hetzelfde ("verwarmen naar 20° · onder het doel"), dan staat dat bovenaan en
+ * niet op elke kaart.
+ */
+function zouSamen(kaarten, plek) {
+  const tel = new Map();
+  for (const k of kaarten) if (k.dataset.zou) tel.set(k.dataset.zou, (tel.get(k.dataset.zou) ?? 0) + 1);
+  const samen = [...tel].filter(([, n]) => n > 1);
+  for (const k of kaarten) if (samen.some(([wat]) => wat === k.dataset.zou)) k.querySelector('.zin')?.remove();
+  const regel = plek?.querySelector('[data-zou-samen]');
+  if (!regel) return;
+  regel.hidden = !samen.length;
+  regel.textContent = samen.map(([wat, n]) => t('apparaten.zouSamen', { n, wat: wat.replace(/\.$/, '') })).join(' ');
+}
 
 function tekenNu() {
   app.schaal();
@@ -401,6 +423,7 @@ function tekenNu() {
     // Wat nu iets doet eerst (besluit 140); verder de volgorde van het huis.
     const opslag = huisData?.opslag ?? {};
     const kaarten = [...klimaat().map(klimaatKaart), ...lijst.map(kaart), ...buffers.map(bufferKaart), ...(opslag.auto ? [ladingKaart('auto', opslag.auto)] : []), ...(opslag.batterij ? [ladingKaart('batterij', opslag.batterij)] : [])];
+    zouSamen(kaarten, box.closest('#wand, #tel'));
     const voor = kaarten.filter((k) => k.dataset.actief === 'true');
     const na = kaarten.filter((k) => k.dataset.actief !== 'true');
     box.replaceChildren(...voor, ...na, ...gevonden.map(nietOpZon), toevoegen());

@@ -108,10 +108,12 @@
         zin: n === 0 ? t('tedoen.afvalVandaag') : n === 1 ? t('tedoen.afvalVanavond') : t('tedoen.afvalAvondervoor', { dag: lang.format(afval[0].startMs - 86_400_000) }),
         // De dag zelf ("za"): vandaag of morgen staat al in de kop.
         wanneer: new Intl.DateTimeFormat(nl() ? 'nl-NL' : 'en-GB', { weekday: 'short' }).format(afval[0].startMs).replace('.', ''),
+        // Nu (besluit 226): de avond ervoor vanaf vijf uur, en de dag zelf tot twaalf uur.
+        nu: (n === 1 && new Date().getHours() >= 17) || (n === 0 && new Date().getHours() < 12),
       });
     }
     const h = data.herinneringen[0];
-    if (h) uit.push({ ik: 'klok', klasse: 'td-klok', kop: h.tekst, zin: h.eigen ? t('tedoen.jouwHerinnering') : h.naam ? t('tedoen.voor', { naam: h.naam }) : t('tedoen.voorIedereen'), wanneer: dagenVan(h.ms) === 0 ? klok(h.ms) : `${dagKort(h.ms)} ${klok(h.ms)}` });
+    if (h) uit.push({ nu: h.ms - Date.now() < 2 * 3_600_000, ik: 'klok', klasse: 'td-klok', kop: h.tekst, zin: h.eigen ? t('tedoen.jouwHerinnering') : h.naam ? t('tedoen.voor', { naam: h.naam }) : t('tedoen.voorIedereen'), wanneer: dagenVan(h.ms) === 0 ? klok(h.ms) : `${dagKort(h.ms)} ${klok(h.ms)}` });
     const b = data.lijsten.find((l) => l.soort === 'boodschappen');
     const open = (b?.items ?? []).filter((x) => !x.klaar);
     if (open.length) {
@@ -129,6 +131,7 @@
       // Er als te doen aan staat, ook als er niets is (30 oktober 2026). Verbergen kan bij Thuis aanpassen (besluit 217).
       k.hidden = r.length === 0;
       k.toggleAttribute('data-niet-hier', !data?.aan);
+      k.classList.toggle('nu', r.some((x) => x.nu));
       if (!r.length) continue;
       k.innerHTML = `<div class="td-naam">${esc(t('tedoen.kop'))}<span>${esc(t('tedoen.alles'))} ›</span></div>${r
         .map((x) => `<div class="td-rij"><span class="td-ik ${x.klasse}">${svg(IK[x.ik])}</span><div><b>${esc(x.kop)}</b><span>${esc(x.zin)}</span></div><span class="td-wanneer">${esc(x.wanneer)}</span></div>`)
