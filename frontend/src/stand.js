@@ -150,19 +150,32 @@
   const LABEL = (s) => (['werkt', 'leert', 'kijkt', 'uit'].includes(s) ? global.taal.t(`stand.label.${s}`) : null);
 
   /**
-   * Wat een thuisbatterij zou opleveren, uit de maand in Opbrengst: wat er
-   * overdag naar het net ging en 's avonds terugkwam. Zolang er gesaldeerd
-   * wordt bijna niets; vanaf 2027 het verschil tussen je stroomprijs en wat je
-   * voor teruglevering krijgt, plus de terugleverkosten. Een schatting.
+   * Wat een thuisbatterij zou opleveren (besluit 230): het afgelopen jaar per
+   * uur nagerekend door de dienst (`api/accu`). Welke maat past, wat die zelf
+   * had geleverd, wat er toch van het net kwam, en wanneer hij bijsprong.
+   * Zolang er gesaldeerd wordt bijna niets; vanaf 2027 het verschil tussen je
+   * stroomprijs en wat je voor teruglevering krijgt, plus de terugleverkosten.
+   * Per maand: het gemiddelde over het jaar. Een schatting.
    */
   function batterijSom(d) {
-    const s = d.opbrengst?.stroom;
+    const a = d.accu;
     const p = d.energie?.instellingen?.prijzen;
-    if (!s || p?.stroom == null) return null;
-    const kwh = Math.min(s.terugKwh ?? 0, s.vanNetKwh ?? 0) * 0.85;
+    if (!a || p?.stroom == null || !(a.dagen > 0)) return null;
     const na2027 = p.stroom - (p.vanaf2027?.vergoeding ?? 0) + (p.vanaf2027?.kosten ?? 0);
-    if (kwh < 1 || na2027 <= 0) return null;
-    return { kwh: Math.round(kwh), euro: Math.round(kwh * na2027), maand: d.opbrengst.periode?.label?.split(' ')[0]?.toLowerCase() ?? global.taal.t('kan.dezeMaand'), terugKwh: Math.round(s.terugKwh) };
+    const perMaand = (a.gedektKwh / a.dagen) * (365 / 12);
+    if (perMaand < 1 || na2027 <= 0) return null;
+    const groter = a.maten.find((m) => m.kwh > a.aanbevolenKwh) ?? null;
+    return {
+      kwh: a.aanbevolenKwh,
+      euro: Math.round(perMaand * na2027),
+      dagen: a.dagen,
+      vanNetKwh: Math.round(a.vanNetKwh),
+      gedektKwh: Math.round(a.gedektKwh),
+      tekortKwh: Math.round(a.tekortKwh),
+      legeDagen: a.legeDagen,
+      uren: a.uren,
+      groter: groter ? { kwh: groter.kwh, meerKwh: Math.round(groter.gedektKwh - a.gedektKwh) } : null,
+    };
   }
 
   /*
@@ -307,7 +320,7 @@
         return x ? [{ ...teksten(soort), groep: 'zon', stand: opZonAan(x) ? meekijk : 'uit', nu: warmteNu(x), href: 'apparaten.html' }] : [];
       }),
       // Kosten
-      { ...teksten('batterij'), groep: 'kosten', stand: 'nodig', label: t('kan.batterij.nodig'), nu: accu ? t('kan.batterij.som', { euro: accu.euro }) : t('kan.idee.batterijZin'), href: 'opbrengst.html', som: accu },
+      { ...teksten('batterij'), groep: 'kosten', stand: 'nodig', label: t('kan.batterij.nodig'), nu: accu ? t('kan.batterij.som', { euro: accu.euro, kwh: global.taal.getal(accu.kwh, accu.kwh % 1 ? 1 : 0) }) : t('kan.idee.batterijZin'), href: 'opbrengst.html', som: accu },
       ...(d.aansluiting?.antwoorden?.tarief !== 'dynamisch' ? [{ ...teksten('goedkoop'), groep: 'kosten', stand: 'nodig', label: t('kan.goedkoop.nodig'), nu: t('kan.goedkoop.nu'), href: 'energie.html#prijzen' }] : []),
       { ...teksten('auto'), groep: 'kosten', stand: 'nodig', label: t('kan.auto.nodig'), nu: t('kan.auto.nu'), href: 'opbrengst.html' },
       // Het sluipverbruik (besluit 192): elke nacht gemeten uit de slimme meter.

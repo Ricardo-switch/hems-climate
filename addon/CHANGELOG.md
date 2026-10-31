@@ -1,5 +1,27 @@
 # Wat is er nieuw · What is new
 
+## 0.100.0
+
+*31 oktober 2026*
+
+**Nieuw**
+
+- Bij een thuisbatterij staat welke maat bij je huis past, wat er dan nog van het net kwam, en per uur wanneer hij had bijgesprongen, uit je eigen jaar
+
+**Beter**
+
+- Wat je huis kan en Hoe ver je huis is blijven twee pagina's, rustiger: de tellers en de standen als tekst met een stipje
+
+*English*
+
+**New**
+
+- A home battery shows which size fits your home, what would still have come from the grid, and per hour when it would have stepped in, from your own year
+
+**Improved**
+
+- What your house can do and How far your house is stay two pages, calmer: counts and states as text with a dot
+
 ## 0.99.0
 
 *31 oktober 2026*

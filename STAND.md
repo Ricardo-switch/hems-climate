@@ -116,6 +116,9 @@ verwijzing bestaat.
   batterij stuurt SunArc niet zelf ([85]). Wat er na comfort over is,
   gaat in de volgorde van de lijst Op zon: kamers die op zon voorkoelen of
   opwarmen en apparaten zoals de droger door elkaar ([176]).
+- **Zonder thuisbatterij** rekent de app het afgelopen jaar per uur na: welke
+  maat past, wat er dan nog van het net kwam, en wanneer hij had bijgesprongen
+  ([230]).
 - **De zonnesensor:** elk merk omvormer werkt; de app meet hoe snel de sensor is
   ([89]).
 - **Sturen:** alleen wat afwijkt. Slimmere timing moet eerst in de replay winnen
@@ -272,7 +275,8 @@ verwijzing bestaat.
   bovenaan; **Comfort** zet je in de app, en de regeling neemt het meteen over;
   **Wat je huis kan** toont per functie hoe het ervoor staat ([130]), en
   **Hoe ver je huis is** laat het als zonnewaaier zien, met de weg naar zelf
-  regelen ([214]). Een nieuw
+  regelen ([214]); ze blijven twee pagina's, met de tellers als tekst ([229]).
+  Een nieuw
   huis begint zuinig (20° overdag, 16° 's nachts, de dag vanaf 7:00), binnen
   wat de apparaten kunnen, en bij Comfort, Functies en Jij kun je terug naar
   die standaard ([204]).
@@ -751,4 +755,6 @@ verwijzing bestaat.
 [226]: DECISIONS.md#226-rust-op-thuis-apparaten-en-vandaag-en-wat-nu-speelt-bovenaan
 [227]: DECISIONS.md#227-instellingen-zonder-doorlopen-en-terug-naar-dezelfde-stap-van-inrichten
 [228]: DECISIONS.md#228-minder-bubbels
+[229]: DECISIONS.md#229-twee-paginas-rustiger-wat-je-huis-kan-en-hoe-ver-je-huis-is
+[230]: DECISIONS.md#230-een-thuisbatterij-op-je-eigen-uren
 <!-- links:einde -->

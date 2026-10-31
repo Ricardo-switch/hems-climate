@@ -49,7 +49,7 @@ import { UitstelStore } from '../src/web/uitstel.js';
 import { STANDAARD_TEL, VoorkeurenStore } from '../src/web/voorkeuren.js';
 import type { Opslag } from '../src/web/opslag.js';
 import { WeatherLog } from '../src/web/weather.js';
-import { EnergyStore, type EnergySource } from '../src/web/energy.js';
+import { EnergyStore, importFromPrefs, type EnergySource } from '../src/web/energy.js';
 import { ConnectionStore, connectionView, type FoundAppliance, type FoundPhase } from '../src/web/aansluiting.js';
 
 /**
@@ -4161,6 +4161,32 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     expect(await knop.getAttribute('href')).toBe('voortgang.html');
     expect(await knop.textContent()).toContain('Hoe ver je huis is');
     await shot('voortgang-huiskan');
+    expect(fouten).toEqual([]);
+    await context.close();
+  }, 30_000);
+
+  /*
+   * Een thuisbatterij op je eigen uren (besluit 230): het blad zegt welke maat
+   * past, wat er dan nog van het net kwam, en wanneer hij had bijgesprongen.
+   */
+  it('zegt bij de thuisbatterij welke maat past en wanneer hij bijspringt', async () => {
+    if (energyStore.current == null) await energyStore.save(importFromPrefs(await ENERGY_SOURCE.prefs(), await ENERGY_SOURCE.meters()));
+    const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+    await context.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    await p.goto(`${baseUrl}/huis-kan.html#batterij`);
+    const som = p.locator('.som', { hasText: 'Past bij je huis' }).first();
+    await som.locator('.uren i.aan').first().waitFor();
+    expect(await som.textContent()).toMatch(/Past bij je huis\s*7,5 kWh[\s\S]*afgelopen jaar kwam er [\d.]+ kWh van het net[\s\S]*nog [\d.]+ kWh van het net/);
+    // Hij springt bij in de uren dat er van het net kwam, niet als de zon schijnt.
+    const aan = await som.locator('.uren i').evaluateAll((l) => l.map((i) => i.classList.contains('aan')));
+    expect(aan.slice(10, 15).some(Boolean)).toBe(false);
+    expect(aan.slice(18, 24).every(Boolean)).toBe(true);
+    if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-batterij.png') });
     expect(fouten).toEqual([]);
     await context.close();
   }, 30_000);

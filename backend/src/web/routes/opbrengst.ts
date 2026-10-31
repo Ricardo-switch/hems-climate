@@ -19,6 +19,7 @@ import { readJson, sendJson } from '../http.js';
 import { leesToelichting } from '../sluipverbruik.js';
 import { isDal } from '../tarief.js';
 import { taalVan, type Diensten, type Verzoek } from '../diensten.js';
+import { accuJaar } from '../accu.js';
 
 /** De routes van dit onderwerp; waar als het verzoek hier is afgehandeld. */
 export async function opbrengstRoutes(d: Diensten, v: Verzoek): Promise<boolean> {
@@ -40,6 +41,34 @@ export async function opbrengstRoutes(d: Diensten, v: Verzoek): Promise<boolean>
       return true;
     }
     sendJson(res, 200, goedkoopVandaag(config.timezone, d.options.energy?.store.current?.prijzen ?? null, Date.now()));
+    return true;
+  }
+
+  /*
+   * Een thuisbatterij op je eigen uren (besluit 230): het afgelopen jaar per
+   * uur nagerekend, welke maat past en wanneer hij bijsprong. Een jaar per uur
+   * is zwaar, dus een paar uur bewaard.
+   */
+  if (path === '/api/accu') {
+    const config = d.config();
+    const energy = d.options.energy;
+    const settings = energy?.store.current;
+    if (config == null || energy == null || settings == null) {
+      sendJson(res, 503, { wachten: 'Opbrengst staat niet aan' });
+      return true;
+    }
+    const now = Date.now();
+    const sleutel = JSON.stringify(settings.net);
+    if (d.accu?.sleutel !== sleutel || now - d.accu.atMs > 6 * 3_600_000) {
+      try {
+        d.accu = { sleutel, atMs: now, som: await accuJaar(energy.source, settings, config.timezone, now) };
+      } catch (error) {
+        sendJson(res, 502, { fout: `Home Assistant gaf de statistiek niet: ${(error as Error).message}` });
+        return true;
+      }
+    }
+    if (d.accu.som == null) sendJson(res, 404, { fout: 'er ging niets naar het net, dus een batterij heeft niets te bewaren' });
+    else sendJson(res, 200, d.accu.som);
     return true;
   }
 
