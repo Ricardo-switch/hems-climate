@@ -121,7 +121,8 @@
   #tel .kopregel .pil svg { width: 17px; height: 17px; flex: none; }
   /* Past het niet naast de klok, zoals bij Afwezig, dan schuift het naar een tweede regel. */
   #tel .kopregel { gap: 10px; }
-  #tel .kopregel > [data-tijd] { flex: none; }
+  #tel .kopregel > .kloklinks { flex: none; display: flex; align-items: center; gap: 6px; }
+  #tel .kloklinks .merkje { width: 34px; }
   #tel .kopregel > span:last-child { flex-wrap: wrap; justify-content: flex-end; row-gap: 6px; min-width: 0; }
   #tel .meldbel b { position: absolute; top: -4px; right: -4px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--gloed); color: #2a1206; font-size: 10.5px; line-height: 16px; text-align: center; }
   /* Een lange naam bij een lege batterij past binnen het scherm. */
@@ -626,7 +627,7 @@
   <div id="tel" class="tel">
     <div class="boven">
       <div class="kopregel">
-        <span class="tijd" data-tijd>--:--</span>
+        <span class="kloklinks"><a class="merkje" href="over.html" data-t-aria-label="over.kop"><img src="kit/merk.svg" alt=""></a><span class="tijd" data-tijd>--:--</span></span>
         <span style="display: flex; gap: 8px; align-items: center">
           <button class="pil weerknop" type="button" style="height: 36px; font-size: 13px" data-buiten aria-haspopup="dialog" aria-controls="weer-tel"></button>
           <button class="pil telknop uitlegknop" type="button" data-uitleg data-t-aria-label="thuis.uitleg">?</button>
