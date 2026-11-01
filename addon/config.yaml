@@ -19,13 +19,13 @@ name: SunArc
 # Gelijk aan VERSIE in backend/src/version.ts; een test houdt ze gelijk. De
 # Supervisor ziet een update zodra dit nummer op `main` omhooggaat, en haalt dan
 # het image met dat nummer op (besluit 153).
-version: 0.106.0
+version: 0.106.1
 slug: hems_climate
 description: >-
   Klimaat en zon in één app: kijkt mee met je verwarming, airco's en
   zonnepanelen, legt elk besluit vast en laat zien wat het huis zou doen.
   Lampen, scènes en schermen bedien je vanuit de app.
-url: https://github.com/Ricardo-switch/hems-climate
+url: https://github.com/Ricardo-switch/SunARC-HA-APP
 # Experimenteel tot stap B (besluit 236): SunArc kijkt mee en regelt het
 # klimaat nog niet zelf. Home Assistant zet er een label bij.
 stage: experimental

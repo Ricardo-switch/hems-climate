@@ -253,7 +253,7 @@ het thermisch model — en die winterdata wordt nu opgebouwd.
 
 ## 6. Repository en infrastructuur
 
-Monorepo op `github.com/Ricardo-switch/hems-climate` (privé).
+Monorepo op `github.com/Ricardo-switch/SunARC-HA-APP` (openbaar; tot 1 november 2026 heette hij `hems-climate`, en GitHub stuurt dat adres door).
 
 ```
 .github/        De CI: typecheck, lint, tests, builds en het image, en de tak stable

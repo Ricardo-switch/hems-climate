@@ -11,7 +11,7 @@ wanneer hij iets zou moeten overschrijven.
 ```bash
 cd /volume1/docker/hems-climate
 mv src src-oud                                  # als er al een src staat
-git clone https://github.com/Ricardo-switch/hems-climate.git src
+git clone https://github.com/Ricardo-switch/SunARC-HA-APP.git src
 cp src/deploy/docker-compose.yml .              # de compose hoort in de wortel
 ```
 

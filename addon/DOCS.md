@@ -72,4 +72,4 @@ er zo weinig mogelijk (beveiligingscijfer 8, het hoogste):
 De add-on staat als **experimenteel**: SunArc kijkt mee en regelt je
 verwarming en airco's nog niet zelf.
 
-Meer: [github.com/Ricardo-switch/hems-climate](https://github.com/Ricardo-switch/hems-climate).
+Meer: [github.com/Ricardo-switch/SunARC-HA-APP](https://github.com/Ricardo-switch/SunARC-HA-APP).

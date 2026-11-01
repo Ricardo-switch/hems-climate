@@ -126,7 +126,7 @@ jobs:
           labels: |
             io.hass.type=addon
             io.hass.name=SunArc
-            io.hass.url=https://github.com/Ricardo-switch/hems-climate
+            io.hass.url=https://github.com/Ricardo-switch/SunARC-HA-APP
 
   een-naam:
     name: één naam voor beide soorten

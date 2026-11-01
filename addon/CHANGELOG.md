@@ -1,5 +1,19 @@
 # Wat is er nieuw · What is new
 
+## 0.106.1
+
+*1 november 2026*
+
+**Beter**
+
+- De links in de app wijzen naar de nieuwe naam van de repository: SunARC-HA-APP
+
+*English*
+
+**Improved**
+
+- The links in the app point to the new name of the repository: SunARC-HA-APP
+
 ## 0.106.0
 
 *1 november 2026*

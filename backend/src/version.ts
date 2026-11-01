@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.106.0';
+export const VERSIE = '0.106.1';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,12 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.106.1',
+    datum: '2026-11-01',
+    beter: ['De links in de app wijzen naar de nieuwe naam van de repository: SunARC-HA-APP'],
+    en: { beter: ['The links in the app point to the new name of the repository: SunARC-HA-APP'] },
+  },
   {
     versie: '0.106.0',
     datum: '2026-11-01',

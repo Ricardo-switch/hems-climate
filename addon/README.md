@@ -20,7 +20,7 @@ verwacht. Zie besluit 34 in `DECISIONS.md` voor waarom die vorm er is.
 
 1. **Instellingen → Add-ons → Add-on store**, rechtsboven de drie puntjes →
    **Repositories**, en voeg toe:
-   `https://github.com/Ricardo-switch/hems-climate`
+   `https://github.com/Ricardo-switch/SunARC-HA-APP`
 2. Kies **SunArc** en **Installeren**. De Pi bouwt niets: GitHub heeft
    het image al klaargezet voor aarch64 (Raspberry Pi) en amd64.
 3. **Starten**, en zet **In zijbalk tonen** aan.

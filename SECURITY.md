@@ -4,7 +4,7 @@ SunArc runs inside your own home and can switch lights, scenes, blinds and (by h
 
 ## Reporting a vulnerability
 
-Please use **[Report a vulnerability](https://github.com/Ricardo-switch/hems-climate/security/advisories/new)** on GitHub. That keeps the report private between you and the maintainer. Do not open a public issue.
+Please use **[Report a vulnerability](https://github.com/Ricardo-switch/SunARC-HA-APP/security/advisories/new)** on GitHub. That keeps the report private between you and the maintainer. Do not open a public issue.
 
 Mention the version (Settings › About this app, or `/api/health`), how SunArc runs (Home Assistant add-on or Docker), and the steps to reproduce. Dutch or English are both fine.
 

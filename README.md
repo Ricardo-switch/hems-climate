@@ -9,11 +9,11 @@ Your home thinks along with the sun: it watches your heating, air conditioners a
 and explains every decision it makes.</p>
 
 <p align="center">
-<a href="https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2FRicardo-switch%2Fhems-climate"><img src="https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg" alt="Add the repository to your Home Assistant"></a>
+<a href="https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2FRicardo-switch%2FSunARC-HA-APP"><img src="https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg" alt="Add the repository to your Home Assistant"></a>
 </p>
 
 <p align="center">
-<img alt="Version" src="https://img.shields.io/badge/dynamic/yaml?url=https%3A%2F%2Fraw.githubusercontent.com%2FRicardo-switch%2Fhems-climate%2Fmain%2Faddon%2Fconfig.yaml&query=%24.version&label=version&color=f7b548">
+<img alt="Version" src="https://img.shields.io/badge/dynamic/yaml?url=https%3A%2F%2Fraw.githubusercontent.com%2FRicardo-switch%2FSunARC-HA-APP%2Fmain%2Faddon%2Fconfig.yaml&query=%24.version&label=version&color=f7b548">
 <img alt="Stage: experimental" src="https://img.shields.io/badge/stage-experimental-e58a3a">
 <img alt="aarch64 and amd64" src="https://img.shields.io/badge/arch-aarch64%20%7C%20amd64-6fd3ff">
 <img alt="License AGPL-3.0" src="https://img.shields.io/badge/license-AGPL--3.0-8f86ff">
@@ -100,19 +100,20 @@ You need Home Assistant with add-ons (Home Assistant OS or Supervised), on a Ras
 
 1. Tap the **Add repository** button above. Or go to **Settings → Add-ons → Add-on store**, choose the three dots at the top right → **Repositories**, and add:
    ```
-   https://github.com/Ricardo-switch/hems-climate
+   https://github.com/Ricardo-switch/SunARC-HA-APP
    ```
+   Added it before 1 November 2026 under the old name `hems-climate`? Leave it as it is: GitHub forwards the old address, and adding it again would make Home Assistant see a different add-on.
 2. Choose **SunArc** → **Install**, then **Start**. Turn on **Show in sidebar**.
 3. Open SunArc in the sidebar. A new home starts with a welcome: your house grows from what Home Assistant knows, and one button starts the setup. It takes about ten minutes.
 
-Updates come through Home Assistant. Turn on **Auto update** on the add-on page if you want them to arrive by themselves. What is new in each version is in the [releases](https://github.com/Ricardo-switch/hems-climate/releases) and in the add-on itself.
+Updates come through Home Assistant. Turn on **Auto update** on the add-on page if you want them to arrive by themselves. What is new in each version is in the [releases](https://github.com/Ricardo-switch/SunARC-HA-APP/releases) and in the add-on itself.
 
 ### Ask SunArc through Assist
 
 To ask SunArc through Home Assistant's Assist ("why is the attic running?", "what are you doing?"), you need the **SunArc** integration. No YAML: the add-on announces itself.
 
 - **Without HACS:** open SunArc → **Settings → Residents and access → Key for the assistant** and tap **Put the integration in Home Assistant**. Then restart Home Assistant.
-- **With HACS:** in HACS choose the three dots → **Custom repositories**, add `https://github.com/Ricardo-switch/hems-climate` as an **Integration**, install **SunArc** and restart Home Assistant.
+- **With HACS:** in HACS choose the three dots → **Custom repositories**, add `https://github.com/Ricardo-switch/SunARC-HA-APP` as an **Integration**, install **SunArc** and restart Home Assistant.
 
 Home Assistant then shows **New device discovered: SunArc**; click **Add**. You do this once: later SunArc updates need no restart, because the sentences and answers come from the add-on. The integration has its own version, which only goes up when it changes itself.
 
@@ -147,7 +148,7 @@ The service is TypeScript on Node 22, the app plain HTML and JavaScript with Tai
 cd backend && npm ci && npm test
 ```
 
-Work goes to `beta`. CI checks every push (typecheck, lint, tests, the page in a browser and the image), and only a pull request goes to `main`. `main` is what Home Assistant installs. A bug or an idea? Open an [issue](https://github.com/Ricardo-switch/hems-climate/issues/new/choose); English or Dutch.
+Work goes to `beta`. CI checks every push (typecheck, lint, tests, the page in a browser and the image), and only a pull request goes to `main`. `main` is what Home Assistant installs. A bug or an idea? Open an [issue](https://github.com/Ricardo-switch/SunARC-HA-APP/issues/new/choose); English or Dutch.
 
 ## License
 
