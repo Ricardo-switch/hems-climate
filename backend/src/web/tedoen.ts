@@ -20,6 +20,7 @@ import { readFile, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { Lang } from './assistant.js';
 import type { Stap } from './brein.js';
+import type { Herhaal, Moment } from './gepland.js';
 import { partsIn, zonedTime } from './today.js';
 
 /* ------------------------------------------------------------ gewone tekst */
@@ -342,7 +343,32 @@ export interface Herinnering {
    * stappen voor de deuren, en of het tijdstip bij de zon hoort. Zo'n opdracht
    * speelt niet op de wand; de dienst voert hem uit en zet hem op klaar.
    */
-  readonly opdracht?: { readonly stappen: readonly Stap[]; readonly zon: 'onder' | 'op' | null };
+  readonly opdracht?: GeplandeOpdracht;
+}
+
+/**
+ * Wat de dienst later doet (besluit 218), en sinds besluit 234 ook steeds: het
+ * moment op de dag, hoe vaak, of hij aan staat, en of hij overslaat als
+ * niemand thuis is. Een oude opdracht zonder herhaling is één keer.
+ */
+export interface GeplandeOpdracht {
+  readonly stappen: readonly Stap[];
+  readonly zon: 'onder' | 'op' | null;
+  readonly moment?: Moment;
+  readonly herhaal?: Herhaal;
+  /** Uit is gepauzeerd: hij slaat zijn beurt over. Weg is aan. */
+  readonly aan?: boolean;
+  readonly overslaanWeg?: boolean;
+  /** Wanneer hij het laatst aan de beurt was. */
+  readonly laatstMs?: number;
+}
+
+/** Wat je aan een vaste of geplande opdracht kunt veranderen. */
+export interface Aanpassing {
+  readonly aan?: boolean;
+  readonly overslaanWeg?: boolean;
+  readonly moment?: Moment;
+  readonly herhaal?: Herhaal;
 }
 
 export const HERINNERINGEN_BESTAND = 'herinneringen.json';
@@ -359,9 +385,13 @@ export class Herinneringen {
   readonly #map: string | null;
   readonly #nu: () => number;
 
-  constructor(o: { readonly map: string | null; readonly nu?: () => number }) {
+  /** Het volgende moment van een vaste opdracht (besluit 234); null als er geen meer komt. */
+  readonly #volgende: (o: GeplandeOpdracht, vanMs: number) => number | null;
+
+  constructor(o: { readonly map: string | null; readonly nu?: () => number; readonly volgende?: (o: GeplandeOpdracht, vanMs: number) => number | null }) {
     this.#map = o.map;
     this.#nu = o.nu ?? Date.now;
+    this.#volgende = o.volgende ?? (() => null);
   }
 
   async lijst(): Promise<readonly Herinnering[]> {
@@ -369,7 +399,7 @@ export class Herinneringen {
     return [...this.#lijst].sort((a, b) => a.ms - b.ms);
   }
 
-  async voeg(h: { readonly tekst: string; readonly ms: number; readonly voor: string | null; readonly naam: string | null; readonly opdracht?: Herinnering['opdracht'] }): Promise<Herinnering> {
+  async voeg(h: { readonly tekst: string; readonly ms: number; readonly voor: string | null; readonly naam: string | null; readonly opdracht?: GeplandeOpdracht }): Promise<Herinnering> {
     await this.#laad();
     const nieuw: Herinnering = {
       id: `${h.opdracht ? 'g' : 'h'}${this.#nu().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
@@ -401,6 +431,32 @@ export class Herinneringen {
     return this.#lijst.filter((h) => h.status === 'nu' && !h.opdracht).sort((a, b) => b.ms - a.ms);
   }
 
+  /**
+   * Een vaste of geplande opdracht aanpassen (besluit 234): aan of uit, het
+   * moment, hoe vaak, overslaan als niemand thuis is. Een ander moment of een
+   * andere herhaling rekent het volgende moment opnieuw uit. False als hij er
+   * niet is, of als er met de nieuwe keus geen moment meer komt.
+   */
+  async pasAan(id: string, w: Aanpassing): Promise<boolean> {
+    await this.#laad();
+    const h = this.#lijst.find((x) => x.id === id && x.opdracht && x.status === 'wacht');
+    if (!h?.opdracht) return false;
+    const opdracht: GeplandeOpdracht = {
+      ...h.opdracht,
+      ...(w.aan === undefined ? {} : { aan: w.aan }),
+      ...(w.overslaanWeg === undefined ? {} : { overslaanWeg: w.overslaanWeg }),
+      ...(w.moment ? { moment: w.moment, zon: w.moment.soort === 'zon' ? w.moment.zon : null } : {}),
+      ...(w.herhaal ? { herhaal: w.herhaal } : {}),
+    };
+    let ms = h.ms;
+    if (w.moment || w.herhaal) {
+      const v = this.#volgende(opdracht, this.#nu());
+      if (v == null) return false;
+      ms = v;
+    }
+    return this.#zet(id, (x) => ({ ...x, ms, opdracht }));
+  }
+
   /** De geplande opdrachten die nog moeten (besluit 218), de eerste eerst. */
   async gepland(): Promise<readonly Herinnering[]> {
     await this.#laad();
@@ -418,10 +474,18 @@ export class Herinneringen {
     let anders = false;
     this.#lijst = this.#lijst.flatMap((h) => {
       if (h.status === 'wacht' && h.ms <= nu) {
-        // Een geplande opdracht speelt niet: de dienst voert hem uit, en dan is hij klaar.
-        const s = { ...h, status: h.opdracht ? ('klaar' as const) : ('nu' as const), sindsMs: nu };
-        nieuw.push(s);
         anders = true;
+        if (h.opdracht) {
+          // Een geplande opdracht speelt niet: de dienst voert hem uit (behalve als hij
+          // gepauzeerd is). Een vaste komt terug op zijn volgende moment (besluit 234).
+          const gedaan: Herinnering = { ...h, status: 'klaar', sindsMs: nu, opdracht: { ...h.opdracht, laatstMs: nu } };
+          if (h.opdracht.aan !== false) nieuw.push(gedaan);
+          const vaak = h.opdracht.herhaal && h.opdracht.herhaal.soort !== 'een';
+          const volgende = vaak ? this.#volgende(h.opdracht, Math.max(nu, h.ms) + 60_000) : null;
+          return volgende == null ? [gedaan] : [{ ...h, ms: volgende, opdracht: { ...h.opdracht, laatstMs: nu } }];
+        }
+        const s = { ...h, status: 'nu' as const, sindsMs: nu };
+        nieuw.push(s);
         return [s];
       }
       if (h.status === 'nu' && nu - (h.sindsMs ?? h.ms) > SPEELT_MS) {

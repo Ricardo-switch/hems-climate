@@ -147,11 +147,14 @@
     return `<div class="td-her${h.status === 'nu' ? ' nu' : ''}"><div class="td-uur"><b>${esc(klok(h.ms))}</b><span>${esc(dagenVan(h.ms) === 0 ? t('tedoen.vandaag') : dagKort(h.ms))}</span></div><div class="td-wat"><b>${esc(h.tekst)}</b><span>${esc(wie)} · ${kanalen}</span></div><button type="button" class="td-vink" data-td-gedaan="${esc(h.id)}" aria-label="${esc(t('tedoen.gedaan'))}">${svg(IK.vink, 2.4)}</button></div>`;
   }
 
-  /** Wat de dienst later doet (besluit 218): de tijd, of de zon met de tijd erbij, en Annuleren. */
-  function geplandHtml(g) {
-    const zon = g.opdracht?.zon === 'onder' ? t('tedoen.naZon') : g.opdracht?.zon === 'op' ? t('tedoen.bijZon') : '';
-    const dag = dagenVan(g.ms) === 0 ? t('tedoen.vandaag') : dagKort(g.ms);
-    return `<div class="td-her td-gepland"><div class="td-uur"><b>${esc(klok(g.ms))}</b><span>${esc(dag)}</span></div><div class="td-wat"><b>${esc(g.tekst)}</b><span>${esc(zon || t('tedoen.doetHuis'))}</span></div><button type="button" class="td-vink td-weg" data-td-annuleer="${esc(g.id)}" aria-label="${esc(t('tedoen.annuleer', { wat: g.tekst }))}">${svg(IK.kruis, 2.2)}</button></div>`;
+  /**
+   * Vast en gepland (besluit 234): één regel naar de eigen pagina, met hoeveel
+   * er is en wanneer de volgende is. Wat gepauzeerd is, telt niet als volgende.
+   */
+  function geplandRegel(lijst) {
+    const volgende = lijst.filter((g) => g.opdracht?.aan !== false).sort((a, b) => a.ms - b.ms)[0];
+    const zin = lijst.length ? t('tedoen.vastGeplandN', { n: lijst.length, klok: volgende ? klok(volgende.ms) : '–' }) : t('tedoen.vastGeplandLeeg');
+    return `<a class="td-her td-gepland" href="gepland.html"><div class="td-wat"><b>${esc(t('tedoen.vastGepland'))}</b><span>${esc(zin)}</span></div><span class="td-pijl" aria-hidden="true">›</span></a>`;
   }
 
   /**
@@ -226,7 +229,7 @@
         <h2>${esc(t('tedoen.herinneringen'))}<em>${data.herinneringen.length || ''}</em></h2>
         ${data.herinneringen.map(herinneringHtml).join('') || `<p class="mini">${esc(t('tedoen.geenHerinneringen'))}</p>`}
         <form class="td-erbij" data-td-nieuw><input type="text" maxlength="160" placeholder="${esc(t('tedoen.nieuw'))}" aria-label="${esc(t('tedoen.nieuwLabel'))}"></form>
-        ${(data.gepland ?? []).length ? `<h3 class="td-sub">${esc(t('tedoen.gepland'))}<span>${data.gepland.length}</span></h3>${data.gepland.map(geplandHtml).join('')}` : ''}
+        ${geplandRegel(data.gepland ?? [])}
         <p class="td-bron">${t('tedoen.zoWerkt')}</p>
       </section>
       <section class="glas tdp-vak">
@@ -280,7 +283,7 @@
   }
 
   document.addEventListener('click', (e) => {
-    const el = e.target.closest?.('[data-tedoen], [data-td-nieuwknop], [data-td-gedaan], [data-td-item], [data-td-later], [data-td-annuleer], [data-td-opruim]');
+    const el = e.target.closest?.('[data-tedoen], [data-td-nieuwknop], [data-td-gedaan], [data-td-item], [data-td-later], [data-td-opruim]');
     if (!el) return;
     // De kaart op Thuis opent de tab (besluit 217).
     if (el.matches('[data-tedoen]')) {
@@ -292,7 +295,6 @@
     if (el.matches('[data-td-later]')) return void stuur({ actie: 'later', id: el.dataset.tdId, minuten: Number(el.dataset.tdLater) }).then(sluitMoment);
     // Afvinken op uid (besluit 218): een naam kan vaker op de lijst staan.
     if (el.matches('[data-td-item]')) return void stuur({ actie: el.dataset.tdKlaar === 'true' ? 'open' : 'klaar', lijst: el.dataset.tdLijst, item: el.dataset.tdItem, ...(el.dataset.tdUid ? { uid: el.dataset.tdUid } : {}) });
-    if (el.matches('[data-td-annuleer]')) return void stuur({ actie: 'annuleer', id: el.dataset.tdAnnuleer });
     if (el.matches('[data-td-opruim]')) {
       const soort = el.dataset.tdOpruim;
       // Eerst vragen: weghalen kan niet terug.

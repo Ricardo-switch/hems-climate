@@ -66,6 +66,7 @@ import { httpBase } from './web/camera.js';
 import { Pauze, WACHT_MS } from './web/taalmodel.js';
 import { Teller } from './web/brein.js';
 import { Herinneringen, type Herinnering } from './web/tedoen.js';
+import { volgendeMoment } from './web/gepland.js';
 import type { TeDoenDienst } from './web/routes/tedoen.js';
 import { spraakKeuzes, type SpraakKeuze } from './web/functies.js';
 import { cameraMelders, camerasNu, laatsteAanUitHistorie } from './web/cameras.js';
@@ -1144,7 +1145,11 @@ if (meldingen) {
  * tijdstip een melding naar de telefoon van wie hem vroeg (alleen in de
  * add-on). De wand vraagt zelf wat er speelt en zegt het hardop.
  */
-const herinneringen = new Herinneringen({ map: logDir !== '' ? logDir : null });
+const herinneringen = new Herinneringen({
+  map: logDir !== '' ? logDir : null,
+  // Vast en gepland (besluit 234): na elke keer het volgende moment, op de klok en de zon van hier.
+  volgende: (o, vanMs) => (o.moment && o.herhaal ? volgendeMoment(o.moment, o.herhaal, vanMs, siteConfig?.timezone ?? 'Europe/Amsterdam', location) : null),
+});
 const teDoenKeus = () => {
   const f = functiesNu();
   return volledig(f ?? functiesVoorstel(functiesKeuzes() ?? { cameras: [], melders: [] }), functiesKeuzes()).tedoen;
@@ -1207,7 +1212,15 @@ async function herinnerRonde(): Promise<void> {
   try {
     const alles = await herinneringen.ronde();
     // Geplande opdrachten voert de dienst zelf uit; ze gaan niet als melding naar een telefoon.
-    for (const g of alles.filter((x) => x.opdracht)) await voerGeplandUit(g).catch((error: unknown) => console.warn(`[gepland] ${(error as Error).message}`));
+    // Overslaan als niemand thuis is (besluit 234): alleen wie dat bij de opdracht koos.
+    const niemand = runner?.latest?.explanation.occupied === false;
+    for (const g of alles.filter((x) => x.opdracht)) {
+      if (g.opdracht?.overslaanWeg && niemand) {
+        console.log(`[gepland] "${g.tekst}" overgeslagen: niemand thuis`);
+        continue;
+      }
+      await voerGeplandUit(g).catch((error: unknown) => console.warn(`[gepland] ${(error as Error).message}`));
+    }
     const nieuw = alles.filter((x) => !x.opdracht);
     // Een melding naar de telefoon van wie hem vroeg; een herinnering voor het huis alleen op de wand.
     if (version.installatie !== 'add-on' || !voorkeuren) return;

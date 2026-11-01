@@ -1,5 +1,21 @@
 # Wat is er nieuw · What is new
 
+## 0.103.0
+
+*1 november 2026*
+
+**Nieuw**
+
+- Vast en gepland: zeg "elke werkdag een kwartier voor zonsondergang de screens dicht", en het huis doet het steeds
+- Een eigen pagina met je dag als boog, een schakelaar om te pauzeren, en Aanpassen voor de tijd, de zon en hoe vaak
+
+*English*
+
+**New**
+
+- Regular and planned: say "close the screens a quarter of an hour before sunset every weekday", and the house keeps doing it
+- A page of its own with your day as an arc, a switch to pause, and Change for the time, the sun and how often
+
 ## 0.102.1
 
 *1 november 2026*

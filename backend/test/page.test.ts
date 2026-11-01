@@ -2250,8 +2250,9 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       expect(await tab.locator('.tdp-lijst').count()).toBe(2);
       // Een scherm aan de wand heeft geen eigen agenda's (besluit 218): geen knop ernaartoe.
       expect(await tab.locator('a[href="jij.html#agenda"]').count()).toBe(0);
-      // Gepland: wat het huis na zonsondergang doet, met een kruisje.
-      expect(await tab.locator('.td-gepland').textContent()).toContain('na zonsondergang');
+      // Vast en gepland (besluit 234): één regel naar de eigen pagina, met wanneer de volgende is.
+      expect(await tab.locator('.td-gepland').textContent()).toMatch(/Vast en gepland1 opdracht · de volgende om \d\d:\d\d/);
+      expect(await tab.locator('.td-gepland').getAttribute('href')).toBe('gepland.html');
       await p.waitForTimeout(500);
       await shot('tedoen-tab');
       // Afvinken op uid: een naam kan vaker op de lijst staan.
@@ -2262,16 +2263,14 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await tab.locator('[data-td-erbij][data-td-lijst="todo"] input').press('Enter');
       await expect.poll(() => gestuurd.length).toBe(2);
       expect(gestuurd[1]).toEqual({ actie: 'toevoegen', lijst: 'todo', item: 'Kaas' });
-      await tab.locator('[data-td-annuleer="g1"]').click();
-      await expect.poll(() => gestuurd.length).toBe(3);
-      expect(gestuurd[2]).toEqual({ actie: 'annuleer', id: 'g1' });
+      // Een geplande opdracht weghalen gaat via Aanpassen op Vast en gepland (besluit 234).
       // De afgevinkte weghalen: eerst vraagt de knop het, de tweede tik doet het.
       await tab.locator('[data-td-opruim="boodschappen"]').click();
       await expect.poll(() => tab.locator('[data-td-opruim="boodschappen"]').textContent()).toBe('Zeker? 1 weg');
-      expect(gestuurd).toHaveLength(3);
+      expect(gestuurd).toHaveLength(2);
       await tab.locator('[data-td-opruim="boodschappen"]').click();
-      await expect.poll(() => gestuurd.length).toBe(4);
-      expect(gestuurd[3]).toEqual({ actie: 'opruimen', lijst: 'boodschappen' });
+      await expect.poll(() => gestuurd.length).toBe(3);
+      expect(gestuurd[2]).toEqual({ actie: 'opruimen', lijst: 'boodschappen' });
       await p.goto(`${baseUrl}/thuis.html`);
       await kaart.waitFor({ state: 'visible', timeout: 10_000 });
       // Het moment: de herinnering speelt, de wand toont hem met Gedaan.
@@ -4307,6 +4306,86 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
       await p.waitForTimeout(800);
       await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-over-wand.png') });
     }
+    expect(fouten).toEqual([]);
+    await context.close();
+  }, 30_000);
+
+  /*
+   * Vast en gepland (besluit 234): de dag als boog, de lijst met een
+   * schakelaar, en Aanpassen met wanneer, hoe vaak en overslaan.
+   */
+  it('toont Vast en gepland, en past een opdracht aan', async () => {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, timezoneId: 'Europe/Amsterdam', locale: 'nl-NL' });
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+    await context.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    const nu = Date.now();
+    const scherm = [{ pad: 'api/scherm', body: { id: 'cover.screen', actie: 'dicht' } }];
+    const licht = [{ pad: 'api/licht', body: { id: 'light.badkamer', aan: true } }];
+    const gepland = [
+      { id: 'g1', tekst: 'Screens dicht', ms: nu + 40 * 60_000, voor: null, naam: null, status: 'wacht', gemaakt: nu, opdracht: { stappen: scherm, zon: 'onder', moment: { soort: 'zon', zon: 'onder', minuten: -10 }, herhaal: { soort: 'dag' }, aan: true } },
+      { id: 'g2', tekst: 'Badkamer licht aan', ms: nu + 30 * 3_600_000, voor: null, naam: null, status: 'wacht', gemaakt: nu, opdracht: { stappen: licht, zon: null, moment: { soort: 'tijd', uur: 7, minuut: 0 }, herhaal: { soort: 'werkdagen' }, aan: false } },
+    ];
+    const gestuurd: Record<string, unknown>[] = [];
+    await context.route(`${baseUrl}/api/te-doen**`, async (route) => {
+      if (route.request().method() === 'POST') {
+        gestuurd.push(route.request().postDataJSON() as Record<string, unknown>);
+        return route.fulfill({ json: { ok: true } });
+      }
+      return route.fulfill({ json: { aan: true, herinneringen: [], gepland, lijsten: [], afspraken: [], speelt: [], agendas: {} } });
+    });
+    // Op Te doen één regel, die naar de eigen pagina gaat.
+    await p.goto(`${baseUrl}/tedoen.html`);
+    const regel = p.locator('#wand .td-gepland');
+    await regel.waitFor({ timeout: 10_000 });
+    expect(await regel.textContent()).toMatch(/Vast en gepland[\s\S]*2 opdrachten · de volgende om \d\d:\d\d/);
+    await regel.click();
+    await p.waitForURL(/gepland\.html$/);
+    const wand = p.locator('#wand [data-gp]');
+    await wand.locator('.gp-regel').first().waitFor();
+    // De boog met de opdracht van vandaag, en de lijst: vandaag nog, en gepauzeerd daarna.
+    expect(await wand.locator('.gp-dag svg circle[stroke-width="2.5"]').count()).toBeGreaterThanOrEqual(1);
+    expect(await wand.locator('.gp-regel', { hasText: 'Screens dicht' }).textContent()).toContain('Elke dag, 10 min voor zonsondergang');
+    expect(await wand.locator('.gp-regel.uit', { hasText: 'Badkamer licht aan' }).textContent()).toContain('gepauzeerd');
+    // Pauzeren met de schakelaar.
+    await wand.locator('.gp-regel', { hasText: 'Screens dicht' }).locator('[data-gp-aan]').click();
+    await expect.poll(() => gestuurd.length).toBe(1);
+    expect(gestuurd[0]).toEqual({ actie: 'aanpassen', id: 'g1', aan: false });
+    // Aanpassen: wanneer, hoe vaak, overslaan.
+    await wand.locator('.gp-regel', { hasText: 'Screens dicht' }).click();
+    const blad = wand.locator('.gp-blad');
+    await blad.waitFor();
+    expect(await blad.locator('.gp-stapper b').textContent()).toBe('10 min ervoor');
+    await blad.locator('[data-gp-min="-5"]').click();
+    expect(await blad.locator('.gp-stapper b').textContent()).toBe('15 min ervoor');
+    await blad.locator('[data-gp-herhalen]').click();
+    await blad.locator('[data-gp-herhaal="werkdagen"]').click();
+    expect(await blad.locator('[data-gp-herhalen]').textContent()).toContain('Werkdagen');
+    await blad.locator('[data-gp-weg]').click();
+    expect(await p.evaluate<boolean>('document.scrollingElement.scrollHeight <= innerHeight')).toBe(true);
+    if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-gepland-aanpassen.png') });
+    await blad.locator('[data-gp-bewaar]').click();
+    await expect.poll(() => gestuurd.length).toBe(2);
+    expect(gestuurd[1]).toEqual({ actie: 'aanpassen', id: 'g1', aan: true, overslaanWeg: true, moment: { soort: 'zon', zon: 'onder', minuten: -15 }, herhaal: { soort: 'werkdagen' } });
+    // Kies dagen: dan pas de zeven dagen.
+    await wand.locator('.gp-regel', { hasText: 'Badkamer licht aan' }).click();
+    await blad.locator('[data-gp-herhalen]').click();
+    expect(await blad.locator('.gp-dagen').count()).toBe(0);
+    await blad.locator('[data-gp-herhaal="dagen"]').click();
+    expect(await blad.locator('.gp-dagen button').count()).toBe(7);
+    await p.keyboard.press('Escape');
+    if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-gepland.png') });
+    // Op de telefoon onder elkaar, en Aanpassen van onderen.
+    await p.setViewportSize({ width: 390, height: 844 });
+    const tel = p.locator('#tel [data-gp]');
+    await tel.locator('.gp-regel').first().waitFor();
+    if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-gepland-tel.png') });
+    await tel.locator('.gp-regel').first().click();
+    await tel.locator('.gp-blad [data-gp-bewaar]').waitFor();
+    if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-gepland-tel-aanpassen.png') });
     expect(fouten).toEqual([]);
     await context.close();
   }, 30_000);

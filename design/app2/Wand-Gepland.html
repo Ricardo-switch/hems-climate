@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Vast en gepland</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Vast en gepland (schets, ronde 3 uit "SunArc polijsten", 1 november 2026).
+   * Wat het huis vanzelf doet: een keer ("om half acht de screens dicht") of
+   * steeds ("elke werkdag tien minuten voor zonsondergang"). Bovenaan je dag
+   * als boog, net als het logo: de zon van opkomst tot ondergang, en elke
+   * opdracht op zijn moment. Eronder de lijst, één regel per opdracht, met een
+   * schakelaar om hem te pauzeren. Een tik opent Aanpassen.
+   *
+   * Rustig (besluit 228): wanneer is een segmentbalk, herhalen een regel met
+   * een waarde die een gewone lijst opent; de zeven dagen pas bij Kies dagen.
+   * Het blijft binnen wat de app mag: licht, scènes en schermen (besluit 218).
+   * Zondag 1 november, 15:10; de zon op 07:29 en onder om 16:59.
+   * Gekozen door Ricardo (1 november 2026): een eigen pagina vanuit Te doen (een
+   * regel "Vast en gepland" in plaats van de losse lijst Gepland); per opdracht
+   * overslaan als niemand thuis is, standaard gaat hij door; klimaat met de hand
+   * na dit, met een eigen schets.
+   * Standen: zonder hash de pagina, #aanpassen het blad, #herhalen Herhalen open.
+   */
+  main { position: relative; padding: 22px 26px 20px 22px; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+  .terugje { font-size: 14px; font-weight: 600; color: var(--zacht); }
+  .kopregel { display: flex; justify-content: space-between; align-items: end; gap: 24px; }
+  .kopregel .lead { max-width: 64ch; margin-top: 6px; }
+  .kopregel .lead q { color: var(--tekst); font-weight: 600; }
+  .nieuw { height: 44px; padding: 0 20px; border-radius: 14px; border: 0; background: var(--tekst); color: var(--inkt); font: inherit; font-weight: 700; font-size: 15px; }
+
+  /* De dag als boog. */
+  .dag { position: relative; height: 292px; padding: 14px 18px 0; overflow: hidden; }
+  .dag h2 { position: absolute; left: 20px; top: 14px; margin: 0; font-family: var(--kop); font-size: 17px; font-weight: 600; }
+  .dag h2 span { font-family: Figtree, sans-serif; font-size: 13px; font-weight: 600; color: var(--gedempt); margin-left: 8px; }
+  .dag svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+  /* De lijst. */
+  .veld { position: relative; flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .lijst { padding: 10px 18px; display: flex; flex-direction: column; }
+  .lijst h3 { margin: 4px 0 2px; font-size: 13px; font-weight: 700; color: var(--gedempt); }
+  .regel { display: grid; grid-template-columns: 30px 64px minmax(0, 1fr) auto; gap: 0 12px; align-items: center; padding: 9px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+  .regel:first-of-type { border-top: 0; }
+  .regel svg { width: 22px; height: 22px; }
+  .regel .uur { font-family: var(--kop); font-size: 20px; font-weight: 600; }
+  .regel .uur small { display: block; font-family: Figtree, sans-serif; font-size: 11.5px; font-weight: 600; color: var(--gedempt); margin-top: 1px; }
+  .regel b { display: block; font-size: 15px; font-weight: 600; }
+  .regel span.hoe { display: block; font-size: 13px; color: var(--gedempt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .regel span.hoe em { font-style: normal; color: var(--zon-t); }
+  .regel.gedaan { opacity: 0.45; }
+  .regel.uit .uur, .regel.uit b { color: var(--gedempt); }
+  .regel.gekozen { background: rgba(255, 255, 255, 0.07); border-radius: 12px; margin: 0 -8px; padding: 9px 8px; border-top-color: transparent; }
+  .lijst .tip { margin-top: auto; font-size: 12.5px; color: var(--gedempt); padding-top: 8px; }
+
+  .schakelaar { position: relative; flex: none; width: 44px; height: 26px; border-radius: 999px; border: 0; padding: 0; background: rgba(255, 255, 255, 0.14); }
+  .schakelaar::after { content: ''; position: absolute; left: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: #c9d3dc; }
+  .schakelaar[aria-checked='true'] { background: var(--mint); }
+  .schakelaar[aria-checked='true']::after { left: 21px; background: #fff; }
+
+  /* Aanpassen: één blad, één keuze tegelijk open. */
+  /* Het blad neemt de lijst over; de boog erboven blijft, zodat je het moment ziet schuiven. */
+  .blad { position: absolute; inset: 0; padding: 16px 22px; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto minmax(0, 1fr); gap: 12px 30px; background: rgba(12, 20, 34, 0.97); z-index: 5; }
+  .blad .kolom { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+  .vraag[hidden], .rij[hidden] { display: none; }
+  .blad[hidden] { display: none; }
+  .blad .bovenaan { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; }
+  .blad .bovenaan h2 { flex: 1; margin: 0; font-family: var(--kop); font-size: 24px; font-weight: 600; }
+  .blad .sluit { width: 34px; height: 34px; border-radius: 50%; border: 0; background: rgba(255, 255, 255, 0.08); color: var(--tekst); font-size: 17px; }
+  .vraag { display: flex; flex-direction: column; gap: 8px; }
+  .vraag > span { font-size: 12.5px; font-weight: 700; color: var(--gedempt); }
+  .waarde { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 14px; background: rgba(255, 255, 255, 0.05); font-size: 15px; }
+  .waarde b { flex: 1; font-weight: 600; }
+  .waarde i { font-style: normal; color: var(--gedempt); font-size: 18px; }
+  .seg { display: flex; padding: 3px; border-radius: 12px; background: rgba(255, 255, 255, 0.06); }
+  .seg button { flex: 1; height: 34px; border: 0; border-radius: 9px; background: transparent; color: var(--zacht); font: inherit; font-size: 14px; font-weight: 600; }
+  .seg button[aria-pressed='true'] { background: rgba(255, 255, 255, 0.14); color: var(--tekst); }
+  .stapper { display: flex; align-items: center; gap: 10px; }
+  .stapper button { width: 36px; height: 36px; border-radius: 11px; border: 0; background: rgba(255, 255, 255, 0.08); color: var(--tekst); font-size: 19px; font-weight: 600; }
+  .stapper b { min-width: 150px; text-align: center; font-size: 15px; font-weight: 600; }
+  .zo { font-size: 13px; color: var(--zon-t); }
+  .keus { display: flex; flex-direction: column; border-radius: 14px; background: rgba(255, 255, 255, 0.05); padding: 2px 14px; }
+  .keus div { display: flex; align-items: center; padding: 5px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); font-size: 14.5px; }
+  .keus div:first-child { border-top: 0; }
+  .keus div span { flex: 1; }
+  .keus div.ja { font-weight: 700; }
+  .keus div.ja::after { content: '✓'; color: var(--mint); font-weight: 800; }
+  .dagen { display: flex; gap: 4px; padding: 3px; border-radius: 12px; background: rgba(255, 255, 255, 0.06); }
+  .blad .onder[hidden] { display: none; }
+  .dagen button { flex: 1; height: 30px; border: 0; border-radius: 9px; background: transparent; color: var(--zacht); font: inherit; font-size: 13px; font-weight: 700; }
+  .dagen button[aria-pressed='true'] { background: rgba(255, 255, 255, 0.14); color: var(--tekst); }
+  .rij { display: flex; align-items: center; gap: 12px; font-size: 14.5px; }
+  .rij span { flex: 1; }
+  .rij small { display: block; font-size: 12.5px; color: var(--gedempt); }
+  .blad .onder { margin-top: auto; display: flex; align-items: center; gap: 12px; }
+  .blad .onder .weg { border: 0; background: none; color: #ffb090; font: inherit; font-weight: 600; font-size: 14px; padding: 0; }
+  .blad .onder .bewaar { margin-left: auto; height: 42px; padding: 0 22px; border-radius: 14px; border: 0; background: var(--tekst); color: var(--inkt); font: inherit; font-weight: 700; font-size: 15px; }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-dag">
+  <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+  <main>
+    <span class="terugje">‹ Te doen</span>
+    <div class="kopregel">
+      <div>
+        <h1 class="kop-1">Vast en gepland</h1>
+        <p class="lead">Wat het huis vanzelf doet. Tik op iets om het aan te passen, of zeg <q>doe elke werkdag bij zonsondergang de screens dicht</q>.</p>
+      </div>
+      <button class="nieuw" type="button">+ Nieuw</button>
+    </div>
+
+    <section class="glas dag" aria-label="Vandaag als boog">
+      <h2>Vandaag<span>zon op 07:29 · onder 16:59</span></h2>
+      <svg id="boog" viewBox="0 0 1180 292" preserveAspectRatio="none"></svg>
+    </section>
+
+    <div class="veld">
+      <section class="glas lijst">
+        <h3>Vandaag nog</h3>
+        <div class="regel gekozen"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="4" width="16" height="4" rx="1"/><path d="M6 8v11h12V8M6 13h12"/></svg><div class="uur">16:49<small>vandaag</small></div><div><b>Screens dicht</b><span class="hoe">Elke dag, <em>10 min voor zonsondergang</em></span></div><button class="schakelaar" role="switch" aria-checked="true" aria-label="Aan"></button></div>
+        <div class="regel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="4" width="16" height="4" rx="1"/><path d="M6 8v11h12V8M6 13h12"/></svg><div class="uur">19:30<small>vandaag</small></div><div><b>Screen groot dicht</b><span class="hoe">Eén keer, gevraagd door Ricardo</span></div><button class="schakelaar" role="switch" aria-checked="true" aria-label="Aan"></button></div>
+        <div class="regel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg><div class="uur">22:30<small>vandaag</small></div><div><b>Scène Nacht</b><span class="hoe">Elke dag</span></div><button class="schakelaar" role="switch" aria-checked="true" aria-label="Aan"></button></div>
+        <div class="regel gedaan"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z"/></svg><div class="uur">08:00<small>gedaan</small></div><div><b>Lamp woonkamer aan</b><span class="hoe">Elke dag</span></div><button class="schakelaar" role="switch" aria-checked="true" aria-label="Aan"></button></div>
+      </section>
+      <section class="glas lijst">
+        <h3>De rest van de week</h3>
+        <div class="regel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z"/></svg><div class="uur">07:00<small>morgen</small></div><div><b>Badkamer licht aan</b><span class="hoe">Werkdagen</span></div><button class="schakelaar" role="switch" aria-checked="true" aria-label="Aan"></button></div>
+        <div class="regel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="4" width="16" height="4" rx="1"/><path d="M6 8v4h12V8"/></svg><div class="uur">07:44<small>morgen</small></div><div><b>Screens open</b><span class="hoe">Werkdagen, <em>15 min na zonsopkomst</em></span></div><button class="schakelaar" role="switch" aria-checked="true" aria-label="Aan"></button></div>
+        <div class="regel uit"><svg viewBox="0 0 24 24" fill="none" stroke="var(--gedempt)" stroke-width="1.8" stroke-linecap="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z"/></svg><div class="uur">23:00<small>gepauzeerd</small></div><div><b>Plafonnière slaapkamer uit</b><span class="hoe">Weekend</span></div><button class="schakelaar" role="switch" aria-checked="false" aria-label="Uit"></button></div>
+        <p class="tip">Op vakantie slaat het huis ze over, tenzij je er "ook op vakantie" bij zette.</p>
+      </section>
+
+      <!-- Aanpassen (#aanpassen, #herhalen). -->
+      <aside class="glas blad" id="blad" hidden>
+        <div class="bovenaan"><h2>Screens dicht</h2><button class="schakelaar" role="switch" aria-checked="true" aria-label="Aan"></button><button class="sluit" type="button" aria-label="Sluiten">×</button></div>
+        <div class="kolom">
+        <div class="vraag"><span>Wat</span><div class="waarde"><b>Alle screens</b>dicht<i>›</i></div></div>
+        <div class="vraag" data-wanneer><span>Wanneer</span>
+          <div class="seg"><button type="button">Om een tijd</button><button type="button">Zonsopkomst</button><button type="button" aria-pressed="true">Zonsondergang</button></div>
+          <div class="stapper"><button type="button" aria-label="Eerder">−</button><b>10 min ervoor</b><button type="button" aria-label="Later">+</button></div>
+          <div class="zo">Vandaag om 16:49, morgen om 16:47</div>
+        </div>
+        </div>
+        <div class="kolom">
+        <div class="vraag" data-herhalen-dicht><span>Herhalen</span><div class="waarde"><b>Elke dag</b><i>›</i></div></div>
+        <div class="vraag" data-herhalen-open hidden><span>Herhalen</span>
+          <div class="keus"><div><span>Eén keer</span></div><div><span>Elke dag</span></div><div><span>Werkdagen</span></div><div><span>Weekend</span></div><div class="ja"><span>Kies dagen</span></div></div>
+          <div class="dagen"><button type="button" aria-pressed="true">ma</button><button type="button">di</button><button type="button" aria-pressed="true">wo</button><button type="button">do</button><button type="button" aria-pressed="true">vr</button><button type="button">za</button><button type="button">zo</button></div>
+        </div>
+        <div class="rij"><span>Overslaan als niemand thuis is<small>Ook gewoon op vakantie</small></span><button class="schakelaar" role="switch" aria-checked="false" aria-label="Overslaan als niemand thuis is"></button></div>
+        <div class="onder"><button class="weg" type="button">Weghalen</button><button class="bewaar" type="button">Bewaar</button></div>
+        </div>
+      </aside>
+    </div>
+  </main>
+</div>
+<script src="../../frontend/kit/teksten.nl.js"></script>
+<script src="../../frontend/kit/teksten.en.js"></script>
+<script src="../../frontend/kit/taal.js"></script>
+<script src="../../frontend/kit/nav.js"></script>
+<script>
+  nav.balk(document.getElementById('balk'), 'tedoen');
+  const stand = location.hash.slice(1);
+  document.getElementById('blad').hidden = !(stand === 'aanpassen' || stand === 'herhalen');
+  document.querySelector('[data-herhalen-dicht]').hidden = stand === 'herhalen';
+  document.querySelector('[data-herhalen-open]').hidden = stand !== 'herhalen';
+  // Herhalen open: de rest van de rechterkolom wijkt, er staat één keuze tegelijk open.
+  if (stand === 'herhalen') document.querySelector('.blad .rij').hidden = true;
+  // Een keuze uit de lijst klapt hem weer dicht; tot dan staan Weghalen en Bewaar er niet.
+  if (stand === 'herhalen') document.querySelector('.blad .onder').hidden = true;
+
+  // De dag als boog: x is de tijd, de zon klimt van opkomst tot ondergang; 's nachts ligt de lijn op de horizon.
+  const W = 1180, H = 292, L = 40, R = 40, HOR = 236, TOP = 70;
+  const OP = 7 + 29 / 60, ONDER = 16 + 59 / 60, NU = 15 + 10 / 60;
+  const x = (u) => L + (u / 24) * (W - L - R);
+  const y = (u) => (u <= OP || u >= ONDER ? HOR : HOR - (HOR - TOP) * Math.sin(Math.PI * (u - OP) / (ONDER - OP)));
+  const pad = (van, tot) => Array.from({ length: 81 }, (_, i) => { const u = van + (i / 80) * (tot - van); return `${i ? 'L' : 'M'}${x(u).toFixed(1)},${y(u).toFixed(1)}`; }).join(' ');
+  const klok = (u) => `${String(Math.floor(u)).padStart(2, '0')}:${String(Math.round((u % 1) * 60)).padStart(2, '0')}`;
+  let s = `<defs><linearGradient id="zonboog" x1="0" x2="1"><stop offset="0" stop-color="#6ee7b7"/><stop offset="0.5" stop-color="#f7b548"/><stop offset="1" stop-color="#8f86ff"/></linearGradient>
+    <radialGradient id="gloed"><stop offset="0" stop-color="#f7b548" stop-opacity="0.55"/><stop offset="1" stop-color="#f7b548" stop-opacity="0"/></radialGradient></defs>`;
+  // De horizon en de uren.
+  s += `<line x1="${x(0)}" x2="${x(24)}" y1="${HOR}" y2="${HOR}" stroke="rgba(255,255,255,0.14)"/>`;
+  for (const u of [0, 6, 12, 18, 24]) s += `<text x="${x(u)}" y="${HOR + 26}" text-anchor="${u === 0 ? 'start' : u === 24 ? 'end' : 'middle'}" font-size="13" fill="rgba(170,185,200,0.75)" font-family="Figtree">${klok(u % 24 === 0 && u ? 24 : u).replace('24:00', '24:00')}</text>`;
+  // Wat al voorbij is, gedimd; wat komt, in kleur. De nacht als stippellijn.
+  s += `<path d="${pad(0, OP)}" stroke="rgba(143,134,255,0.45)" stroke-width="3" stroke-dasharray="2 7" stroke-linecap="round" fill="none"/>`;
+  s += `<path d="${pad(ONDER, 24)}" stroke="rgba(143,134,255,0.65)" stroke-width="3" stroke-dasharray="2 7" stroke-linecap="round" fill="none"/>`;
+  s += `<path d="${pad(OP, NU)}" stroke="url(#zonboog)" stroke-opacity="0.35" stroke-width="5" stroke-linecap="round" fill="none"/>`;
+  s += `<path d="${pad(NU, ONDER)}" stroke="url(#zonboog)" stroke-width="5" stroke-linecap="round" fill="none"/>`;
+  // De zon, nu.
+  s += `<circle cx="${x(NU)}" cy="${y(NU)}" r="40" fill="url(#gloed)"/><circle cx="${x(NU)}" cy="${y(NU)}" r="13" fill="#ffd27a"/>`;
+  s += `<text x="${x(NU)}" y="${y(NU) - 24}" text-anchor="middle" font-size="13" font-weight="700" fill="#ffd27a" font-family="Figtree">nu</text>`;
+  // De opdrachten van vandaag.
+  const opdrachten = [
+    { u: 8, wat: 'Lamp woonkamer aan', gedaan: true, boven: true },
+    { u: 16 + 49 / 60, wat: 'Screens dicht', boven: true, gekozen: true },
+    { u: 19.5, wat: 'Screen groot dicht', boven: true },
+    { u: 22.5, wat: 'Scène Nacht' },
+  ];
+  for (const o of opdrachten) {
+    const px = x(o.u), py = y(o.u);
+    const kleur = o.gedaan ? 'rgba(170,185,200,0.55)' : o.gekozen ? '#ffffff' : '#e8eef5';
+    // Op de boog staat het label aan de buitenkant; 's nachts erboven, op een steeltje.
+    const dag = o.u > OP && o.u < ONDER;
+    const stijgt = o.u < (OP + ONDER) / 2;
+    const tx = dag ? px + (stijgt ? -16 : 16) : px;
+    const ty = dag ? py - 4 : py - 40;
+    const anker = dag ? (stijgt ? 'end' : 'start') : 'middle';
+    if (!dag) s += `<line x1="${px}" x2="${px}" y1="${py}" y2="${py - 32}" stroke="${kleur}" stroke-opacity="0.35"/>`;
+    s += `<circle cx="${px}" cy="${py}" r="${o.gekozen ? 8 : 6}" fill="${o.gedaan ? '#5b6b7c' : '#0b1424'}" stroke="${kleur}" stroke-width="2.5"/>`;
+    s += `<text x="${tx}" y="${ty - 16}" text-anchor="${anker}" font-size="16" font-weight="700" fill="${kleur}" font-family="Bricolage Grotesque">${klok(o.u)}${o.gedaan ? ' ✓' : ''}</text>`;
+    s += `<text x="${tx}" y="${ty + 2}" text-anchor="${anker}" font-size="13.5" font-weight="600" fill="${o.gedaan ? 'rgba(170,185,200,0.55)' : 'rgba(205,215,225,0.9)'}" font-family="Figtree">${o.wat}</text>`;
+  }
+  document.getElementById('boog').innerHTML = s;
+</script>
+</body>
+</html>

@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="only dark">
+<title>Vast en gepland · SunArc</title>
+<link rel="stylesheet" href="kit/kit.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0b1424">
+<link rel="icon" href="icoon-192.png?v=sunarc">
+<link rel="apple-touch-icon" href="icoon-192.png?v=sunarc">
+<script>(function () { var d = document.documentElement, w0 = 0, h0 = 0, t = {}, m = matchMedia('(prefers-color-scheme: light)'); try { t = JSON.parse(localStorage.getItem('sc-thema')) || {}; } catch (e) {} function k() { var eigen = d.classList.contains('tel-stand') || !t.scherm, c = eigen ? t.kleur : t.wandKleur; var licht = eigen && (t.thema === 'licht' || (t.thema === 'systeem' && m.matches)), tc = document.querySelector('meta[name="theme-color"]'); d.classList.toggle('sc-licht', licht); if (tc) tc.setAttribute('content', licht ? '#e9eff6' : '#0b1424'); if (c && c !== 'lucht') d.setAttribute('data-kleur', c); else d.removeAttribute('data-kleur'); } window.scThema = function (n) { if (n) { t = n; try { localStorage.setItem('sc-thema', JSON.stringify(n)); } catch (e) {} } k(); }; function s() { var a = document.activeElement; if (w0 === innerWidth && innerHeight < h0 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; w0 = innerWidth; h0 = innerHeight; var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); k(); } s(); addEventListener('resize', s); m.addEventListener('change', k); })();</script>
+<style>
+  /*
+   * Vast en gepland (besluit 234, schetsen Wand-Gepland en Tel-Gepland): wat
+   * het huis vanzelf doet, een keer of steeds. Bovenaan de dag als boog met de
+   * zon en elke opdracht op zijn moment; eronder de lijst met een schakelaar om
+   * te pauzeren; een tik opent Aanpassen. gepland.js tekent hem.
+   */
+  #wand main { position: relative; padding: 22px 26px 20px 22px; display: flex; flex-direction: column; gap: 14px; min-height: 0; height: 100%; box-sizing: border-box; }
+  .gp-kop { display: flex; justify-content: space-between; align-items: end; gap: 24px; }
+  .gp-kop .lead { max-width: 64ch; margin-top: 6px; }
+  .gp-kop .lead q { color: var(--tekst); font-weight: 600; }
+  .gp-nieuw { flex: none; height: 44px; padding: 0 20px; border-radius: 14px; background: var(--tekst); color: var(--inkt); font-weight: 700; font-size: 15px; display: inline-flex; align-items: center; text-decoration: none; }
+  .gp-dag { position: relative; height: 270px; flex: none; overflow: hidden; }
+  .gp-dag h2 { position: absolute; left: 20px; top: 14px; margin: 0; font-family: var(--kop); font-size: 17px; font-weight: 600; }
+  .gp-dag h2 span { font-family: var(--romp); font-size: 13px; font-weight: 600; color: var(--gedempt); margin-left: 8px; }
+  .gp-dag svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .gp-dag svg text { font-family: var(--romp); }
+  .gp-dag svg .t { font-family: var(--kop); font-size: 16px; font-weight: 700; }
+  .gp-dag svg .w { font-size: 13.5px; font-weight: 600; }
+  .gp-veld { position: relative; flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .gp-lijst { padding: 10px 18px; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+  .gp-lijst h3 { margin: 4px 0 2px; font-size: 13px; font-weight: 700; color: var(--gedempt); }
+  .gp-lijst .tip { margin-top: auto; font-size: 12.5px; color: var(--gedempt); padding-top: 8px; }
+  .gp-regel { display: grid; grid-template-columns: 26px 64px minmax(0, 1fr) auto; gap: 0 12px; align-items: center; padding: 8px 0; border-top: 1px solid rgb(var(--wit) / 0.06); cursor: pointer; }
+  .gp-regel:first-of-type { border-top: 0; }
+  .gp-regel > svg { width: 22px; height: 22px; color: var(--zacht); }
+  .gp-regel .uur { font-family: var(--kop); font-size: 20px; font-weight: 600; }
+  .gp-regel .uur small { display: block; font-family: var(--romp); font-size: 11.5px; font-weight: 600; color: var(--gedempt); margin-top: 1px; }
+  .gp-regel b { display: block; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .gp-regel span.hoe { display: block; font-size: 13px; color: var(--gedempt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .gp-regel span.hoe em { font-style: normal; color: var(--zon-t); }
+  .gp-regel.gedaan { opacity: 0.45; }
+  .gp-regel.uit .uur, .gp-regel.uit b { color: var(--gedempt); }
+  .gp-regel.gekozen { background: rgb(var(--wit) / 0.07); border-radius: 12px; margin: 0 -8px; padding: 8px; border-top-color: transparent; }
+  .gp-leeg { font-size: 14px; color: var(--zacht); margin: 8px 0; }
+
+  /* Aanpassen: neemt de lijst over, de boog blijft. Eén keuze tegelijk open. */
+  .gp-blad { position: absolute; inset: 0; padding: 16px 22px; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto minmax(0, 1fr); gap: 12px 30px; background: rgb(var(--nacht) / 0.97); z-index: 5; }
+  .gp-blad[hidden], .gp-achter[hidden] { display: none; }
+  .gp-blad .boven { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; }
+  .gp-blad .boven h2 { flex: 1; margin: 0; font-family: var(--kop); font-size: 24px; font-weight: 600; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .gp-blad .sluit { width: 34px; height: 34px; border-radius: 50%; border: 0; background: rgb(var(--wit) / 0.08); color: var(--tekst); font-size: 17px; cursor: pointer; }
+  .gp-kolom { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+  .gp-vraag { display: flex; flex-direction: column; gap: 8px; }
+  .gp-vraag[hidden], .gp-rij[hidden], .gp-onder[hidden] { display: none; }
+  .gp-vraag > span { font-size: 12.5px; font-weight: 700; color: var(--gedempt); }
+  .gp-waarde { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 14px; background: rgb(var(--wit) / 0.05); border: 0; color: inherit; font: inherit; font-size: 15px; text-align: left; width: 100%; box-sizing: border-box; }
+  .gp-waarde b { flex: 1; font-weight: 600; }
+  .gp-waarde i { font-style: normal; color: var(--gedempt); font-size: 18px; }
+  button.gp-waarde { cursor: pointer; }
+  .gp-stapper { display: flex; align-items: center; gap: 10px; }
+  .gp-stapper button { width: 36px; height: 36px; border-radius: 11px; border: 0; background: rgb(var(--wit) / 0.08); color: var(--tekst); font-size: 19px; font-weight: 600; cursor: pointer; }
+  .gp-stapper b { min-width: 170px; text-align: center; font-size: 15px; font-weight: 600; }
+  /* Wanneer: één balk (besluit 228), de gewone knoppen zonder rand. */
+  .gp-blad .chips.seg { display: flex; }
+  .gp-blad .chips.seg > .chip { border: 0; height: 34px; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .gp-tijd { height: 40px; padding: 0 12px; border-radius: 12px; border: 0; background: rgb(var(--wit) / 0.08); color: var(--tekst); font: inherit; font-size: 17px; font-weight: 600; width: 130px; color-scheme: dark; }
+  .gp-zo { font-size: 13px; color: var(--zon-t); }
+  .gp-keus { display: flex; flex-direction: column; border-radius: 14px; background: rgb(var(--wit) / 0.05); padding: 2px 14px; }
+  .gp-keus button { display: flex; align-items: center; padding: 6px 0; border: 0; border-top: 1px solid rgb(var(--wit) / 0.06); background: none; color: inherit; font: inherit; font-size: 14.5px; text-align: left; cursor: pointer; }
+  .gp-keus button:first-child { border-top: 0; }
+  .gp-keus button span { flex: 1; }
+  .gp-keus button[aria-pressed='true'] { font-weight: 700; }
+  .gp-keus button[aria-pressed='true']::after { content: '✓'; color: var(--mint); font-weight: 800; }
+  .gp-dagen { display: flex; gap: 4px; padding: 3px; border-radius: 12px; background: rgb(var(--wit) / 0.06); }
+  .gp-dagen button { flex: 1; height: 30px; border: 0; border-radius: 9px; background: transparent; color: var(--zacht); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .gp-dagen button[aria-pressed='true'] { background: rgb(var(--wit) / 0.14); color: var(--tekst); }
+  .gp-rij { display: flex; align-items: center; gap: 12px; font-size: 14.5px; }
+  .gp-rij span { flex: 1; }
+  .gp-rij small { display: block; font-size: 12.5px; color: var(--gedempt); }
+  .gp-onder { margin-top: auto; display: flex; align-items: center; gap: 12px; }
+  .gp-onder .weg { border: 0; background: none; color: var(--gloed-t); font: inherit; font-weight: 600; font-size: 14px; padding: 0; cursor: pointer; }
+  .gp-onder .bewaar { margin-left: auto; height: 42px; padding: 0 22px; border-radius: 14px; border: 0; background: var(--tekst); color: var(--inkt); font: inherit; font-weight: 700; font-size: 15px; cursor: pointer; }
+  .gp-fout { color: var(--gloed-t); font-size: 13px; }
+
+  /* De telefoon: alles onder elkaar, Aanpassen van onderen. */
+  #tel .inhoud { padding: 16px 16px 110px; display: flex; flex-direction: column; gap: 14px; }
+  #tel .gp-kop h1 { font-size: 32px; }
+  #tel .gp-kop .lead { display: none; }
+  #tel .gp-nieuw { height: 38px; padding: 0 14px; font-size: 14px; }
+  #tel .gp-dag { height: 190px; }
+  #tel .gp-dag svg .w { display: none; }
+  #tel .gp-veld { display: flex; flex-direction: column; gap: 14px; }
+  #tel .gp-lijst { overflow: visible; }
+  #tel .gp-regel { grid-template-columns: 54px minmax(0, 1fr) auto; }
+  #tel .gp-regel > svg { display: none; }
+  #tel .gp-regel .uur { font-size: 18px; }
+  #tel .gp-achter { position: fixed; inset: 0; background: rgba(4, 8, 16, 0.6); z-index: 60; }
+  #tel .gp-blad { position: fixed; inset: auto 8px 8px 8px; max-height: 88vh; overflow-y: auto; border-radius: 26px; display: flex; flex-direction: column; background: rgb(var(--nacht)); z-index: 61; }
+  #tel .gp-blad[hidden] { display: none; }
+  #tel .gp-stapper b { flex: 1; min-width: 0; }
+</style>
+</head>
+<body class="lucht lucht-dag">
+  <div id="wand" class="wand">
+    <nav class="balk" id="balk" data-t-aria-label="nav.hoofdmenu"></nav>
+    <main data-gp></main>
+  </div>
+
+  <div id="tel" class="tel">
+    <div class="inhoud" data-gp></div>
+    <nav class="tabs" id="tabs" data-t-aria-label="nav.hoofdmenu"></nav>
+  </div>
+  <script src="kit/teksten.nl.js"></script>
+  <script src="kit/teksten.en.js"></script>
+  <script src="kit/taal.js"></script>
+  <script src="kit/nav.js"></script>
+  <script src="basis.js"></script>
+  <script src="gepland.js"></script>
+</body>
+</html>

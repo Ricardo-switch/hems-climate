@@ -235,6 +235,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [229. Twee pagina's, rustiger: Wat je huis kan en Hoe ver je huis is](#229-twee-paginas-rustiger-wat-je-huis-kan-en-hoe-ver-je-huis-is)
 - [232. Het logo naast de klok, en Over deze app](#232-het-logo-naast-de-klok-en-over-deze-app)
 - [233. Wat Whisper vast verkeerd hoort, rechtzetten](#233-wat-whisper-vast-verkeerd-hoort-rechtzetten)
+- [234. Vast en gepland: herhalen, de zon met minuten, en aanpassen](#234-vast-en-gepland-herhalen-de-zon-met-minuten-en-aanpassen)
 
 **Veiligheid**
 
@@ -10782,6 +10783,51 @@ Piper, gingen via Wyoming rechtstreeks naar Whisper op de Pi:
 - **Een meting met stemmen van Piper**, geen echte opnames: met je eigen stem
   en geluid in de kamer gaat er meer mis.
 - **Versie 0.102.1.**
+
+---
+
+## 234. Vast en gepland: herhalen, de zon met minuten, en aanpassen
+
+*Onderwerp: weergave · Status: geldig*
+
+1 november 2026, ronde 3 uit het rapport "SunArc polijsten". De bewoner:
+"je moet ook kunnen vragen, zet lamp woonkamer elke dag om 08:00 aan", en bij
+Gepland "een knop aanpassen waar je bijvoorbeeld tijd (of
+zonsondergang/opkomst) kunt aangeven en/of herhaling". Tot nu toe deed de
+dienst een geplande opdracht één keer (besluit 218). Gekozen na de schetsen
+`Wand-Gepland` en `Tel-Gepland`: een eigen pagina vanuit Te doen, per opdracht
+overslaan als niemand thuis is (standaard gaat hij door), en het klimaat met
+de hand daarna, met een eigen schets.
+
+*Besluit:*
+
+- **Een opdracht heeft een moment en een herhaling.** Het moment is een tijd,
+  of de zon (op of onder) met minuten ervoor of erna. De herhaling is één
+  keer, elke dag, werkdagen, het weekend, of gekozen dagen. Na elke keer
+  rekent de dienst het volgende moment uit (`volgendeMoment` in
+  `gepland.ts`), op de klok en de zon van het huis. Een oude opdracht zonder
+  herhaling blijft één keer.
+- **Pauzeren:** een opdracht die uit staat, slaat zijn beurt over; een vaste
+  komt daarna gewoon terug. **Overslaan als niemand thuis is** kies je per
+  opdracht; dan slaat hij ook op vakantie over. Standaard gaat hij door.
+- **Met je stem:** "elke dag", "elke ochtend", "elke werkdag", "doordeweeks",
+  "in het weekend", "elke maandag en woensdag", en "een kwartier voor
+  zonsondergang" of "10 minuten na zonsopkomst". Het uur geldt zoals je het
+  zegt: "elke werkdag om zeven" is 07:00. De assistent zegt wat hij vastlegde
+  en wanneer de eerste keer is: "Goed, elke werkdag om 07:00: zet de lamp in
+  de keuken aan. De eerste keer is morgen om 07:00."
+- **Een eigen pagina** (`gepland.html`): bovenaan de dag als boog, net als het
+  logo, met de zon van opkomst tot ondergang en elke opdracht van vandaag op
+  zijn moment. Daaronder twee lijsten: "Vandaag nog" en "De komende dagen",
+  met een schakelaar per opdracht. Een tik opent Aanpassen, met Wanneer (één
+  balk: om een tijd, zonsopkomst of zonsondergang, met minuten ervoor of
+  erna), Herhalen (een lijst; de zeven dagen pas bij Kies dagen), Overslaan
+  als niemand thuis is, en Weghalen. Wat je doet, verander je met een nieuwe
+  opdracht; Nieuw opent de assistent.
+- **Te doen** toont één regel "Vast en gepland" met hoeveel er is en wanneer
+  de volgende is, in plaats van de losse lijst met Annuleren.
+- Het blijft binnen wat de app mag: licht, scènes en schermen (besluit 218).
+- **Versie 0.103.0.**
 
 ---
 
