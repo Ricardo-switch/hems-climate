@@ -1,8 +1,11 @@
 # Welke basisafbeelding per architectuur.
 #
 # De Supervisor vult hiermee `BUILD_FROM` in de Dockerfile wanneer hij zelf
-# bouwt (een lokale add-on uit stage.ps1); de workflow op GitHub leest hem ook.
-# Gelijk aan `arch` in config.yaml.
+# bouwt (een lokale add-on uit stage.ps1). Gelijk aan `arch` in config.yaml.
+#
+# Een vaste versie in plaats van "latest" (besluit 236), zodat een bouw morgen
+# hetzelfde oplevert als vandaag. Eén naam voor beide soorten: Docker kiest zelf
+# de juiste. Een nieuwere basis is een bewuste stap, met een eigen versie.
 build_from:
-  aarch64: ghcr.io/home-assistant/aarch64-base:latest
-  amd64: ghcr.io/home-assistant/amd64-base:latest
+  aarch64: ghcr.io/home-assistant/base:3.24
+  amd64: ghcr.io/home-assistant/base:3.24

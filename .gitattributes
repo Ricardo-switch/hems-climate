@@ -17,6 +17,8 @@ Dockerfile  text eol=lf
 *.ts        text eol=lf
 *.md        text eol=lf
 .gitignore  text eol=lf
+# Het AppArmor-profiel leest de host van Home Assistant (besluit 236).
+apparmor.txt text eol=lf
 
 # Deze draaien juist op Windows en houden CRLF.
 *.bat       text eol=crlf

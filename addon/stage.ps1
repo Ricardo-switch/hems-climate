@@ -50,6 +50,8 @@ $bestanden = @(
   @{ Van = 'addon/build.yaml';             Naar = 'build.yaml' }
   @{ Van = 'addon/Dockerfile';             Naar = 'Dockerfile' }
   @{ Van = 'addon/run.sh';                 Naar = 'run.sh' }
+  # Het eigen AppArmor-profiel (besluit 236): de Supervisor leest het naast config.yaml.
+  @{ Van = 'addon/apparmor.txt';           Naar = 'apparmor.txt' }
   @{ Van = 'addon/README.md';              Naar = 'README.md' }
   @{ Van = 'addon/DOCS.md';                Naar = 'DOCS.md' }
   # Het teken van SunArc (besluit 222), gemaakt met frontend/tools/iconen.cjs.

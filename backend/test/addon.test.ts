@@ -48,10 +48,33 @@ describe('de add-on en de NAS', () => {
     const blok = manifest.slice(manifest.indexOf('\narch:')).split('\n\n')[0]!;
     const soorten = [...blok.matchAll(/^ {2}- (\w+)$/gm)].map((m) => m[1]).sort();
     const basis = [...(await lees('../../addon/build.yaml')).matchAll(/^ {2}(\w+): /gm)].map((m) => m[1]).sort();
-    const workflow = [...(await lees('../../.github/workflows/addon.yml')).matchAll(/- arch: (\w+)$/gm)].map((m) => m[1]).sort();
     expect(soorten).toEqual(['aarch64', 'amd64']);
     expect(basis).toEqual(soorten);
-    expect(workflow).toEqual(soorten);
+    // De workflow leest de soorten uit config.yaml (besluit 236), en bouwt met de stappen van Home Assistant.
+    const workflow = await lees('../../.github/workflows/addon.yml');
+    expect(workflow).toContain("awk '/^arch:/");
+    expect(workflow).toMatch(/home-assistant\/builder\/actions\/build-image@\d{4}\.\d{2}\.\d+$/m);
+    expect(workflow).toMatch(/^ {6}id-token: write$/m);
+  });
+
+  it('bouwt op een vaste basis, dezelfde op GitHub als bij een lokale bouw (besluit 236)', async () => {
+    const basis = [...(await lees('../../addon/build.yaml')).matchAll(/^ {2}\w+: (\S+)$/gm)].map((m) => m[1]);
+    const docker = (await lees('../../addon/Dockerfile')).match(/^ARG BUILD_FROM=(\S+)$/m)?.[1];
+    expect(docker).toMatch(/^ghcr\.io\/home-assistant\/base:\d+\.\d+$/);
+    expect(new Set(basis)).toEqual(new Set([docker]));
+  });
+
+  it('heeft een eigen AppArmor-profiel voor cijfer 8, en is experimenteel tot stap B (besluit 236)', async () => {
+    const profiel = await lees('../../addon/apparmor.txt');
+    expect(profiel).toMatch(/^profile hems_climate flags=/m);
+    expect(profiel).toContain('/usr/bin/node cx -> node,');
+    // De dienst schrijft alleen in de mappen die config.yaml aankoppelt.
+    const schrijven = [...profiel.slice(profiel.indexOf('profile node')).matchAll(/^ +(\/\S+) \w*w\w*,$/gm)].map((m) => m[1]);
+    expect(schrijven).toEqual(['/dev/null', '/tmp/**', '/config/{,**}', '/share/{,**}', '/data/{,**}', '/homeassistant/{,**}']);
+    expect(await lees('../../addon/stage.ps1')).toContain("Van = 'addon/apparmor.txt'");
+    const manifest = await lees('../../addon/config.yaml');
+    expect(manifest).toMatch(/^stage: experimental$/m);
+    expect(manifest).not.toMatch(/^(apparmor: false|full_access|docker_api|host_network|privileged)/m);
   });
 
   it('zet het paneel voor iedereen met een account in de zijbalk (besluit 161)', async () => {

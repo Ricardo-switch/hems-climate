@@ -17,7 +17,9 @@
 #   powershell -File addon/stage.ps1   -> dist-addon/
 #   docker build dist-addon
 
-ARG BUILD_FROM=ghcr.io/home-assistant/aarch64-base:latest
+# Een vaste versie, gelijk aan build.yaml (besluit 236). Op GitHub geeft niemand
+# BUILD_FROM mee; dan geldt deze, en kiest Docker de soort van de machine.
+ARG BUILD_FROM=ghcr.io/home-assistant/base:3.24
 
 # ---------- de weergave bouwen ----------
 FROM node:22-alpine AS web

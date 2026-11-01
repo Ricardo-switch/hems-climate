@@ -230,7 +230,7 @@ cd "$SRC"
 # Wat een server draait, en niets meer.
 #
 # De repository bevat ook `HA export/` (3,1 MB entity-registers en dashboards),
-# `legacy_code/` en `ha-fixes/`. Dat is naslag voor het ontwikkelen; op een
+# `docs/oude-regeling/`. Dat is naslag voor het ontwikkelen; op een
 # machine die alleen de dienst draait heeft het niets te zoeken. Het kost geen
 # noemenswaardige schijfruimte, maar het is wel huishouding van een klant op een
 # server — en zodra dit bij iemand anders draait is dat geen smaakkwestie meer.

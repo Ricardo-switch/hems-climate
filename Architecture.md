@@ -267,8 +267,7 @@ design/app/     Ontwerp 1: alleen ONTWERP.md, met hoe het samenhangt (71)
 addon/          De Home Assistant-add-on, kant-en-klaar van GitHub (153)
 config/sites/   Configuratie per installatie
 deploy/         Compose, uitrolscript, handleiding voor de NAS
-ha-fixes/       Reparaties aan het YAML-systeem, klaar om over te nemen
-legacy_code/    Het YAML-systeem dat vervangen wordt
+docs/oude-regeling/  Het YAML-systeem dat vervangen wordt, en de reparaties eraan
 HA export/      Referentie: helpers, entity-register, dashboards
 ```
 

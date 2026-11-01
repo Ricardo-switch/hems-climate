@@ -1,5 +1,23 @@
 # Wat is er nieuw · What is new
 
+## 0.105.0
+
+*1 november 2026*
+
+**Beter**
+
+- Een eigen beveiligingsprofiel: Home Assistant geeft SunArc nu het hoogste cijfer, 8
+- De add-on wordt ondertekend gebouwd, op een vaste basis, en staat als experimenteel tot het echte regelen
+- De uitleg van de add-on zegt welke rechten hij vraagt, en waarom
+
+*English*
+
+**Improved**
+
+- Its own security profile: Home Assistant now gives SunArc the highest rating, 8
+- The add-on is built signed, on a fixed base, and is marked experimental until real control
+- The add-on documentation says which permissions it asks for, and why
+
 ## 0.104.0
 
 *1 november 2026*

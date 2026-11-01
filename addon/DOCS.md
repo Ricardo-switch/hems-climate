@@ -49,4 +49,27 @@ Assistant en kies **Toevoegen** bij "Nieuw apparaat gevonden".
 - De drie technische getallen staan onder "ongebruikte opties". Leeg laten is
   goed.
 
+## Rechten, en waarom
+
+Home Assistant toont bij een add-on welke rechten hij vraagt. SunArc vraagt
+er zo weinig mogelijk (beveiligingscijfer 8, het hoogste):
+
+- **Ingress:** de app zit achter de inlog van Home Assistant. De eigen poort
+  voor Tailscale staat dicht tot je hem zelf opent.
+- **Toegang tot Home Assistant:** om je huis te lezen. Home Assistant kent
+  geen variant die alleen leest. SunArc schrijft alleen via smalle deuren:
+  lampen, scènes, schermen, meldingen, je lijsten, en het klimaat met de hand,
+  altijd met een eindtijd. De regeling zelf schrijft niets tot het echte
+  regelen begint.
+- **De configuratie van Home Assistant (schrijven):** alleen voor de
+  integratie SunArc, na jouw tik, in `custom_components/smart_climate`.
+- **`share` (schrijven):** het beslislogboek in `/share/hems`, en het
+  wekwoord in `/share/openwakeword`.
+- **Een eigen AppArmor-profiel:** de dienst mag alleen in deze mappen
+  schrijven. Het staat nog in de leerstand: het meldt wat erbuiten valt en
+  houdt nog niets tegen.
+
+De add-on staat als **experimenteel**: SunArc kijkt mee en regelt je
+verwarming en airco's nog niet zelf.
+
 Meer: [github.com/Ricardo-switch/hems-climate](https://github.com/Ricardo-switch/hems-climate).

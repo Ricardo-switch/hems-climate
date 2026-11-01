@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.104.0';
+export const VERSIE = '0.105.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,22 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.105.0',
+    datum: '2026-11-01',
+    beter: [
+      'Een eigen beveiligingsprofiel: Home Assistant geeft SunArc nu het hoogste cijfer, 8',
+      'De add-on wordt ondertekend gebouwd, op een vaste basis, en staat als experimenteel tot het echte regelen',
+      'De uitleg van de add-on zegt welke rechten hij vraagt, en waarom',
+    ],
+    en: {
+      beter: [
+        'Its own security profile: Home Assistant now gives SunArc the highest rating, 8',
+        'The add-on is built signed, on a fixed base, and is marked experimental until real control',
+        'The add-on documentation says which permissions it asks for, and why',
+      ],
+    },
+  },
   {
     versie: '0.104.0',
     datum: '2026-11-01',

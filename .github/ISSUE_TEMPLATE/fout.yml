@@ -1,0 +1,44 @@
+name: Something does not work
+description: A bug in SunArc. Nederlands mag ook.
+labels: [fout]
+body:
+  - type: textarea
+    id: wat
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what did SunArc do instead?
+    validations:
+      required: true
+  - type: input
+    id: versie
+    attributes:
+      label: SunArc version
+      description: Settings › About this app, or the add-on page in Home Assistant.
+      placeholder: 0.105.0
+    validations:
+      required: true
+  - type: dropdown
+    id: waar
+    attributes:
+      label: Where does it run?
+      options:
+        - Home Assistant add-on
+        - Docker (outside Home Assistant)
+    validations:
+      required: true
+  - type: dropdown
+    id: scherm
+    attributes:
+      label: On which screen?
+      multiple: true
+      options:
+        - Wall tablet
+        - Phone
+        - Browser on a computer
+        - Voice (Assist or "Hé huis")
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: The add-on log around the moment it happened. Remove anything private first.
+      render: text
