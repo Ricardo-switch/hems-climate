@@ -1,5 +1,21 @@
 # Wat is er nieuw · What is new
 
+## 0.106.1
+
+*1 november 2026*
+
+**Beter**
+
+- Het logo op het always-on display van de wand staat klein rechtsboven; de klok staat weer alleen
+- De links in de app wijzen naar de nieuwe naam van de repository: SunARC-HA-APP
+
+*English*
+
+**Improved**
+
+- The logo on the always-on display of the wall sits small in the top right; the clock stands on its own again
+- The links in the app point to the new name of the repository: SunARC-HA-APP
+
 ## 0.106.0
 
 *1 november 2026*

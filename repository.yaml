@@ -3,5 +3,5 @@
 # Instellingen -> Add-ons -> Add-on store -> rechtsboven -> Repositories,
 # en dan de URL van deze repository toevoegen.
 name: SunArc OS
-url: https://github.com/Ricardo-switch/hems-climate
+url: https://github.com/Ricardo-switch/SunARC-HA-APP
 maintainer: Ricardo Cornelissen

@@ -124,7 +124,7 @@ function assistentVorm() {
 const hacsStappen = () => `<ol class="klein stappen">
     <li>${t('toegang.hacs.1')}</li>
     <li>${t('toegang.hacs.2')}</li>
-    <li>${t('toegang.hacs.3')}<div class="sleutel">https://github.com/Ricardo-switch/hems-climate</div></li>
+    <li>${t('toegang.hacs.3')}<div class="sleutel">https://github.com/Ricardo-switch/SunARC-HA-APP</div></li>
     <li>${t('toegang.hacs.4')}</li>
   </ol>`;
 const eenmalig = () => `<p class="mini" style="margin: 0">${esc(t('toegang.eenmalig'))}</p>`;

@@ -62,7 +62,7 @@ LABEL \
   io.hass.arch="${BUILD_ARCH}" \
   io.hass.version="${BUILD_VERSION}" \
   org.opencontainers.image.version="${BUILD_VERSION}" \
-  org.opencontainers.image.source="https://github.com/Ricardo-switch/hems-climate"
+  org.opencontainers.image.source="https://github.com/Ricardo-switch/SunARC-HA-APP"
 
 # Node zit niet in de HA-basis. Alleen de runtime; de toolchain bleef in de
 # bouwfasen hierboven.

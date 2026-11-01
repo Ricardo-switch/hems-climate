@@ -135,8 +135,8 @@
 
   const DAG = global.taal.opmaak({ weekday: 'long', day: 'numeric', month: 'long' });
   const klokNu = () => global.taal.klok(Date.now());
-  /** Het logo links naast de klok; een tik opent Over deze app. */
-  const MERK = `<a class="merkje" href="over.html" data-nk-over aria-label="${t('over.kop')}"><img src="kit/merk.svg" alt=""></a>`;
+  /** Het logo voluit, klein rechtsboven (ronde 5, schets Wand-Nacht-Logo); een tik opent Over deze app. */
+  const MERK = `<a class="merkje nk-hoek" href="over.html" data-nk-over aria-label="${t('over.kop')}"><img src="kit/merk.svg" alt=""><b>SunArc</b></a>`;
   const ICOON_HUIS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l8-7 8 7v9H4z"/></svg>';
   /** Een nieuwe versie: een pijl omlaag, zoals bij Meldingen. */
   const ICOON_UPDATE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>';
@@ -229,7 +229,8 @@
       const morgen = morgenZin();
       const apparaat = apparaatNu();
       el.innerHTML = `<div class="nk-huis" data-nk-huis></div>
-        <div class="nk-klok"><div class="klokrij">${MERK}<div class="tijd" data-nk-tijd>${klokNu()}</div></div><div class="datum">${esc(datum)}</div></div>
+        ${MERK}
+        <div class="nk-klok"><div class="tijd" data-nk-tijd>${klokNu()}</div><div class="datum">${esc(datum)}</div></div>
         <div class="nk-regels">
           <span>${ICOON_HUIS}<i data-nk-rustig>${nachtZin()}</i></span>
           ${apparaat ? `<span class="nk-apparaat" data-nk-apparaat>${apparaat}</span>` : ''}
@@ -250,7 +251,8 @@
         update ? `<div class="glas-klein nr-update" data-nk-update>${ICOON_UPDATE}<span><b>${esc(update.titel)}</b><span>${esc(t('niemand.bijwerken'))}</span></span></div>` : '',
       ].join('');
       el.innerHTML = `<div class="nr-huis" data-nk-huis></div>
-        <div class="nr-klok"><div class="klokrij">${MERK}<div class="tijd" data-nk-tijd>${klokNu()}</div></div><div class="datum">${esc(datum)}</div></div>
+        ${MERK}
+        <div class="nr-klok"><div class="tijd" data-nk-tijd>${klokNu()}</div><div class="datum">${esc(datum)}</div></div>
         <div class="nr-kop"><h1 class="kop-1" data-nk-kop>${esc(st?.bewoner?.kop?.titel ?? t('thuis.hetHuis'))}</h1><p class="lead">${esc(st?.bewoner?.kop?.zin ?? '')}</p></div>
         <div class="nr-weer">${tegels}</div>`;
     }

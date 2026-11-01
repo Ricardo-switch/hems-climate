@@ -113,7 +113,7 @@ export function kiesGebouw(antwoord: unknown, p: Punt): readonly Punt[] | null {
 export async function haalOmtrek(lat: number, lon: number, doe: typeof fetch = fetch): Promise<readonly Punt[] | null> {
   const res = await doe('https://overpass-api.de/api/interpreter', {
     method: 'POST',
-    headers: { 'content-type': 'application/x-www-form-urlencoded', 'user-agent': 'SmartClimate (github.com/Ricardo-switch/hems-climate)' },
+    headers: { 'content-type': 'application/x-www-form-urlencoded', 'user-agent': 'SmartClimate (github.com/Ricardo-switch/SunARC-HA-APP)' },
     body: `data=${encodeURIComponent(overpassVraag(lat, lon))}`,
     signal: AbortSignal.timeout(60_000),
   });

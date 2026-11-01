@@ -16,7 +16,8 @@ verwijzing bestaat.
 - **De naam is SunArc** (sinds 31 oktober 2026; eerst Smart Climate): de zon
   op de horizon met stralen in mint, ijs en violet. Wat je ziet heet zo; de
   technische namen bleven ([222]). Het logo staat naast de klok en opent Over
-  deze app ([232]).
+  deze app ([232]); op het always-on display van de wand staat het sinds
+  0.106.1 klein rechtsboven, zodat de klok alleen staat.
 - **Nu: meekijken.** SunArc draait op de NAS naast de oude YAML-regeling,
   beslist elke ronde en legt vast wat hij zou doen. Klimaat en screens schakelt
   hij niet ([15], [28], [73]).
@@ -298,6 +299,9 @@ verwijzing bestaat.
   vooruit, en naar `main` gaat het alleen met een pull request dat de bewoner
   samenvoegt. De repository is openbaar en opgeschoond: geen export van Home
   Assistant en geen configuratie van een echte woning in git ([152]).
+  Sinds 1 november 2026 heet de repository `SunARC-HA-APP`; GitHub stuurt het
+  oude adres `hems-climate` door, en de Pi houdt dat oude adres (anders ziet
+  Home Assistant een andere add-on). De images houden hun naam.
 - **De add-on** komt kant-en-klaar van GitHub, voor de Pi en voor amd64; zijn
   versie is die van de app, en Home Assistant werkt bij als die op `main`
   omhooggaat ([153]). Hij wordt gebouwd met de stappen van Home Assistant,

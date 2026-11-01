@@ -2957,10 +2957,11 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await p.clock.setFixedTime(new Date('2026-10-19T14:10:30Z'));
       await expect.poll(stand, { timeout: 10_000 }).toBe(aanStand);
       expect(await laag.locator('[data-nk-tijd]').textContent()).toBe('14:10');
-      // Het logo links naast de klok (1 november 2026), met een tik naar Over deze app.
+      // Het logo voluit rechtsboven (ronde 5), los van de klok, met een tik naar Over deze app.
       const merk = await laag.locator('.merkje').boundingBox();
       const klokVak = await laag.locator('[data-nk-tijd]').boundingBox();
-      expect(merk!.x + merk!.width).toBeLessThanOrEqual(klokVak!.x);
+      expect(merk!.x).toBeGreaterThan(klokVak!.x + klokVak!.width);
+      expect(merk!.y).toBeLessThan(klokVak!.y);
       expect(await laag.locator('.merkje').getAttribute('href')).toBe('over.html');
       expect(await laag.locator('[data-nk-huis] svg.sc-huis').count()).toBe(1);
       // Zonder getallen op het huis.
