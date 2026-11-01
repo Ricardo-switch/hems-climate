@@ -427,6 +427,27 @@ const NOOIT_RECHTZETTEN = new Set([
   'zitten', 'zetten', 'zeker', 'zelf', 'zoals', 'solar', 'kosten', 'koelen', 'kouden', 'woont', 'wonen', 'warmte', 'verwarmen',
 ]);
 
+/**
+ * Wat Whisper (small-int8) vast verkeerd hoort, en niet op klank te vangen is
+ * (besluit 233): gemeten op 1 november 2026 met twintig zinnen van het huis in
+ * drie stemmen. Een echt woord ("schreeuwen", "hier") alleen waar het de naam
+ * moet zijn; de rest bestaat niet in het Nederlands.
+ */
+const VERHOORD: readonly (readonly [RegExp, string])[] = [
+  [/\b(het|de|kleine|grote) schreeuwen\b/g, '$1 screen'],
+  [/\bsk(?:rii|rie|ree)n\b/g, 'screen'],
+  [/\bsk(?:rii|rie|ree)(?:n?s|z)\b/g, 'screens'],
+  [/\b(?:ijko|ayrko|airko|eirko|ayacot)\b/g, 'airco'],
+  [/\bjaken zee\b/g, 'jacuzzi'],
+  [/\bplafond hier\b/g, 'plafonniere'],
+  [/\bboodschap en lijst\b/g, 'boodschappenlijst'],
+  [/\bmorgenzonig\b/g, 'morgen zonnig'],
+  [/\bzonig\b/g, 'zonnig'],
+  [/\bkoust\b/g, 'koudst'],
+  [/\bsezon\b/g, 'de zon'],
+  [/\bwel ?te ?r[au]st[eu]?n?e?\b/g, 'welterusten'],
+];
+
 /** De soorten van Home Assistant, die in een id staan maar geen woord in je huis zijn. */
 const HA_SOORT = new Set(['light', 'lights', 'cover', 'switch', 'scene', 'sensor', 'climate', 'media', 'player', 'binary', 'input', 'number', 'select', 'button', 'group', 'script', 'automation']);
 
@@ -471,7 +492,7 @@ export function verbeter(ruw: string, namen: readonly string[]): string {
   // Een naam die nog een id is ("light.hal") geeft geen woord: "licht" klinkt als light.
   for (const n of namen) for (const w of gewoon(n).split(' ')) if (w.length >= 5 && !HA_SOORT.has(w)) woordenschat.add(w);
   const lijst = [...woordenschat];
-  const woorden = gewoon(ruw)
+  const woorden = VERHOORD.reduce((t, [vorm, wordt]) => t.replace(vorm, wordt), gewoon(ruw))
     .replace(/\bzette\b/g, 'zet de')
     // "Set de zithoek aan" (30 oktober 2026): aan het begin is het zet, en "doet de" is doe de.
     .replace(/^set\b/, 'zet')

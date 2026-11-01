@@ -1,5 +1,41 @@
 # Wat is er nieuw · What is new
 
+## 0.102.1
+
+*1 november 2026*
+
+**Beter**
+
+- De assistent verstaat woorden van je huis beter: airco, screen, jacuzzi, plafonnière en welterusten
+
+*English*
+
+**Improved**
+
+- The assistant understands words of your home better: air conditioning, screen, jacuzzi, ceiling light and good night
+
+## 0.102.0
+
+*1 november 2026*
+
+**Nieuw**
+
+- Over deze app: het logo groot en voluit, de versie, wat de naam betekent en waar de broncode staat
+
+**Beter**
+
+- Het logo staat naast de klok, op Thuis staand en op het scherm van de wand als niemand kijkt; een tik opent Over deze app
+
+*English*
+
+**New**
+
+- About this app: the logo large and in full, the version, what the name means and where the source code is
+
+**Improved**
+
+- The logo sits next to the clock, on Home upright and on the wall screen when nobody is looking; a tap opens About this app
+
 ## 0.101.0
 
 *1 november 2026*

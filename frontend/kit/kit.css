@@ -392,7 +392,13 @@ a.knop:not(.knop-licht) {
   margin-bottom: 14px;
   /* Het teken van SunArc (besluit 222), met vijf stralen: zo klein is negen een vlek. */
   background: url('icoon-klein.svg') center / cover;
+  /* Een tik brengt je bij Over deze app; geen tab, dus zonder de vulling van een tab. */
+  display: block;
+  padding: 0;
 }
+/* Het logo naast de klok (Thuis staand, en het always-on display): een tik opent Over deze app. */
+.merkje { display: inline-flex; flex: none; align-items: center; }
+.merkje img { display: block; width: 100%; height: auto; }
 .balk a {
   width: 50px;
   padding: 8px 0 6px;

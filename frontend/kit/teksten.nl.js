@@ -107,6 +107,15 @@
   'nav.assistent': 'Assistent',
   'nav.meldingen': 'Meldingen',
   'nav.instellingen': 'Instellingen',
+  'over.kop': 'Over deze app',
+  'over.terug': '‹ Thuis',
+  'over.arc': '<b>A</b>utonomous <b>R</b>esidential <b>C</b>limate',
+  'over.versieKop': 'Versie',
+  'over.naamKop': 'De naam',
+  'over.naam': 'De zon in het midden, en arc: de boog van de waaier. ARC staat voor Autonomous Residential Climate, een huis dat zijn klimaat zelf regelt.',
+  'over.openKop': 'Open en vrij',
+  'over.open': 'SunArc is open source onder de AGPL-3.0, en werkt samen met Home Assistant.',
+  'over.bron': 'De broncode staat op GitHub',
 
   // Jij: de taal (besluit 185). De namen van de talen staan in hun eigen taal.
   'jij.taal.kop': 'Taal',

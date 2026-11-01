@@ -15,7 +15,8 @@ verwijzing bestaat.
 
 - **De naam is SunArc** (sinds 31 oktober 2026; eerst Smart Climate): de zon
   op de horizon met stralen in mint, ijs en violet. Wat je ziet heet zo; de
-  technische namen bleven ([222]).
+  technische namen bleven ([222]). Het logo staat naast de klok en opent Over
+  deze app ([232]).
 - **Nu: meekijken.** SunArc draait op de NAS naast de oude YAML-regeling,
   beslist elke ronde en legt vast wat hij zou doen. Klimaat en screens schakelt
   hij niet ([15], [28], [73]).
@@ -452,7 +453,8 @@ verwijzing bestaat.
   vandaag en gisteren, en "doe maar terug" zet het weer zoals het was ([213]).
   Met geluid in de kamer is je eigen stem de maat voor het einde van je zin,
   en een bijna goed verstaan woord wordt ook op klank rechtgezet, zodat het
-  snelle Whisper-model volstaat ([215]). Te doen: herinneringen die de wand
+  snelle Whisper-model volstaat ([215]); wat small-int8 vast verkeerd hoort
+  ("IJko", "schreeuwen"), staat in een eigen lijst ([233]). Te doen: herinneringen die de wand
   hardop zegt en naar je telefoon gaan, de boodschappen en to-do van Home
   Assistant, en het afval en je agenda's, met je stem en in een eigen tab
   Te doen; de instellingen van de assistent staan bij Instellingen ›
@@ -761,4 +763,6 @@ verwijzing bestaat.
 [229]: DECISIONS.md#229-twee-paginas-rustiger-wat-je-huis-kan-en-hoe-ver-je-huis-is
 [230]: DECISIONS.md#230-een-thuisbatterij-op-je-eigen-uren
 [231]: DECISIONS.md#231-hoe-je-huis-warmte-vasthoudt-het-thermisch-model-leert-en-laat-zien
+[232]: DECISIONS.md#232-het-logo-naast-de-klok-en-over-deze-app
+[233]: DECISIONS.md#233-wat-whisper-vast-verkeerd-hoort-rechtzetten
 <!-- links:einde -->

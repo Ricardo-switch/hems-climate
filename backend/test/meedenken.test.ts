@@ -239,6 +239,23 @@ describe('bijna goed verstaan (besluit 211)', () => {
     expect(klank('zithoek')).toBe(klank('sitoek'));
   });
 
+  it('zet recht wat small-int8 vast verkeerd hoort (besluit 233, meting van 1 november 2026)', () => {
+    expect(verbeter('Doe het kleine schreeuwen open.', namen)).toBe('doe het kleine screen open');
+    expect(verbeter('Doe de skriis om half acht dicht.', namen)).toBe('doe de screens om half acht dicht');
+    expect(verbeter('Hoeveel heeft de IJko deze maand gekost?', namen)).toBe('hoeveel heeft de airco deze maand gekost');
+    expect(verbeter('Hoeveel heeft de ayacot deze maand gekost?', namen)).toBe('hoeveel heeft de airco deze maand gekost');
+    expect(verbeter('Wanneer is de jaken zee warm?', namen)).toBe('wanneer is de jacuzzi warm');
+    expect(verbeter('Zet de plafond hier in de slaapkamer uit.', namen)).toBe('zet de plafonniere in de slaapkamer uit');
+    expect(verbeter('Zet melk op de boodschap en lijst.', namen)).toBe('zet melk op de boodschappenlijst');
+    expect(verbeter('Wordt het morgenzonig?', namen)).toBe('wordt het morgen zonnig');
+    expect(verbeter('Welke kamer is het koust?', namen)).toBe('welke kamer is het koudst');
+    expect(verbeter('Hoe laat gaat sezon onder?', namen)).toBe('hoe laat gaat de zon onder');
+    for (const w of ['Wel terastun.', 'Wel teruste.', 'Wel te rusten.', 'Welteruste.', 'Welterusten.']) expect(verbeter(w, namen)).toBe('welterusten');
+    // Een echt woord blijft staan waar het geen naam hoeft te zijn.
+    expect(verbeter('Ik hoor iemand schreeuwen', namen)).toBe('ik hoor iemand schreeuwen');
+    expect(verbeter('Zet het plafond hoger', namen)).toBe('zet het plafond hoger');
+  });
+
   it('zet gewone woorden niet recht, ook als ze op een naam lijken', () => {
     expect(verbeter('Ik ga even kijken zonder licht', namen)).toBe('ik ga even kijken zonder licht');
     expect(verbeter('Wanneer komen de kosten?', namen)).toBe('wanneer komen de kosten');

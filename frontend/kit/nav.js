@@ -41,7 +41,8 @@
     const href = (id) => links[id] ?? '#';
     // De bel boven het tandwiel (besluit 136): op elke pagina, met een getal als er iets is.
     const bel = `<button type="button" class="meldbel" data-meldbel aria-label="${t('nav.meldingen')}" aria-haspopup="dialog">${svg('meldingen')}<b data-meldaantal hidden></b></button>`;
-    el.innerHTML = `<span class="logo" aria-hidden="true"></span>${NAMEN.map((id) => `<a href="${href(id)}" data-tab="${id}" ${id === actief ? 'aria-current="page"' : ''}>${svg(id)}${naam(id)}</a>`).join('')}${bel}<a href="${href('instellingen')}" class="onder" ${actief === 'instellingen' ? 'aria-current="page"' : ''} aria-label="${t('nav.instellingen')}">${svg('instellingen')}</a>`;
+    // Het logo brengt je bij Over deze app.
+    el.innerHTML = `<a class="logo" href="over.html" aria-label="${t('over.kop')}"></a>${NAMEN.map((id) => `<a href="${href(id)}" data-tab="${id}" ${id === actief ? 'aria-current="page"' : ''}>${svg(id)}${naam(id)}</a>`).join('')}${bel}<a href="${href('instellingen')}" class="onder" ${actief === 'instellingen' ? 'aria-current="page"' : ''} aria-label="${t('nav.instellingen')}">${svg('instellingen')}</a>`;
   }
   function tabs(el, actief, links = {}) {
     // Alleen het icoon; de naam staat er wel, voor wie voorleest, en is te zien bij de gekozen tab.

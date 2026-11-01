@@ -233,6 +233,8 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [227. Instellingen zonder doorlopen, en terug naar dezelfde stap van Inrichten](#227-instellingen-zonder-doorlopen-en-terug-naar-dezelfde-stap-van-inrichten)
 - [228. Minder bubbels](#228-minder-bubbels)
 - [229. Twee pagina's, rustiger: Wat je huis kan en Hoe ver je huis is](#229-twee-paginas-rustiger-wat-je-huis-kan-en-hoe-ver-je-huis-is)
+- [232. Het logo naast de klok, en Over deze app](#232-het-logo-naast-de-klok-en-over-deze-app)
+- [233. Wat Whisper vast verkeerd hoort, rechtzetten](#233-wat-whisper-vast-verkeerd-hoort-rechtzetten)
 
 **Veiligheid**
 
@@ -10717,6 +10719,69 @@ ervoor worden sinds september vastgelegd (besluit 65). Gekozen na een schets
   stoken kent. Komt de ventilatie, dan begint het afkoelen opnieuw (zie "Wat
   nog een besluit wacht").
 - **Versie 0.101.0.**
+
+---
+
+## 232. Het logo naast de klok, en Over deze app
+
+*Onderwerp: weergave · Status: geldig*
+
+1 november 2026. De bewoner: "logo in Portretstand links naast de klok mag en
+ook op het always on display aan de wand", en "ook aanklik wat je naar over
+deze app brengt en daar staat groot voluit het logo". Het teken van SunArc
+(besluit 222) stond alleen in de balk van de wand.
+
+*Besluit:*
+
+- **Het logo staat links naast de klok:** op Thuis staand (telefoon, of een
+  tablet die rechtop staat) en op het always-on display van de wand, zowel de
+  dagstand als de avondstand. 's Avonds is het gedimd, net als de klok.
+- **Een tik op het logo opent Over deze app** (`over.html`), ook het logo in de
+  balk van de wand. Op het always-on display wekt die tik de wand en opent hij
+  dezelfde pagina.
+- **Over deze app** toont het logo groot en voluit, met SunArc en "Autonomous
+  Residential Climate". Ernaast staan de versie met wat er in de laatste versie
+  nieuw is, wat de naam betekent, en dat SunArc open source is onder de
+  AGPL-3.0 (besluit 223), met een link naar de broncode. Rustig, zonder
+  scrollen op de wand.
+- **Versie 0.102.0.**
+
+---
+
+## 233. Wat Whisper vast verkeerd hoort, rechtzetten
+
+*Onderwerp: weergave · Status: geldig*
+
+1 november 2026, met het akkoord van de bewoner voor de meting uit het rapport
+"SunArc polijsten". De Whisper-add-on bleek al op small-int8 te staan. Twintig
+zinnen van het huis, uitgesproken door drie Nederlandse en Vlaamse stemmen van
+Piper, gingen via Wyoming rechtstreeks naar Whisper op de Pi:
+
+- ongeveer 6 seconden per zin, voor 2,3 seconden geluid (5,4 tot 7,2 s);
+- 29 van de 60 zinnen woord voor woord goed. Fouten zaten vooral in woorden
+  van het huis: "screen" werd "schreeuwen" of "skriis", "airco" werd "IJko" of
+  "ayacot", "jacuzzi" werd "jaken zee", "plafonnière" werd "plafond hier";
+- het rechtzetten op klank (besluit 215) maakte er al 37 van.
+
+*Besluit:*
+
+- **Een korte lijst van vaste misverstanden** (`VERHOORD` in
+  `woordzoeker.ts`), die eerst gaat, vóór het rechtzetten op klank. Daarmee
+  komen 51 van de 60 zinnen woord voor woord goed uit. Van de rest is een
+  deel onschuldig, zoals "8" in plaats van "acht".
+- **Een echt woord alleen waar het de naam moet zijn:** "schreeuwen" wordt
+  alleen "screen" na "het", "de", "kleine" of "grote", en "plafond" alleen
+  voor "hier". De rest van de lijst bestaat niet in het Nederlands.
+- **Small-int8 is de beste keuze.** De bewoner zette de add-on daarna op
+  base-int8, en dezelfde 60 zinnen gingen opnieuw door Whisper. Base-int8 is
+  drie keer zo snel (2,1 s per zin), maar maar 17 zinnen kwamen er woord voor
+  woord goed uit, en met de lijst en het rechtzetten op klank 21; bij
+  small-int8 zijn dat er 51. Base hoort vooral langere woorden verkeerd
+  ("plaats van meer", "eigen codecimaand", "boot schap en leist"): dat haalt
+  geen lijst recht.
+- **Een meting met stemmen van Piper**, geen echte opnames: met je eigen stem
+  en geluid in de kamer gaat er meer mis.
+- **Versie 0.102.1.**
 
 ---
 

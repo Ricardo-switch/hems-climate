@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.101.0';
+export const VERSIE = '0.102.1';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,36 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.102.1',
+    datum: '2026-11-01',
+    beter: [
+      'De assistent verstaat woorden van je huis beter: airco, screen, jacuzzi, plafonnière en welterusten',
+    ],
+    en: {
+      beter: [
+        'The assistant understands words of your home better: air conditioning, screen, jacuzzi, ceiling light and good night',
+      ],
+    },
+  },
+  {
+    versie: '0.102.0',
+    datum: '2026-11-01',
+    nieuw: [
+      'Over deze app: het logo groot en voluit, de versie, wat de naam betekent en waar de broncode staat',
+    ],
+    beter: [
+      'Het logo staat naast de klok, op Thuis staand en op het scherm van de wand als niemand kijkt; een tik opent Over deze app',
+    ],
+    en: {
+      nieuw: [
+        'About this app: the logo large and in full, the version, what the name means and where the source code is',
+      ],
+      beter: [
+        'The logo sits next to the clock, on Home upright and on the wall screen when nobody is looking; a tap opens About this app',
+      ],
+    },
+  },
   {
     versie: '0.101.0',
     datum: '2026-11-01',

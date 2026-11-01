@@ -2958,6 +2958,11 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await p.clock.setFixedTime(new Date('2026-10-19T14:10:30Z'));
       await expect.poll(stand, { timeout: 10_000 }).toBe(aanStand);
       expect(await laag.locator('[data-nk-tijd]').textContent()).toBe('14:10');
+      // Het logo links naast de klok (1 november 2026), met een tik naar Over deze app.
+      const merk = await laag.locator('.merkje').boundingBox();
+      const klokVak = await laag.locator('[data-nk-tijd]').boundingBox();
+      expect(merk!.x + merk!.width).toBeLessThanOrEqual(klokVak!.x);
+      expect(await laag.locator('.merkje').getAttribute('href')).toBe('over.html');
       expect(await laag.locator('[data-nk-huis] svg.sc-huis').count()).toBe(1);
       // Zonder getallen op het huis.
       expect(await laag.locator('[data-nk-huis] .sc-label').count()).toBe(0);
@@ -4253,6 +4258,55 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     const kolommen = await p.evaluate<number>("getComputedStyle(document.querySelector('#tel .thermisch .kamers')).gridTemplateColumns.split(' ').length");
     expect(kolommen).toBe(1);
     if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-thermisch-tel.png'), fullPage: true });
+    expect(fouten).toEqual([]);
+    await context.close();
+  }, 30_000);
+
+  /*
+   * Over deze app (1 november 2026): het logo in de balk en naast de klok op
+   * Thuis staand brengt je hier, met het logo groot en voluit.
+   */
+  it('opent Over deze app met een tik op het logo', async () => {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+    await context.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    await p.goto(`${baseUrl}/thuis.html`);
+    // Staand: het logo links naast de klok.
+    const merk = p.locator('#tel .kloklinks .merkje');
+    await merk.waitFor();
+    expect((await merk.boundingBox())!.x).toBeLessThan((await p.locator('#tel .kloklinks [data-tijd]').boundingBox())!.x);
+    if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-logo-thuis-tel.png') });
+    await merk.click();
+    await p.waitForURL(/over\.html$/);
+    const tel = p.locator('#tel [data-over]');
+    await tel.locator('.versie', { hasText: VERSIE }).waitFor();
+    expect(await tel.locator('.woord').textContent()).toBe('SunArc');
+    expect(await tel.locator('.arc').textContent()).toBe('Autonomous Residential Climate');
+    expect(await tel.textContent()).toContain('AGPL-3.0');
+    if (process.env.HEMS_PAGE_SHOT) {
+      // Na de overgang tussen de pagina's.
+      await p.waitForTimeout(800);
+      await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-over-tel.png') });
+    }
+    // Op de wand: het logo in de balk gaat ook hierheen, en alles past zonder te scrollen.
+    await p.setViewportSize({ width: 1280, height: 800 });
+    await p.goto(`${baseUrl}/vandaag.html`);
+    const balkLogo = p.locator('#balk a.logo');
+    await balkLogo.waitFor();
+    expect(await balkLogo.getAttribute('href')).toBe('over.html');
+    await balkLogo.click();
+    await p.waitForURL(/over\.html$/);
+    await p.locator('#wand [data-over] .versie', { hasText: VERSIE }).waitFor();
+    expect(await p.evaluate<boolean>('document.scrollingElement.scrollHeight <= innerHeight')).toBe(true);
+    if (process.env.HEMS_PAGE_SHOT) {
+      // Na de overgang tussen de pagina's.
+      await p.waitForTimeout(800);
+      await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-over-wand.png') });
+    }
     expect(fouten).toEqual([]);
     await context.close();
   }, 30_000);
