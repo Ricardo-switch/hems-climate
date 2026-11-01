@@ -68,7 +68,9 @@ const vrijePoort = () =>
 
 /* ---- opstarten ---- */
 
-zetKlok({ minuut: 12 * 60 + 40, seizoen: 'zomer' });
+// Waar de dienst het voorbeeld laat beginnen (de dagschuif), anders een zomermiddag.
+const [beginMinuut, beginSeizoen] = (process.env['HEMS_VOORBEELD_KLOK'] ?? '').split(':');
+zetKlok({ minuut: beginMinuut && Number(beginMinuut) >= 0 && Number(beginMinuut) < 1440 ? Number(beginMinuut) : 12 * 60 + 40, seizoen: beginSeizoen === 'winter' ? 'winter' : 'zomer' });
 
 const { NepHa } = await import('./nep-ha.js');
 const { VOORBEELD_SITE } = await import('./huis.js');

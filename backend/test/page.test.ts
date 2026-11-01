@@ -3552,16 +3552,25 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       } else {
         expect(await p.evaluate('document.scrollingElement.scrollWidth <= innerWidth')).toBe(true);
       }
-      // Klaar voor kiezen gaat naar de dienst, en terug naar geen haast.
-      await droger.locator('.keuze button', { hasText: '18:00' }).click();
-      await droger.filter({ hasText: 'Genoteerd: klaar voor 18:00.' }).waitFor();
-      expect(Object.keys(uitstel.readyBy)).toEqual(['droger']);
-      await droger.locator('.keuze button', { hasText: 'Geen haast' }).click();
-      await droger.filter({ hasText: 'Geen haast: hij begint op zon' }).waitFor();
-      expect(uitstel.readyBy).toEqual({});
+      // Uiterlijk klaar kiest de bewoner in het blad van de droger (besluit 238), en terug naar geen haast.
+      const blad = p.locator('[data-hand] .hand-blad');
+      await droger.click();
+      await blad.locator('h2', { hasText: 'Droger' }).waitFor();
+      expect(await blad.locator('.hand-tijd b').textContent()).toBe('Geen haast');
+      await blad.locator('[data-wg-stap="1"]').click();
+      expect(await blad.locator('.hand-tijd span').textContent()).toMatch(/uiterlijk om \d\d:\d\d/);
+      await blad.locator('[data-wg-bewaar]').click();
+      await expect.poll(() => Object.keys(uitstel.readyBy)).toEqual(['droger']);
+      // Terug naar geen haast: de bovenste stap, en bewaren.
+      await droger.click();
+      await blad.locator('[data-wg-stap="1"]').waitFor();
+      while (await blad.locator('[data-wg-stap="-1"]').isEnabled()) await blad.locator('[data-wg-stap="-1"]').click();
+      expect(await blad.locator('.hand-tijd b').textContent()).toBe('Geen haast');
+      await blad.locator('[data-wg-bewaar]').click();
+      await expect.poll(() => uitstel.readyBy).toEqual({});
       expect(fouten).toEqual([]);
       await context.close();
-    }, 20_000);
+    }, 30_000);
   }
 
   /*
@@ -4395,7 +4404,7 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
    * Klimaat met de hand (besluit 235): een knop op Apparaten opent de laag met
    * de apparaten en het blad; de zolder warm gaat direct, met een eindtijd.
    */
-  it('bedient het klimaat met de hand vanaf Apparaten', async () => {
+  it('bedient een klimaatapparaat vanaf zijn kaart bij Apparaten, ook tot het doel (besluit 238)', async () => {
     const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, timezoneId: 'Europe/Amsterdam', locale: 'nl-NL' });
     await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
     await context.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
@@ -4410,11 +4419,10 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
       nu,
       dagdeelTotMs: nu + 5 * 3_600_000,
       apparaten: [
-        { id: 'climate.beneden', naam: 'Nest beneden', kamer: 'Woonkamer', zoneId: 'woonkamer', modi: [modus('verwarmen', 20, 'knop')], hvac: 'heat', nuC: 19.6, actief: { modus: 'verwarmen', doelC: 21, totMs: nu + 5 * 3_600_000 } },
-        { id: 'climate.air_conditioning_zolder', naam: 'Airco zolder', kamer: 'Zolder', zoneId: 'zolder', modi: [modus('verwarmen', 19, 'direct'), modus('koelen', 24, 'knop', 'koelstrategie')], hvac: 'off', nuC: 17.8, actief: null },
-        { id: 'climate.sonoff_thermostaat', soort: 'radiatorknop', naam: 'Radiatorknop keuken', kamer: 'Keuken', zoneId: null, modi: [modus('verwarmen', 17, 'direct')], hvac: 'heat', nuC: 18.4, actief: null },
+        { id: 'climate.beneden', actuatorId: 'nest', naam: 'Nest beneden', kamer: 'Woonkamer', zoneId: 'woonkamer', modi: [modus('verwarmen', 20, 'knop')], hvac: 'heat', nuC: 19.6, actief: { modus: 'verwarmen', doelC: 21, totMs: nu + 5 * 3_600_000 } },
+        { id: 'climate.air_conditioning_zolder', actuatorId: 'ac-zolder', naam: 'Airco zolder', kamer: 'Zolder', zoneId: 'zolder', modi: [modus('verwarmen', 19, 'direct'), modus('koelen', 24, 'knop', 'koelstrategie')], hvac: 'off', nuC: 17.8, actief: null },
       ],
-      schakelaars: [{ id: 'switch.paneel_keuken', naam: 'Paneel keuken', kamer: 'Keuken', aan: false, totMs: null }],
+      schakelaars: [],
     };
     const gestuurd: Record<string, unknown>[] = [];
     await context.route(`${baseUrl}/api/hand`, async (route) => {
@@ -4425,51 +4433,42 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
       return route.fulfill({ json: hand });
     });
     await p.goto(`${baseUrl}/apparaten.html`);
-    const knop = p.locator('#wand [data-hand-open]');
-    await knop.waitFor({ state: 'visible', timeout: 10_000 });
-    await knop.click();
+    // De knop Met de hand en de lijst zijn weg; een tik op de kaart opent het blad.
+    expect(await p.locator('[data-hand-open]').count()).toBe(0);
+    const zolder = p.locator('#wand .app[data-klimaat="climate.air_conditioning_zolder"]');
+    await zolder.waitFor({ timeout: 10_000 });
+    // Wat met de hand staat, in zonkleur op de kaart.
+    expect(await p.locator('#wand .app[data-klimaat="climate.beneden"]').textContent()).toMatch(/met de hand op 21° · tot \d\d:\d\d/i);
+    await zolder.click();
     const laag = p.locator('[data-hand]');
     await laag.locator('.hand-blad').waitFor();
-    // Wat met de hand staat, in zonkleur in de lijst.
-    expect(await laag.locator('.hand-regel', { hasText: 'Nest beneden' }).textContent()).toMatch(/met de hand op 21° · tot \d\d:\d\d/);
-    expect(await laag.locator('.hand-blad h2').textContent()).toBe('Nest beneden');
-    expect(await laag.locator('.hand-terug').textContent()).toBe('Terug naar je regeling');
-    // De zolder: warm direct, koelen kan niet zolang de koelstrategie uit staat.
-    await laag.locator('[data-hand-kies="climate.air_conditioning_zolder"]').click();
+    expect(await laag.locator('.hand-blad h2').textContent()).toBe('Airco zolder');
+    expect(await zolder.getAttribute('class')).toContain('gekozen');
     expect(await laag.locator('.hand-hoe').textContent()).toContain('alleen met zon of als hulp');
     await laag.locator('[data-hand-doel="1"]').click();
-    expect(await laag.locator('.hand-doel b').textContent()).toBe('19,5°');
-    await laag.locator('[data-hand-tot="u1"]').click();
+    expect(await laag.locator('.hand-wijzer').textContent()).toContain('19,5°');
+    // Tot het doel: terug zodra het er is, uiterlijk aan het eind van het dagdeel.
+    await laag.locator('[data-hand-tot="doel"]').click();
+    expect(await laag.locator('.hand-hoe').textContent()).toContain('Tot het 19,5° is');
     expect(await p.evaluate<boolean>('document.scrollingElement.scrollHeight <= innerHeight')).toBe(true);
-    if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-hand.png') });
+    if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-blad.png') });
     await laag.locator('[data-hand-zet]').click();
     await expect.poll(() => gestuurd.length).toBe(1);
-    expect(gestuurd[0]).toMatchObject({ id: 'climate.air_conditioning_zolder', modus: 'verwarmen', doelC: 19.5 });
-    expect(Number(gestuurd[0]!['totMs']) - nu).toBeGreaterThan(55 * 60_000);
+    expect(gestuurd[0]).toMatchObject({ id: 'climate.air_conditioning_zolder', modus: 'verwarmen', doelC: 19.5, totDoel: true });
+    expect(Number(gestuurd[0]!['totMs']) - nu).toBeGreaterThan(4 * 3_600_000);
+    // Koelen kan niet zolang de koelstrategie uit staat.
+    await zolder.click();
     await laag.locator('[data-hand-modus="koelen"]').click();
     expect(await laag.locator('.hand-hoe').textContent()).toContain('Koelen staat in je regeling uit');
     expect(await laag.locator('[data-hand-zet]').isDisabled()).toBe(true);
-    // De radiatorknop in de keuken: zijn eigen doel, en daarna terug naar wat het was.
-    await laag.locator('[data-hand-kies="climate.sonoff_thermostaat"]').click();
-    expect(await laag.locator('.hand-hoe').textContent()).toContain('Deze radiatorknop zit niet in je regeling');
-    await laag.locator('[data-hand-doel="1"]').click();
-    await laag.locator('[data-hand-zet]').click();
-    await expect.poll(() => gestuurd.length).toBe(2);
-    expect(gestuurd[1]).toMatchObject({ id: 'climate.sonoff_thermostaat', modus: 'verwarmen', doelC: 17.5 });
-    // De stekker: aan tot een tijd.
-    await laag.locator('[data-hand-kies="switch.paneel_keuken"]').click();
-    await laag.locator('[data-hand-zet]').click();
-    await expect.poll(() => gestuurd.length).toBe(3);
-    expect(gestuurd[2]).toMatchObject({ id: 'switch.paneel_keuken' });
     await p.keyboard.press('Escape');
     expect(await laag.count()).toBe(0);
-    // Op de telefoon: eerst de lijst, dan het blad, van onderen.
+    // Op de telefoon: het blad van onderen.
     await p.setViewportSize({ width: 390, height: 844 });
-    await p.locator('#tel [data-hand-open]').click();
-    await p.locator('[data-hand] .hand-lijst').waitFor();
-    await p.locator('[data-hand-kies="climate.beneden"]').click();
-    await p.locator('[data-hand] .hand-blad').waitFor();
-    if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-hand-tel.png') });
+    await p.locator('#tel .app[data-klimaat="climate.beneden"]').click();
+    await p.locator('.hand-laag.tel .hand-blad').waitFor();
+    expect(await p.locator('.hand-laag.tel .hand-terug').textContent()).toBe('Terug naar je regeling');
+    if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-blad-tel.png') });
     expect(fouten).toEqual([]);
     await context.close();
   }, 30_000);

@@ -58,7 +58,8 @@ er zo weinig mogelijk (beveiligingscijfer 8, het hoogste):
   voor Tailscale staat dicht tot je hem zelf opent.
 - **Toegang tot Home Assistant:** om je huis te lezen. Home Assistant kent
   geen variant die alleen leest. SunArc schrijft alleen via smalle deuren:
-  lampen, scènes, schermen, meldingen, je lijsten, en het klimaat met de hand,
+  lampen, scènes, schermen, meldingen, je lijsten, de startknop van witgoed
+  dat op zon wacht, en het klimaat met de hand,
   altijd met een eindtijd. De regeling zelf schrijft niets tot het echte
   regelen begint.
 - **De configuratie van Home Assistant (schrijven):** alleen voor de

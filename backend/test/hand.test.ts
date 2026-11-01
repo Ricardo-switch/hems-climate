@@ -119,6 +119,19 @@ describe('klimaat met de hand (besluit 235)', () => {
     expect(await h.zetKnop(knop, 40, nu.ms + 3_600_000)).toMatchObject({ ok: false });
   });
 
+  it('tot het doel: terug zodra de zolder warm genoeg is, niet eerder (besluit 238)', async () => {
+    const { h, staten, gedaan, nu } = await huis();
+    await h.zet('climate.air_conditioning_zolder', 'verwarmen', 20, nu.ms + 6 * 3_600_000, true);
+    expect((await h.standen()).find((s) => s.id === 'climate.air_conditioning_zolder')?.actief).toMatchObject({ doelC: 20, totDoel: true });
+    gedaan.length = 0;
+    staten['climate.air_conditioning_zolder'] = { state: 'heat', attributes: { temperature: 20, current_temperature: 19.4 } };
+    expect(await h.ronde()).toEqual([]);
+    staten['climate.air_conditioning_zolder'] = { state: 'heat', attributes: { temperature: 20, current_temperature: 20.1 } };
+    await h.ronde();
+    expect(gedaan).toEqual(['input_number.temp_airco_zolder=19', 'climate.air_conditioning_zolder=uit']);
+    expect(h.terugzetten).toEqual([]);
+  });
+
   it('zet een stekker aan tot een tijd, en terug met de hand', async () => {
     const { h, gedaan, nu } = await huis();
     await h.schakelAan('switch.paneel_keuken', nu.ms + 2 * 3_600_000);

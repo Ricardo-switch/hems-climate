@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.106.1';
+export const VERSIE = '0.107.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,26 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.107.0',
+    datum: '2026-11-01',
+    nieuw: [
+      'Tik op een apparaat bij Apparaten: hetzelfde blad als in het huis, met hoe lang, en nieuw: tot het doel',
+      'De droger aanklikbaar: kies hoe laat hij uiterlijk klaar moet zijn, of start hem nu',
+      'SunArc start de droger zelf op zon, of op tijd voor je eindtijd',
+      'Bij Te doen staat bovenaan wat nu met de hand of op zon loopt',
+    ],
+    opgelost: ['Klimaat met de hand: een opdracht kwam niet door bij de dienst'],
+    en: {
+      nieuw: [
+        'Tap a device on Devices: the same sheet as in the house, with how long, and new: until the target',
+        'The dryer can be tapped: choose when it must be done at the latest, or start it now',
+        'SunArc starts the dryer itself on sun, or in time for your end time',
+        'To do shows at the top what runs by hand or on sun right now',
+      ],
+      opgelost: ['Climate by hand: a command did not get through to the service'],
+    },
+  },
   {
     versie: '0.106.1',
     datum: '2026-11-01',

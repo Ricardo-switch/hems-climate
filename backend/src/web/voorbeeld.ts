@@ -68,7 +68,7 @@ export class Voorbeeld {
     this.#gedaan.clear();
     this.#poort = new Promise<number>((ok, fout) => {
       // Alleen wat het proces nodig heeft; het adres en de sleutel van je eigen Home Assistant gaan niet mee.
-      const env: NodeJS.ProcessEnv = { PATH: process.env['PATH'], TZ: process.env['TZ'] ?? 'Europe/Amsterdam', NODE_ENV: process.env['NODE_ENV'], HEMS_WEB_DIR: this.#o.webDir, HEMS_COMMIT: process.env['HEMS_COMMIT'], HEMS_GEBOUWD: process.env['HEMS_GEBOUWD'] };
+      const env: NodeJS.ProcessEnv = { PATH: process.env['PATH'], TZ: process.env['TZ'] ?? 'Europe/Amsterdam', NODE_ENV: process.env['NODE_ENV'], HEMS_WEB_DIR: this.#o.webDir, HEMS_COMMIT: process.env['HEMS_COMMIT'], HEMS_GEBOUWD: process.env['HEMS_GEBOUWD'], HEMS_VOORBEELD_KLOK: `${this.#klok.minuut}:${this.#klok.seizoen}` };
       const p = fork(this.#o.script, [], { env, stdio: ['ignore', 'ignore', 'pipe', 'ipc'] });
       this.#proces = p;
       const grens = setTimeout(() => fout(new Error('het voorbeeld startte niet op tijd')), START_MS);
@@ -195,17 +195,21 @@ export class Voorbeeld {
       sendJson(res, 400, { fout: 'klok: { minuut 0-1439, seizoen zomer of winter }' });
       return;
     }
-    this.#klok = { minuut: Math.round(minuut), seizoen: k.seizoen };
-    this.#klokOp = Date.now();
-    // 's Avonds kijken telt als proberen.
-    if (this.#klok.seizoen === 'zomer' ? this.#klok.minuut >= 19 * 60 : this.#klok.minuut >= 17 * 60) this.#gedaan.add('avond');
+    const gewenst: Klok = { minuut: Math.round(minuut), seizoen: k.seizoen };
+    // Start het proces nog, dan begint het meteen op deze tijd.
+    if (!this.#proces) this.#klok = gewenst;
     try {
       await this.#start();
     } catch (e) {
       sendJson(res, 503, { fout: `Het voorbeeldhuis start niet: ${(e as Error).message}` });
       return;
     }
-    this.#proces?.send({ klok: this.#klok });
+    // Pas na het starten: een vers proces meldt eerst zijn eigen klok, en die mag de keuze niet overschrijven.
+    this.#klok = gewenst;
+    this.#klokOp = Date.now();
+    // 's Avonds kijken telt als proberen.
+    if (gewenst.seizoen === 'zomer' ? gewenst.minuut >= 19 * 60 : gewenst.minuut >= 17 * 60) this.#gedaan.add('avond');
+    this.#proces?.send({ klok: gewenst });
     sendJson(res, 200, { ok: true, klok: this.#klok, nuMs: this.nuMs, gedaan: this.gedaan });
   }
 }

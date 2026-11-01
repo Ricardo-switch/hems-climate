@@ -238,6 +238,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [232. Het logo naast de klok, en Over deze app](#232-het-logo-naast-de-klok-en-over-deze-app)
 - [233. Wat Whisper vast verkeerd hoort, rechtzetten](#233-wat-whisper-vast-verkeerd-hoort-rechtzetten)
 - [234. Vast en gepland: herhalen, de zon met minuten, en aanpassen](#234-vast-en-gepland-herhalen-de-zon-met-minuten-en-aanpassen)
+- [238. Eén blad per apparaat: klimaat tot het doel, en SunArc start de droger](#238-eén-blad-per-apparaat-klimaat-tot-het-doel-en-sunarc-start-de-droger)
 
 **Veiligheid**
 
@@ -10998,6 +10999,54 @@ werkt, maar alleen in het voorbeeld.
   begint zijn logboek als je het opent), en de schermafdrukken en de film voor
   de README uit het voorbeeld (de volgende stap).
 - **Versie 0.106.0.**
+
+---
+
+## 238. Eén blad per apparaat: klimaat tot het doel, en SunArc start de droger
+
+*Onderwerp: weergave · Status: geldig*
+
+1 november 2026, ronde 5, punt 2 tot en met 4. "Met de hand bedienen als los
+onderdeel is niet goed": de bewoner wilde de bediening die je via het huis
+krijgt en die van met de hand (besluit 235) samen, vanaf de kaart bij
+Apparaten, met "tot het doel"; witgoed ook aanklikbaar met een uiterste
+eindtijd; en beide terug bij Te doen. Gekozen na de schetsen
+`Wand-Apparaat-Blad` en `Tel-Apparaat-Blad`.
+
+*Besluit:*
+
+- **Eén blad per apparaat** (`hand.js`): een klimaatapparaat krijgt de
+  draaiknop met min en plus, warm of koelen, **hoe lang** (1 uur, 2 uur, tot
+  het eind van het dagdeel, of **tot het doel**), de dag als balk en hoe het
+  gaat. Hetzelfde blad op Apparaten (een tik op de kaart; op de wand rechts
+  naast de kaarten, op de telefoon van onderen) en in het blad van een kamer.
+  De knop Met de hand en de lijst zijn weg. Zonder met de hand (de brug staat
+  uit bij Functies, of op de NAS) blijft het blad van meekijken.
+- **Tot het doel, voor alle klimaatapparaten** (`hand.ts`): terug naar de
+  regeling zodra het apparaat zijn doel haalt (zijn eigen temperatuur), en
+  uiterlijk aan het eind van het dagdeel.
+- **Witgoed aanklikbaar**: wacht het op zon, dan kies je in het blad hoe laat
+  het uiterlijk klaar moet zijn (elk half uur dat nog te halen is, met hoe laat
+  het dan uiterlijk begint), en **Nu starten**.
+- **SunArc start de droger zelf** (`web/witgoed.ts`, gekozen door de
+  bewoner): zodra de regeling zegt dat hij zou starten (zon over, of op tijd
+  voor de eindtijd), drukt SunArc op de startknop. De eerste keer dat de
+  regeling zelf iets aanzet, dus een **tiende smalle deur** (`isStartCall`):
+  alleen `button.press` op de startknop van hetzelfde apparaat als de melder
+  voor op afstand starten, alleen als die aan staat en het programma niet
+  loopt, en nooit twee keer binnen twee uur (een tweede druk op start/pauze
+  zet hem stil). Alleen in de add-on. De oude automatisering "Droger starten
+  bij zonne-energie of uiterlijk 15:00" drukt op dezelfde knop: die zet de
+  bewoner uit.
+- **Te doen**: bovenaan korte regels voor wat nu met de hand of op zon loopt
+  (met Terug of Aanpassen), en bij Vast en gepland een blok **Nu**.
+- **Gevonden en hersteld:** sinds 0.104.0 liet de dienst een opdracht van met
+  de hand niet door (`api/hand` stond niet bij de deuren die mogen schrijven,
+  dus elke opdracht kreeg 405). De paginatest bootste de dienst na en zag het
+  niet; een test in de dienst bewijst het nu.
+- **Het voorbeeldhuis** krijgt de startknop erbij, en begint op de tijd van
+  de dagschuif.
+- **Versie 0.107.0.**
 
 ---
 

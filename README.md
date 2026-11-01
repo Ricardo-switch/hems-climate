@@ -124,7 +124,7 @@ Does it work with your devices? SunArc works with what your home has. An air con
 - The app sits behind the Home Assistant login (Ingress). No port is open, unless you turn on the separate port for Tailscale yourself.
 - Its own AppArmor profile: security rating 8, the highest.
 - The images are built on GitHub and signed with Cosign.
-- SunArc writes to Home Assistant only through narrow doors: lights, scenes, blinds, and climate by hand with an end time. A test proves nothing else gets through. Why the add-on may write to the Home Assistant configuration is explained in the add-on documentation.
+- SunArc writes to Home Assistant only through narrow doors: lights, scenes, blinds, the start button of a dryer waiting for sun, and climate by hand with an end time. A test proves nothing else gets through. Why the add-on may write to the Home Assistant configuration is explained in the add-on documentation.
 - Found a weakness? See [SECURITY.md](SECURITY.md).
 
 ## How it works

@@ -137,6 +137,11 @@ export interface HaClientOptions {
    */
   readonly allowHand?: () => { readonly klimaat: readonly string[]; readonly schakelaars: readonly string[] };
   /**
+   * Witgoed starten (ronde 5): alleen de startknop (`button.`) van een droger of
+   * vaatwasser uit de lijst, zonder iets erbij. Leeg of weg: dicht.
+   */
+  readonly allowStart?: () => readonly string[];
+  /**
    * Of deze client een AI-taak van Home Assistant om een tekst mag vragen
    * (besluit 148): precies `ai_task.generate_data`, via `generateData`, met
    * alleen een taaknaam, een opdracht, één `ai_task.`-entiteit en eventueel
@@ -310,6 +315,14 @@ export function isHandCall(
   return false;
 }
 
+/** Witgoed starten (ronde 5): `button.press` op één startknop uit de lijst, verder niets. */
+export function isStartCall(domain: string, service: string, data: Record<string, unknown>, target: Record<string, unknown>, mag: readonly string[]): boolean {
+  if (domain !== 'button' || service !== 'press' || Object.keys(data).length > 0) return false;
+  if (Object.keys(target).some((k) => k !== 'entity_id')) return false;
+  const id = target['entity_id'];
+  return typeof id === 'string' && id.startsWith('button.') && mag.includes(id);
+}
+
 /** Een scène aanzetten (besluit 100): één `scene.`-entiteit, verder niets. */
 function isSceneCall(domain: string, service: string, data: Record<string, unknown>, target: Record<string, unknown>): boolean {
   if (domain !== 'scene' || service !== 'turn_on') return false;
@@ -351,10 +364,11 @@ export declare interface HaClient {
 }
 
 export class HaClient extends EventEmitter {
-  readonly #options: Required<Omit<HaClientOptions, 'allowWrites' | 'allowLights' | 'allowScenes' | 'allowCovers' | 'allowAiTask' | 'allowListen' | 'allowUpdate' | 'allowNotify' | 'allowKnoppen' | 'allowHand' | 'allowTodo'>> & {
+  readonly #options: Required<Omit<HaClientOptions, 'allowWrites' | 'allowLights' | 'allowScenes' | 'allowCovers' | 'allowAiTask' | 'allowListen' | 'allowUpdate' | 'allowNotify' | 'allowKnoppen' | 'allowHand' | 'allowStart' | 'allowTodo'>> & {
     allowUpdate: () => string | null;
     allowKnoppen: () => { readonly entiteiten: readonly string[]; readonly opties: readonly string[] };
     allowHand: () => { readonly klimaat: readonly string[]; readonly schakelaars: readonly string[] };
+    allowStart: () => readonly string[];
     allowNotify: boolean;
     allowWrites: boolean;
     allowLights: boolean;
@@ -384,6 +398,7 @@ export class HaClient extends EventEmitter {
       allowNotify: options.allowNotify ?? false,
       allowKnoppen: options.allowKnoppen ?? (() => ({ entiteiten: [], opties: [] })),
       allowHand: options.allowHand ?? (() => ({ klimaat: [], schakelaars: [] })),
+      allowStart: options.allowStart ?? (() => []),
       allowAiTask: options.allowAiTask ?? false,
       allowListen: options.allowListen ?? false,
       allowTodo: options.allowTodo ?? false,
@@ -785,7 +800,8 @@ export class HaClient extends EventEmitter {
       (this.#options.allowNotify && isNotifyCall(domain, service, data, target)) ||
       (this.#options.allowTodo && isTodoCall(domain, service, data, target)) ||
       isKnopCall(domain, service, data, target, this.#options.allowKnoppen()) ||
-      isHandCall(domain, service, data, target, this.#options.allowHand());
+      isHandCall(domain, service, data, target, this.#options.allowHand()) ||
+      isStartCall(domain, service, data, target, this.#options.allowStart());
     if (!allowed) {
       throw new Error(
         `Schrijven staat uit: ${domain}.${service} is niet verstuurd. ` +

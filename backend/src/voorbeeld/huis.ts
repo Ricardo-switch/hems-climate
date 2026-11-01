@@ -193,7 +193,7 @@ const TOESTELLEN: readonly Toestel[] = [
     ruimte: 'keuken',
     merk: 'Bosch',
     platform: 'home_connect',
-    entiteiten: [['binary_sensor.droger_op_afstand', meter('', 'Op afstand starten')], ['sensor.droger_status', meter('', 'Status')], ['sensor.droger_programmaduur', meter('duration', 'Programmaduur')]],
+    entiteiten: [['binary_sensor.droger_op_afstand', meter('', 'Op afstand starten')], ['sensor.droger_status', meter('', 'Status')], ['sensor.droger_programmaduur', meter('duration', 'Programmaduur')], ['button.droger_start_pauze', meter('', 'Start of pauze')]],
   },
   { id: 'd-accu', naam: 'Thuisbatterij', ruimte: 'hal', merk: 'Sessy', platform: 'sessy', entiteiten: [['sensor.thuisbatterij_lading', meter('battery', 'Lading')], ['sensor.thuisbatterij_vermogen', meter('power', 'Batterij vermogen')]] },
   {
@@ -333,6 +333,7 @@ export function staten(klok: Klok, ingrepen: Ingrepen, nuMs: number): HaEntitySt
   zet('binary_sensor.droger_op_afstand', !winter && klok.minuut < 690 ? 'on' : 'off', { device_class: 'running' });
   zet('sensor.droger_status', m.droger ? 'Run' : !winter && klok.minuut < 690 ? 'Ready' : klok.minuut >= 860 && !winter ? 'Finished' : 'Inactive', {});
   zet('sensor.droger_programmaduur', 168, { unit_of_measurement: 'min', device_class: 'duration' });
+  zet('button.droger_start_pauze', 'unknown', {});
 
   // Thuisbatterij, auto en laadpaal.
   zet('sensor.thuisbatterij_lading', m.batterijPct, { unit_of_measurement: '%', device_class: 'battery' });

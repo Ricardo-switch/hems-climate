@@ -194,7 +194,9 @@ function teken() {
     const onder = zon?.dag?.onderMs != null ? klok(zon.dag.onderMs) : null;
     const dag = `<section class="glas gp-dag"><h2>${esc(t('gp.vandaag.kop'))}${op && onder ? `<span>${esc(t('gp.zonOpOnder', { op, onder }))}</span>` : ''}</h2>${boog(opBoog, tel)}</section>`;
     const leeg = !alle.length ? `<p class="gp-leeg">${esc(t('gp.leeg'))}</p>` : '';
-    const links = `<section class="glas gp-lijst"><h3>${esc(t('gp.vandaagNog'))}</h3>${leeg}${vandaag.map((g) => regel(g)).join('')}${gedaan.map((g) => regel(g, true)).join('')}${!leeg && !vandaag.length && !gedaan.length ? `<p class="gp-leeg">${esc(t('gp.nietsMeer'))}</p>` : ''}</section>`;
+    // Wat nu met de hand of op zon loopt (besluit 238): een eigen blok bovenaan.
+    const nu = hand.nuHtml();
+    const links = `<section class="glas gp-lijst">${nu ? `<h3>${esc(t('gp.nu'))}</h3><div class="nu-regels">${nu}</div>` : ''}<h3>${esc(t('gp.vandaagNog'))}</h3>${leeg}${vandaag.map((g) => regel(g)).join('')}${gedaan.map((g) => regel(g, true)).join('')}${!leeg && !vandaag.length && !gedaan.length ? `<p class="gp-leeg">${esc(t('gp.nietsMeer'))}</p>` : ''}</section>`;
     const rechts = `<section class="glas gp-lijst"><h3>${esc(t('gp.komend'))}</h3>${later.map((g) => regel(g)).join('') || `<p class="gp-leeg">${esc(t('gp.nietsKomend'))}</p>`}<p class="tip">${esc(t('gp.tip'))}</p></section>`;
     const g = open ? alle.find((x) => x.id === open.id) : null;
     const bladHtml = g ? `${tel ? '<div class="gp-achter" data-gp-sluit></div>' : ''}<aside class="glas gp-blad" role="dialog" aria-label="${esc(g.tekst)}">${blad(g)}</aside>` : '';
@@ -205,7 +207,7 @@ function teken() {
 }
 
 async function laad() {
-  const [d, z] = await Promise.allSettled([haal('api/te-doen'), haal('api/zon')]);
+  const [d, z] = await Promise.allSettled([haal('api/te-doen'), haal('api/zon'), hand.laadNu()]);
   if (d.status === 'fulfilled') data = d.value;
   if (z.status === 'fulfilled') zon = z.value;
   // Een opdracht die niet meer bestaat, sluit vanzelf.

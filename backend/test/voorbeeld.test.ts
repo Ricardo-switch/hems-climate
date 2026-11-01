@@ -121,6 +121,21 @@ describe('het voorbeeld in de dienst (besluit 237)', () => {
     await web.stop();
   });
 
+  it('met de hand en witgoed mogen schrijven; eerst kreeg met de hand 405 (besluit 238)', async () => {
+    type Opties = ConstructorParameters<typeof WebServer>[0];
+    const hand = { hand: {}, aan: () => false, schakelaars: () => [], knoppen: () => [] } as unknown as NonNullable<Opties['hand']>;
+    const witgoed = { nuStarten: async () => ({ ok: true, knop: 'button.droger_start' }), stand: () => ({ kan: true, reden: null, gestartMs: null }) } as unknown as NonNullable<Opties['witgoed']>;
+    const config = { timezone: 'Europe/Amsterdam', zones: [], actuators: [], deferrables: [{ id: 'droger', name: 'Droger' }] } as unknown as NonNullable<Opties['config']>;
+    const web = new WebServer({ access: { kind: 'open' }, port: 0, host: '127.0.0.1', webDir: '.', config, latest: () => null, hand, witgoed });
+    const basis = `http://127.0.0.1:${await web.start()}`;
+    const post = (pad: string, body: unknown) => fetch(basis + pad, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    // De brug staat uit: de deur antwoordt zelf, niet de muur van "leest alleen".
+    expect((await post('/api/hand', { id: 'climate.x' })).status).toBe(409);
+    expect((await post('/api/witgoed', { id: 'droger', start: true })).status).toBe(200);
+    expect((await post('/api/witgoed', { id: 'droger' })).status).toBe(400);
+    await web.stop();
+  });
+
   it('een opdracht alleen als JSON, en van de eigen pagina', async () => {
     const { web, gezien, basis } = await dienst();
     expect((await fetch(`${basis}/voorbeeld/api/licht`, { method: 'POST', body: 'x', headers: { 'content-type': 'text/plain' } })).status).toBe(403);

@@ -311,6 +311,9 @@ verwijzing bestaat.
 - **Het voorbeeldhuis:** vanaf het welkom en Inrichten een verzonnen huis met
   alles erin, op een nagemaakt Home Assistant in een eigen proces, met een dag
   om door te spelen; elke knop werkt, alleen in het voorbeeld ([237]).
+- **Eén blad per apparaat:** een tik op een kaart bij Apparaten opent de
+  bediening, ook tot het doel; witgoed dat op zon wacht kiest een uiterste
+  eindtijd, en SunArc drukt zelf op de startknop van de droger ([238]).
 - **In de add-on** opent de app, en een leeg huis begint met een welkom: het
   huis groeit uit Home Assistant, één knop naar Inrichten, of een back-up
   terugzetten. Alleen een verplichte keuze zonder voorstel wordt een vraag
@@ -783,4 +786,5 @@ verwijzing bestaat.
 [235]: DECISIONS.md#235-klimaat-met-de-hand-elk-apparaat-via-de-knop-of-direct-met-een-eindtijd
 [236]: DECISIONS.md#236-klaar-om-te-delen-apparmor-één-ondertekend-image-experimenteel-en-een-verzorgde-repository
 [237]: DECISIONS.md#237-het-voorbeeldhuis-de-app-op-een-nagemaakt-home-assistant-met-een-dag-om-door-te-spelen
+[238]: DECISIONS.md#238-eén-blad-per-apparaat-klimaat-tot-het-doel-en-sunarc-start-de-droger
 <!-- links:einde -->

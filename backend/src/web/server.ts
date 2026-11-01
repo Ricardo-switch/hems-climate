@@ -313,6 +313,10 @@ export class WebServer {
       (this.#d.options.covers != null && path === '/api/scherm') ||
       // De klimaatbrug (besluit 210): alleen de knoppen van het oude systeem, tot stap B. Een gast niet.
       (this.#d.options.klimaat != null && path === '/api/klimaat') ||
+      // Klimaat met de hand (besluit 235): stond er niet bij, dus elke opdracht kreeg 405 (gevonden in ronde 5).
+      (this.#d.options.hand != null && path === '/api/hand') ||
+      // Witgoed starten (besluit 238): alleen Nu starten, op de startknop van het apparaat.
+      (this.#d.options.witgoed != null && path === '/api/witgoed') ||
       // Te doen (besluit 216): een herinnering in het eigen bestand, of iets op een lijst van Home Assistant. Een gast niet.
       (this.#d.options.tedoen != null && path === '/api/te-doen') ||
       // Scènes (besluit 100): een eigen smalle deur naast het licht.
