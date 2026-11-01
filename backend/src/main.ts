@@ -92,6 +92,7 @@ import { Onboarding } from './web/onboarding.js';
 import { FeedbackLog } from './web/feedback.js';
 import { laadWekmodellen, type Wekmodellen } from './web/wekwoord.js';
 import { BRUG_ENTITEITEN, KlimaatBrug, MODUS_OPTIES } from './web/klimaatbrug.js';
+import { HAND_KLIMAAT, HAND_KNOPPEN, Handbediening } from './web/hand.js';
 import { kiesVerstaan, Verstaan } from './web/verstaan.js';
 
 
@@ -447,7 +448,11 @@ const client = new HaClient({
   allowTodo: Boolean(process.env['SUPERVISOR_TOKEN']),
   // De klimaatbrug (besluit 210): alleen de knoppen van het oude systeem, als de brug aan staat
   // of er nog iets terug moet. Alleen in de add-on (zie `klimaatBrug`).
-  allowKnoppen: (): { readonly entiteiten: readonly string[]; readonly opties: readonly string[] } => (klimaatAan() || (klimaatBrug?.terugzetten.length ?? 0) > 0 ? { entiteiten: BRUG_ENTITEITEN, opties: MODUS_OPTIES } : { entiteiten: [], opties: [] }),
+  allowKnoppen: (): { readonly entiteiten: readonly string[]; readonly opties: readonly string[] } =>
+    klimaatAan() || (klimaatBrug?.terugzetten.length ?? 0) > 0 || (handbediening?.terugzetten.length ?? 0) > 0 ? { entiteiten: [...new Set([...BRUG_ENTITEITEN, ...HAND_KNOPPEN])], opties: MODUS_OPTIES } : { entiteiten: [], opties: [] },
+  // Klimaat met de hand (besluit 235): de airco's op warm en de stekkers, als de brug aan staat of er nog iets terug moet.
+  allowHand: (): { readonly klimaat: readonly string[]; readonly schakelaars: readonly string[] } =>
+    klimaatAan() || (handbediening?.terugzetten.length ?? 0) > 0 ? { klimaat: [...new Set([...HAND_KLIMAAT, ...handKnoppen().map((k) => k.id), ...(handbediening?.terugzetten ?? []).filter((t) => t.thermostaat).map((t) => t.id)])], schakelaars: [...new Set([...handSchakelaars().map((s) => s.id), ...(handbediening?.terugzetten ?? []).filter((t) => t.modus === 'aan').map((t) => t.id)])] } : { klimaat: [], schakelaars: [] },
 });
 
 // De twee verwijzen naar elkaar: de runner duwt besluiten naar de weergave, de
@@ -585,11 +590,49 @@ function klimaatAan(): boolean {
   const f = klimaatBrug ? functiesNu() : null;
   return f != null && volledig(f, functiesKeuzes()).praten.klimaat;
 }
+/*
+ * Klimaat met de hand (besluit 235): elk apparaat via zijn knop, de airco's op
+ * warm ook zelf, en een stekker met een warmtebron die niet in de regeling zit.
+ * Alleen in de add-on en als de brug aan staat, net als de klimaatbrug.
+ */
+const handbediening: Handbediening | null = process.env['SUPERVISOR_TOKEN']
+  ? new Handbediening({
+      state: (id) => allStates.get(id),
+      zet: (knop, waarde): Promise<void> => client.callService('input_number', 'set_value', { value: waarde }, { entity_id: knop }),
+      kies: (select, optie): Promise<void> => client.callService('input_select', 'select_option', { option: optie }, { entity_id: select }),
+      klimaat: async (id, stand): Promise<void> => {
+        if (stand === 'uit') return client.callService('climate', 'turn_off', {}, { entity_id: id });
+        await client.callService('climate', 'set_hvac_mode', { hvac_mode: 'heat' }, { entity_id: id });
+        await client.callService('climate', 'set_temperature', { temperature: stand.warm }, { entity_id: id });
+      },
+      schakel: (id, aan): Promise<void> => client.callService('switch', aan ? 'turn_on' : 'turn_off', {}, { entity_id: id }),
+      temperatuur: (id, c): Promise<void> => client.callService('climate', 'set_temperature', { temperature: c }, { entity_id: id }),
+      map: logDir !== '' ? logDir : null,
+    })
+  : null;
+/** De radiatorknoppen buiten de regeling (besluit 126), met hun kamer: die zet de hand direct (besluit 235). */
+function handKnoppen(): { id: string; naam: string; kamer: string }[] {
+  const regeling = new Set((siteConfig?.actuators ?? []).map((a) => a.ref.id));
+  return (houseReport()?.etages ?? []).flatMap((e) => e.ruimtes.flatMap((r) => r.apparaten.filter((a) => a.radiatorknop && a.id.startsWith('climate.') && !regeling.has(a.id)).map((a) => ({ id: a.id, naam: a.naam, kamer: r.naam }))));
+}
+/** De stekkers met een warmtebron die niet in de regeling zitten (besluit 235). */
+function handSchakelaars(): { id: string; kamer: string; naam: string; aan: boolean }[] {
+  const regeling = new Set((siteConfig?.actuators ?? []).map((a) => a.ref.id));
+  return (layoutNu?.()?.kamers ?? []).flatMap((k) =>
+    (k.bronnen ?? [])
+      .filter((b) => b.aan !== 'hand' && b.apparaat?.startsWith('switch.') && !regeling.has(b.apparaat))
+      .map((b) => ({ id: b.apparaat!, kamer: k.naam ?? k.id, naam: String(allStates.get(b.apparaat!)?.attributes['friendly_name'] ?? b.apparaat), aan: allStates.get(b.apparaat!)?.state === 'on' })),
+  );
+}
 if (klimaatBrug) {
   setInterval(() => {
     klimaatBrug.ronde().then(
       (gedaan) => gedaan.forEach((g) => console.log(`[klimaatbrug] ${g}`)),
       (e: unknown) => console.warn(`[klimaatbrug] terugzetten lukte niet: ${(e as Error).message}`),
+    );
+    handbediening?.ronde().then(
+      (gedaan) => gedaan.forEach((g) => console.log(`[met de hand] ${g}`)),
+      (e: unknown) => console.warn(`[met de hand] terugzetten lukte niet: ${(e as Error).message}`),
     );
   }, 60_000).unref();
 }
@@ -1725,6 +1768,7 @@ if (webPort != null) {
     ...(lightSwitch ? { lights: lightSwitch } : {}),
     ...(coverSwitch ? { covers: coverSwitch } : {}),
     ...(klimaatBrug ? { klimaat: { brug: klimaatBrug, aan: klimaatAan } } : {}),
+    ...(handbediening ? { hand: { hand: handbediening, aan: klimaatAan, schakelaars: handSchakelaars, knoppen: handKnoppen } } : {}),
     verstaanInHuis: () => kiesVerstaan([...allStates.keys()]),
     ...(layoutStore && siteConfig
       ? {

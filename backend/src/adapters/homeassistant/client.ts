@@ -131,6 +131,12 @@ export interface HaClientOptions {
    */
   readonly allowKnoppen?: () => { readonly entiteiten: readonly string[]; readonly opties: readonly string[] };
   /**
+   * Klimaat met de hand (besluit 235): de airco's die de app zelf op warm mag
+   * zetten, en de stekkers met een warmtebron die hij aan en uit mag zetten.
+   * Leeg of weg: dicht.
+   */
+  readonly allowHand?: () => { readonly klimaat: readonly string[]; readonly schakelaars: readonly string[] };
+  /**
    * Of deze client een AI-taak van Home Assistant om een tekst mag vragen
    * (besluit 148): precies `ai_task.generate_data`, via `generateData`, met
    * alleen een taaknaam, een opdracht, één `ai_task.`-entiteit en eventueel
@@ -278,6 +284,32 @@ export function isKnopCall(
   return false;
 }
 
+/**
+ * Klimaat met de hand (besluit 235): een airco uit de lijst op warm, op een
+ * temperatuur, of uit; een stekker uit de lijst aan of uit. Precies die
+ * velden, op één entiteit; koelen of een andere stand komt er niet door.
+ */
+export function isHandCall(
+  domain: string,
+  service: string,
+  data: Record<string, unknown>,
+  target: Record<string, unknown>,
+  mag: { readonly klimaat: readonly string[]; readonly schakelaars: readonly string[] },
+): boolean {
+  if (Object.keys(target).some((k) => k !== 'entity_id')) return false;
+  const id = target['entity_id'];
+  if (typeof id !== 'string' || !id.startsWith(`${domain}.`)) return false;
+  const keys = Object.keys(data);
+  if (domain === 'climate' && mag.klimaat.includes(id)) {
+    if (service === 'set_hvac_mode') return keys.length === 1 && (data['hvac_mode'] === 'heat' || data['hvac_mode'] === 'off');
+    if (service === 'set_temperature') return keys.length === 1 && typeof data['temperature'] === 'number' && Number.isFinite(data['temperature']) && data['temperature'] >= 5 && data['temperature'] <= 30;
+    if (service === 'turn_off') return keys.length === 0;
+    return false;
+  }
+  if (domain === 'switch' && mag.schakelaars.includes(id)) return (service === 'turn_on' || service === 'turn_off') && keys.length === 0;
+  return false;
+}
+
 /** Een scène aanzetten (besluit 100): één `scene.`-entiteit, verder niets. */
 function isSceneCall(domain: string, service: string, data: Record<string, unknown>, target: Record<string, unknown>): boolean {
   if (domain !== 'scene' || service !== 'turn_on') return false;
@@ -319,9 +351,10 @@ export declare interface HaClient {
 }
 
 export class HaClient extends EventEmitter {
-  readonly #options: Required<Omit<HaClientOptions, 'allowWrites' | 'allowLights' | 'allowScenes' | 'allowCovers' | 'allowAiTask' | 'allowListen' | 'allowUpdate' | 'allowNotify' | 'allowKnoppen' | 'allowTodo'>> & {
+  readonly #options: Required<Omit<HaClientOptions, 'allowWrites' | 'allowLights' | 'allowScenes' | 'allowCovers' | 'allowAiTask' | 'allowListen' | 'allowUpdate' | 'allowNotify' | 'allowKnoppen' | 'allowHand' | 'allowTodo'>> & {
     allowUpdate: () => string | null;
     allowKnoppen: () => { readonly entiteiten: readonly string[]; readonly opties: readonly string[] };
+    allowHand: () => { readonly klimaat: readonly string[]; readonly schakelaars: readonly string[] };
     allowNotify: boolean;
     allowWrites: boolean;
     allowLights: boolean;
@@ -350,6 +383,7 @@ export class HaClient extends EventEmitter {
       allowUpdate: options.allowUpdate ?? (() => null),
       allowNotify: options.allowNotify ?? false,
       allowKnoppen: options.allowKnoppen ?? (() => ({ entiteiten: [], opties: [] })),
+      allowHand: options.allowHand ?? (() => ({ klimaat: [], schakelaars: [] })),
       allowAiTask: options.allowAiTask ?? false,
       allowListen: options.allowListen ?? false,
       allowTodo: options.allowTodo ?? false,
@@ -750,7 +784,8 @@ export class HaClient extends EventEmitter {
       isUpdateCall(domain, service, data, target, this.#options.allowUpdate()) ||
       (this.#options.allowNotify && isNotifyCall(domain, service, data, target)) ||
       (this.#options.allowTodo && isTodoCall(domain, service, data, target)) ||
-      isKnopCall(domain, service, data, target, this.#options.allowKnoppen());
+      isKnopCall(domain, service, data, target, this.#options.allowKnoppen()) ||
+      isHandCall(domain, service, data, target, this.#options.allowHand());
     if (!allowed) {
       throw new Error(
         `Schrijven staat uit: ${domain}.${service} is niet verstuurd. ` +

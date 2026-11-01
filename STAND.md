@@ -445,6 +445,8 @@ verwijzing bestaat.
   keuzes ("klein of groot?") en stelt 's avonds de sfeerverlichting voor ([209]).
   Tot stap B verwarmt de assistent via de knoppen van het oude systeem, als
   de bewoner dat aanzet: een graad hoger tot 22:00, daarna terug ([210]).
+  Met de hand kan elk klimaatapparaat, tot een eindtijd: via zijn knop, en een
+  airco op warm ook zelf, met een eigen smalle deur ([235]).
   De dienst verstaat zelf met Whisper in huis, rechtstreeks; meer screens gaan
   samen, en het venster sluit na een opdracht ([211]). De stem kies je bij
   Functies › Stem en luisteren, vrouw of man, Google HD of in huis, met een
@@ -768,4 +770,5 @@ verwijzing bestaat.
 [232]: DECISIONS.md#232-het-logo-naast-de-klok-en-over-deze-app
 [233]: DECISIONS.md#233-wat-whisper-vast-verkeerd-hoort-rechtzetten
 [234]: DECISIONS.md#234-vast-en-gepland-herhalen-de-zon-met-minuten-en-aanpassen
+[235]: DECISIONS.md#235-klimaat-met-de-hand-elk-apparaat-via-de-knop-of-direct-met-een-eindtijd
 <!-- links:einde -->
