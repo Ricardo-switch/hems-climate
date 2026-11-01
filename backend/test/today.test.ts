@@ -110,6 +110,20 @@ describe('vandaag', () => {
     ]);
   });
 
+  it('telt een apparaat dat zegt wat het doet alleen als draaiend als het echt verwarmt (1 november 2026)', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hems-today-'));
+    cleanup.push(dir);
+    // De Nest staat de hele tijd op verwarmen naar 20°, maar brandt alleen van 08:00 tot 08:30.
+    const lines: string[] = [];
+    for (let t = at('2026-10-02T07:00:00Z'); t <= at('2026-10-02T09:00:00Z'); t += MIN) {
+      const brandt = t >= at('2026-10-02T08:00:00Z') && t < at('2026-10-02T08:30:00Z');
+      lines.push(JSON.stringify(record(t, { obs: { nest: 'heat@20', badkamer: 'off@18', 'ac-woonkamer': 'off', 'ac-zolder': 'off' }, doet: { nest: brandt ? 'heating' : 'idle' } })));
+    }
+    await writeFile(join(dir, 'decisions-2026-10-02.ndjson'), `${lines.join('\n')}\n`, 'utf-8');
+    const r = await todayReport(dir, exampleSite, at('2026-10-02T09:00:00Z'));
+    expect(r.apparaten.find((a) => a.actuatorId === 'nest')!.huidig).toEqual([{ vanMs: at('2026-10-02T08:00:00Z'), totMs: at('2026-10-02T08:29:00Z'), actie: 'heat' }]);
+  });
+
   it('weet wanneer een uitstelbaar apparaat draaide, en wanneer SunArc het zou starten', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'hems-today-'));
     cleanup.push(dir);

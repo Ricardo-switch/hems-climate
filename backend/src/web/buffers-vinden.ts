@@ -12,7 +12,7 @@
  * - **Een zonne-boilerregelaar:** een getal dat het vermogen zet, zoals een
  *   AC·THOR of PEEC.
  *
- * Wat hij trekt en hoe snel hij opwarmt, is een schatting per soort; het huis
+ * Wat hij trekt en hoe snel hij verwarmt, is een schatting per soort; het huis
  * leert het daarna zelf. Een voorstel: de bewoner kiest of hij op zon mag.
  */
 
@@ -38,7 +38,7 @@ export interface FoundHeatStore {
 const SPA = /spa|jacuzzi|hot.?tub|whirlpool|bubbelbad|bubbel|intex/i;
 const BOILER = /boiler|geyser|water.?heater|warm.?water|tapwater|dhw/i;
 const DIVERTER = /ac.?thor|elwa|my.?pv|peec|diverter/i;
-/** Merken en woorden van warmtepompboilers: die trekken weinig en warmen langzaam. */
+/** Merken en woorden van warmtepompboilers: die trekken weinig en verwarmen langzaam. */
 const WARMTEPOMP = /heat.?pump|warmtepomp|explorer|nuos|aquarea|altherma|ecotech|lyos|vitocal|aerotermo|thermo/i;
 
 const slug = (s: string) =>

@@ -135,8 +135,24 @@ const DOET = new Set(['koelen', 'verwarmen', 'uit', 'geparkeerd', 'drogen', 'ven
 const ACTIE = { cool: 'koelen', heat: 'verwarmen', off: 'uit', standby: 'geparkeerd' };
 const KLEUR = { koelen: 'var(--ijs)', verwarmen: 'var(--gloed)', uit: 'var(--mint)', geparkeerd: 'var(--zon)' };
 
+/**
+ * Deed het apparaat echt wat SunArc besloot (1 november 2026)? Zolang SunArc
+ * meekijkt, regelt de oude regeling; dan zegt de tijdlijn alleen "ging
+ * verwarmen" als het apparaat rond dat moment ook echt verwarmde (de lijnen
+ * van "huidig", sinds 1 november uit wat het apparaat zelf zegt). Onbekend
+ * apparaat: dan geen oordeel.
+ */
+function echtGedaan(r, id, actie, tMs) {
+  const a = (r?.apparaten ?? []).find((x) => x.actuatorId === id);
+  if (!a || !actie) return true;
+  const echt = (a.huidig ?? []).filter((s) => s.vanMs <= tMs + 10 * 60_000 && s.totMs >= tMs - 5 * 60_000);
+  if (actie === 'uit' || actie === 'geparkeerd') return !(a.huidig ?? []).some((s) => s.vanMs <= tMs + 3 * 60_000 && s.totMs >= tMs + 3 * 60_000);
+  const soort = Object.keys(ACTIE).find((k) => ACTIE[k] === actie);
+  return soort ? echt.some((s) => s.actie === soort) : true;
+}
+
 /** Een besluit van de dienst als moment: een kop, een zin, een kleur. */
-function momentVan(b) {
+function momentVan(b, r) {
   // De naam van het apparaat staat voor de dubbele punt, in elke taal.
   const [naam = '', woord = ''] = (b.wat[0] ?? '').split(': ');
   const eerste = b.opdrachten?.[0];
@@ -144,11 +160,18 @@ function momentVan(b) {
   const sp = (b.opdrachten ?? []).find((o) => o.kind === 'setSetpoint')?.setpointC;
   const doel = sp != null ? `${nl(sp, Number.isInteger(sp) ? 0 : 1)}°` : null;
   const reden = (b.waarom[0] ?? '').split(': ').slice(1).join(': ');
-  const kop = actie ? `${naam} ${DOET.has(actie) ? t(`vandaag.doet.${actie}`) : actie}` : hoofd(b.wat[0] ?? t('vandaag.besluit'));
+  const actuatorId = b.redenen?.[0]?.actuatorId ?? null;
+  const echt = !ZOU.has(actie) || echtGedaan(r, actuatorId, actie, b.tMs);
+  const kop = actie ? `${naam} ${DOET.has(actie) ? t(`vandaag.${echt ? 'doet' : 'zou'}.${actie}`) : actie}` : hoofd(b.wat[0] ?? t('vandaag.besluit'));
   // Zonder actie noemt de kop het doel al ("Thermostaat badkamer: doel 20°"); dan niet nog eens eronder (besluit 226).
   const zin = [reden ? `${hoofd(reden)}.` : '', doel && actie && actie !== 'uit' ? t('vandaag.doel', { doel }) : ''].filter(Boolean).join(' ');
-  return { tMs: b.tMs, kop, zin, kleur: KLEUR[actie] ?? 'var(--zacht)', actuatorId: b.redenen?.[0]?.actuatorId ?? null, naam, actie };
+  // Op zon: alleen als de strategie van de zon het voorstelde, niet omdat iets vaak aan en uit ging.
+  const opZon = (b.redenen ?? []).some((x) => x.strategie === 'pv-surplus');
+  return { tMs: b.tMs, kop, zin, kleur: echt ? (KLEUR[actie] ?? 'var(--zacht)') : 'var(--zacht)', actuatorId, naam, actie, echt, opZon };
 }
+
+/** Acties waarvan de tijdlijn nagaat of ze echt gebeurden. */
+const ZOU = new Set(['koelen', 'verwarmen', 'uit']);
 
 /** Zo heet een reeks in de verleden tijd. */
 const DEED = new Set(['koelen', 'verwarmen', 'drogen', 'ventileren']);
@@ -181,11 +204,16 @@ function groepeer(lijst) {
     if (!werk || starts < 2) return g.leden;
     const wachtte = g.leden.some((x) => x.actie === 'geparkeerd');
     const eind = g.leden.at(-1);
+    // "Met de zon mee" alleen als de zon de reden was (1 november 2026: een Nest op de cv-ketel
+    // ging na zonsondergang drie keer aan en uit omdat het doel wisselde, en heette zo).
+    const opZon = g.leden.some((x) => x.opZon);
+    const echt = g.leden.every((x) => x.echt !== false);
+    const kop = opZon ? (echt ? 'vandaag.metZonMee' : 'vandaag.zouMetZonMee') : echt ? 'vandaag.aanUit' : 'vandaag.zouAanUit';
     return [{
       tMs: g.tMs,
-      kop: t('vandaag.metZonMee', { naam: g.naam, deed: t(`vandaag.deed.${werk}`) }),
-      zin: t(wachtte ? 'vandaag.gestartGewacht' : 'vandaag.gestart', { van: klokVan(g.tMs), tot: klokVan(eind.tMs), n: starts }),
-      kleur: KLEUR[werk] ?? 'var(--zacht)',
+      kop: t(kop, { naam: g.naam, deed: t(`vandaag.deed.${werk}`), werk: t(`vandaag.werk.${werk}`) }),
+      zin: t(wachtte && opZon ? 'vandaag.gestartGewacht' : 'vandaag.gestart', { van: klokVan(g.tMs), tot: klokVan(eind.tMs), n: starts }),
+      kleur: echt ? (KLEUR[werk] ?? 'var(--zacht)') : 'var(--zacht)',
       actuatorId: g.actuatorId,
       leden: g.leden,
     }];
@@ -194,12 +222,13 @@ function groepeer(lijst) {
 
 /** Alle momenten van de dag, op tijd: de besluiten, en wanneer een uitstelbaar apparaat begon en klaar was. */
 function momenten(r) {
-  const lijst = [...(r?.besluiten ?? [])].reverse().map(momentVan);
+  const lijst = [...(r?.besluiten ?? [])].reverse().map((b) => momentVan(b, r));
   for (const u of r?.uitstelbaar ?? []) {
     const naam = naamVan(u.id);
     for (const s of u.draaide ?? []) {
       lijst.push({ tMs: s.vanMs, kop: t('vandaag.begon', { naam }), zin: t('vandaag.opApparaat'), kleur: 'var(--zon)', actuatorId: u.id });
-      if (r.totMs - s.totMs > 5 * 60_000) lijst.push({ tMs: s.totMs, kop: t('vandaag.isKlaar', { naam }), zin: t('vandaag.liep', { duur: duur(s.totMs - s.vanMs) }), kleur: 'var(--mint)', actuatorId: u.id });
+      // Klaar alleen na een echte run: een stuk van minder dan twee minuten is een gat in het logboek (een herstart), geen programma.
+      if (r.totMs - s.totMs > 5 * 60_000 && s.totMs - s.vanMs >= 2 * 60_000) lijst.push({ tMs: s.totMs, kop: t('vandaag.isKlaar', { naam }), zin: t('vandaag.liep', { duur: duur(s.totMs - s.vanMs) }), kleur: 'var(--mint)', actuatorId: u.id });
     }
   }
   return groepeer(lijst.sort((a, b) => a.tMs - b.tMs));
@@ -556,6 +585,8 @@ document.addEventListener('keydown', (e) => {
 });
 void laadAlles();
 setInterval(() => void laadAlles(), 60_000);
+// In het voorbeeldhuis verschuift de klok (besluit 237): dan meteen vers.
+addEventListener('voorbeeldklok', () => void laadAlles());
 app.live((nieuw) => {
   state = nieuw;
   teken();

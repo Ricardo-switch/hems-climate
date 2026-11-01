@@ -26,14 +26,17 @@ export interface ProfileChoice {
 }
 
 /**
- * Thuis, met rust: wie net thuiskwam, telt de eerste tien minuten nog als weg,
- * en wie net wegging nog als thuis. Zo wisselt het comfort niet bij een
- * boodschap. De meting draagt sinds wanneer ze zo staat.
+ * Thuis, met rust: wie net wegging, telt de eerste tien minuten nog als thuis.
+ * Zo wisselt het comfort niet bij een boodschap. Wie thuiskomt, telt meteen
+ * (1 november 2026): de stand "dag" gaat bij thuiskomen ook meteen aan, en met
+ * rust bij aankomst wisselde het comfort bij twee bewoners die vlak na elkaar
+ * thuiskwamen twee keer (eerst niemand, dan de een, dan allebei). De meting
+ * draagt sinds wanneer ze zo staat.
  */
 function settledHome(state: SystemState, sourceId: string): boolean {
   const r = state.occupancy[sourceId];
   if (!r?.ok) return false;
-  return state.nowMs - r.atMs < PROFILE_SETTLE_MS ? !r.value : r.value;
+  return r.value || state.nowMs - r.atMs < PROFILE_SETTLE_MS;
 }
 
 /** Het profiel dat geldt, of null zonder profielen. Zuiver: dezelfde toestand geeft dezelfde keuze. */

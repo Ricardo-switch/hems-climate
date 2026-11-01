@@ -73,7 +73,7 @@ export interface FoundAppliance {
   /** Hoe lang het programma nog duurt (of de eindtijd), en de voortgang in procent (besluit 167). */
   readonly remainingTime?: string;
   readonly programProgress?: string;
-  /** Wat hij ongeveer vraagt als hij opwarmt; een schatting per soort. */
+  /** Wat hij ongeveer vraagt als hij verwarmt; een schatting per soort. */
   readonly estimatedW: number;
 }
 
@@ -94,7 +94,7 @@ export interface ConnectionAnswers {
   /**
    * De verwarming (besluit 122): wat het is, en de aanvoertemperatuur die op de
    * ketel staat, als de bewoner die weet. Voor het thermisch model: een lagere
-   * aanvoer warmt een kamer langzamer op.
+   * aanvoer verwarmt een kamer langzamer.
    */
   readonly verwarming?: Verwarming;
   /**

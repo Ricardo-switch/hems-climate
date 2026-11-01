@@ -461,7 +461,7 @@ const client = new HaClient({
   // of er nog iets terug moet. Alleen in de add-on (zie `klimaatBrug`).
   allowKnoppen: (): { readonly entiteiten: readonly string[]; readonly opties: readonly string[] } =>
     klimaatAan() || (klimaatBrug?.terugzetten.length ?? 0) > 0 || (handbediening?.terugzetten.length ?? 0) > 0 ? { entiteiten: [...new Set([...BRUG_ENTITEITEN, ...HAND_KNOPPEN])], opties: MODUS_OPTIES } : { entiteiten: [], opties: [] },
-  // Klimaat met de hand (besluit 235): de airco's op warm en de stekkers, als de brug aan staat of er nog iets terug moet.
+  // Klimaat met de hand (besluit 235): de airco's op verwarmen en de stekkers, als de brug aan staat of er nog iets terug moet.
   // Witgoed starten (ronde 5, besluit 238): alleen de startknop van een droger of vaatwasser, alleen in de add-on.
   allowStart: (): readonly string[] => witgoed?.knoppen() ?? [],
   allowHand: (): { readonly klimaat: readonly string[]; readonly schakelaars: readonly string[] } =>

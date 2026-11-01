@@ -207,7 +207,7 @@ export interface HouseDevice {
     readonly doelC: number | null;
     readonly minC: number;
     readonly zonC: number;
-    /** Wacht hij op zon, of warmt hij er nu mee op. */
+    /** Wacht hij op zon, of verwarmt hij er nu mee. */
     readonly opZon: boolean;
   };
   /**
@@ -558,7 +558,7 @@ const WOORDEN = {
     doel: (graden: string) => `doel ${graden}°`,
     apparaat: { running: 'draait', would_start: 'zou nu starten', waiting: 'klaargezet', not_ready: 'uit' } as Readonly<Record<string, string>>,
     // Een boiler of jacuzzi (besluit 186).
-    buffer: { stookt: 'warmt op', would_heat: 'zou nu opwarmen', waiting: 'wacht op zon', full: 'warm', unknown: 'niet te lezen' } as Readonly<Record<string, string>>,
+    buffer: { stookt: 'verwarmt', would_heat: 'zou nu verwarmen', waiting: 'wacht op zon', full: 'warm', unknown: 'niet te lezen' } as Readonly<Record<string, string>>,
     // Nog geen melding van het apparaat: dat is iets anders dan kapot (besluit 131).
     meldtNogNiets: 'meldt nog niets',
     live: 'live te bekijken',

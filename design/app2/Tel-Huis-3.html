@@ -71,7 +71,7 @@
     <h1 class="kop-1" data-stand="zon">Het huis koelt op zon</h1>
     <h1 class="kop-1" data-stand="avond">Rustige avond</h1>
     <p class="lead" data-stand="zon">De woonkamer koelt en er gaat 0,3 kW terug naar het net.</p>
-    <p class="lead" data-stand="avond">De zon is weg. Het huis haalt 1,2 kW van het net; de jacuzzi warmt op voor 20:00.</p>
+    <p class="lead" data-stand="avond">De zon is weg. Het huis haalt 1,2 kW van het net; de jacuzzi verwarmt voor 20:00.</p>
   </div>
   <div class="podium" id="podium" data-stand="zon avond"></div>
   <section class="glas nu" data-stand="zon">
@@ -90,7 +90,7 @@
   </section>
   <section class="glas kamers" data-stand="avond">
     <a><span class="stip" style="background: var(--mint)"></span><div><b>Woonkamer</b><small class="mint-t">Goed, twee lampen aan</small></div><span class="getal">22,4°</span></a>
-    <a><span class="stip" style="background: var(--gloed)"></span><div><b>Jacuzzi</b><small class="gloed-t">Warmt op, 38° om 20:00</small></div><span class="getal">36°</span></a>
+    <a><span class="stip" style="background: var(--gloed)"></span><div><b>Jacuzzi</b><small class="gloed-t">Verwarmt op, 38° om 20:00</small></div><span class="getal">36°</span></a>
   </section>
 
   <div data-stand="balk">
@@ -138,7 +138,7 @@
       { naam: 'Eerste', kamers: [{ naam: 'Badkamer', gewicht: 0.8, stil: true, apparaten: [] }, { naam: 'Slaapkamer', gewicht: 1.3, stil: true, apparaten: [] }] },
       { dak: true, kamers: [{ naam: 'Zolder', stil: true, stand: zon ? 'wacht' : 'rust', apparaten: [] }] },
     ],
-    net: true, voordeur: {}, buitenunit: { aan: zon }, tuin: { tuinhuis: true, jacuzzi: { temp: zon ? 35 : 36, stand: 'warmt', zon } }, seizoen: zon ? 'zomer' : 'herfst',
+    net: true, voordeur: {}, buitenunit: { aan: zon }, tuin: { tuinhuis: true, jacuzzi: { temp: zon ? 35 : 36, stand: 'verwarmt', zon } }, seizoen: zon ? 'zomer' : 'herfst',
     stromen: zon ? [{ van: 'zon', naar: 'kamer:Woonkamer', sterkte: 0.7 }, { van: 'zon', naar: 'net', sterkte: 0.2 }] : [{ van: 'net', naar: 'huis', sterkte: 0.6 }],
     labels: zon
       ? [{ bij: 'panelen', titel: '4,1 kW', groot: true, toon: 'zon', regels: ['je panelen'], dx: 44, dy: -56 }, { bij: [-0.6, 2.3, -0.32], titel: '0,3 kW terug', toon: 'mint', dx: 20, dy: 52 }]

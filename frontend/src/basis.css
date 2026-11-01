@@ -501,7 +501,7 @@ html.sc-stil::view-transition-group(*), html.sc-stil::view-transition-old(*), ht
 .td-bron b { color: var(--zacht); font-weight: 600; }
 /* Gepland (besluit 218): wat het huis later doet, met een kruisje om te annuleren. */
 .td-sub { margin: 6px 0 0; font-size: 12px; font-weight: 700; color: var(--gedempt); text-transform: uppercase; letter-spacing: 0.06em; display: flex; justify-content: space-between; }
-.td-gepland { background: rgb(111 211 255 / 0.07); border-color: rgb(111 211 255 / 0.22); color: inherit; text-decoration: none; align-items: center; }
+.td-gepland { grid-template-columns: minmax(0, 1fr) auto; background: rgb(111 211 255 / 0.07); border-color: rgb(111 211 255 / 0.22); color: inherit; text-decoration: none; align-items: center; }
 .td-gepland .td-pijl { margin-left: auto; color: var(--gedempt); font-size: 20px; padding: 0 4px; }
 .td-weg { color: var(--zacht); }
 .td-voet { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 2px; }
@@ -684,7 +684,9 @@ html.tel-stand .vb-balk { bottom: 88px; width: calc(100vw - 20px); grid-template
 html.tel-stand .vb-speel { grid-area: speel; width: 40px; height: 40px; justify-self: start; }
 html.tel-stand .vb-baan { grid-area: baan; height: 46px; }
 html.tel-stand .vb-seizoen { grid-area: seizoen; width: auto; }
-html.tel-stand .vb-probeer { grid-area: probeer; height: 34px; padding: 0 10px; font-size: 13px; }
+html.tel-stand .vb-probeer { grid-area: probeer; height: 34px; padding: 0 10px; font-size: 13px; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* Smal (een kleine telefoon): de knoppen schuiven in, niets loopt over de rand. */
+html.tel-stand .vb-seizoen .chip { padding: 0 10px; min-width: 0; }
 html.tel-stand .vb-terug { grid-area: terug; height: 34px; padding: 0 10px; font-size: 13px; }
 html.tel-stand .vb-naam { display: none; }
 html.tel-stand .vb-lijst { left: 0; right: 0; width: auto; }
@@ -702,4 +704,7 @@ html.tel-stand .vb-terug .vb-lang { display: none; }
 html.tel-stand .vb-terug .vb-kort { display: inline; }
 /* In het voorbeeld staat de balk van de dag onderaan: het blad stopt erboven. */
 html.sc-voorbeeld .hand-laag:not(.tel) .hand-vel { bottom: 124px; }
-html.sc-voorbeeld .hand-laag.tel .hand-vel { bottom: 150px; border-radius: 26px; }
+/* Op de telefoon gaat het blad over de balk heen, zoals elk blad van onderen. */
+html.sc-voorbeeld .hand-laag.tel { z-index: 93; }
+/* De rondleiding (via het vraagteken) gaat over de balk heen. */
+html.sc-voorbeeld .rl-kaart { z-index: 92; }

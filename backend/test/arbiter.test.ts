@@ -953,7 +953,7 @@ describe('het stroombudget per fase (besluit 78)', () => {
 
 /*
  * Ook op zon (besluit 132): een primary die ook op zon mag, zoals elektrische
- * vloerverwarming. Comfort regelt hem gewoon; is er zon over, dan warmt hij
+ * vloerverwarming. Comfort regelt hem gewoon; is er zon over, dan verwarmt hij
  * door tot boven het doel. Zonder de vlag verandert er niets.
  */
 describe('een primary die ook op zon mag (besluit 132)', () => {
@@ -965,7 +965,7 @@ describe('een primary die ook op zon mag (besluit 132)', () => {
   const decideWith = (config: SiteConfig, state: SystemState) => decide({ config, state, strategies: defaultStrategies() });
   const voorBadkamer = (d: ReturnType<typeof decideWith>) => [...d.accepted, ...d.rejected.map((r) => r.intent)].filter((i) => i.actuatorId === 'badkamer');
 
-  it('warmt op zon door, ook als comfort tevreden is', () => {
+  it('verwarmt op zon door, ook als comfort tevreden is', () => {
     const d = decideWith(opZon, buildState({ gridPowerW: -4000, bathroomC: 18.4 }));
     const zon = d.accepted.find((i) => i.actuatorId === 'badkamer' && i.strategyId === 'pv-surplus');
     expect(zon?.action).toBe('heat');

@@ -78,7 +78,7 @@
     vrijstaand: {
       naam: 'Vrijstaand',
       kop: 'Het huis koelt op zon',
-      lead: 'Je panelen leveren meer dan het huis vraagt. De woonkamer koelt, de jacuzzi warmt op.',
+      lead: 'Je panelen leveren meer dan het huis vraagt. De woonkamer koelt, de jacuzzi verwarmt.',
       kaarten: [['Garage en kelder', 'Panelen liggen nu ook op de garage, en de kelder ligt opengewerkt in de grond, met de boiler en de wasruimte.']],
       model: {
         tijd: 'dag', zon: { stand: 0.56, aandeel: 0.85, panelen: 12 }, wolken: 0.15,
@@ -88,13 +88,13 @@
         ] },
         etages: [{ naam: 'Begane grond', kamers: beneden }, { naam: 'Eerste', kamers: boven }, zolder],
         buitenunit: { aan: true }, net: true, voordeur: {},
-        oprit: { auto: { kleur: '#7f97b0' } }, garage: { panelen: 6 }, tuin: { tuinhuis: true, jacuzzi: { temp: 35, stand: 'warmt', zon: true } },
+        oprit: { auto: { kleur: '#7f97b0' } }, garage: { panelen: 6 }, tuin: { tuinhuis: true, jacuzzi: { temp: 35, stand: 'verwarmt', zon: true } },
         stromen: [{ van: 'zon', naar: 'kamer:Woonkamer', sterkte: 0.7 }, { van: 'zon', naar: 'net', sterkte: 0.2 }],
         labels: [
           { bij: 'panelen', titel: '4,1 kW', groot: true, toon: 'zon', regels: ['je panelen, nu'], dx: 64, dy: -70 },
           { bij: 'net', titel: '0,3 kW terug', toon: 'mint', dx: -30, dy: 34 },
           { bij: 'panelenGarage', titel: '1,4 kW', toon: 'zon', regels: ['op de garage'], dx: -40, dy: -60 },
-          { bij: 'jacuzzi', titel: 'Jacuzzi 35°', toon: 'zon', regels: ['warmt op zon, 38° om 16:10'], dx: 30, dy: -90 },
+          { bij: 'jacuzzi', titel: 'Jacuzzi 35°', toon: 'zon', regels: ['verwarmt op zon, 38° om 16:10'], dx: 30, dy: -90 },
           { bij: 'boiler', titel: 'Boiler 58°', toon: 'zon', regels: ['laadt op zon'], dx: 60, dy: 40 },
         ],
       },
@@ -115,13 +115,13 @@
     },
     hoek: {
       naam: 'Hoekhuis',
-      kop: 'De jacuzzi warmt op',
+      kop: 'De jacuzzi verwarmt',
       lead: 'Om 20:00 is hij 38°.',
       kaarten: [['De tuin', 'Elk ding een vaste plek: tuinhuis, jacuzzi, pad met lampjes, terras en border.']],
       model: {
         woning: 'hoek', tijd: 'avond', zon: { stand: 0.86, aandeel: 0.2, panelen: 10 },
         etages: [{ naam: 'Begane grond', kamers: beneden.map((k) => ({ ...k, apparaten: k.naam === 'Woonkamer' ? [{ soort: 'lamp', aan: true }, { soort: 'bank' }] : k.apparaten, stand: 'goed', zin: 'goed' })) }, { naam: 'Eerste', kamers: boven }, zolder],
-        voordeur: {}, net: true, tuin: { tuinhuis: true, tuinhuisSoort: 'schuur', jacuzzi: { temp: 37, stand: 'warmt', bubbels: true }, lampen: [{ aan: true }] }, terras: { lampAan: true },
+        voordeur: {}, net: true, tuin: { tuinhuis: true, tuinhuisSoort: 'schuur', jacuzzi: { temp: 37, stand: 'verwarmt', bubbels: true }, lampen: [{ aan: true }] }, terras: { lampAan: true },
         labels: [],
       },
     },

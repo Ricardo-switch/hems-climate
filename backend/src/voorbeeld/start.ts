@@ -99,6 +99,8 @@ Object.assign(process.env, {
   HEMS_LIGHTS: '1',
   HEMS_SCREENS: '1',
   SHADOW_TICK_SECONDS: '30',
+  // De bewaking stopt een dienst die een tijd niets hoort; de dagschuif springt uren, dus niet hier.
+  SHADOW_WATCHDOG_MINUTES: '0',
 });
 process.chdir(map);
 
@@ -120,8 +122,8 @@ setInterval(() => ha.ververs(), 30_000).unref();
 await import('../main.js');
 
 /**
- * Het voorbeeld is al ingericht: de meters van Opbrengst uit het energiedashboard,
- * en klimaat met de hand aan. Via de eigen vragen van de dienst, met dezelfde
+ * Het voorbeeld is al ingericht: de meters van Opbrengst uit het energiedashboard
+ * met prijzen, de aansluiting met panelen, en klimaat met de hand aan. Via de eigen vragen van de dienst, met dezelfde
  * controles als bij een bewoner; wat niet lukt, blijft gewoon leeg.
  */
 async function inrichten(basis: string): Promise<void> {
@@ -132,11 +134,21 @@ async function inrichten(basis: string): Promise<void> {
   for (let i = 0; i < 40; i++) {
     const e = await vraag('/api/energie').catch(() => null);
     if (e?.['voorstel']) {
-      await vraag('/api/energie', e['voorstel']).catch(() => null);
+      const voorstel = e['voorstel'] as Record<string, unknown>;
+      // Met prijzen, zodat Opbrengst en Te doen in euro's rekenen.
+      const prijzen = { stroom: 0.27, stroomDal: 0.25, dalUren: 'nl', salderen: true, teruglevering: 0.08, gas: 1.35, vast: [], contractStart: null };
+      await vraag('/api/energie', { ...voorstel, prijzen: { ...((voorstel['prijzen'] as Record<string, unknown> | undefined) ?? {}), ...prijzen } }).catch(() => null);
       break;
     }
     await new Promise((r) => setTimeout(r, 250));
   }
+  // De aansluiting: twaalf panelen op het zuiden, drie fasen van 25 A, een warmtepomp.
+  await vraag('/api/aansluiting', {
+    panelen: { ligging: 'voorkant', aantal: 12 },
+    zekering: { fasen: 3, ampere: 25 },
+    tarief: 'vast',
+    verwarming: { soort: 'warmtepomp', aanvoerC: 35 },
+  }).catch(() => null);
   for (let i = 0; i < 40; i++) {
     const f = await vraag('/api/functies').catch(() => null);
     const basisKeuze = (f?.['instellingen'] ?? f?.['voorstel']) as Record<string, unknown> | undefined;

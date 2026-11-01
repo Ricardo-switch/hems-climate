@@ -70,8 +70,8 @@
   const maat = { breedte: 290, hoogte: 420, marge: 0.06 };
   huis.teken(document.getElementById('b1'), { tijd: 'nacht', zon: { aandeel: 0, panelen: 12 }, etages: kamers({}), net: true }, maat);
   huis.teken(document.getElementById('b2'), { tijd: 'dag', zon: { stand: 0.55, hoogte: 0.9, aandeel: 0.85, panelen: 12 }, etages: kamers({ koel: true, droger: true, zolder: 'koelt' }), buitenunit: { aan: true }, net: true, stromen: [{ van: 'zon', naar: 'kamer:Zolder', sterkte: 0.7 }] }, maat);
-  huis.teken(document.getElementById('b3'), { tijd: 'avond', zon: { aandeel: 0, panelen: 12 }, etages: kamers({ vloer: true, licht: true, bad: 'warmt' }), net: true }, maat);
-  huis.teken(document.getElementById('b4'), { tijd: 'ochtend', zon: { stand: 0.2, hoogte: 0.3, aandeel: 0.2, panelen: 12 }, etages: kamers({ cv: true, woon: 'warmt' }), net: true }, maat);
+  huis.teken(document.getElementById('b3'), { tijd: 'avond', zon: { aandeel: 0, panelen: 12 }, etages: kamers({ vloer: true, licht: true, bad: 'verwarmt' }), net: true }, maat);
+  huis.teken(document.getElementById('b4'), { tijd: 'ochtend', zon: { stand: 0.2, hoogte: 0.3, aandeel: 0.2, panelen: 12 }, etages: kamers({ cv: true, woon: 'verwarmt' }), net: true }, maat);
 </script>
 </body>
 </html>

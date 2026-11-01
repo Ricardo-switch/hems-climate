@@ -19,8 +19,6 @@ const WOORDEN: readonly [RegExp, string][] = [
   [/\bdeploy\b|\bDocker\b/i, 'hoe het bij één huis uitgerold wordt'],
   [/\bSynology\b/, 'een merk alsof iedereen het heeft'],
   [/Cornelissen|Matts|Daan/, 'een naam uit één huis'],
-  // "Warmen" klinkt niet gewoon (15 oktober 2026): verwarmen, en opwarmen mag.
-  [/'warmen'|\b(?:gaat|zou|kan|mag) warmen\b|[a-z] warmt (?!op\b)[a-z]/, 'warmen: zeg verwarmen'],
 ];
 
 /** Zonder commentaar: daar mag uitgelegd worden hoe het hier zit. */
@@ -43,6 +41,41 @@ describe('teksten voor elk huis (besluit 131)', () => {
         const m = woord.exec(tekst);
         if (m) fout.push(`${f}: "${tekst.slice(Math.max(0, m.index - 40), m.index + 40).replace(/\s+/g, ' ')}" — ${waarom}`);
       }
+    }
+    expect(fout).toEqual([]);
+  });
+});
+
+/*
+ * Altijd verwarm, verwarmt of verwarmen (15 oktober en 1 november 2026, twee
+ * keer gezegd): nooit het kale werkwoord, ook niet "warmt op" of "op warm". In
+ * alles wat iemand leest: de app, de dienst, de uitleg in Home Assistant, de
+ * pagina's op GitHub en de schetsen. "Te warm" en "warm water" mogen gewoon, en
+ * wat de assistent moet verstaan ("maak het warmer", "opwarmen") ook.
+ */
+const KAAL_WERKWOORD = /\b[Ww]arm(?:t|en|de|den)\b|\b[Oo]p warm\b(?![a-zë])|\bopwarmt\b/;
+const OVERAL = ['README.md', 'README.nl.md', 'STAND.md', 'DECISIONS.md', 'addon/DOCS.md', 'addon/CHANGELOG.md', 'frontend/kit', 'frontend/src', 'backend/src', 'backend/test', 'design/app2'];
+
+async function allesIn(pad: string): Promise<string[]> {
+  try {
+    const items = await readdir(new URL(`../../${pad}`, import.meta.url), { withFileTypes: true });
+    const lijst = await Promise.all(items.map(async (i) => (i.isDirectory() ? allesIn(`${pad}/${i.name}`) : /\.(md|js|ts|html|css)$/.test(i.name) ? [`${pad}/${i.name}`] : [])));
+    return lijst.flat();
+  } catch {
+    return [pad];
+  }
+}
+
+describe('verwarmen, nooit het kale werkwoord', () => {
+  it('zegt nergens warmt, warmen, warmde of op warm', async () => {
+    // Deze test zelf noemt de woorden in zijn uitleg.
+    const bestanden = (await Promise.all(OVERAL.map(allesIn))).flat().filter((f) => !f.endsWith('teksten.test.ts'));
+    expect(bestanden.length).toBeGreaterThan(100);
+    const fout: string[] = [];
+    for (const f of bestanden) {
+      const tekst = await readFile(new URL(`../../${f}`, import.meta.url), 'utf-8');
+      const m = KAAL_WERKWOORD.exec(tekst);
+      if (m) fout.push(`${f}: "${tekst.slice(Math.max(0, m.index - 40), m.index + 40).replace(/\s+/g, ' ')}"`);
     }
     expect(fout).toEqual([]);
   });

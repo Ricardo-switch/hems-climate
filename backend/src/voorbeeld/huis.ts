@@ -287,12 +287,12 @@ export function staten(klok: Klok, ingrepen: Ingrepen, nuMs: number): HaEntitySt
   // Klimaat. De warmtepomp volgt de regeling van het huis; de airco's koelen op zon.
   const klimaat = (id: string, stand: 'heat' | 'cool' | 'off', doel: number, huidig: number, actie: string, modes: string[]) =>
     zet(id, stand, { hvac_modes: modes, hvac_action: actie, temperature: doel, current_temperature: huidig, min_temp: 7, max_temp: 30, target_temp_step: 0.5 });
-  klimaat('climate.beneden', winter ? 'heat' : 'off', 20.5, m.temp.woonkamer, m.warmt ? 'heating' : winter ? 'idle' : 'off', ['off', 'heat']);
+  klimaat('climate.beneden', winter ? 'heat' : 'off', 20.5, m.temp.woonkamer, m.verwarmt ? 'heating' : winter ? 'idle' : 'off', ['off', 'heat']);
   klimaat('climate.air_conditioning_woonkamer', m.koelt ? 'cool' : 'off', 23, m.temp.woonkamer, m.koelt ? 'cooling' : 'off', ['off', 'heat', 'cool']);
   klimaat('climate.air_conditioning_zolder', 'off', 18, m.temp.zolder, 'off', ['off', 'heat', 'cool']);
   klimaat('climate.thermostaat_badkamer', 'heat', 21, m.temp.badkamer, winter && m.temp.badkamer < 21 ? 'heating' : 'idle', ['off', 'heat']);
   const stroomW = (id: string) => (ingrepen.get(id)?.state ?? '') === 'heat' || (ingrepen.get(id)?.state ?? '') === 'cool';
-  zet('sensor.warmtepomp_vermogen', m.warmt ? (m.zonW > 800 ? 1400 : 1100) : 0, { unit_of_measurement: 'W', device_class: 'power' });
+  zet('sensor.warmtepomp_vermogen', m.verwarmt ? (m.zonW > 800 ? 1400 : 1100) : 0, { unit_of_measurement: 'W', device_class: 'power' });
   zet('sensor.airco_woonkamer_vermogen', m.koelt || stroomW('climate.air_conditioning_woonkamer') ? 900 : 4, { unit_of_measurement: 'W', device_class: 'power' });
   zet('sensor.airco_zolder_vermogen', stroomW('climate.air_conditioning_zolder') ? 750 : 3, { unit_of_measurement: 'W', device_class: 'power' });
 

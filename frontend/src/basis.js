@@ -1617,6 +1617,8 @@
         return;
       }
     } else {
+      // Niet in het voorbeeldhuis: wat er nieuw is, hoort bij je eigen huis, en daar zie je het straks.
+      if (/\/voorbeeld\//.test(global.location.pathname)) return;
       let gezien = null;
       try {
         gezien = localStorage.getItem(VERSIE_GEZIEN);

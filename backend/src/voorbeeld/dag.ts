@@ -39,7 +39,7 @@ export interface Moment {
   /** De airco in de woonkamer koelt. */
   readonly koelt: boolean;
   /** De warmtepomp verwarmt. */
-  readonly warmt: boolean;
+  readonly verwarmt: boolean;
   readonly autoLaadt: boolean;
   readonly autoPct: number;
   readonly batterijPct: number;
@@ -65,10 +65,10 @@ export function moment({ minuut: m, seizoen: s }: Klok): Moment {
   const avond = !licht || m > onder - 120;
   const droger = !winter && m >= 690 && m < 860;
   const koelt = !winter && licht && m > 660 && m < 1020;
-  const warmt = winter && m > 360 && m < 1350;
+  const verwarmt = winter && m > 360 && m < 1350;
   const autoLaadt = !winter && licht && m > 660 && m < 990;
   const autoPct = winter ? 55 : Math.round(Math.min(100, 40 + Math.max(0, Math.min(m, 990) - 660) / 6));
-  const huisW = 260 + (droger ? 700 : 0) + (koelt ? 900 : 0) + (warmt ? (zonW > 800 ? 1400 : 1100) : 0) + (avond && m < 1380 ? 350 : 0);
+  const huisW = 260 + (droger ? 700 : 0) + (koelt ? 900 : 0) + (verwarmt ? (zonW > 800 ? 1400 : 1100) : 0) + (avond && m < 1380 ? 350 : 0);
   const over = zonW - huisW - (autoLaadt ? 1400 : 0);
   const batterijPct = Math.round(Math.max(18, Math.min(96, winter ? 40 + zonW / 100 : 30 + (Math.min(m, 1020) - 540) / 7)));
   const batterijW = over > 300 && batterijPct < 96 ? Math.min(2000, over - 100) : avond && batterijPct > 20 ? -Math.min(huisW, 1200) : 0;
@@ -77,7 +77,7 @@ export function moment({ minuut: m, seizoen: s }: Klok): Moment {
   const buitenC = winter ? rond(1 + 3 * dagGang) : rond(20 + 6 * dagGang);
   const binnen = (basis: number, zon: number) => rond(basis + zon * zonHoogte);
   const temp = winter
-    ? { woonkamer: warmt ? 20.8 : 19.4, keuken: 20.4, badkamer: 21.5, slaapkamer: 18.1, kinderkamer: 18.6, zolder: binnen(16.6, 1.4) }
+    ? { woonkamer: verwarmt ? 20.8 : 19.4, keuken: 20.4, badkamer: 21.5, slaapkamer: 18.1, kinderkamer: 18.6, zolder: binnen(16.6, 1.4) }
     : { woonkamer: koelt ? 23.6 : binnen(23.2, 1.4), keuken: binnen(22.8, 0.8), badkamer: 23.5, slaapkamer: binnen(22.0, 1.2), kinderkamer: binnen(22.3, 1.2), zolder: binnen(23.4, 3) };
   return {
     zonStand,
@@ -88,7 +88,7 @@ export function moment({ minuut: m, seizoen: s }: Klok): Moment {
     avond,
     droger,
     koelt,
-    warmt,
+    verwarmt,
     autoLaadt,
     autoPct,
     batterijPct,

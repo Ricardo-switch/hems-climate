@@ -131,7 +131,7 @@ export interface HaClientOptions {
    */
   readonly allowKnoppen?: () => { readonly entiteiten: readonly string[]; readonly opties: readonly string[] };
   /**
-   * Klimaat met de hand (besluit 235): de airco's die de app zelf op warm mag
+   * Klimaat met de hand (besluit 235): de airco's die de app zelf op verwarmen mag
    * zetten, en de stekkers met een warmtebron die hij aan en uit mag zetten.
    * Leeg of weg: dicht.
    */
@@ -290,7 +290,7 @@ export function isKnopCall(
 }
 
 /**
- * Klimaat met de hand (besluit 235): een airco uit de lijst op warm, op een
+ * Klimaat met de hand (besluit 235): een airco uit de lijst op verwarmen, op een
  * temperatuur, of uit; een stekker uit de lijst aan of uit. Precies die
  * velden, op één entiteit; koelen of een andere stand komt er niet door.
  */

@@ -82,6 +82,17 @@ describe('de zinnen van te doen', () => {
     expect(leesLijstZin('zet het op de lijst')).toBeNull();
   });
 
+  it('leest de lijst ook zoals Whisper het opschrijft, met het wekwoord of beleefd (ronde 5)', () => {
+    const melk = { lijst: 'boodschappen', item: 'Melk' };
+    expect(leesLijstZin('zet melk op de boodschappen lijst')).toEqual(melk);
+    expect(leesLijstZin('Zet melk op de boodschappenlijst, alsjeblieft.')).toEqual(melk);
+    expect(leesLijstZin('Hé huis, zet melk op de boodschappenlijst')).toEqual(melk);
+    expect(leesLijstZin('Voeg melk toe aan de boodschappenlijst')).toEqual(melk);
+    expect(leesLijstZin('Kun je melk op de boodschappenlijst zetten?')).toEqual(melk);
+    expect(leesLijstZin('add milk to the shopping list please')).toEqual({ lijst: 'boodschappen', item: 'Milk' });
+    expect(leesLijstZin('wat staat er op de boodschappen lijst')).toBeNull();
+  });
+
   it('herkent een vraag over te doen', () => {
     expect(leesTeDoenVraag('Wanneer komt het GFT?')).toBe('afval');
     expect(leesTeDoenVraag('Welke container moet er morgen buiten?')).toBe('afval');

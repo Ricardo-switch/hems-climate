@@ -94,9 +94,9 @@ describe('de boiler en de jacuzzi op Apparaten (besluit 186)', () => {
       NOW,
     );
     expect(j).toMatchObject({ kop: 'Wacht op zon', temperatuurC: 31, klaarOm: { tekst: 'za 20:00', doelC: 38 }, bron: null });
-    expect(j!.zin).toBe('Hij warmt op zodra er zon over is. Komt die niet, dan begint hij om 14:00, op tijd voor za 20:00.');
+    expect(j!.zin).toBe('Hij verwarmt zodra er zon over is. Komt die niet, dan begint hij om 14:00, op tijd voor za 20:00.');
     // Vrijdag 14:00: vanavond, morgen, en zondag.
     expect(j!.keuzes.map((k) => k.tekst)).toEqual(['Vanavond', 'Morgen', 'zo 20:00']);
-    expect(b).toMatchObject({ kop: 'Zou nu opwarmen op zon', zin: 'Er is zon over: hij zou nu opwarmen naar 65°.', bron: 'zon', keuzes: [] });
+    expect(b).toMatchObject({ kop: 'Zou nu opwarmen op zon', zin: 'Er is zon over: hij zou nu verwarmen naar 65°.', bron: 'zon', keuzes: [] });
   });
 });

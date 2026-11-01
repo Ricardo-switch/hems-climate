@@ -60,7 +60,7 @@ async function huis(extra: Record<string, Staat> = {}) {
 }
 
 describe('klimaat met de hand (besluit 235)', () => {
-  it('zet de zolder warm: de knop op het doel, en de airco zelf op warm', async () => {
+  it('verwarmt de zolder: de knop op het doel, en de airco zelf op verwarmen', async () => {
     const { h, gedaan, nu } = await huis();
     const uit = await h.zet('climate.air_conditioning_zolder', 'verwarmen', 20, nu.ms + 3_600_000);
     expect(uit).toEqual({ ok: true, doelC: 20, totMs: nu.ms + 3_600_000 });
@@ -153,7 +153,7 @@ describe('met de hand via de assistent (besluit 235)', () => {
     const vraag = handVraag(h, config, 'zet de zolder op 21');
     const uit = vraag('verwarmen', 'zolder', 21, 'nl');
     expect(uit).toMatchObject({ ok: true, opdracht: { pad: 'api/hand', body: { id: 'climate.air_conditioning_zolder', modus: 'verwarmen', doelC: 21 } } });
-    expect(uit && uit.antwoord).toBe('Ik zet de airco zolder op warm, 21°, tot 22:00.');
+    expect(uit && uit.antwoord).toBe('Ik zet de airco zolder op verwarmen, 21°, tot 22:00.');
   });
 
   it('zegt eerlijk waarom niet, en laat een kamer zonder apparaat aan de rest', async () => {

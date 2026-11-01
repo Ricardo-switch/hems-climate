@@ -43,7 +43,7 @@ describe('het voorbeeldhuis (besluit 237)', () => {
     expect(avond.zonW).toBe(0);
     expect(avond.batterijW).toBeLessThan(0);
     const winter = moment({ minuut: 450, seizoen: 'winter' });
-    expect(winter).toMatchObject({ warmt: true, licht: false, koelt: false });
+    expect(winter).toMatchObject({ verwarmt: true, licht: false, koelt: false });
   });
 });
 

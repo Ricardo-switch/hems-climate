@@ -62,12 +62,12 @@ const THERMISCH_VOORBEELD = (nu: number): ThermischRapport => ({
   stand: 'leert',
   zones: [
     { id: 'woonkamer', naam: 'Woonkamer', k: 0.0082, tauUur: 122, rustUren: 555, zonPerKw: 0.28, zonKwartieren: 910, zeker: { afkoelen: 4, zon: 3 }, apparaten: [
-      { id: 'nest', naam: 'Nest', stand: 'warmt', perUur: null, kwartieren: 181, zeker: 0 },
-      { id: 'airco-woonkamer', naam: 'Airco woonkamer', stand: 'warmt', perUur: 1.02, kwartieren: 16, zeker: 1 },
+      { id: 'nest', naam: 'Nest', stand: 'verwarmt', perUur: null, kwartieren: 181, zeker: 0 },
+      { id: 'airco-woonkamer', naam: 'Airco woonkamer', stand: 'verwarmt', perUur: 1.02, kwartieren: 16, zeker: 1 },
       { id: 'airco-woonkamer', naam: 'Airco woonkamer', stand: 'koelt', perUur: -0.39, kwartieren: 294, zeker: 3 },
     ] },
     { id: 'zolder', naam: 'Zolder', k: 0.0102, tauUur: 98, rustUren: 541, zonPerKw: 0.29, zonKwartieren: 879, zeker: { afkoelen: 4, zon: 3 }, apparaten: [
-      { id: 'airco-zolder', naam: 'Airco zolder', stand: 'warmt', perUur: null, kwartieren: 0, zeker: 0 },
+      { id: 'airco-zolder', naam: 'Airco zolder', stand: 'verwarmt', perUur: null, kwartieren: 0, zeker: 0 },
       { id: 'airco-zolder', naam: 'Airco zolder', stand: 'koelt', perUur: -0.59, kwartieren: 63, zeker: 2 },
     ] },
   ],
@@ -882,7 +882,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
    * Verwarmen en koelen per kamer (besluit 132): wat er hangt toevoegen, een
    * thermostaat aanvullen met vermogen, en op zon aanzetten.
    */
-  it('legt bij Indeling vast wat er in een kamer warmt, en zet het op zon', async () => {
+  it('legt bij Indeling vast wat er in een kamer verwarmt, en zet het op zon', async () => {
     const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
     await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
     await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
@@ -2967,7 +2967,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       // Zonder getallen op het huis.
       expect(await laag.locator('[data-nk-huis] .sc-label').count()).toBe(0);
       if (aanStand === 'dag') expect(await laag.locator('[data-nk-kop]').textContent()).toBe(await p.locator('#wand [data-kop]').textContent());
-      else expect(await laag.locator('[data-nk-rustig]').textContent()).toMatch(/^(Alles rustig|.+ (koelt|warmt))[.,]/);
+      else expect(await laag.locator('[data-nk-rustig]').textContent()).toMatch(/^(Alles rustig|.+ (koelt|verwarmt))[.,]/);
       await shot(aanStand);
       // Beweging houdt het display aan; het opent de app niet.
       server.wek('beweging');

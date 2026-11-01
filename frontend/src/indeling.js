@@ -518,7 +518,7 @@ function kamerBlad(d, k) {
 /* ------------------------------------------------- verwarmen en koelen (besluit 132) */
 
 /*
- * Per kamer wat er warmt en koelt (schets Wand-Indeling-Warmte). Wat Home
+ * Per kamer wat er verwarmt en koelt (schets Wand-Indeling-Warmte). Wat Home
  * Assistant al weet, staat er als "gevonden": een airco, een radiatorknop, een
  * thermostaat. Wat de bewoner toevoegt, gaat met de indeling mee. Een
  * elektrische bron die slim aangaat, krijgt een vermogen en mag op zon; wat

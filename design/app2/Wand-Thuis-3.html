@@ -233,7 +233,7 @@
     etages: [
       { naam: 'Begane grond', kamers: [
         { naam: 'Keuken', gewicht: 0.9, temp: '22,6°', stand: 'goed', apparaten: licht(avond || nacht) },
-        { naam: 'Woonkamer', gewicht: 1.3, temp: id === 'winter' ? '20,5°' : '24,1°', zin: zon ? 'koelt op zon' : id === 'winter' ? 'warmt' : '', stand: zon ? 'koelt' : id === 'winter' ? 'warmt' : 'goed', apparaten: [{ soort: 'airco', aan: zon, stand: id === 'winter' ? 'warmt' : 'koelt' }, { soort: 'bank' }, ...licht(avond)] },
+        { naam: 'Woonkamer', gewicht: 1.3, temp: id === 'winter' ? '20,5°' : '24,1°', zin: zon ? 'koelt op zon' : id === 'winter' ? 'verwarmt' : '', stand: zon ? 'koelt' : id === 'winter' ? 'verwarmt' : 'goed', apparaten: [{ soort: 'airco', aan: zon, stand: id === 'winter' ? 'verwarmt' : 'koelt' }, { soort: 'bank' }, ...licht(avond)] },
       ] },
       { naam: 'Eerste', kamers: [
         { naam: 'Badkamer', gewicht: 0.8, temp: '23,5°', stand: 'goed', apparaten: [] },
@@ -244,7 +244,7 @@
     voordeur: {}, net: true, buitenunit: { aan: zon }, batterij: { procent: nacht ? 54 : 78, stand: zon ? 'laadt' : nacht ? 'levert' : 'rust' },
     oprit: {}, auto: { procent: 62, stand: zon ? 'laadt' : 'rust', bron: 'zon', kleur: '#7f97b0' },
     garage: { panelen: 6, lampAan: avond },
-    tuin: { tuinhuis: true, tuinhuisAan: avond || nacht, tuinhuisPanelen: 3, jacuzzi: { temp: avond ? 37 : 35, stand: zon || avond ? 'warmt' : 'rust', zon, bubbels: avond }, lampen: [{ aan: avond || nacht }], terrasAan: avond },
+    tuin: { tuinhuis: true, tuinhuisAan: avond || nacht, tuinhuisPanelen: 3, jacuzzi: { temp: avond ? 37 : 35, stand: zon || avond ? 'verwarmt' : 'rust', zon, bubbels: avond }, lampen: [{ aan: avond || nacht }], terrasAan: avond },
     stromen: zon
       ? [{ van: 'zon', naar: 'kamer:Woonkamer', sterkte: 0.7 }, { van: 'zon', naar: 'auto', sterkte: 0.55 }, { van: 'zon', naar: 'batterij', sterkte: 0.4 }, { van: 'zon', naar: 'net', sterkte: 0.15 }]
       : avond ? [{ van: 'net', naar: 'huis', sterkte: 0.55 }] : nacht ? [{ van: 'batterij', naar: 'huis', sterkte: 0.4 }] : [{ van: 'net', naar: 'huis', sterkte: 0.7 }],

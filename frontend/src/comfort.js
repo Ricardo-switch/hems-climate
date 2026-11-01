@@ -1,7 +1,7 @@
 /*
  * Comfort (besluit 130, schets Wand-Instellingen-Comfort): per kamer hoe warm
  * of koel, per dagdeel, en de uren van de dagdelen. Per dagdeel een balk:
- * onder de oranje greep warmt het huis op, boven de blauwe koelt het, daartussen
+ * onder de oranje greep verwarmt het huis, boven de blauwe koelt het, daartussen
  * is het goed. Slepen of met de pijltjes; wat je loslaat, wordt meteen bewaard
  * en de regeling rekent er direct mee.
  */

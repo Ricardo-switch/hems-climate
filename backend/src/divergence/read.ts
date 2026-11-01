@@ -36,6 +36,11 @@ export interface Moment {
   }[];
   /** Wat de apparaten op dat moment werkelijk deden, op actuator-id. */
   readonly observed: Readonly<Record<string, string>>;
+  /**
+   * Wat een apparaat zei dat het deed (`hvac_action`: heating, cooling, idle),
+   * voortgedragen. Leeg in logboeken van voor 1 november 2026.
+   */
+  readonly observedAction?: Readonly<Record<string, string>>;
   /** De uitleg van het oude systeem, voortgedragen tot hij wijzigt. */
   readonly legacy: string | null;
   /** Wat de arbiter zou sturen. Alleen op momenten dat het besluit wijzigde. */
@@ -134,6 +139,7 @@ interface RawRecord {
   }[];
   zonesT?: [string, number | null, string, (number | null)?][];
   obs?: Record<string, string>;
+  doet?: Record<string, string>;
   legacy?: string;
   commands?: { kind: string; actuatorId?: string; action?: string }[];
   rejected?: { intent: { actuatorId: string; action: string }; blockedBy: string }[];
@@ -208,11 +214,13 @@ export function linesOf(path: string): Interface {
 export interface ReaderCarry {
   lastLegacy: string | null;
   lastObserved: Record<string, string>;
+  /** Wat de apparaten zeiden dat ze deden; weg in een tussenstand van daarvoor. */
+  lastDoet?: Record<string, string>;
   arbiterAction: Record<string, string>;
 }
 
 export function newReaderCarry(): ReaderCarry {
-  return { lastLegacy: null, lastObserved: {}, arbiterAction: {} };
+  return { lastLegacy: null, lastObserved: {}, lastDoet: {}, arbiterAction: {} };
 }
 
 /**
@@ -242,6 +250,7 @@ export async function* readMoments(
 
       if (raw.legacy != null) carry.lastLegacy = raw.legacy;
       if (raw.obs) carry.lastObserved = raw.obs;
+      if (raw.doet) carry.lastDoet = raw.doet;
 
       // Alleen een volledig record herziet de wens van de arbiter.
       if (raw.changed === true) {
@@ -283,6 +292,7 @@ export async function* readMoments(
           : EMPTY_BUDGET,
         zones,
         observed: carry.lastObserved,
+        observedAction: carry.lastDoet ?? {},
         legacy: carry.lastLegacy,
         commands: raw.commands ?? [],
         rejected: (raw.rejected ?? []).map((r) => ({

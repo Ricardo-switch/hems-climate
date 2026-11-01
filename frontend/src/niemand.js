@@ -166,7 +166,7 @@
   function nachtZin() {
     const st = bron?.state();
     const lijst = kamers();
-    const bezigNu = lijst.map((r) => ({ r, stand: global.huismodel?.standVan?.(r.zoneId, st) })).filter((x) => x.stand === 'koelt' || x.stand === 'warmt');
+    const bezigNu = lijst.map((r) => ({ r, stand: global.huismodel?.standVan?.(r.zoneId, st) })).filter((x) => x.stand === 'koelt' || x.stand === 'verwarmt');
     const kop = bezigNu.length ? `${bezigNu.map((x, i) => t(`niemand.${x.stand}`, { kamer: i ? x.r.naam.toLowerCase() : x.r.naam })).join(', ')}.` : t('niemand.rustig');
     const temps = lijst.slice(0, 2).map((r, i) => `${esc(i ? r.naam.toLowerCase() : r.naam)} <b>${nl(r.temperatuurC)}°</b>`).join(', ');
     return `${esc(kop)}${temps ? ` ${temps}` : ''}`;

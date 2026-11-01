@@ -312,3 +312,4 @@ app.start('tedoen');
 addEventListener('resize', () => teken());
 void laad();
 setInterval(() => void laad(), 60_000);
+addEventListener('voorbeeldklok', () => void laad());

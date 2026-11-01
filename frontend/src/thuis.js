@@ -540,7 +540,7 @@ addEventListener('gevoelzone', (e) => {
 /** De kamers op de telefoon: één kaart, een regel per kamer (besluit 159). */
 function tekenKamersTel() {
   const box = document.querySelector('[data-kamers]');
-  const kleur = { koelt: 'var(--ijs)', warmt: 'var(--gloed)', wacht: 'var(--zon)', goed: 'var(--mint)' };
+  const kleur = { koelt: 'var(--ijs)', verwarmt: 'var(--gloed)', wacht: 'var(--zon)', goed: 'var(--mint)' };
   const kamers = huisData.etages.flatMap((e) => e.ruimtes).filter((r) => r.zoneId && r.temperatuurC != null);
   box.closest('[data-kaart]').hidden = !kamers.length;
   box.innerHTML = kamers
@@ -815,13 +815,13 @@ document.addEventListener('click', (e) => {
 
 /* ------------------------------------------------------------- het weer */
 
-/** De boiler of de jacuzzi (besluit 189): hoe warm, en of hij op zon opwarmt; een tik opent Apparaten. */
+/** De boiler of de jacuzzi (besluit 189): hoe warm, en of hij op zon verwarmt; een tik opent Apparaten. */
 function tekenBoiler() {
   const alles = (huisData?.etages ?? []).flatMap((e) => e.ruimtes ?? []).flatMap((r) => r.apparaten ?? []);
   const x = alles.find((a) => a.warmte?.soort === 'boiler') ?? alles.find((a) => a.warmte?.soort === 'jacuzzi');
   const w = x?.warmte;
   const vol = !w ? 0 : w.tempC == null ? 0.5 : Math.max(0.05, Math.min(1, (w.tempC - (w.minC - 10)) / Math.max(1, w.zonC - (w.minC - 10))));
-  const zin = !w ? '' : w.tempC == null ? t('thuis.boiler.onbekend') : x.aan ? `${t(w.opZon ? 'thuis.boiler.opZon' : 'thuis.boiler.warmt')}${w.doelC != null ? `, ${t('thuis.boiler.naar', { doel: w.doelC })}` : ''}` : t('thuis.boiler.rust');
+  const zin = !w ? '' : w.tempC == null ? t('thuis.boiler.onbekend') : x.aan ? `${t(w.opZon ? 'thuis.boiler.opZon' : 'thuis.boiler.verwarmt')}${w.doelC != null ? `, ${t('thuis.boiler.naar', { doel: w.doelC })}` : ''}` : t('thuis.boiler.rust');
   const waarde = w?.tempC == null ? '–' : `${getal(w.tempC, 0)}°`;
   const toon = x?.aan ? (w.opZon ? 'var(--zon-t)' : 'var(--gloed-t)') : '';
   zetKaart('[data-boiler]', 'boiler', x
@@ -1148,6 +1148,8 @@ for (const podium of [document.getElementById('podium-wand'), document.getElemen
 }
 void laadAlles();
 setInterval(() => void laadAlles(), 60_000);
+// In het voorbeeldhuis verschuift de klok (besluit 237): dan meteen vers.
+addEventListener('voorbeeldklok', () => void laadAlles());
 // Beweging en lampen in het huis (15 oktober 2026) en wie er thuis is: live, zodra
 // de dienst zegt dat er iets veranderde (21 oktober 2026).
 app.bijVerandering('huis', async () => {

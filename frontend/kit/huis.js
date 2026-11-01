@@ -517,7 +517,7 @@
         <stop offset="1" stop-color="${KLEUR.zon}" stop-opacity="0"/>
       </linearGradient>
       <linearGradient id="${id}-vloer" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#363e4b"/><stop offset="1" stop-color="#262d38"/></linearGradient>
-      ${[['lamp', '#FFB765', 0.5], ['koelt', KLEUR.ijs, 0.62], ['wacht', KLEUR.zon, 0.42], ['goed', KLEUR.mint, 0.34], ['warmt', KLEUR.gloed, 0.6], ['rust', '#9fb3c8', 0.1]]
+      ${[['lamp', '#FFB765', 0.5], ['koelt', KLEUR.ijs, 0.62], ['wacht', KLEUR.zon, 0.42], ['goed', KLEUR.mint, 0.34], ['verwarmt', KLEUR.gloed, 0.6], ['rust', '#9fb3c8', 0.1]]
         .map(([st, c, o]) => `<linearGradient id="${id}-w-${st}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c}" stop-opacity="${(o * 0.5).toFixed(2)}"/><stop offset="1" stop-color="${c}" stop-opacity="${o}"/></linearGradient>`)
         .join('')}
       <linearGradient id="${id}-hoek" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#000" stop-opacity="0.38"/><stop offset="1" stop-color="#000" stop-opacity="0"/></linearGradient>
@@ -1295,7 +1295,7 @@
       if (!kamer) return '#202b3a';
       const st = kamer.stand;
       if (st === 'koelt') return '#21496a';
-      if (st === 'warmt') return '#5a3324';
+      if (st === 'verwarmt') return '#5a3324';
       if (st === 'wacht') return '#4a3d22';
       if (st === 'goed') return '#22443d';
       return nacht ? '#1a2331' : '#2e3b4e';
@@ -1305,7 +1305,7 @@
       const c = P(xm, 0.1, (z0 + z1) / 2);
       const r = k * (x1 - x0) * 0.55;
       if (kamer.stand === 'koelt') huis.push(`<ellipse cx="${c[0]}" cy="${c[1]}" rx="${r}" ry="${r * 0.6}" fill="url(#${id}-koel)"/>`);
-      if (kamer.stand === 'warmt') huis.push(`<ellipse cx="${c[0]}" cy="${c[1]}" rx="${r}" ry="${r * 0.6}" fill="url(#${id}-warm)"/>`);
+      if (kamer.stand === 'verwarmt') huis.push(`<ellipse cx="${c[0]}" cy="${c[1]}" rx="${r}" ry="${r * 0.6}" fill="url(#${id}-warm)"/>`);
       // Beweging (15 oktober 2026): twee zachte ringen over de vloer, die uitdijen en
       // vervagen. Midden op de vloer en niet groter dan de kamer (besluit 166): eerst
       // stonden ze halverwege de achtermuur, en onder het dak zo boven de nok uit.
@@ -1393,7 +1393,7 @@
       // Weinig hoogte, zoals onder de schuine kant van het dak: alles op één regel.
       if (hoogte != null && hoogte * k < 96) {
         const t1 = P(xl, D, zl);
-        const kl = { koelt: KLEUR.ijs, warmt: KLEUR.gloed, wacht: KLEUR.zon, goed: KLEUR.mint }[kamer.stand] ?? KLEUR.zacht;
+        const kl = { koelt: KLEUR.ijs, verwarmt: KLEUR.gloed, wacht: KLEUR.zon, goed: KLEUR.mint }[kamer.stand] ?? KLEUR.zacht;
         // Het icoon links van de regel, als er naast de tekst ruimte voor is.
         const breedTekst = kamer.naam.length * 12.5 * 0.55 + (kamer.temp ? 6 + kamer.temp.length * 16 * 0.55 : 0);
         const metIcoon = !!icoon && (breedte == null || breedte * AX * k > breedTekst + 40);
@@ -1406,7 +1406,7 @@
       }
       const t = P(xl, D, zl);
       const anker = midden ? 'middle' : 'start';
-      const kleur = { koelt: KLEUR.ijs, warmt: KLEUR.gloed, wacht: KLEUR.zon, goed: KLEUR.mint }[kamer.stand] ?? KLEUR.zacht;
+      const kleur = { koelt: KLEUR.ijs, verwarmt: KLEUR.gloed, wacht: KLEUR.zon, goed: KLEUR.mint }[kamer.stand] ?? KLEUR.zacht;
       const ruimte = (breedte ?? 2) * AX * k - 18;
       const past = (tekst, px) => tekst.length * px * 0.6 <= ruimte;
       const naamPx = past(kamer.naam, 12.5) ? 12.5 : past(kamer.naam, 11.5) ? 11.5 : 10.5;
@@ -1535,7 +1535,7 @@
       };
       const hoog = (x) => (plafond ? plafond(x) : z1);
       if (app.soort === 'airco') {
-        const kleur = app.stand === 'warmt' ? KLEUR.gloed : KLEUR.ijs;
+        const kleur = app.stand === 'verwarmt' ? KLEUR.gloed : KLEUR.ijs;
         const KAST = ['#eef3f7', '#dfe7ee', '#b4c0cb'];
         const dakPlek = plafond ? aircoDak ?? aircoOnderDak(x0, x1, z0, plafond) : null;
         if (dakPlek?.wand === 'links') {
@@ -2150,7 +2150,7 @@
       const zijde = [...voor, ...[...voor].reverse().map(([x, y]) => [x, y, h])];
       buiten.push(poly(zijde, `fill="${j.kleur ?? '#4a5a6e'}"`));
       buiten.push(poly(rand(h), `fill="#5d6e83" stroke="${j.zon ? KLEUR.zon : '#7a8a9d'}" stroke-opacity="${j.zon ? 0.9 : 0.6}" stroke-width="${j.zon ? 2 : 1}"`));
-      const warm = j.stand === 'warmt' || (j.temp ?? 0) >= 34;
+      const warm = j.stand === 'verwarmt' || (j.temp ?? 0) >= 34;
       buiten.push(poly(rand(h - 0.02, 0.8), `fill="${warm ? '#5fb6e0' : '#3d6f96'}" opacity="0.95"`));
       // Bubbels als hij aan staat.
       if (j.bubbels) for (const [dx, dy] of [[-0.12, 0.05], [0.1, -0.08], [0.02, 0.14], [0.16, 0.1]]) {

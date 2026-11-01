@@ -1579,7 +1579,7 @@ export function parseSiteConfig(
       'solarProduction',
       'ontbreekt; zonder de eigen opbrengst is er geen maat voor instraling, ' +
         'en kan het thermische model van fase 7 niet uitrekenen hoeveel de zon ' +
-        'een kamer opwarmt',
+        'een kamer verwarmt',
     );
   }
 

@@ -186,12 +186,13 @@
     global.dispatchEvent(new CustomEvent('handblad', { detail: { id: open.wg ? open.wg.id : open.id } }));
   }
 
-  /** Begint een klimaatapparaat: wat er met de hand staat, of het doel van zijn knop nu. */
+  /** Begint een klimaatapparaat: wat er met de hand staat, wat het nu doet (een airco die koelt), of het doel van zijn knop. */
   function begin(id, plek = null) {
     const a = vind(id);
     if (!a) return null;
     const actief = a.actief ?? null;
-    const m = a.modi?.find((x) => x.modus === actief?.modus) ?? a.modi?.find((x) => !x.niet) ?? a.modi?.[0];
+    const doetNu = a.hvac === 'cool' ? 'koelen' : a.hvac === 'heat' ? 'verwarmen' : null;
+    const m = a.modi?.find((x) => x.modus === actief?.modus) ?? a.modi?.find((x) => x.modus === doetNu && !x.niet) ?? a.modi?.find((x) => !x.niet) ?? a.modi?.[0];
     return { id, modus: m?.modus ?? null, doel: actief?.doelC ?? m?.doelC ?? 20, tot: actief?.totDoel ? 'doel' : 'dagdeel', plek };
   }
 

@@ -6,14 +6,14 @@
  * deden. Daaruit, per zone:
  *
  * - **Afkoelen:** stukken van minstens drie uur zonder zon en zonder dat er iets
- *   warmt of koelt. Newton: de helling is −k maal het verschil met buiten. Over
+ *   verwarmt of koelt. Newton: de helling is −k maal het verschil met buiten. Over
  *   het hele stuk gemeten, want per kwartier is de meter te grof (0,05°).
  * - **Zon:** overdag, niets aan: wat er na het afkoelen overblijft, per kW van
  *   de panelen.
  * - **Elk apparaat:** kwartieren waarin alleen dat apparaat iets deed: wat er na
- *   het afkoelen en de zon overblijft, per stand (warmen of koelen).
+ *   het afkoelen en de zon overblijft, per stand (verwarmen of koelen).
  *
- * Een apparaat doet iets als het op warmen staat met een doel boven de kamer,
+ * Een apparaat doet iets als het op verwarmen staat met een doel boven de kamer,
  * of op koelen met een doel eronder. Of de ketel werkelijk brandt, ziet het
  * logboek niet; een warmer die zo geen merkbare warmte geeft, heet nog
  * onduidelijk in plaats van een getal dat niet klopt.
@@ -51,7 +51,7 @@ const zeker = (n: number, treden: readonly [number, number, number, number]): Ze
 export interface ThermischApparaat {
   readonly id: string;
   readonly naam: string;
-  readonly stand: 'warmt' | 'koelt';
+  readonly stand: 'verwarmt' | 'koelt';
   /** Graden per uur bovenop afkoelen en zon; null zolang het niet merkbaar of te weinig gezien is. */
   readonly perUur: number | null;
   readonly kwartieren: number;
@@ -101,13 +101,13 @@ interface Kwartier {
   readonly obs: Map<string, Set<string>>;
 }
 
-/** Doet het apparaat iets bij deze kamertemperatuur: `warmt`, `koelt`, `iets` (onbekend wat) of null. */
-function doet(waarde: string, T: number): 'warmt' | 'koelt' | 'iets' | null {
+/** Doet het apparaat iets bij deze kamertemperatuur: `verwarmt`, `koelt`, `iets` (onbekend wat) of null. */
+function doet(waarde: string, T: number): 'verwarmt' | 'koelt' | 'iets' | null {
   const [stand, doelRuw] = waarde.split('@');
   if (stand === 'off' || stand === 'onbekend' || stand === 'unavailable' || stand === 'unknown') return null;
   const doel = doelRuw == null ? NaN : Number(doelRuw);
-  // Warmen en koelen met één doel (een vloerthermostaat op auto): alleen warmen ligt voor de hand.
-  if (stand === 'heat' || stand === 'heat_cool' || stand === 'auto') return Number.isFinite(doel) && doel <= T + 0.3 ? null : 'warmt';
+  // Verwarmen en koelen met één doel (een vloerthermostaat op auto): alleen verwarmen ligt voor de hand.
+  if (stand === 'heat' || stand === 'heat_cool' || stand === 'auto') return Number.isFinite(doel) && doel <= T + 0.3 ? null : 'verwarmt';
   if (stand === 'cool') return Number.isFinite(doel) && doel >= T - 0.3 ? null : 'koelt';
   return stand === 'fan_only' || stand === 'dry' ? null : 'iets';
 }
@@ -202,12 +202,12 @@ export function leerThermisch(
     // Elk apparaat van de zone, per stand: alleen dat apparaat deed iets.
     const apparaten: ThermischApparaat[] = [];
     for (const a of zone.apparaten) {
-      for (const stand of ['warmt', 'koelt'] as const) {
+      for (const stand of ['verwarmt', 'koelt'] as const) {
         // Wat het apparaat kan, ook als het nog niet gezien is: dan zegt de app dat.
-        if (!(stand === 'warmt' ? a.warmen : a.koelen)) continue;
+        if (!(stand === 'verwarmt' ? a.verwarmen : a.koelen)) continue;
         const rest = k == null ? [] : stappen.filter((s) => s.doen.size === 1 && s.doen.get(a.id) === stand).map((s) => s.helling + k * s.dT - (zonPerKw ?? 0) * s.zonKw);
         const v = rest.length >= APPARAAT_MIN ? gem(rest) : null;
-        const merkbaar = v != null && (stand === 'warmt' ? v >= MERKBAAR : v <= -MERKBAAR / 2);
+        const merkbaar = v != null && (stand === 'verwarmt' ? v >= MERKBAAR : v <= -MERKBAAR / 2);
         apparaten.push({ id: a.id, naam: a.naam, stand, perUur: merkbaar ? r2(v) : null, kwartieren: rest.length, zeker: merkbaar ? zeker(rest.length, [8, 40, 160, 480]) : 0 });
       }
     }
@@ -226,7 +226,7 @@ export function leerThermisch(
   }
 
   const gemeten = uit.filter((z) => z.k != null);
-  const klaar = gemeten.length > 0 && gemeten.every((z) => z.zeker.afkoelen >= 3 && z.apparaten.some((a) => a.stand === 'warmt' && a.zeker >= 2));
+  const klaar = gemeten.length > 0 && gemeten.every((z) => z.zeker.afkoelen >= 3 && z.apparaten.some((a) => a.stand === 'verwarmt' && a.zeker >= 2));
   return {
     versie: 1,
     dag,
@@ -243,7 +243,7 @@ const r2 = (n: number) => Math.round(n * 100) / 100;
 export interface ThermischZoneIn {
   readonly id: string;
   readonly naam: string;
-  readonly apparaten: readonly { readonly id: string; readonly naam: string; readonly warmen: boolean; readonly koelen: boolean }[];
+  readonly apparaten: readonly { readonly id: string; readonly naam: string; readonly verwarmen: boolean; readonly koelen: boolean }[];
 }
 
 /** De zones van het huis met hun apparaten, zoals de configuratie ze noemt. */
@@ -253,7 +253,7 @@ export function thermischZones(config: SiteConfig): ThermischZoneIn[] {
     naam: z.name,
     apparaten: z.actuatorIds.flatMap((id) => {
       const a = config.actuators.find((x) => x.id === id);
-      return a ? [{ id: a.id, naam: a.name, warmen: a.capabilities.canHeat, koelen: a.capabilities.canCool }] : [];
+      return a ? [{ id: a.id, naam: a.name, verwarmen: a.capabilities.canHeat, koelen: a.capabilities.canCool }] : [];
     }),
   }));
 }

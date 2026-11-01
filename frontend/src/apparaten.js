@@ -476,6 +476,8 @@ document.addEventListener('keydown', (e) => {
 });
 
 setInterval(() => void laadAlles(), 60_000);
+// In het voorbeeldhuis verschuift de klok (besluit 237): dan meteen vers.
+addEventListener('voorbeeldklok', () => void laadAlles());
 app.live((nieuw) => {
   state = nieuw;
   teken();

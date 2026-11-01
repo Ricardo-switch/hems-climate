@@ -396,6 +396,7 @@
     global.app.start('tedoen');
     void laad();
     setInterval(() => void laad(), 60_000);
+    addEventListener('voorbeeldklok', () => void laad());
     // Met de hand en witgoed op zon (besluit 238).
     if (global.hand) {
       const nu = () => void global.hand.laadNu().then(tekenPagina);

@@ -19,6 +19,7 @@ import { dagRegels, deelVan, denk, herkenDelen, isTerug, samen, terugVan, type D
 import type { Fact } from '../assistant.js';
 import type { IncomingMessage } from 'node:http';
 import { alsAntwoord, teDoenZin } from './tedoen.js';
+import { leesLijstZin } from '../tedoen.js';
 import { planZin } from './gepland.js';
 import type { URL } from 'node:url';
 import { momentWoorden } from '../lichtrecept.js';
@@ -214,6 +215,13 @@ export async function assistentRoutes(d: Diensten, v: Verzoek): Promise<boolean>
       if (tedoen && !viaSleutel) {
         const a = await teDoenZin(d, tedoen, tekst, await d.bezoeker(req), config.timezone, lang).catch(() => null);
         if (a) return stuur({ body: alsAntwoord(a, lang), terug: null });
+      }
+      // Via Assist van Home Assistant zet SunArc niets op een lijst (de integratie leest alleen): zeg dat eerlijk, in plaats van "dat begrijp ik niet" (ronde 5).
+      if (tedoen && viaSleutel && leesLijstZin(tekst)) {
+        const antwoord = lang === 'nl'
+          ? 'Iets op een lijst zetten doe ik via de app, op de wand of je telefoon. Via deze spraakassistent kan het met "Opdrachten bij voorkeur lokaal afhandelen" aan in Home Assistant.'
+          : 'I put things on a list through the app, on the wall or your phone. Through this voice assistant it works with "Prefer handling commands locally" switched on in Home Assistant.';
+        return stuur({ body: { vraag: 'tedoen', taal: lang, kamer: null, antwoord, feiten: [], gesproken: uitspraak(antwoord, lang) }, terug: null });
       }
       // Later uitvoeren (besluit 218): "zet over vijf minuten de lamp aan", "na zonsondergang de screens dicht".
       if (tedoen && lijst && !viaSleutel) {

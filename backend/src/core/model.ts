@@ -354,7 +354,7 @@ export interface Deferrable {
  *
  * Anders dan de droger draait het geen programma dat één keer start en dan
  * stopt: het mag aan zolang er zon is en uit als die wegvalt. Het houdt een
- * ondergrens vast, warmt op zon op naar een hoger doel, en haalt een doel op
+ * ondergrens vast, verwarmt op zon naar een hoger doel, en haalt een doel op
  * tijd ("klaar om"), zonder zon in de goedkoopste uren.
  */
 export const HEAT_STORE_KINDS = ['boiler', 'jacuzzi'] as const;
@@ -382,9 +382,9 @@ export interface HeatStore {
   readonly estimatedW: number;
   /** De ondergrens: daaronder stookt hij altijd, ook zonder zon. */
   readonly minC: number;
-  /** Op zon warmt hij op tot hier. */
+  /** Op zon verwarmt hij op tot hier. */
   readonly sunC: number;
-  /** Hoeveel graden per uur hij opwarmt, tot het huis het zelf weet. */
+  /** Hoeveel graden per uur hij verwarmt, tot het huis het zelf weet. */
   readonly heatRateCPerHour: number;
   /** Eens per week tot deze temperatuur, tegen legionella. Weg: niet. */
   readonly legionellaC?: number;
@@ -432,7 +432,7 @@ export interface ProfileHold {
   readonly home: readonly string[];
 }
 
-/** Zo lang moet iemand thuis of weg zijn voordat het comfort wisselt: een boodschap laat het met rust. */
+/** Zo lang moet iemand weg zijn voordat het comfort wisselt: een boodschap laat het met rust. Thuiskomen telt meteen. */
 export const PROFILE_SETTLE_MS = 10 * 60_000;
 
 export interface DayScheduleConfig {
@@ -561,7 +561,7 @@ export interface SiteConfig {
    * (besluit 30). Hij gaat mee het logboek in omdat het thermische model van
    * fase 7 hem nodig heeft.
    *
-   * Waarvoor precies: de term "hoeveel warmt de zon deze kamer op". Zon boven
+   * Waarvoor precies: de term "hoeveel verwarmt de zon deze kamer op". Zon boven
    * of onder de horizon is daarvoor te grof — een heldere februarimiddag en
    * een grijze zijn allebei "boven". De eigen opbrengst is de beste
    * instralingsmeter die een woning met panelen al in huis heeft.

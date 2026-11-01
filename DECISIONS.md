@@ -239,6 +239,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [233. Wat Whisper vast verkeerd hoort, rechtzetten](#233-wat-whisper-vast-verkeerd-hoort-rechtzetten)
 - [234. Vast en gepland: herhalen, de zon met minuten, en aanpassen](#234-vast-en-gepland-herhalen-de-zon-met-minuten-en-aanpassen)
 - [238. Eén blad per apparaat: klimaat tot het doel, en SunArc start de droger](#238-eén-blad-per-apparaat-klimaat-tot-het-doel-en-sunarc-start-de-droger)
+- [239. Wat de app zegt, klopt met wat er in huis gebeurt](#239-wat-de-app-zegt-klopt-met-wat-er-in-huis-gebeurt)
 
 **Veiligheid**
 
@@ -1862,7 +1863,7 @@ koud is.
 *Onderwerp: meten, data en analyse · Status: geldig*
 
 Het thermische model van fase 7 heeft drie termen: warmteverlies naar buiten,
-wat een apparaat levert, en hoeveel de zon een kamer opwarmt. Voor die derde
+wat een apparaat levert, en hoeveel de zon een kamer verwarmt. Voor die derde
 stond er alleen `sun.sun` in het logboek — boven of onder de horizon. Dat is te
 grof: een heldere februarimiddag en een grijze zijn allebei "boven".
 
@@ -3731,7 +3732,7 @@ het seizoen. Daarom:
   zonnestand nog genoeg komen voor het apparaat, dan is het een wolk: parkeren.
   Kan dat niet meer, dan is de zonnige dag voorbij: meteen uit, geen standby
   die eindigt in een tweede schakeling.
-- **Met E (prognose) en D (hoe snel de kamer opwarmt)** wordt het beter: of de
+- **Met E (prognose) en D (hoe snel de kamer verwarmt)** wordt het beter: of de
   wolk lang duurt, en of de kamer de dip kan opvangen.
 
 Dit is kandidaat 2 en moet dus ook eerst in de replay winnen.
@@ -5363,7 +5364,7 @@ radiatorknoppen van Sonoff (Zigbee) en een slimme cv-regeling.
 - **De verwarming** staat bij Zon en aansluiting: cv-ketel, warmtepomp,
   stadsverwarming of weet ik niet, en de aanvoertemperatuur op de ketel (25 tot
   90 °C, leeg als je hem niet weet). Het thermisch model gebruikt het later:
-  een lagere aanvoer warmt een kamer langzamer op.
+  een lagere aanvoer verwarmt een kamer langzamer.
 
 ---
 
@@ -5915,7 +5916,7 @@ versie.
 
 - **Waar:** in Indeling, bij de kamer, bij Verwarmen en koelen. Per
   klimaatapparaat een regel "De regeling" met drie keuzes: **Houdt op
-  temperatuur** (warmt of koelt tot het doel bij Comfort, ook van het net),
+  temperatuur** (verwarmt of koelt tot het doel bij Comfort, ook van het net),
   **Helpt op zon** (springt bij als er eigen zon over is; van het net alleen
   als Comfort dat zegt) en **Alleen kijken** (het huis volgt het, maar regelt
   het niet). Bovenaan staat waarmee de kamer meet, met een tik naar Meten met.
@@ -5985,7 +5986,7 @@ voelde als instellingen, niet als je huis neerzetten.
   winterdagen er al zijn. Het geluid maakt de browser zelf, een zacht akkoord
   per beeld; uit te zetten, en de keuze blijft. Pauzeren en overslaan kan
   altijd; wie minder beweging wil, krijgt de beelden zonder beweging.
-- **Gewone woorden (15 oktober):** "verwarmen" in plaats van "warmen", en een
+- **Gewone woorden (15 oktober):** "verwarmen" in plaats van het kale werkwoord, en een
   test die het bewaakt. Gewone kamernamen krijgen weer "de" ("de badkamer"):
   een onzichtbaar stuurteken in de regel daarvoor hield dat sinds besluit 131
   tegen.
@@ -7300,7 +7301,7 @@ potlood op de wand; en Weergave achter het tandwiel en onderaan Thuis.
   of als iemand het huis zelf op Nacht zet. De Nacht van de dagdelen telt niet:
   die begint al om 22:00. Na een minuut zonder iemand aan het scherm staan er de
   klok, gedimd, en een donker huis zonder getallen, zonder zon of stromen; met
-  *Alles rustig* (of welke kamer koelt of warmt) en de temperatuur van twee
+  *Alles rustig* (of welke kamer koelt of verwarmt) en de temperatuur van twee
   kamers, de slaapkamer eerst, en het weer van morgen. Na wekken komt hij
   terug na weer een minuut zonder iemand.
 - **Rust overdag:** na 2, 5 (standaard) of 15 minuten, of uit. Groot de klok,
@@ -8565,7 +8566,7 @@ lijst Op zon standaard helemaal achteraan.
 - **Herkennen** (`web/buffers-vinden.ts`): een jacuzzi aan zijn naam of de
   koppeling Intex Spa, als thermostaat of, via Tuya Local, als boiler; een
   `water_heater` als boiler met temperatuur (een warmtepompboiler trekt 0,5 kW
-  en warmt 6° per uur, een elektrische 2 kW en 10°); een schakelaar die boiler
+  en verwarmt 6° per uur, een elektrische 2 kW en 10°); een schakelaar die boiler
   heet, met de meter van hetzelfde apparaat; een regelaar als AC·THOR. Ze komen
   in de lijst van de zon en je aansluiting, naast de droger.
 - **Wat de dienst onthoudt** staat in `warmtebuffers.json` naast de dataset:
@@ -8719,7 +8720,7 @@ eruit. De bewoner verwachtte de kaarten uit de schets (`Wand-Thuis-3.html`).
   en elke rij in de kolom is zo hoog als zijn inhoud, zodat een volle kolom een
   kaart niet platdrukt; de kolom schuift zelf (besluit 167).
 - **Een kaart Boiler** (`boiler` bij de kaarten): de boiler, of anders de
-  jacuzzi (besluit 186), met hoe warm hij is en of hij op zon opwarmt; om te
+  jacuzzi (besluit 186), met hoe warm hij is en of hij op zon verwarmt; om te
   kiezen, alleen als het huis er een heeft.
 - **Het kompas** staat niet op Thuis (24 oktober 2026, 0.62.1): het hoort bij
   Zonnepanelen, bij de ligging.
@@ -10695,7 +10696,7 @@ ervoor worden sinds september vastgelegd (besluit 65). Gekozen na een schets
 - **De dienst leert per zone uit het beslislogboek** (`web/thermisch.ts`,
   `api/thermisch`), per kwartier, over hooguit 180 dagen:
   - **afkoelen:** stukken van minstens drie uur zonder zon en zonder dat er
-    iets warmt of koelt. Volgens Newton is de helling −k maal het verschil met
+    iets verwarmt of koelt. Volgens Newton is de helling −k maal het verschil met
     buiten; de helling geldt over het hele stuk, omdat de meter per kwartier te
     grof is;
   - **zon:** kwartieren met zon en niets aan, wat er na het afkoelen
@@ -10848,7 +10849,7 @@ en `Tel-Klimaat-Hand`.
 
 *Wat de oude regeling doet* (nagelezen in `klimaat_controller_apply`): in de
 winter verwarmt zij met een airco alleen met zon over (`pv_verwarmen`) of als
-hulp voor de cv. Staat een airco op warm, dan neemt het pv-deel het over: het
+hulp voor de cv. Staat een airco op verwarmen, dan neemt het pv-deel het over: het
 zet hem op 18° bij stroom van het net, tenzij een knop met de hand verzet is
 (`manuele_override_actief`), of als de kamer warm genoeg is.
 
@@ -10862,7 +10863,7 @@ zet hem op 18° bij stroom van het net, tenzij een knop met de hand verzet is
   - de badkamer via de uit-temperatuur overdag;
   - **verwarmen met een airco** (woonkamer en zolder): de knop van die airco
     op het doel, zodat de regeling een handmatige stand ziet, en de airco zelf
-    op warm. Gekozen door de bewoner: anders gaat de zolder pas aan als er zon
+    op verwarmen. Gekozen door de bewoner: anders gaat de zolder pas aan als er zon
     is.
   - een radiatorknop die niet in de regeling zit (zoals de Sonoff TRVZB in de
     keuken, besluit 126): zijn eigen doel, direct; daarna terug naar het doel
@@ -10888,7 +10889,7 @@ zet hem op 18° bij stroom van het net, tenzij een knop met de hand verzet is
   Wat met de hand staat, staat in zonkleur op de kaart. Op de telefoon eerst
   de lijst, dan het blad van onderen.
 - **Met je stem:** gaat een kamer niet via de klimaatbrug, zoals de zolder,
-  dan met de hand: "zet de zolder op 21" zet de airco op warm tot 22:00.
+  dan met de hand: "zet de zolder op 21" zet de airco op verwarmen tot 22:00.
 - **Versie 0.104.0.** Bij stap B verdwijnt de omweg: dan regelt de app zelf.
 
 ---
@@ -11047,6 +11048,57 @@ eindtijd; en beide terug bij Te doen. Gekozen na de schetsen
 - **Het voorbeeldhuis** krijgt de startknop erbij, en begint op de tijd van
   de dagschuif.
 - **Versie 0.107.0.**
+
+---
+
+## 239. Wat de app zegt, klopt met wat er in huis gebeurt
+
+*Onderwerp: weergave · Status: geldig*
+
+1 november 2026, ronde 5. De bewoner zag om 20:10 "De woonkamer is fris" bij
+20,2° en doel 20°, en bij Vandaag "Nest thermostaat verwarmde met de zon mee"
+na zonsondergang, terwijl de Nest op de cv-ketel op gas werkt. "Dit soort
+dingen mogen niet voorkomen": alles wat de app zegt, moet kloppen met de
+werkelijkheid, en zodra een apparaat verwarmt of koelt, moet dat er staan.
+Uitgezocht in het beslislogboek van de Pi.
+
+*Wat er gebeurde:*
+
+- Shira kwam om 19:33 thuis, Ricardo om 19:34. Met tien minuten rust bij
+  thuiskomen telde eerst niemand (het comfort van de hoofdgebruiker, 20°), om
+  19:43 alleen Shira (18°) en om 19:44 allebei (weer 20°). De Nest ging
+  daardoor drie keer aan en uit.
+- De tijdlijn noemde elke reeks van aan en uit "met de zon mee", ook zonder zon.
+- SunArc verwarmt tot iets boven het doel (de marge tegen aan en uit). De
+  Nest stond stil, dus de kop zei "zou verwarmen", in woorden "is fris".
+- "Ging verwarmen" bij Vandaag was het besluit van SunArc, ook als het echte
+  apparaat niets deed (de airco woonkamer om 19:38).
+
+*Besluit:*
+
+- **Thuiskomen telt meteen** (`context.ts`); weggaan houdt tien minuten rust.
+  De stand "dag" ging bij thuiskomen al meteen aan.
+- **Wat het apparaat zegt, gaat voor** (`hvac_action`). Verwarmt of koelt een
+  apparaat van een kamer echt, dan zegt de kamer "Verwarmt" (oranje in het
+  huis), ook als SunArc het anders zou doen; de assistent zegt het erbij. Een
+  Nest in de stand verwarmen die stilstaat, gloeit niet in de tekening.
+- **Boven het doel is op temperatuur**: zou SunArc nog even doorgaan, maar
+  gebeurt er niets en is het doel gehaald, dan "Op temperatuur", niet "fris".
+- **Vandaag**: "ging verwarmen" alleen als het apparaat het rond dat moment
+  echt deed, anders "zou gaan verwarmen"; "met de zon mee" alleen als de
+  strategie van de zon de reden was, anders "met tussenpozen". Het logboek
+  schrijft daarvoor sinds deze versie op wat elk apparaat zegt dat het doet
+  (`doet`), en de lijnen van wat er echt draaide lezen dat.
+- **Altijd verwarm, verwarmt of verwarmen**, nooit het kale werkwoord, ook niet
+  in de uitleg, op GitHub, in de schetsen of in de code. Een test houdt het
+  tegen (`teksten.test.ts`).
+- Verder in deze ronde: het voorbeeldhuis heeft prijzen, panelen, een
+  aansluiting en een plek (dag en nacht kloppen), blijft staan als je de dag
+  afspeelt, en de lijn van nu loopt mee; op de telefoon ligt het blad over de
+  balk. De uitleg in Home Assistant is herschreven voor wie begint, met een
+  korte Engelse versie. De assistent verstaat "zet melk op de
+  boodschappenlijst".
+- **Versie 0.108.0.**
 
 ---
 

@@ -52,7 +52,7 @@ export interface ComfortRoom {
   readonly opZonC?: number;
 }
 
-/** Een plek in de lijst Op zon (besluit 176): een kamer die op zon opwarmt of koelt, een apparaat op zon, of een boiler of jacuzzi (besluit 186). */
+/** Een plek in de lijst Op zon (besluit 176): een kamer die op zon verwarmt of koelt, een apparaat op zon, of een boiler of jacuzzi (besluit 186). */
 export interface ZonPlek {
   readonly soort: 'kamer' | 'apparaat' | 'buffer';
   readonly id: string;
@@ -238,7 +238,7 @@ export function withComfort(raw: Record<string, unknown>, comfort: Comfort | nul
       const pair = kamer.modi[m];
       if (pair == null) continue;
       setpoints[m] = { ...(pair.heat != null ? { heat: pair.heat } : {}), ...(pair.cool != null ? { cool: pair.cool } : {}) };
-      // Voorverwarmen volgt de dag: anders warmt het 's ochtends naar een oud doel.
+      // Voorverwarmen volgt de dag: anders verwarmt het 's ochtends naar een oud doel.
       if (m === 'dag' && pair.heat != null) setpoints['voorverwarmen'] = { heat: pair.heat };
     }
     const uit: Record<string, unknown> = { ...zone, setpoints };

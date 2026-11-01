@@ -5,7 +5,7 @@
  * bewoner het vast bij de kamer, in Indeling, bij Verwarmen en koelen: per
  * klimaatapparaat wat de regeling ermee doet.
  *
- * - **Houdt op temperatuur** (`houdt`): warmt of koelt tot het doel bij
+ * - **Houdt op temperatuur** (`houdt`): verwarmt of koelt tot het doel bij
  *   Comfort, ook van het net. In de configuratie de rol `primary`.
  * - **Helpt op zon** (`zon`): springt bij als er eigen zon over is; van het
  *   net alleen als Comfort dat zegt. De rol `assist`.

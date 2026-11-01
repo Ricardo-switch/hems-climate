@@ -1,7 +1,7 @@
 /*
  * Verwarmen en koelen per kamer (besluit 132, schets Wand-Indeling-Warmte).
  *
- * Wat er in een kamer warmt of koelt: een radiator op de cv, vloerverwarming
+ * Wat er in een kamer verwarmt of koelt: een radiator op de cv, vloerverwarming
  * op water of elektrisch, een infraroodpaneel, een elektrische kachel, een
  * airco. Hoe het aangaat: met een thermostaat, een slimme radiatorknop, een
  * slimme stekker of module, of met de hand. De bewoner legt het vast in de

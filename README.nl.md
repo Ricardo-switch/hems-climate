@@ -39,7 +39,7 @@ Achter de app zit een regeling die elke ronde beslist wat het huis zou moeten do
 
 **Je huis in één beeld**
 - Het huis in 3D, uit wat Home Assistant al weet. Je deelt het in per etage, kamer en zone.
-- Per kamer de temperatuur, wat er warmt of koelt, en welke sensoren meetellen.
+- Per kamer de temperatuur, wat er verwarmt of koelt, en welke sensoren meetellen.
 - Batterijen van sensoren en het filter van je airco, met een melding als het tijd is.
 
 **Comfort en zon**
@@ -47,7 +47,7 @@ Achter de app zit een regeling die elke ronde beslist wat het huis zou moeten do
 - Een stroombudget per fase, zodat je hoofdzekering het houdt.
 - Wanneer de droger op zon zou starten, met een eindtijd die je zelf kiest.
 - Het weer voor vandaag en vijf dagen, met wat je panelen dan leveren. Het huis leert hoeveel zon je dak bij heldere lucht vangt.
-- **Leren:** hoe snel je huis afkoelt en opwarmt, en wat de zon erbij doet.
+- **Leren:** hoe snel je huis afkoelt en verwarmt, en wat de zon erbij doet.
 
 **Terugkijken**
 - **Vandaag:** de dag in de tijd, met wat het huis deed en waarom.

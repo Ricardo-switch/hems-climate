@@ -37,7 +37,7 @@ function logboek(dagen: number): ThermischMoment[] {
   return uit;
 }
 
-const ZONES = [{ id: 'kamer', naam: 'Kamer', apparaten: [{ id: 'nest', naam: 'Nest', warmen: true, koelen: false }, { id: 'airco', naam: 'Airco kamer', warmen: true, koelen: true }] }];
+const ZONES = [{ id: 'kamer', naam: 'Kamer', apparaten: [{ id: 'nest', naam: 'Nest', verwarmen: true, koelen: false }, { id: 'airco', naam: 'Airco kamer', verwarmen: true, koelen: true }] }];
 
 describe('hoe je huis warmte vasthoudt (besluit 231)', () => {
   const r = leerThermisch(logboek(25), ZONES, Date.UTC(2026, 9, 26));
@@ -65,7 +65,7 @@ describe('hoe je huis warmte vasthoudt (besluit 231)', () => {
     const nest = kamer.apparaten.find((a) => a.id === 'nest')!;
     expect(nest.perUur).toBeNull();
     expect(nest.kwartieren).toBeGreaterThanOrEqual(8);
-    const aircoWarmt = kamer.apparaten.find((a) => a.id === 'airco' && a.stand === 'warmt')!;
+    const aircoWarmt = kamer.apparaten.find((a) => a.id === 'airco' && a.stand === 'verwarmt')!;
     expect(aircoWarmt.kwartieren).toBe(0);
     expect(r.stand).toBe('leert');
   });

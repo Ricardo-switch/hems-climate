@@ -646,7 +646,11 @@ export function roomStatus(
 ): RoomStatus {
   const f = new Facts(lang, config.timezone);
   const s = statusOf(config, snap, zone, lang, shadow, f);
-  return { ...s, feiten: f.list };
+  // Wat een apparaat van de kamer echt doet (1 november 2026): verwarmt of koelt het, dan zegt de
+  // zin dat ook, want in de schaduw regelt de oude regeling en kan dat anders zijn dan SunArc zou doen.
+  const echt = shadow ? zone.actuatorIds.map((id) => ({ a: config.actuators.find((x) => x.id === id), doet: snap.observedAction?.[id] })).filter((x) => x.a && (x.doet === 'heating' || x.doet === 'cooling')) : [];
+  const erbij = echt.map(({ a, doet }) => (lang === 'nl' ? `${cap(deviceName(a!, lang))} ${doet === 'heating' ? 'verwarmt' : 'koelt'} nu.` : `${cap(deviceName(a!, lang))} is ${doet === 'heating' ? 'heating' : 'cooling'} right now.`));
+  return { ...s, zin: [s.zin, ...erbij].join(' '), feiten: f.list };
 }
 
 /*
@@ -1532,6 +1536,10 @@ function shortStatusOf(
   }
   const mine = snap.accepted.filter((i) => ids.has(i.actuatorId));
   const running = mine.find((i) => i.action === 'cool' || i.action === 'heat');
+  // Wat een apparaat van de kamer zegt dat het echt doet (1 november 2026): verwarmt of koelt
+  // het, dan staat dat er, ook als SunArc het anders zou doen.
+  const echtBezig = shadow ? zone.actuatorIds.map((id) => ({ id, doet: snap.observedAction?.[id] })).find((x) => x.doet === 'heating' || x.doet === 'cooling') : undefined;
+  const echtActie = echtBezig ? (echtBezig.doet === 'heating' ? ('heat' as const) : ('cool' as const)) : null;
   if (running && (running.action === 'cool' || running.action === 'heat')) {
     const onSun = running.strategyId === 'pv-surplus';
     // Doet het apparaat het al echt (de oude regeling), dan geen "zou" (besluit 188). Zegt het
@@ -1539,8 +1547,16 @@ function shortStatusOf(
     // naar 20°" die stil staat, verwarmt niet (25 oktober 2026, de wand zei het wel).
     const doet = snap.observedAction?.[running.actuatorId];
     const klopt = (snap.observed[running.actuatorId] ?? '').split('@')[0] === running.action && (doet == null || doet === (running.action === 'heat' ? 'heating' : 'cooling'));
+    if (shadow && !klopt && echtBezig && echtActie) return { soort: echtActie, kort: w.run[echtActie], actuatorId: echtBezig.id, klopt: true };
+    // SunArc zou nog even doorgaan tot net boven het doel (de marge tegen aan en uit), maar
+    // in huis gebeurt niets en het doel is al gehaald: dan is de kamer op temperatuur, niet
+    // fris (1 november 2026: "De woonkamer is fris" bij 20,2° en doel 20°).
+    const doel = running.action === 'heat' ? (pz?.heatTargetC ?? null) : (pz?.coolTargetC ?? null);
+    const gehaald = pz?.temperatureC != null && doel != null && (running.action === 'heat' ? pz.temperatureC >= doel : pz.temperatureC <= doel);
+    if (shadow && !klopt && gehaald) return { soort: 'ok', kort: w.ok, actuatorId: null };
     return { soort: running.action, kort: `${(shadow && !klopt ? w.wouldRun : w.run)[running.action]}${onSun ? w.onSun : ''}`, actuatorId: running.actuatorId, klopt: !shadow || klopt };
   }
+  if (echtBezig && echtActie) return { soort: echtActie, kort: w.run[echtActie], actuatorId: echtBezig.id, klopt: true };
   if (mine.some((i) => i.action === 'standby')) return { soort: 'wait', kort: w.parked, actuatorId: null };
   const wanting = pz != null && pz.demand !== 'none';
   const blocked = snap.rejected.find((r) => r.intent.zoneId === zone.id);
