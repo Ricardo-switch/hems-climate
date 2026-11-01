@@ -9,10 +9,10 @@
 
 const { $$, esc, haal } = app;
 
-const d = { site: null, huis: null, functies: null, energie: null, aansluiting: null, state: null, divergence: null, opbrengst: null, accu: null, zon: null, sluip: null };
+const d = { site: null, huis: null, functies: null, energie: null, aansluiting: null, state: null, divergence: null, opbrengst: null, accu: null, thermisch: null, zon: null, sluip: null };
 
 async function laadAlles() {
-  const deuren = { site: 'api/site', huis: 'api/huis', functies: 'api/functies', energie: 'api/energie', aansluiting: 'api/aansluiting', state: 'api/state', divergence: 'api/divergence', opbrengst: 'api/opbrengst?soort=maand', accu: 'api/accu', zon: 'api/zon', sluip: 'api/sluipverbruik' };
+  const deuren = { site: 'api/site', huis: 'api/huis', functies: 'api/functies', energie: 'api/energie', aansluiting: 'api/aansluiting', state: 'api/state', divergence: 'api/divergence', opbrengst: 'api/opbrengst?soort=maand', accu: 'api/accu', thermisch: 'api/thermisch', zon: 'api/zon', sluip: 'api/sluipverbruik' };
   const r = await Promise.allSettled(Object.values(deuren).map((p) => haal(p)));
   Object.keys(deuren).forEach((k, i) => {
     if (r[i].status === 'fulfilled') d[k] = r[i].value;
@@ -153,6 +153,7 @@ function blad(x, v, m) {
     if (m?.genoeg) komt.push(t('voortgang.weg.vroegst', { datum: datum(m.genoeg) }));
     balk = `<div class="as" style="margin-top: 6px"><span>${esc(t('voortgang.as.winter'))}</span><div class="balkje"><i style="width: ${Math.min(100, (v.winter.dagen / v.winter.doel) * 100)}%; background: ${KLEUR.leert}"></i></div><span class="getal">${Math.floor(v.winter.dagen)}/${v.winter.doel}</span></div>`;
   } else if (x.id === 'ligging' && x.stand === 'leert') komt.push(t('voortgang.komt.ligging'));
+  else if (x.id === 'thermisch') komt.push(...x.wanneer);
   else if (x.stand === 'kijkt') komt.push(t('voortgang.komt.kijkt'));
   else if (x.stand === 'mis') komt.push(t('voortgang.komt.mis'));
   else if (x.stand === 'uit') komt.push(t('voortgang.komt.uit'));

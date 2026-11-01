@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Hoe je huis warmte vasthoudt</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Hoe je huis warmte vasthoudt (schets, 31 oktober 2026): het thermisch
+   * model (stap D, besluit 46) als eigen regel onder "Wat het huis eerst
+   * leert" op Wat je huis kan. Het leert en laat zien; de regeling gebruikt
+   * het nog niet. Gekozen door Ricardo: leren en laten zien, een eigen regel,
+   * eerst een schets.
+   *
+   * De getallen zijn echt: de beslislogboeken van de NAS, 5 september tot
+   * 31 oktober, per kwartier. Afkoelen uit stukken van minstens drie uur
+   * zonder zon en zonder iets aan; zon en apparaten wat er daarna overblijft.
+   * Zekerheid in vier streepjes, net als bij Hoe ver je huis is.
+   * Standen: zonder hash het blad, #lijst alleen de regel in de lijst.
+   */
+  main { position: relative; padding: 22px 26px 20px 22px; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+  .terugje { font-size: 14px; font-weight: 600; color: var(--zacht); }
+  .kopregel { display: flex; justify-content: space-between; align-items: end; gap: 24px; }
+  .kopregel .lead { max-width: 56ch; margin-top: 6px; }
+  /* De tellers als tekst met een stipje (besluit 229). */
+  .legenda { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+  .legenda span { display: inline-flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 600; color: var(--zacht); }
+  .legenda b { font-family: var(--kop); font-size: 15px; color: var(--tekst); }
+
+  .veld { position: relative; flex: 1; display: grid; grid-template-columns: 400px minmax(0, 1fr); gap: 16px; min-height: 0; }
+  .links { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+
+  .vak { padding: 12px 16px 6px; display: flex; flex-direction: column; }
+  .vak h3 { margin: 0 0 2px; font-family: var(--kop); font-size: 15px; font-weight: 600; }
+  .vak.leren { border-color: rgba(111, 211, 255, 0.28); background: linear-gradient(160deg, rgba(111, 211, 255, 0.08), rgba(255, 255, 255, 0.03)); }
+  .regel { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 0 10px; align-items: center; padding: 7px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+  .regel:first-of-type { border-top: 0; }
+  .regel svg { width: 20px; height: 20px; }
+  .regel b { display: block; font-size: 14px; font-weight: 600; }
+  .regel span.nu { display: block; font-size: 12.5px; color: var(--gedempt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .regel.gekozen { background: rgba(255, 255, 255, 0.07); border-radius: 12px; margin: 0 -8px; padding: 8px 8px; border-top-color: transparent; }
+  .regel .nieuw { font-size: 11px; font-weight: 700; color: var(--ijs); margin-left: 6px; }
+
+  /* Een stand is een stipje met een woord (besluit 229). */
+  .stand { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+  .stand::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .werkt { color: var(--mint); }
+  .leert { color: var(--violet); }
+
+  /* Het blad. */
+  .blad { position: absolute; left: 416px; right: 0; top: 0; bottom: 0; padding: 18px 24px 16px; display: flex; flex-direction: column; gap: 12px; background: rgba(12, 20, 34, 0.96); z-index: 5; }
+  .blad[hidden] { display: none; }
+  .blad .bovenaan { display: flex; justify-content: space-between; align-items: start; gap: 16px; }
+  .blad .sluit { width: 36px; height: 36px; border-radius: 50%; border: 0; background: rgba(255, 255, 255, 0.08); color: var(--tekst); font-size: 18px; flex: none; }
+  .blad h4 { margin: 0 0 6px; font-size: 13px; font-weight: 700; color: var(--gedempt); }
+
+  /* Een dag zonder verwarming: hoe ver elke kamer zakt. */
+  .bovenin { display: grid; grid-template-columns: minmax(0, 1fr) 250px; gap: 18px; align-items: stretch; }
+  .grafiek { padding: 12px 14px 8px; border-radius: 18px; background: rgba(255, 255, 255, 0.04); }
+  .grafiek svg { display: block; width: 100%; height: 112px; }
+  .grafiek .onderschrift { font-size: 12px; color: var(--gedempt); margin-top: 2px; }
+  .vast { display: flex; flex-direction: column; justify-content: center; gap: 12px; }
+  .vast .getal { font-family: var(--kop); font-size: 34px; font-weight: 600; line-height: 1; }
+  .vast .getal small { font-family: Figtree, sans-serif; font-size: 14px; font-weight: 500; color: var(--zacht); margin-left: 4px; }
+  .vast p { margin: 4px 0 0; font-size: 13px; line-height: 1.4; color: var(--zacht); }
+
+  /* Per kamer wat het weet: een regel met een waarde, en hoe zeker. */
+  .kamers { display: grid; grid-template-columns: 1fr 1fr; gap: 0 26px; }
+  .kamers h5 { margin: 0 0 2px; font-family: var(--kop); font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .kamers h5 i { width: 10px; height: 3px; border-radius: 2px; display: inline-block; }
+  .weet { display: grid; grid-template-columns: minmax(0, 1fr) auto 44px; gap: 0 12px; align-items: baseline; padding: 5px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); font-size: 14px; }
+  .weet:first-of-type { border-top: 0; }
+  .weet span { color: var(--zacht); }
+  .weet b { font-family: var(--kop); font-weight: 600; font-size: 15px; text-align: right; white-space: nowrap; }
+  .weet b.nog { font-family: Figtree, sans-serif; font-size: 13px; font-weight: 600; color: var(--gedempt); }
+  .zeker { display: inline-flex; gap: 3px; align-self: center; }
+  .zeker i { width: 8px; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.12); }
+  .zeker i.ja { background: var(--violet); }
+
+  .nog { font-size: 13.5px; color: var(--zacht); line-height: 1.45; }
+  .twee { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 26px; }
+  .lijst { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; font-size: 13.5px; color: var(--zacht); }
+  .lijst li { display: flex; gap: 8px; }
+  .lijst li::before { content: ''; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--violet); margin-top: 7px; }
+  .blad .onder { margin-top: auto; display: flex; gap: 10px; align-items: center; }
+  .blad .onder .knop { height: 40px; padding: 0 18px; border-radius: 14px; border: 0; background: rgba(255, 255, 255, 0.08); color: var(--tekst); font: inherit; font-weight: 700; font-size: 14px; }
+  .blad .onder small { font-size: 12.5px; color: var(--gedempt); }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-avond">
+  <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+  <main>
+    <span class="terugje">‹ Instellingen</span>
+    <div class="kopregel">
+      <div>
+        <h1 class="kop-1">Wat je huis kan</h1>
+        <p class="lead">Alles wat SunArc voor je doet, en hoe het ervoor staat. Tik op iets voor de uitleg.</p>
+      </div>
+      <div class="legenda">
+        <span><span class="stip" style="background: var(--mint)"></span>Werkt <b>10</b></span>
+        <span><span class="stip" style="background: var(--ijs)"></span>Kijkt mee <b>6</b></span>
+        <span><span class="stip" style="background: var(--violet)"></span>Leert nog <b>2</b></span>
+        <span><span class="stip" style="background: transparent; box-shadow: inset 0 0 0 1.5px var(--zon)"></span>Iets nodig <b>3</b></span>
+      </div>
+    </div>
+
+    <div class="veld">
+      <section class="links">
+        <div class="glas vak leren">
+          <h3>Wat het huis eerst leert</h3>
+          <div class="regel gekozen"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M12 13v4M10.5 15.5 12 17l1.5-1.5"/></svg><div><b>Hoe je huis warmte vasthoudt<span class="nieuw">nieuw</span></b><span class="nu">kent het afkoelen, wacht op de cv</span></div><span class="stand leert">Leert nog</span></div>
+          <div class="regel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><path d="M4 18c3-8 6-10 8-10s4 3 8 0"/><path d="M4 21h16"/></svg><div><b>Op tijd warm of koel</b><span class="nu">begint zodra het huis de cv kent</span></div><span class="stand leert">Leert nog</span></div>
+          <div class="regel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><path d="M12 21a5 5 0 0 1-5-5c0-3 5-8 5-8s5 5 5 8a5 5 0 0 1-5 5z"/></svg><div><b>Wat jij prettig vindt</b><span class="nu">tik op Thuis hoe het voelt</span></div><span class="stand werkt">Werkt</span></div>
+          <div class="regel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><path d="M4 17l3-10h10l3 10z"/><path d="M5.5 12h13M10 7l-1 10M14 7l1 10"/></svg><div><b>Ligging van de panelen</b><span class="nu">oost en west, 4,9 kWp</span></div><span class="stand werkt">Werkt</span></div>
+        </div>
+        <div class="glas vak">
+          <h3>Comfort</h3>
+          <div class="regel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/></svg><div><b>Op temperatuur</b><span class="nu">in Woonkamer en Zolder</span></div><span class="stand" style="color: var(--ijs)">Kijkt mee</span></div>
+          <div class="regel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><path d="M8 3v18M16 3v18M4 8h16M4 16h16"/></svg><div><b>Verwarmen per kamer</b><span class="nu">in Woonkamer en Badkamer</span></div><span class="stand" style="color: var(--ijs)">Kijkt mee</span></div>
+        </div>
+      </section>
+
+      <aside class="glas blad" id="blad">
+        <div class="bovenaan">
+          <div>
+            <span class="stand leert">Leert nog · sinds 5 september, 555 rustige uren</span>
+            <h2 class="kop-2" style="margin-top: 8px">Hoe je huis warmte vasthoudt</h2>
+            <p class="lead" style="margin-top: 4px; max-width: 58ch">Per kamer hoe snel hij afkoelt, en wat de zon en elk apparaat doen. Zo kan het huis straks op tijd beginnen.</p>
+          </div>
+          <button class="sluit" type="button" aria-label="Sluiten">×</button>
+        </div>
+
+        <div class="bovenin">
+          <div class="grafiek">
+            <h4>Een dag zonder verwarming, bij 5° buiten</h4>
+            <svg id="curve" viewBox="0 0 520 112" preserveAspectRatio="none" aria-label="Woonkamer en zolder zakken in 24 uur van 20 naar ongeveer 17 graden"></svg>
+            <div class="onderschrift">Uit je eigen nachten. De woonkamer houdt het langst vast.</div>
+          </div>
+          <div class="vast">
+            <div><div class="getal">−0,7°<small>in een nacht</small></div><p>Zo ver zakt de woonkamer in acht uur als het buiten 10° kouder is.</p></div>
+            <div><div class="getal" style="font-size: 24px">± 3½ dag</div><p>tot de woonkamer half naar buiten is gezakt. Een zwaar huis: het reageert traag.</p></div>
+          </div>
+        </div>
+
+        <div class="kamers">
+          <div>
+            <h5><i style="background: var(--zon)"></i>Woonkamer</h5>
+            <div class="weet"><span>Koelt af, bij 10° verschil</span><b>0,08° per uur</b><span class="zeker"><i class="ja"></i><i class="ja"></i><i class="ja"></i><i class="ja"></i></span></div>
+            <div class="weet"><span>Zon, per kW op de panelen</span><b>+0,3° per uur</b><span class="zeker"><i class="ja"></i><i class="ja"></i><i class="ja"></i><i></i></span></div>
+            <div class="weet"><span>Airco koelt</span><b>−0,4° per uur</b><span class="zeker"><i class="ja"></i><i class="ja"></i><i class="ja"></i><i></i></span></div>
+            <div class="weet"><span>Airco verwarmt</span><b>+1,0° per uur</b><span class="zeker"><i class="ja"></i><i></i><i></i><i></i></span></div>
+            <div class="weet"><span>Cv</span><b class="nog">nog te weinig gestookt</b><span class="zeker"><i></i><i></i><i></i><i></i></span></div>
+          </div>
+          <div>
+            <h5><i style="background: var(--ijs)"></i>Zolder</h5>
+            <div class="weet"><span>Koelt af, bij 10° verschil</span><b>0,10° per uur</b><span class="zeker"><i class="ja"></i><i class="ja"></i><i class="ja"></i><i class="ja"></i></span></div>
+            <div class="weet"><span>Zon, per kW op de panelen</span><b>+0,3° per uur</b><span class="zeker"><i class="ja"></i><i class="ja"></i><i class="ja"></i><i></i></span></div>
+            <div class="weet"><span>Airco koelt</span><b>−0,6° per uur</b><span class="zeker"><i class="ja"></i><i class="ja"></i><i></i><i></i></span></div>
+            <div class="weet"><span>Airco verwarmt</span><b class="nog">nog niet gezien</b><span class="zeker"><i></i><i></i><i></i><i></i></span></div>
+            <div class="weet"><span>Cv</span><b class="nog">nog te weinig gestookt</b><span class="zeker"><i></i><i></i><i></i><i></i></span></div>
+          </div>
+        </div>
+
+        <div class="twee">
+          <div><h4>Wat het nog nodig heeft</h4><ul class="lijst"><li>Koude dagen met de cv aan: nu twee keer een half uur</li><li>Een paar uur de airco op warmen, vooral op zolder</li></ul></div>
+          <div><h4>Zo werkt het</h4><ul class="lijst"><li>Elke nacht rekent het de dag ervoor mee, alleen uren met één ding tegelijk</li><li>Komt de ventilatie, dan begint het afkoelen opnieuw</li></ul></div>
+        </div>
+
+        <div class="onder"><button class="knop" type="button">Op tijd warm of koel</button><small>De regeling gebruikt het nog niet: eerst kijkt het mee.</small></div>
+      </aside>
+    </div>
+  </main>
+</div>
+<script src="../../frontend/kit/teksten.nl.js"></script>
+<script src="../../frontend/kit/teksten.en.js"></script>
+<script src="../../frontend/kit/taal.js"></script>
+<script src="../../frontend/kit/nav.js"></script>
+<script>
+  nav.balk(document.getElementById('balk'), 'instellingen');
+  document.getElementById('blad').hidden = location.hash === '#lijst';
+
+  // Newton: T(t) = buiten + (start - buiten) * e^(-t/τ); τ uit je eigen nachten.
+  const svg = document.getElementById('curve');
+  const W = 520, H = 112, L = 34, R = 118, T = 8, B = 18;
+  const x = (u) => L + (u / 24) * (W - L - R);
+  const y = (c) => T + ((20 - c) / 4) * (H - T - B);
+  const lijn = (tau) => Array.from({ length: 25 }, (_, u) => `${u ? 'L' : 'M'}${x(u).toFixed(1)},${y(5 + 15 * Math.exp(-u / tau)).toFixed(1)}`).join(' ');
+  const eind = (tau) => 5 + 15 * Math.exp(-24 / tau);
+  let s = '';
+  for (const c of [20, 19, 18, 17, 16]) s += `<line x1="${L}" x2="${W - R}" y1="${y(c)}" y2="${y(c)}" stroke="rgba(255,255,255,0.07)"/><text x="${L - 8}" y="${y(c) + 4}" text-anchor="end" font-size="11" fill="var(--gedempt)">${c}°</text>`;
+  for (const [u, t] of [[0, '23:00'], [8, '07:00'], [16, '15:00'], [24, '23:00']]) s += `<text x="${x(u)}" y="${H - 4}" text-anchor="${u === 0 ? 'start' : u === 24 ? 'end' : 'middle'}" font-size="11" fill="var(--gedempt)">${t}</text>`;
+  s += `<rect x="${x(0)}" y="${T}" width="${x(8) - x(0)}" height="${H - T - B}" fill="rgba(255,255,255,0.025)"/>`;
+  for (const [tau, kleur, naam] of [[98, 'var(--ijs)', 'Zolder'], [120, 'var(--zon)', 'Woonkamer']]) {
+    s += `<path d="${lijn(tau)}" fill="none" stroke="${kleur}" stroke-width="2.5" stroke-linecap="round"/>`;
+    s += `<circle cx="${x(24)}" cy="${y(eind(tau))}" r="3.5" fill="${kleur}"/>`;
+    s += `<text x="${x(24) + 10}" y="${y(eind(tau)) + (naam === 'Zolder' ? 10 : -4)}" font-size="12" font-weight="700" fill="${kleur}">${naam} ${eind(tau).toFixed(1).replace('.', ',')}°</text>`;
+  }
+  svg.innerHTML = s;
+</script>
+</body>
+</html>

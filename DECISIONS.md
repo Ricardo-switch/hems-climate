@@ -135,6 +135,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [127. Het weer van Open-Meteo, de batterijlijst, en een apparaat via twee koppelingen](#127-het-weer-van-open-meteo-de-batterijlijst-en-een-apparaat-via-twee-koppelingen)
 - [157. Hoe de panelen liggen, gemeten uit tien dagen opbrengst; de bewoner bevestigt](#157-hoe-de-panelen-liggen-gemeten-uit-tien-dagen-opbrengst-de-bewoner-bevestigt)
 - [230. Een thuisbatterij op je eigen uren](#230-een-thuisbatterij-op-je-eigen-uren)
+- [231. Hoe je huis warmte vasthoudt: het thermisch model leert en laat zien](#231-hoe-je-huis-warmte-vasthoudt-het-thermisch-model-leert-en-laat-zien)
 
 **Weergave**
 
@@ -10667,6 +10668,55 @@ wanneer.
   niet; zonder teruglevering is er geen som. Het jaar per uur is zwaar, dus de
   dienst bewaart de som zes uur, of tot de meters veranderen.
 - **Versie 0.100.0**, samen met besluit 229.
+
+---
+
+## 231. Hoe je huis warmte vasthoudt: het thermisch model leert en laat zien
+
+*Onderwerp: meten, data en analyse · Status: geldig*
+
+1 november 2026. De bewoner: "ik mis bij leren eigenlijk nog 1 van de
+belangrijkste aspecten. het thermische model". Onder "Wat het huis eerst
+leert" stond alleen "Op tijd warm of koel", met het aantal gemeten dagen. De
+tekst beloofde dat het huis leert hoe snel elke kamer afkoelt, maar dat
+gebeurde nergens. Het thermisch model is stap D (besluit 46), en de gegevens
+ervoor worden sinds september vastgelegd (besluit 65). Gekozen na een schets
+(`design/app2/Wand-Warmte.html`): leren en laten zien, als eigen regel.
+
+*Besluit:*
+
+- **De dienst leert per zone uit het beslislogboek** (`web/thermisch.ts`,
+  `api/thermisch`), per kwartier, over hooguit 180 dagen:
+  - **afkoelen:** stukken van minstens drie uur zonder zon en zonder dat er
+    iets warmt of koelt. Volgens Newton is de helling −k maal het verschil met
+    buiten; de helling geldt over het hele stuk, omdat de meter per kwartier te
+    grof is;
+  - **zon:** kwartieren met zon en niets aan, wat er na het afkoelen
+    overblijft, per kW van de panelen;
+  - **elk apparaat van de zone:** kwartieren waarin alleen dat apparaat iets
+    deed, wat er na afkoelen en zon overblijft, apart voor verwarmen en koelen.
+    Een apparaat doet iets als het doel boven (verwarmen) of onder (koelen) de
+    kamer ligt.
+- **Eerlijk over wat het niet weet.** Een verwarmer die zo minder dan 0,2° per
+  uur geeft, heet "nog onduidelijk" in plaats van een getal: het logboek ziet
+  niet of de ketel werkelijk brandt. Wat het apparaat kan maar nooit deed, heet
+  "nog niet gezien". Zekerheid staat in vier streepjes, zoals bij Hoe ver je
+  huis is.
+- **Een regel onder Leren** met een blad: een dag zonder verwarming bij 5°
+  buiten per kamer, hoe ver de eerste kamer in een nacht zakt, na hoeveel
+  dagen hij half naar buiten is, per kamer wat het weet, en wat het nog nodig
+  heeft. Het telt mee in de zonnewaaier. "Op tijd warm of koel" zegt nu dat
+  het wacht tot het huis het stoken kent.
+- **Een keer per dag uitgerekend** en bewaard als `thermisch.json` naast het
+  logboek. Op het logboek van de NAS (5 september tot 31 oktober) duurt dat
+  minder dan twee seconden. De uitkomst komt overeen met de losse schatting
+  van 28 oktober: de woonkamer koelt 0,08° per uur af bij 10° verschil, de
+  zolder 0,10°.
+- **Alleen wereldbeeld** (besluit 46): de regeling gebruikt het nog niet.
+  Vooruitrekenen wanneer de cv of airco aan moet, volgt als het model het
+  stoken kent. Komt de ventilatie, dan begint het afkoelen opnieuw (zie "Wat
+  nog een besluit wacht").
+- **Versie 0.101.0.**
 
 ---
 

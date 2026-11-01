@@ -10,12 +10,12 @@
 
 const { $$, esc, haal } = app;
 
-const d = { site: null, huis: null, functies: null, energie: null, aansluiting: null, state: null, divergence: null, opbrengst: null, accu: null, zon: null, klaar: null };
+const d = { site: null, huis: null, functies: null, energie: null, aansluiting: null, state: null, divergence: null, opbrengst: null, accu: null, thermisch: null, zon: null, klaar: null };
 /** Laat alleen deze stand zien, of alles. */
 let filter = null;
 
 async function laadAlles() {
-  const deuren = { site: 'api/site', huis: 'api/huis', functies: 'api/functies', energie: 'api/energie', aansluiting: 'api/aansluiting', state: 'api/state', divergence: 'api/divergence', opbrengst: 'api/opbrengst?soort=maand', accu: 'api/accu', zon: 'api/zon', klaar: 'api/klaarzetten', sluip: 'api/sluipverbruik' };
+  const deuren = { site: 'api/site', huis: 'api/huis', functies: 'api/functies', energie: 'api/energie', aansluiting: 'api/aansluiting', state: 'api/state', divergence: 'api/divergence', opbrengst: 'api/opbrengst?soort=maand', accu: 'api/accu', thermisch: 'api/thermisch', zon: 'api/zon', klaar: 'api/klaarzetten', sluip: 'api/sluipverbruik' };
   const r = await Promise.allSettled(Object.values(deuren).map((p) => haal(p)));
   Object.keys(deuren).forEach((k, i) => {
     if (r[i].status === 'fulfilled') d[k] = r[i].value;
@@ -66,6 +66,54 @@ function bijspringen(uren) {
   return `<div class="uren" role="img" aria-label="${esc(t('kan.accu.urenUitleg'))}">${staven}</div><div class="assen"><span>0</span><span>6</span><span>12</span><span>18</span><span>24</span></div>`;
 }
 
+/**
+ * Hoe je huis warmte vasthoudt (besluit 231): een dag zonder verwarming per
+ * kamer (Newton, met de tijdconstante uit je eigen nachten), twee getallen voor
+ * de eerste kamer die het zeker weet, en per kamer wat het weet met vier
+ * streepjes voor hoe zeker.
+ */
+const KLEUREN = ['var(--zon)', 'var(--ijs)', 'var(--violet)', 'var(--mint)'];
+function thermischBlok(r) {
+  const zones = r.zones.filter((z) => z.k != null).slice(0, 4);
+  const W = 520, H = 112, L = 34, R = 128, T = 8, B = 18, BUITEN = 5, START = 20;
+  const temp = (z, u) => BUITEN + (START - BUITEN) * Math.exp(-u * z.k);
+  const laagste = Math.floor(Math.min(...zones.map((z) => temp(z, 24))));
+  const x = (u) => L + (u / 24) * (W - L - R);
+  const y = (c) => T + ((START - c) / (START - laagste)) * (H - T - B);
+  let svg = '';
+  for (let c = START; c >= laagste; c--) svg += `<line x1="${L}" x2="${W - R}" y1="${y(c)}" y2="${y(c)}"/><text x="${L - 8}" y="${y(c) + 4}" text-anchor="end">${c}°</text>`;
+  svg += [[0, '23:00'], [8, '07:00'], [16, '15:00'], [24, '23:00']].map(([u, tijd]) => `<text x="${x(u)}" y="${H - 3}" text-anchor="${u === 0 ? 'start' : u === 24 ? 'end' : 'middle'}">${tijd}</text>`).join('');
+  // De namen naast de lijnen, zonder dat ze op elkaar vallen.
+  const eind = zones.map((z, i) => ({ z, i, y: y(temp(z, 24)) })).sort((a, b) => a.y - b.y);
+  eind.forEach((e, n) => { if (n > 0) e.y = Math.max(e.y, eind[n - 1].y + 13); });
+  for (const e of eind) {
+    const kleur = KLEUREN[e.i];
+    svg += `<path d="${Array.from({ length: 25 }, (_, u) => `${u ? 'L' : 'M'}${x(u).toFixed(1)},${y(temp(e.z, u)).toFixed(1)}`).join(' ')}" stroke="${kleur}" class="lijn"/><circle cx="${x(24)}" cy="${y(temp(e.z, 24))}" r="3.5" fill="${kleur}"/><text x="${x(24) + 9}" y="${e.y + 4}" class="naam" fill="${kleur}">${esc(e.z.naam)} ${app.nl(temp(e.z, 24))}°</text>`;
+  }
+  const eerste = zones.find((z) => z.zeker.afkoelen >= 2) ?? zones[0];
+  const half = Math.round(((Math.LN2 * eerste.tauUur) / 24) * 2) / 2;
+  const streepjes = (n) => `<span class="zeker" aria-label="${esc(t('kan.thermisch.zeker', { n }))}">${[1, 2, 3, 4].map((i) => `<i${i <= n ? ' class="ja"' : ''}></i>`).join('')}</span>`;
+  const teken = (v, d) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${app.nl(Math.abs(v), d)}°`;
+  // Een apparaat heet zonder de naam van zijn kamer: "Airco", niet "Airco woonkamer".
+  const kort = (a, z) => {
+    const i = a.naam.toLowerCase().indexOf(z.naam.toLowerCase());
+    return (i < 0 ? a.naam : `${a.naam.slice(0, i)} ${a.naam.slice(i + z.naam.length)}`.replace(/\s+/g, ' ').trim()) || a.naam;
+  };
+  const regel = (label, waarde, n, nog) => `<div class="weet"><span title="${esc(label)}">${esc(label)}</span>${nog ? `<b class="nog">${esc(waarde)}</b>` : `<b>${esc(waarde)}</b>`}${streepjes(n)}</div>`;
+  const kamers = zones.map((z, i) => `<div><h5><i style="background: ${KLEUREN[i]}"></i>${esc(z.naam)}</h5>
+      ${regel(t('kan.thermisch.afkoelen'), `${teken(z.k * 10, 2).replace('+', '')}`, z.zeker.afkoelen)}
+      ${regel(t('kan.thermisch.zon'), z.zonPerKw == null ? t('kan.thermisch.nogNiet') : teken(z.zonPerKw, 1), z.zeker.zon, z.zonPerKw == null)}
+      ${z.apparaten.map((a) => regel(t(`kan.thermisch.${a.stand}`, { naam: kort(a, z) }), a.perUur != null ? teken(a.perUur, 1) : t(a.kwartieren >= 8 ? 'kan.thermisch.onduidelijk' : 'kan.thermisch.nogNiet'), a.zeker, a.perUur == null)).join('')}</div>`).join('');
+  return `<div class="thermisch">
+      <div class="bovenin">
+        <div class="grafiek"><h4>${esc(t('kan.thermisch.dag', { buiten: BUITEN }))}</h4><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${esc(t('kan.thermisch.dagUitleg'))}">${svg}</svg></div>
+        <div class="vast"><div><div class="getal">${teken(-eerste.k * 10 * 8, 1)}<small>${esc(t('kan.thermisch.inEenNacht'))}</small></div><p>${esc(t('kan.thermisch.nachtZin', { kamer: eerste.naam.toLowerCase() }))}</p></div>
+          <div><div class="getal klein">± ${app.nl(half, half % 1 ? 1 : 0)} ${esc(t(half === 1 ? 'kan.thermisch.dag1' : 'kan.thermisch.dagen'))}</div><p>${esc(t('kan.thermisch.halfZin', { kamer: eerste.naam.toLowerCase() }))}</p></div></div>
+      </div>
+      <div class="kamers" style="--n: ${zones.length}">${kamers}</div>
+    </div>`;
+}
+
 function blad(x) {
   const a = x.som;
   const maat = (k) => app.nl(k, k % 1 ? 1 : 0);
@@ -84,18 +132,19 @@ function blad(x) {
         <h4 style="margin-top: 12px">${esc(t('kan.accu.wanneer'))}</h4>${bijspringen(a.uren)}</div>`
     : '';
   // Wat er nodig is, koop je zelf; dan is er geen knop, behalve naar wat het nu oplevert.
-  const ga = x.stand === 'mis' ? t('kan.ga.mis') : x.stand === 'uit' ? t('kan.ga.uit') : x.stand === 'nodig' ? (x.som ? t('kan.ga.opbrengst') : null) : t('kan.ga.bekijken');
+  const ga = x.ga ?? (x.stand === 'mis' ? t('kan.ga.mis') : x.stand === 'uit' ? t('kan.ga.uit') : x.stand === 'nodig' ? (x.som ? t('kan.ga.opbrengst') : null) : t('kan.ga.bekijken'));
   // Waar het werkt (besluit 132): per kamer, en wat er nog kan als idee, niet als tekort.
   const waar = x.waar?.length
     ? `<div><h4>${esc(t('kan.waar'))}</h4><div class="waar">${x.waar.map((k) => `<div class="kamerkaart"><b>${esc(k.naam)}</b><span>${esc(k.wat)}</span></div>`).join('')}</div></div>`
-    : x.som ? '' : `<div class="nu"><span class="stand ${x.stand}">${esc(t('kan.nu'))}</span>${esc(x.nu)}</div>`;
+    : x.som || x.thermisch ? '' : `<div class="nu"><span class="stand ${x.stand}">${esc(t('kan.nu'))}</span>${esc(x.nu)}</div>`;
   const idee = x.idee ? `<a class="kanook" href="${x.idee.href}"><span class="wanneer">${esc(t('kan.idee'))}</span><b>${esc(x.idee.titel)}</b><p>${esc(x.idee.zin)}, ${esc(x.idee.wint)}.</p><span class="knop">${esc(t(x.idee.soort === 'aan' ? 'kan.zetAan' : 'kan.bekijk'))}</span></a>` : '';
   return `<div class="bovenaan"><div><span class="stand ${x.stand}">${esc(x.label)}</span><h2 class="kop-2" style="margin-top: 10px">${esc(x.titel)}</h2><p class="lead" style="margin-top: 4px; max-width: 52ch">${esc(x.wat)}</p>${x.extra ? `<p class="mini" style="margin: 6px 0 0">${esc(x.extra)}</p>` : ''}</div><button type="button" class="sluit" data-sluit aria-label="${esc(t('algemeen.sluiten'))}">×</button></div>
     ${waar}
     ${idee}
     ${som}
-    <div class="twee"><div><h4>${esc(t('kan.zoWerkt'))}</h4><ul class="lijst">${x.zo.map((z) => `<li>${esc(z)}</li>`).join('')}</ul></div><div><h4>${esc(t('kan.wanneerWerkt'))}</h4><ul class="lijst">${x.wanneer.map((w) => `<li>${esc(w)}</li>`).join('')}</ul></div></div>
-    ${ga ? `<div class="onder"><a href="${x.href}">${esc(ga)}</a></div>` : ''}`;
+    ${x.thermisch ? thermischBlok(x.thermisch) : ''}
+    <div class="twee"><div><h4>${esc(t('kan.zoWerkt'))}</h4><ul class="lijst">${x.zo.map((z) => `<li>${esc(z)}</li>`).join('')}</ul></div><div><h4>${esc(x.wanneerKop ?? t('kan.wanneerWerkt'))}</h4><ul class="lijst">${x.wanneer.map((w) => `<li>${esc(w)}</li>`).join('')}</ul></div></div>
+    ${ga ? `<div class="onder"><a href="${x.gaHref ?? x.href}">${esc(ga)}</a></div>` : ''}`;
 }
 
 /*

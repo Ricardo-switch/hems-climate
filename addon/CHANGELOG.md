@@ -1,5 +1,27 @@
 # Wat is er nieuw · What is new
 
+## 0.101.0
+
+*1 november 2026*
+
+**Nieuw**
+
+- Onder Wat het huis eerst leert: hoe je huis warmte vasthoudt. Per kamer hoe snel hij afkoelt, wat de zon en elk apparaat doen, en hoe zeker dat al is
+
+**Beter**
+
+- Op tijd warm of koel zegt nu eerlijk dat het wacht tot het huis het stoken kent
+
+*English*
+
+**New**
+
+- Under What the house learns first: how your home holds heat. Per room how fast it cools down, what the sun and each device do, and how sure that is
+
+**Improved**
+
+- Warm or cool on time now honestly says it waits until the house knows the heating
+
 ## 0.100.0
 
 *31 oktober 2026*
