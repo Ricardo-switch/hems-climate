@@ -16,7 +16,8 @@ verwijzing bestaat.
 - **De naam is SunArc** (sinds 31 oktober 2026; eerst Smart Climate): de zon
   op de horizon met stralen in mint, ijs en violet. Wat je ziet heet zo; de
   technische namen bleven ([222]). Het logo staat naast de klok en opent Over
-  deze app ([232]).
+  deze app ([232]); op het always-on display van de wand staat het sinds
+  0.106.1 klein rechtsboven, zodat de klok alleen staat.
 - **Nu: meekijken.** SunArc draait op de NAS naast de oude YAML-regeling,
   beslist elke ronde en legt vast wat hij zou doen. Klimaat en screens schakelt
   hij niet ([15], [28], [73]).

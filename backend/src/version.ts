@@ -47,8 +47,8 @@ export const NIEUW: readonly Nieuw[] = [
   {
     versie: '0.106.1',
     datum: '2026-11-01',
-    beter: ['De links in de app wijzen naar de nieuwe naam van de repository: SunARC-HA-APP'],
-    en: { beter: ['The links in the app point to the new name of the repository: SunARC-HA-APP'] },
+    beter: ['Het logo op het always-on display van de wand staat klein rechtsboven; de klok staat weer alleen', 'De links in de app wijzen naar de nieuwe naam van de repository: SunARC-HA-APP'],
+    en: { beter: ['The logo on the always-on display of the wall sits small in the top right; the clock stands on its own again', 'The links in the app point to the new name of the repository: SunARC-HA-APP'] },
   },
   {
     versie: '0.106.0',
