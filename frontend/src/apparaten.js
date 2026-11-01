@@ -120,42 +120,27 @@ function kaart(d) {
     <div class="labels">${label}</div>
     <div class="vandaag"><span>${esc(t('thuis.kaart.vandaag'))}</span><b>${esc(draaide > 0 ? t('apparaten.gedraaid', { duur: uren(draaide) }) : t('apparaten.nietGedraaid'))}</b></div>`;
 
+  // Wacht hij op zon, dan opent een tik het blad: uiterlijk klaar, en Nu starten (besluit 238).
   if (d.kanKiezen) {
-    const opties = [{ tekst: t('apparaten.geenHaast'), waarde: null }, ...d.keuzes];
-    const blok = document.createElement('div');
-    blok.innerHTML = `<div class="mini" style="margin-bottom: 6px">${esc(t('apparaten.klaarVoor'))}</div><div class="keuze" role="group" aria-label="${esc(t('apparaten.klaarVoorVan', { naam: d.naam }))}"></div><p class="mini gezegd" aria-live="polite" style="margin: 8px 0 0">${esc(gezegd.get(d.id) ?? '')}</p>`;
-    const groep = blok.querySelector('.keuze');
-    const antwoord = blok.querySelector('.gezegd');
-    for (const o of opties) {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.textContent = o.tekst;
-      b.setAttribute('aria-pressed', String(o.waarde == null ? d.klaarVoor == null : d.klaarVoor === o.waarde));
-      b.addEventListener('click', () => void kies(d, o, groep, b, antwoord));
-      groep.append(b);
-    }
-    el.append(blok);
+    el.dataset.blad = 'witgoed';
+    el.dataset.wg = d.id;
+    el.tabIndex = 0;
+    el.setAttribute('role', 'button');
+    el.setAttribute('aria-label', t('witgoed.openBlad', { naam: d.naam }));
+    if (d.klaarVoor) el.querySelector('.zin').insertAdjacentHTML('afterend', `<p class="mini" style="color: var(--zon-t); font-weight: 600; margin: 0">${esc(t('witgoed.klaarVoorKort', { klok: d.klaarVoor }))}</p>`);
+    witgoedNu.set(d.id, d);
   }
   return el;
 }
 
-async function kies(d, optie, groep, knop, antwoord) {
-  antwoord.textContent = t('apparaten.even');
-  try {
-    const res = await deur('api/uitstel', { id: d.id, klaarVoor: optie.waarde });
-    if (res === null) return;
-    const uit = await res.json().catch(() => ({}));
-    const tekst = !res.ok
-      ? uit.fout ?? t('kamer.mislukt')
-      : optie.waarde
-        ? t('apparaten.genoteerd', { tekst: optie.tekst })
-        : t(d.uiterlijk ? 'apparaten.geenHaastUiterlijk' : 'apparaten.geenHaastZin', { klok: d.uiterlijk });
-    if (res.ok) [...groep.children].forEach((b) => b.setAttribute('aria-pressed', String(b === knop)));
-    gezegd.set(d.id, tekst);
-    antwoord.textContent = tekst;
-  } catch {
-    antwoord.textContent = t('kamer.geenVerbinding');
-  }
+/** Het witgoed op de kaarten, voor het blad. */
+const witgoedNu = new Map();
+/** Van Te doen (apparaten.html#wg-droger): dat blad meteen open, één keer. */
+let wgUitAdres = location.hash.startsWith('#wg-') ? decodeURIComponent(location.hash.slice(4)) : null;
+function openUitAdres() {
+  if (!wgUitAdres || !witgoedNu.has(wgUitAdres)) return;
+  void hand.openWitgoed(witgoedNu.get(wgUitAdres));
+  wgUitAdres = null;
 }
 
 /* ------------------------------------------- de boiler en de jacuzzi */
@@ -279,8 +264,17 @@ function klimaatKaart({ a, r }) {
   el.dataset.actief = String(doet || bew?.soort === 'wait');
   // Alleen "SunArc zou: …": dan kan hij samen met de andere kaarten bovenaan (besluit 226).
   if (vanSC && zin === vanSC && rest && !doet && bew?.soort !== 'wait') el.dataset.zou = rest;
-  // Met de hand (besluit 235): in zonkleur, met wanneer het terug gaat.
-  const metHand = hand.data()?.apparaten?.find((x) => x.id === a.id && x.actief);
+  // Met de hand (besluit 235): in zonkleur, met wanneer het terug gaat. Een tik opent het blad (besluit 238).
+  const bijHand = hand.bij({ actuatorId: id, id: a.id });
+  const metHand = bijHand?.actief ? bijHand : null;
+  if (bijHand) {
+    // Geen link naar de kamer meer, maar het blad hier (de link ging voor de klik van de pagina).
+    el.removeAttribute('href');
+    el.dataset.blad = 'klimaat';
+    el.dataset.klimaat = bijHand.id;
+    el.tabIndex = 0;
+    el.setAttribute('role', 'button');
+  }
   el.innerHTML = `
     <div class="kopje"><span class="ik${a.klimaat?.kanKoelen ? '' : ' warm'}">${a.klimaat?.kanKoelen ? IK.airco : IK.warm}</span><div><b>${esc(a.naam)}</b><span class="mini">${esc(r.naam)}</span></div><div class="kw">${kw}</div></div>
     <div class="stand"><i style="background: ${stand[1]}"></i>${esc(stand[0])}</div>
@@ -440,6 +434,7 @@ function tekenNu() {
       k.scrollIntoView({ block: 'center' });
     }
   }
+  openUitAdres();
 }
 let naarKaart = false;
 
@@ -451,19 +446,35 @@ addEventListener('standwissel', teken);
 
 app.start('apparaten');
 void laadAlles();
-// Klimaat met de hand (besluit 235): de knop als er iets met de hand kan.
+// Het blad van een apparaat (besluit 238): een tik op een klimaatapparaat of witgoed dat op zon wacht.
 async function laadHand() {
-  const h = await hand.laad();
-  const kan = (h?.apparaten?.length ?? 0) + (h?.schakelaars?.length ?? 0) > 0;
-  $$('[data-hand-open]').forEach((b) => (b.hidden = !kan));
+  await hand.laad();
   teken();
 }
 void laadHand();
 setInterval(() => void laadHand(), 60_000);
 addEventListener('handveranderd', () => void laadAlles());
+function openBlad(kaartEl) {
+  if (kaartEl.dataset.blad === 'klimaat') void hand.openen(kaartEl.dataset.klimaat);
+  else if (kaartEl.dataset.blad === 'witgoed' && witgoedNu.has(kaartEl.dataset.wg)) void hand.openWitgoed(witgoedNu.get(kaartEl.dataset.wg));
+  else return;
+  $$('.app.gekozen').forEach((x) => x.classList.remove('gekozen'));
+  kaartEl.classList.add('gekozen');
+}
 document.addEventListener('click', (e) => {
-  if (e.target.closest('[data-hand-open]')) void hand.openen();
+  const k = e.target.closest('.app[data-blad]');
+  if (!k || e.target.closest('[data-hand]')) return;
+  e.preventDefault();
+  openBlad(k);
 });
+document.addEventListener('keydown', (e) => {
+  const k = e.target.closest?.('.app[data-blad]');
+  if (k && (e.key === 'Enter' || e.key === ' ')) {
+    e.preventDefault();
+    openBlad(k);
+  }
+});
+
 setInterval(() => void laadAlles(), 60_000);
 app.live((nieuw) => {
   state = nieuw;

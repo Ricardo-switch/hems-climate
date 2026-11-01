@@ -1,5 +1,33 @@
 # Wat is er nieuw · What is new
 
+## 0.107.0
+
+*1 november 2026*
+
+**Nieuw**
+
+- Tik op een apparaat bij Apparaten: hetzelfde blad als in het huis, met hoe lang, en nieuw: tot het doel
+- De droger aanklikbaar: kies hoe laat hij uiterlijk klaar moet zijn, of start hem nu
+- SunArc start de droger zelf op zon, of op tijd voor je eindtijd
+- Bij Te doen staat bovenaan wat nu met de hand of op zon loopt
+
+**Opgelost**
+
+- Klimaat met de hand: een opdracht kwam niet door bij de dienst
+
+*English*
+
+**New**
+
+- Tap a device on Devices: the same sheet as in the house, with how long, and new: until the target
+- The dryer can be tapped: choose when it must be done at the latest, or start it now
+- SunArc starts the dryer itself on sun, or in time for your end time
+- To do shows at the top what runs by hand or on sun right now
+
+**Fixed**
+
+- Climate by hand: a command did not get through to the service
+
 ## 0.106.1
 
 *1 november 2026*

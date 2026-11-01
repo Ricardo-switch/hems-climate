@@ -91,6 +91,11 @@ export interface ResidentDeferrable {
   readonly kanKiezen: boolean;
   /** Tijden om uit te kiezen die nog te halen zijn: "18:00", "morgen 07:00". */
   readonly keuzes: readonly { readonly tekst: string; readonly waarde: string }[];
+  /**
+   * Voor het blad van het apparaat (ronde 5): elk half uur dat nog te halen is,
+   * de komende dag, met hoe laat hij dan uiterlijk begint.
+   */
+  readonly stappen: readonly { readonly tekst: string; readonly waarde: string; readonly klaarMs: number; readonly beginMs: number }[];
 }
 
 export interface ResidentDecisionWords {
@@ -557,9 +562,22 @@ export function residentDeferrables(config: SiteConfig, list: readonly Deferrabl
         klaarSindsMs: dx.doneSinceMs ?? null,
         kanKiezen: dx.state === 'waiting' || dx.state === 'would_start',
         keuzes: dx.state === 'waiting' || dx.state === 'would_start' ? readyChoices(config, nowMs, dx.durationMin ?? FALLBACK_PROGRAM_MIN, lang) : [],
+        stappen: dx.state === 'waiting' || dx.state === 'would_start' ? readySteps(config, nowMs, dx.durationMin ?? FALLBACK_PROGRAM_MIN, lang) : [],
       },
     ];
   });
+}
+
+/** Elk half uur van de komende dag dat nog te halen is, voor de stappen in het blad (ronde 5). */
+function readySteps(config: SiteConfig, nowMs: number, durationMin: number, lang: Lang): { tekst: string; waarde: string; klaarMs: number; beginMs: number }[] {
+  const earliest = nowMs + durationMin * 60_000;
+  const dayOf = (ms: number) => new Intl.DateTimeFormat('en-CA', { timeZone: config.timezone }).format(ms);
+  const tijden = Array.from({ length: 48 }, (_, i) => `${String(Math.floor(i / 2)).padStart(2, '0')}:${i % 2 ? '30' : '00'}`);
+  return tijden
+    .map((waarde) => ({ waarde, ms: nextLocalTime(nowMs, waarde, config.timezone) }))
+    .filter((c) => c.ms >= earliest && c.ms <= nowMs + 24 * 3_600_000)
+    .sort((a, b) => a.ms - b.ms)
+    .map((c) => ({ waarde: c.waarde, klaarMs: c.ms, beginMs: c.ms - durationMin * 60_000, tekst: dayOf(c.ms) === dayOf(nowMs) ? c.waarde : `${lang === 'nl' ? 'morgen' : 'tomorrow'} ${c.waarde}` }));
 }
 
 /**

@@ -75,7 +75,8 @@ function metWens(h) {
 }
 
 async function laadAlles() {
-  const [s, h, z, v] = await Promise.allSettled([haal('api/state'), haal('api/huis'), haal('api/zon'), haal('api/vandaag')]);
+  // Het blad van een klimaatapparaat (besluit 238): met de hand, ook vanuit het huis.
+  const [s, h, z, v] = await Promise.allSettled([haal('api/state'), haal('api/huis'), haal('api/zon'), haal('api/vandaag'), hand.laad()]);
   if (s.status === 'fulfilled') state = s.value;
   if (h.status === 'fulfilled') huisData = metWens(h.value);
   if (z.status === 'fulfilled') zon = z.value;
@@ -187,6 +188,8 @@ function tekenNu() {
     // Een lopend camerabeeld niet afbreken bij elke verversing: het oude vak terugzetten.
     const lopend = new Map([...blad.querySelectorAll('[data-camera][data-gestart]')].map((b) => [b.dataset.camera, b]));
     blad.innerHTML = apparaat ? apparaatBlad(kamer, apparaat) : kamerBlad(kamer);
+    // Met de hand in het blad van de kamer, alleen in het zichtbare blad (wand of telefoon).
+    if (blad.closest(app.zicht())) blad.querySelectorAll('[data-handplek]').forEach((el) => hand.inPlek(el, el.dataset.handplek));
     // Van een melding over een batterij: die regel in beeld, even opgelicht.
     const naar = adres().apparaat;
     if (!apparaat && naar.startsWith('batterij-') && blad.closest(app.zicht())) {
@@ -366,7 +369,9 @@ function apparaatBlad(k, d) {
   const terug = `<button type="button" class="terug" data-terug>‹ ${esc(k.naam)}</button>`;
   const soort = soortVan(d);
   let inhoud;
-  if (soort === 'airco') inhoud = aircoBlad(k, d);
+  const metHand = (soort === 'airco' || soort === 'thermostaat') ? hand.bij(d) : null;
+  if (metHand) inhoud = handBlad(k, d, metHand, soort);
+  else if (soort === 'airco') inhoud = aircoBlad(k, d);
   else if (soort === 'thermostaat') inhoud = nestBlad(k, d);
   else if (soort === 'screen') inhoud = screenBlad(k, d);
   else if (soort === 'licht') inhoud = lampBlad(k, d);
@@ -406,6 +411,20 @@ function strookVandaag(d, kleur) {
 }
 
 const MEEKIJKEN = t('kamer.meekijken');
+
+/**
+ * Een klimaatapparaat dat met de hand kan (besluit 238): hetzelfde blad als bij
+ * Apparaten, met de draaiknop, hoe lang en tot het doel. Zonder (de brug staat
+ * uit bij Functies, of op de NAS) blijft het blad van meekijken.
+ */
+function handBlad(k, d, a, soort) {
+  return `${kopVan(d, d.aan ? (soort === 'airco' && !/warm/.test(d.stand) ? 'ijs-t' : 'gloed-t') : '')}
+    ${a.actief ? `<p class="klein" style="margin: -6px 0 0; color: var(--zon-t); font-weight: 600">${esc(huismodel.metHoofdletter(hand.nuZin(a)))}</p>` : ''}
+    <div data-handplek="${esc(a.id)}"></div>
+    ${filterRegel(d)}
+    ${knopRegel(d)}
+    ${strookVandaag(d, soort === 'airco' ? '#6FD3FF' : '#FF7A4D')}`;
+}
 
 function aircoBlad(k, d) {
   const doel = doelen.get(d.id) ?? d.klimaat?.doelC ?? 22;
@@ -897,3 +916,6 @@ app.live((nieuw) => {
 
 // Een antwoord of voorstel bij Hoe voelt het: het blad opnieuw tekenen (besluit 134).
 gevoel.bij(() => teken());
+
+// Met de hand gezet of terug (besluit 238): het huis en het blad opnieuw.
+addEventListener('handveranderd', () => void laadAlles());

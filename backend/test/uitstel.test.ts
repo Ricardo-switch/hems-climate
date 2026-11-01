@@ -88,7 +88,8 @@ describe('de droger op het scherm Apparaten', () => {
       [{ id: 'droger', state: 'waiting', reason: 'surplus_insufficient', durationMin: 168, readyByMs: at, latestStartMs: at - 168 * 60_000 }],
       now,
     );
-    expect(d).toEqual({
+    const { stappen, ...rest } = d!;
+    expect(rest).toEqual({
       id: 'droger',
       naam: 'Droger',
       stand: 'waiting',
@@ -107,6 +108,11 @@ describe('de droger op het scherm Apparaten', () => {
         { tekst: 'morgen 07:00', waarde: '07:00' },
       ],
     });
+    // Het blad (besluit 238): elk half uur dat nog te halen is, met hoe laat hij dan uiterlijk begint.
+    expect(stappen[0]).toMatchObject({ tekst: '17:00', waarde: '17:00' });
+    expect(stappen[0]!.klaarMs - stappen[0]!.beginMs).toBe(168 * 60_000);
+    expect(stappen.at(-1)!.klaarMs - now).toBeLessThanOrEqual(24 * 3_600_000);
+    expect(stappen.map((x) => x.waarde)).toContain('18:30');
   });
 
   it('zonder eindtijd de vaste uiterlijke start, en wat te doen als hij niet klaarstaat of klaar is', () => {

@@ -94,6 +94,7 @@ import { laadWekmodellen, type Wekmodellen } from './web/wekwoord.js';
 import { BRUG_ENTITEITEN, KlimaatBrug, MODUS_OPTIES } from './web/klimaatbrug.js';
 import { HAND_KLIMAAT, HAND_KNOPPEN, Handbediening } from './web/hand.js';
 import { Voorbeeld } from './web/voorbeeld.js';
+import { Witgoed } from './web/witgoed.js';
 import { kiesVerstaan, Verstaan } from './web/verstaan.js';
 
 
@@ -461,6 +462,8 @@ const client = new HaClient({
   allowKnoppen: (): { readonly entiteiten: readonly string[]; readonly opties: readonly string[] } =>
     klimaatAan() || (klimaatBrug?.terugzetten.length ?? 0) > 0 || (handbediening?.terugzetten.length ?? 0) > 0 ? { entiteiten: [...new Set([...BRUG_ENTITEITEN, ...HAND_KNOPPEN])], opties: MODUS_OPTIES } : { entiteiten: [], opties: [] },
   // Klimaat met de hand (besluit 235): de airco's op warm en de stekkers, als de brug aan staat of er nog iets terug moet.
+  // Witgoed starten (ronde 5, besluit 238): alleen de startknop van een droger of vaatwasser, alleen in de add-on.
+  allowStart: (): readonly string[] => witgoed?.knoppen() ?? [],
   allowHand: (): { readonly klimaat: readonly string[]; readonly schakelaars: readonly string[] } =>
     klimaatAan() || (handbediening?.terugzetten.length ?? 0) > 0 ? { klimaat: [...new Set([...HAND_KLIMAAT, ...handKnoppen().map((k) => k.id), ...(handbediening?.terugzetten ?? []).filter((t) => t.thermostaat).map((t) => t.id)])], schakelaars: [...new Set([...handSchakelaars().map((s) => s.id), ...(handbediening?.terugzetten ?? []).filter((t) => t.modus === 'aan').map((t) => t.id)])] } : { klimaat: [], schakelaars: [] },
 });
@@ -605,6 +608,13 @@ function klimaatAan(): boolean {
  * warm ook zelf, en een stekker met een warmtebron die niet in de regeling zit.
  * Alleen in de add-on en als de brug aan staat, net als de klimaatbrug.
  */
+/*
+ * Witgoed starten (ronde 5, besluit 238): de startknop van een droger of
+ * vaatwasser, op het moment dat de regeling zegt, of op een tik. Alleen in de
+ * add-on (en het voorbeeldhuis), net als met de hand.
+ */
+let witgoed: Witgoed | null = null;
+
 const handbediening: Handbediening | null = inHuisMetDeuren
   ? new Handbediening({
       state: (id) => allStates.get(id),
@@ -875,6 +885,8 @@ const runner: ShadowRunner | null =
                 // Een eindtijd vervalt als het programma klaar is of de deur openging.
                 void uitstelStore?.prune(snapshot.explanation.deferrables);
                 void bufferStore?.observe(snapshot.explanation.heatStores);
+                // Wat de regeling zou starten, start SunArc nu echt (besluit 238).
+                void witgoed?.opBesluit(snapshot).catch(() => []);
                 web?.publish(snapshot);
                 // De stand van de kamers in het huis hangt aan het besluit.
                 web?.huisVeranderd(false);
@@ -927,6 +939,16 @@ const onboarding =
 
 // Na het laden; comfort uit de app (besluit 130) kan hem later vervangen.
 let siteConfig = site?.config ?? null;
+witgoed = inHuisMetDeuren
+  ? new Witgoed({
+      config: () => siteConfig,
+      entiteiten: () => houseRegisters?.entities ?? null,
+      state: (id) => allStates.get(id),
+      druk: (knop) => client.callService('button', 'press', {}, { entity_id: knop }),
+      aan: () => inHuisMetDeuren,
+      write: (r) => console.log(r),
+    })
+  : null;
 
 /*
  * De indeling van het huis (besluit 96): alleen als er gelogd wordt, want hij
@@ -1762,6 +1784,7 @@ if (webPort != null) {
   web = new WebServer({
     access,
     ...(voorbeeld ? { voorbeeld } : {}),
+    ...(witgoed ? { witgoed } : {}),
     ...(eigenPoort ? { eigenPoort } : {}),
     ...(gegevens ? { gegevens } : {}),
     port: webPort,

@@ -275,6 +275,10 @@ export class NepHa {
         } else if (dienst === 'set_temperature') this.#zet(id, null, { temperature: Number(data['temperature']) });
         else if (dienst === 'turn_off') this.#zet(id, 'off', { hvac_action: 'off' });
         else if (dienst === 'turn_on') this.#zet(id, 'heat', { hvac_action: 'heating' });
+      } else if (domein === 'button' && dienst === 'press' && id.startsWith('button.droger')) {
+        // De droger start: hij draait, en op afstand starten gaat uit.
+        this.#zet('sensor.droger_status', 'Run');
+        this.#zet('binary_sensor.droger_op_afstand', 'off');
       } else if (domein === 'input_number' && dienst === 'set_value') {
         this.#zet(id, String(data['value']));
       } else if (domein === 'input_select' && dienst === 'select_option') {

@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telefoon · Een apparaat bedienen (schets)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Een apparaat bedienen op de telefoon (schets bij Wand-Apparaat-Blad, ronde 5
+   * punt 2-4, 1 november 2026). Een tik op een kaart bij Apparaten opent het blad
+   * van onderen, over de hele breedte; de kaarten blijven erachter.
+   * Keuzes van Ricardo: tot het doel voor alle klimaatapparaten; SunArc start de
+   * droger zelf (op zon, of op tijd voor de eindtijd), met Nu starten; bij Te
+   * doen een korte regel op de voorpagina en een blok Nu bij Vast en gepland.
+   * Standen: #klimaat de airco op zolder, #droger de droger, #tedoen de regel op Te doen.
+   */
+  .tel { position: relative; overflow: hidden; }
+  .inhoud { padding: 16px 16px 110px; display: flex; flex-direction: column; gap: 12px; }
+  .inhoud h1 { font-size: 34px; margin: 0; }
+  .kaart { padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
+  .kaart .kop { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 12px; align-items: center; }
+  .kaart .ik { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: rgba(255, 255, 255, 0.07); }
+  .kaart .ik svg { width: 21px; height: 21px; }
+  .kaart b { display: block; font-size: 16px; font-weight: 600; }
+  .kaart small { display: block; font-size: 12.5px; color: var(--gedempt); }
+  .kaart .kw { font-family: var(--kop); font-size: 21px; font-weight: 600; text-align: right; }
+  .kaart .stand { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
+  .kaart .stand i { width: 8px; height: 8px; border-radius: 50%; }
+  .tabs { position: fixed; left: 12px; right: 12px; bottom: 14px; }
+  .achter { position: fixed; inset: 0; background: rgba(4, 8, 16, 0.6); z-index: 60; }
+  .blad { position: fixed; left: 0; right: 0; bottom: 0; padding: 18px 18px 22px; border-radius: 26px 26px 0 0; display: flex; flex-direction: column; gap: 13px; background: #0e1726; border-top: 1px solid rgba(255, 255, 255, 0.08); z-index: 61; }
+  .blad .greep { width: 40px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.2); align-self: center; margin-top: -6px; }
+  .blad .boven { display: flex; align-items: start; gap: 10px; }
+  .blad .boven div { flex: 1; }
+  .blad h2 { margin: 0; font-family: var(--kop); font-size: 23px; font-weight: 600; }
+  .blad .nu { margin-top: 2px; font-size: 13.5px; color: var(--zacht); }
+  .blad .sluit { width: 34px; height: 34px; border-radius: 50%; border: 0; background: rgba(255, 255, 255, 0.08); color: var(--tekst); font-size: 16px; }
+  .knop-rij { display: flex; align-items: center; justify-content: center; gap: 14px; }
+  .knop-rij button { width: 48px; height: 48px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.14); background: rgba(255, 255, 255, 0.04); color: var(--tekst); font-size: 22px; }
+  .wijzer { width: 170px; height: 150px; }
+  .seg { display: flex; padding: 3px; border-radius: 12px; background: rgba(255, 255, 255, 0.06); }
+  .seg button { flex: 1; height: 34px; border: 0; border-radius: 9px; background: transparent; color: var(--zacht); font: inherit; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+  .seg button[aria-pressed='true'] { background: rgba(255, 255, 255, 0.14); color: var(--tekst); }
+  .vraag > span { display: block; font-size: 11.5px; font-weight: 700; color: var(--gedempt); margin-bottom: 6px; letter-spacing: 0.04em; }
+  .balk24 { position: relative; height: 18px; border-radius: 7px; background: rgba(255, 255, 255, 0.05); overflow: hidden; }
+  .balk24 i { position: absolute; top: 0; bottom: 0; }
+  .balk24 i.nacht { background: rgba(143, 134, 255, 0.16); }
+  .balk24 i.dag { background: rgba(255, 255, 255, 0.07); }
+  .balk24 i.zon { background: linear-gradient(180deg, rgba(247, 181, 72, 0.35), rgba(247, 181, 72, 0.05)); }
+  .balk24 i.hand { top: 4px; bottom: 4px; border-radius: 5px; background: linear-gradient(90deg, #f7b548, #ffd27a); }
+  .balk24 i.loopt { top: 4px; bottom: 4px; border-radius: 5px; background: rgba(110, 231, 183, 0.75); }
+  .balk24 i.uiterst { width: 2px; background: var(--gloed); }
+  .balk24 b { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: #fff; }
+  .assen { position: relative; height: 15px; margin-top: 4px; font-size: 11px; color: var(--gedempt); }
+  .assen span { position: absolute; white-space: nowrap; }
+  .hoe { padding: 11px 13px; border-radius: 14px; background: rgba(255, 255, 255, 0.04); font-size: 13px; line-height: 1.5; color: var(--zacht); }
+  .hoe b { color: var(--tekst); font-weight: 600; }
+  .onder { display: flex; align-items: center; gap: 12px; }
+  .onder .terug { border: 0; background: none; color: var(--zacht); font: inherit; font-weight: 600; font-size: 14px; padding: 0; }
+  .onder .zet { flex: 1; height: 48px; border-radius: 15px; border: 0; background: var(--tekst); color: var(--inkt); font: inherit; font-weight: 700; font-size: 15.5px; }
+  .tijd-kies { display: flex; align-items: center; justify-content: space-between; }
+  .tijd-kies button { width: 48px; height: 48px; border-radius: 15px; border: 0; background: rgba(255, 255, 255, 0.08); color: var(--tekst); font-size: 22px; }
+  .tijd-kies .getal { text-align: center; }
+  .tijd-kies .getal b { display: block; font-family: var(--kop); font-size: 52px; font-weight: 600; line-height: 1; }
+  .tijd-kies .getal span { font-size: 12.5px; color: var(--gedempt); }
+  /* Te doen: een korte regel voor wat nu loopt. */
+  .nu-regel { padding: 12px 14px; display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 12px; align-items: center; border-radius: 18px; background: rgba(247, 181, 72, 0.08); border: 1px solid rgba(247, 181, 72, 0.25); }
+  .nu-regel .ik { width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; background: rgba(247, 181, 72, 0.16); color: var(--zon-t); }
+  .nu-regel b { display: block; font-size: 15px; }
+  .nu-regel span { font-size: 12.5px; color: var(--zon-t); font-weight: 600; }
+  .nu-regel em { font-style: normal; font-size: 13px; font-weight: 700; color: var(--ijs-t); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="tel lucht lucht-dag">
+  <div class="inhoud" data-apparaten>
+    <h1 class="kop-1">Apparaten</h1>
+    <section class="glas kaart"><div class="kop"><span class="ik"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="6" width="18" height="8" rx="2"/><path d="M7 18c0-1.5 1-2 1-3M12 19c0-1.5 1-2 1-3M17 18c0-1.5 1-2 1-3"/></svg></span><div><b>Airco zolder</b><small>Zolder</small></div><div class="kw">0,0</div></div><div class="stand"><i style="background: var(--zon)"></i>Wacht op zon</div></section>
+    <section class="glas kaart"><div class="kop"><span class="ik"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="13" r="4.5"/></svg></span><div><b>Droger</b><small>Bijkeuken</small></div><div class="kw">0,0</div></div><div class="stand"><i style="background: var(--zon)"></i>Wacht op zon</div></section>
+    <section class="glas kaart"><div class="kop"><span class="ik"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l2 2"/></svg></span><div><b>Nest thermostaat</b><small>Woonkamer</small></div><div class="kw">20°</div></div><div class="stand"><i style="background: var(--gloed)"></i>Verwarmt</div></section>
+  </div>
+
+  <div class="inhoud" data-tedoen hidden>
+    <h1 class="kop-1">Te doen</h1>
+    <div class="nu-regel"><span class="ik"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="6" width="18" height="8" rx="2"/><path d="M7 18c0-1.5 1-2 1-3M12 19c0-1.5 1-2 1-3M17 18c0-1.5 1-2 1-3"/></svg></span><div><b>Airco zolder warm</b><span>met de hand, tot het 21° is</span></div><em>Terug</em></div>
+    <div class="nu-regel"><span class="ik"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="13" r="4.5"/></svg></span><div><b>Droger op zon</b><span>uiterlijk klaar 18:00</span></div><em>Aanpassen</em></div>
+    <section class="glas kaart"><b>Herinneringen</b><small>Om 20:00 de container aan de straat</small></section>
+    <section class="glas kaart"><b>Vast en gepland</b><small>Vandaag nog 2 · screens dicht om 17:21</small></section>
+  </div>
+  <nav class="tabs" id="tabs" aria-label="Hoofdmenu"></nav>
+
+  <div class="achter" data-blad></div>
+  <aside class="blad" data-blad="klimaat">
+    <span class="greep"></span>
+    <div class="boven"><div><h2>Airco zolder</h2><p class="nu">Nu 17,8° · <b style="color: var(--zon-t); font-weight: 600">wacht op zon</b></p></div><button class="sluit" type="button" aria-label="Sluiten">×</button></div>
+    <div class="knop-rij"><button type="button" aria-label="Lager">−</button><svg class="wijzer" viewBox="0 0 210 190" data-wijzer></svg><button type="button" aria-label="Hoger">+</button></div>
+    <div class="seg"><button type="button">Koelen</button><button type="button" aria-pressed="true">Verwarmen</button><button type="button">Uit</button></div>
+    <div class="vraag"><span>HOE LANG</span><div class="seg"><button type="button">1 uur</button><button type="button">2 uur</button><button type="button">Tot 22:00</button><button type="button" aria-pressed="true">Tot 21°</button></div></div>
+    <div>
+      <div class="balk24"><i class="nacht" style="left: 0; width: 29.2%"></i><i class="dag" style="left: 29.2%; width: 62.5%"></i><i class="nacht" style="left: 91.7%; width: 8.3%"></i><i class="hand" style="left: 58.3%; width: 9%"></i><b style="left: 58.3%"></b></div>
+      <div class="assen"><span style="left: 0">0</span><span style="right: 42.4%; color: var(--tekst); font-weight: 700">nu</span><span style="left: 59%; color: var(--zon-t); font-weight: 600">± 16:10 op 21°</span><span style="right: 0">24</span></div>
+    </div>
+    <div class="hoe">De app zet de airco zelf op warm, <b>tot het 21° is</b>, en dan weer uit; uiterlijk om 22:00.</div>
+    <div class="onder"><button class="zet" type="button">Verwarm tot 21°</button></div>
+  </aside>
+  <aside class="blad" data-blad="droger" hidden>
+    <span class="greep"></span>
+    <div class="boven"><div><h2>Droger</h2><p class="nu">Programma van 2 uur 48 · <b style="color: var(--zon-t); font-weight: 600">wacht op zon</b></p></div><button class="sluit" type="button" aria-label="Sluiten">×</button></div>
+    <div class="vraag"><span>UITERLIJK KLAAR</span>
+      <div class="tijd-kies"><button type="button" aria-label="Eerder">−</button><div class="getal"><b>18:00</b><span>uiterlijk start om 15:12</span></div><button type="button" aria-label="Later">+</button></div>
+    </div>
+    <div>
+      <div class="balk24"><i class="nacht" style="left: 0; width: 23.2%"></i><i class="zon" style="left: 23.2%; width: 67.9%"></i><i class="nacht" style="left: 91.1%; width: 8.9%"></i><i class="loopt" style="left: 50.5%; width: 11.7%"></i><i class="uiterst" style="left: 75%"></i><b style="left: 50.5%"></b></div>
+      <div class="assen"><span style="left: 0">0</span><span style="left: 51.5%; color: var(--mint-t); font-weight: 600">op zon</span><span style="left: 71%; color: var(--gloed-t); font-weight: 600">18:00</span><span style="right: 0">24</span></div>
+    </div>
+    <div class="hoe">SunArc start hem op zon zodra er 0,8 kW over is, en anders om 15:12, zodat hij om 18:00 klaar is. Alleen met <b>op afstand starten</b> aan op de droger.</div>
+    <div class="onder"><button class="terug" type="button">Nu starten</button><button class="zet" type="button">Bewaar</button></div>
+  </aside>
+</div>
+<script src="../../frontend/kit/teksten.nl.js"></script>
+<script src="../../frontend/kit/teksten.en.js"></script>
+<script src="../../frontend/kit/taal.js"></script>
+<script src="../../frontend/kit/nav.js"></script>
+<script>
+  const stand = location.hash.slice(1) || 'klimaat';
+  const $ = (s) => document.querySelector(s);
+  if (nav.tabs) nav.tabs(document.getElementById('tabs'), stand === 'tedoen' ? 'tedoen' : 'apparaten');
+  function wijzer(doel, nu, kleur) {
+    const hoek = (c) => (-225 + ((c - 16) / 14) * 270) * (Math.PI / 180);
+    const punt = (c, r) => [105 + r * Math.cos(hoek(c)), 100 + r * Math.sin(hoek(c))];
+    const streep = [];
+    for (let c = 16; c <= 30; c += 0.5) {
+      const [x1, y1] = punt(c, 78), [x2, y2] = punt(c, c % 1 ? 86 : 90);
+      const tussen = c >= Math.min(nu, doel) && c <= Math.max(nu, doel);
+      streep.push(`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${tussen ? kleur : 'rgba(255,255,255,0.18)'}" stroke-width="${tussen ? 3 : 2}" stroke-linecap="round"/>`);
+    }
+    const [dx, dy] = punt(doel, 64);
+    return `${streep.join('')}<circle cx="${dx.toFixed(1)}" cy="${dy.toFixed(1)}" r="6" fill="${kleur}"/><text x="105" y="110" text-anchor="middle" font-family="Bricolage Grotesque" font-weight="600" font-size="52" fill="#eef3f7">${doel}°</text><text x="105" y="134" text-anchor="middle" font-family="Figtree" font-size="13" fill="#8494a5">nu ${String(nu).replace('.', ',')}°</text>`;
+  }
+  $('[data-wijzer]').innerHTML = wijzer(21, 17.8, '#ff9a6b');
+  document.querySelectorAll('[data-blad]').forEach((el) => (el.hidden = stand === 'tedoen' || (el.dataset.blad && el.dataset.blad !== stand)));
+  if (stand === 'tedoen') {
+    $('[data-apparaten]').hidden = true;
+    $('[data-tedoen]').hidden = false;
+  }
+</script>
+</body>
+</html>

@@ -224,7 +224,9 @@
       <div class="tdp-knoppen">${telStand() || !data?.bewoner ? '' : `<a class="pil" href="jij.html#agenda">${esc(t('tedoen.agendasKiezen'))}</a>`}<button type="button" class="pil licht" data-td-nieuwknop>${esc(t('tedoen.plusHerinnering'))}</button></div></div>`;
     if (!data) return `${kop}<p class="mini">${esc(t('algemeen.laden'))}</p>`;
     if (!data.aan) return `${kop}<section class="glas tdp-vak"><p class="uitleg">${esc(t('tedoen.uit'))}</p><a class="pil" href="functies.html?groep=assistent#tedoen">${esc(t('tedoen.naarFuncties'))}</a></section>`;
-    return `${kop}<div class="tdp-drie">
+    // Wat nu met de hand of op zon loopt (besluit 238), boven de rest.
+    const nu = global.hand?.nuHtml() ?? '';
+    return `${kop}${nu ? `<div class="nu-regels">${nu}</div>` : ''}<div class="tdp-drie">
       <section class="glas tdp-vak">
         <h2>${esc(t('tedoen.herinneringen'))}<em>${data.herinneringen.length || ''}</em></h2>
         ${data.herinneringen.map(herinneringHtml).join('') || `<p class="mini">${esc(t('tedoen.geenHerinneringen'))}</p>`}
@@ -394,5 +396,12 @@
     global.app.start('tedoen');
     void laad();
     setInterval(() => void laad(), 60_000);
+    // Met de hand en witgoed op zon (besluit 238).
+    if (global.hand) {
+      const nu = () => void global.hand.laadNu().then(tekenPagina);
+      nu();
+      setInterval(nu, 60_000);
+      global.addEventListener('handveranderd', nu);
+    }
   }
 })(window);

@@ -583,42 +583,39 @@ html.sc-stil::view-transition-group(*), html.sc-stil::view-transition-old(*), ht
 .td-onder svg { width: 16px; height: 16px; }
 
 /*
- * Klimaat met de hand (besluit 235, schetsen Wand-Klimaat-Hand en
- * Tel-Klimaat-Hand): een laag met links de apparaten en rechts het blad; op de
- * telefoon één tegelijk, van onderen.
+ * Het blad van een apparaat (besluit 238, schetsen Wand-Apparaat-Blad en
+ * Tel-Apparaat-Blad; eerst klimaat met de hand, besluit 235). Op de wand rechts
+ * naast de kaarten, die zichtbaar blijven; op de telefoon van onderen.
  */
 .hand-laag { position: absolute; inset: 0; z-index: 40; }
 .hand-laag.tel { position: fixed; z-index: 70; }
 .hand-achter { position: absolute; inset: 0; background: rgb(4 8 16 / 0.6); }
-.hand-vak { position: absolute; inset: 24px 26px 20px 112px; display: grid; grid-template-columns: 400px minmax(0, 1fr); gap: 16px; }
-.hand-vel { position: absolute; left: 8px; right: 8px; bottom: 8px; max-height: 90vh; overflow-y: auto; border-radius: 26px; }
-.hand-lijst, .hand-blad { background: rgb(var(--nacht) / 0.97); }
-.hand-lijst { padding: 14px 18px; display: flex; flex-direction: column; min-height: 0; overflow-y: auto; }
-.hand-lijstkop { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
-.hand-lijstkop h2, .hand-boven h2 { margin: 0; font-family: var(--kop); font-weight: 600; }
-.hand-lijstkop h2 { font-size: 22px; }
+.hand-laag:not(.tel) .hand-achter { background: transparent; }
+.hand-vel { position: absolute; top: 24px; right: 26px; bottom: 20px; width: 470px; display: flex; }
+.hand-vel > .hand-blad { flex: 1; }
+.hand-laag.tel .hand-vel { top: auto; left: 0; right: 0; bottom: 0; width: auto; max-height: 92vh; overflow-y: auto; border-radius: 26px 26px 0 0; }
+.hand-laag.tel .hand-vel > .hand-blad { border-radius: 26px 26px 0 0; }
+/* De draaiknop met min en plus, en de tijd voor witgoed. */
+.hand-knoprij { display: flex; align-items: center; justify-content: center; gap: 16px; }
+.hand-knoprij button, .hand-tijd button { width: 52px; height: 52px; flex: none; border-radius: 50%; border: 1px solid rgb(var(--wit) / 0.14); background: rgb(var(--wit) / 0.04); color: var(--tekst); font-size: 24px; cursor: pointer; }
+.hand-knoprij button:disabled, .hand-tijd button:disabled { opacity: 0.35; cursor: default; }
+.hand-wijzer { width: 210px; height: 190px; color: var(--tekst); }
+.hand-kolom { flex-direction: column; align-items: stretch; gap: 8px; }
+.hand-tijd { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.hand-tijd .getal { text-align: center; }
+.hand-tijd .getal b { display: block; font-family: var(--kop); font-size: 58px; font-weight: 600; line-height: 1; letter-spacing: -0.03em; }
+.hand-tijd .getal span { display: block; margin-top: 6px; font-size: 13px; color: var(--gedempt); }
+.hand-tijd .getal b.woord { font-size: 34px; line-height: 1.2; }
+/* In het blad van een kamer staat het blad zonder eigen kop. */
+[data-handplek] { display: flex; flex-direction: column; gap: 14px; }
+[data-handplek] .hand-vraag { flex-direction: column; align-items: stretch; gap: 6px; }
+.hand-blad { background: rgb(var(--nacht) / 0.97); }
+.hand-boven h2 { margin: 0; font-family: var(--kop); font-weight: 600; }
 .hand-laag .sluit { width: 36px; height: 36px; flex: none; border-radius: 50%; border: 0; background: rgb(var(--wit) / 0.08); color: var(--tekst); font-size: 18px; cursor: pointer; }
-.hand-regel { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 12px; align-items: center; width: 100%; padding: 11px 0; border: 0; border-top: 1px solid rgb(var(--wit) / 0.06); background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
-.hand-regel:first-of-type { border-top: 0; }
-.hand-regel b { display: block; font-size: 15.5px; font-weight: 600; }
-.hand-regel span { display: block; font-size: 13px; color: var(--gedempt); }
-.hand-regel span.hand-actief { color: var(--zon-t); font-weight: 600; }
-.hand-regel .temp { font-family: var(--kop); font-size: 22px; font-weight: 600; text-align: right; }
-.hand-regel .temp small { display: block; font-family: var(--romp); font-size: 11.5px; font-weight: 600; color: var(--gedempt); }
-.hand-regel.gekozen { background: rgb(var(--wit) / 0.07); border-radius: 12px; margin: 0 -8px; padding: 11px 8px; width: calc(100% + 16px); border-top-color: transparent; }
-.hand-lijst .tip { margin-top: auto; padding-top: 10px; font-size: 12.5px; color: var(--gedempt); }
 .hand-blad { padding: 20px 26px; display: flex; flex-direction: column; gap: 14px; min-height: 0; overflow-y: auto; }
 .hand-boven { display: flex; align-items: start; justify-content: space-between; gap: 16px; }
 .hand-boven h2 { font-size: 28px; }
 .hand-boven .nu { margin: 4px 0 0; font-size: 14px; color: var(--zacht); }
-.hand-lijstknop { display: none; border: 0; background: none; padding: 0 0 6px; color: var(--zacht); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
-.hand-laag.tel .hand-lijstknop { display: block; }
-.hand-doel { display: flex; align-items: center; justify-content: center; gap: 34px; }
-.hand-doel button { width: 60px; height: 60px; border-radius: 20px; border: 0; background: rgb(var(--wit) / 0.08); color: var(--tekst); font-size: 28px; cursor: pointer; }
-.hand-doel button:disabled { opacity: 0.35; cursor: default; }
-.hand-doel .getal { text-align: center; min-width: 190px; }
-.hand-doel .getal b { display: block; font-family: var(--kop); font-size: 84px; font-weight: 600; line-height: 1; letter-spacing: -0.03em; }
-.hand-doel .getal span { display: block; margin-top: 6px; font-size: 13.5px; color: var(--gedempt); }
 .hand-vraag { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .hand-vraag > span { font-size: 14px; font-weight: 600; color: var(--zacht); }
 .hand-seg > .chip { border: 0; height: 34px; padding: 0 14px; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
@@ -637,14 +634,20 @@ html.sc-stil::view-transition-group(*), html.sc-stil::view-transition-old(*), ht
 .hand-zet { margin-left: auto; height: 48px; padding: 0 24px; border-radius: 15px; border: 0; background: var(--tekst); color: var(--inkt); font: inherit; font-size: 16px; font-weight: 700; cursor: pointer; }
 .hand-zet:disabled { opacity: 0.4; cursor: default; }
 .hand-laag.tel .hand-blad { padding: 18px; gap: 12px; }
-.hand-laag.tel .hand-doel { gap: 0; justify-content: space-between; }
-.hand-laag.tel .hand-doel .getal b { font-size: 60px; }
 .hand-laag.tel .hand-vraag { flex-direction: column; align-items: stretch; gap: 6px; }
 .hand-laag.tel .hand-zet { flex: 1; }
-/* Op de wand één sluitknop: die van het blad. */
-.hand-laag:not(.tel) .hand-vak:has(.hand-blad) .hand-lijstsluit { display: none; }
-#tel .hand-knop { height: 36px; padding: 0 12px; font-size: 13px; }
-.hand-knop { flex: none; height: 40px; padding: 0 16px; border-radius: 13px; border: 0; background: var(--tekst); color: var(--inkt); font: inherit; font-size: 14.5px; font-weight: 700; cursor: pointer; }
+/* Wat nu met de hand of op zon loopt, bij Te doen en Vast en gepland (besluit 238). */
+.nu-regels { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+.nu-regel { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 18px; background: rgb(247 181 72 / 0.08); border: 1px solid rgb(247 181 72 / 0.25); color: var(--tekst); text-decoration: none; }
+.nu-regel .ik { width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; background: rgb(247 181 72 / 0.16); color: var(--zon-t); }
+.nu-regel .ik svg { width: 20px; height: 20px; }
+.nu-regel b { display: block; font-size: 15px; font-weight: 600; }
+.nu-regel span { font-size: 12.5px; color: var(--zon-t); font-weight: 600; }
+.nu-regel em, .nu-regel button { font-style: normal; font-size: 13px; font-weight: 700; color: var(--ijs-t); background: none; border: 0; padding: 0; font-family: inherit; cursor: pointer; }
+/* Een kaart bij Apparaten opent het blad. */
+.app[data-blad] { cursor: pointer; }
+.app[data-blad]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.app.gekozen { box-shadow: inset 0 0 0 2px rgb(var(--wit) / 0.5); }
 
 /*
  * Het voorbeeldhuis (besluit 237): een violette rand om het hele scherm, en
@@ -697,3 +700,6 @@ html.tel-stand.sc-voorbeeld #tel { padding-bottom: 150px; }
 .vb-terug .vb-kort { display: none; }
 html.tel-stand .vb-terug .vb-lang { display: none; }
 html.tel-stand .vb-terug .vb-kort { display: inline; }
+/* In het voorbeeld staat de balk van de dag onderaan: het blad stopt erboven. */
+html.sc-voorbeeld .hand-laag:not(.tel) .hand-vel { bottom: 124px; }
+html.sc-voorbeeld .hand-laag.tel .hand-vel { bottom: 150px; border-radius: 26px; }

@@ -124,7 +124,7 @@ Werkt het met jouw apparaten? SunArc werkt met wat je huis heeft. Een airco, een
 - De app zit achter de inlog van Home Assistant (Ingress). Er staat geen poort open, tenzij je zelf de eigen poort voor Tailscale aanzet.
 - Een eigen AppArmor-profiel: beveiligingscijfer 8, het hoogste.
 - De images worden op GitHub gebouwd en ondertekend met Cosign.
-- SunArc schrijft naar Home Assistant alleen via smalle deuren: lampen, scènes, schermen, en het klimaat met de hand met een eindtijd. Een test bewijst dat er niets anders door kan. Waarom de add-on de configuratie van Home Assistant mag schrijven, staat in de uitleg van de add-on.
+- SunArc schrijft naar Home Assistant alleen via smalle deuren: lampen, scènes, schermen, de startknop van witgoed dat op zon wacht, en het klimaat met de hand met een eindtijd. Een test bewijst dat er niets anders door kan. Waarom de add-on de configuratie van Home Assistant mag schrijven, staat in de uitleg van de add-on.
 - Een zwakke plek gevonden? Zie [SECURITY.md](SECURITY.md).
 
 ## Hoe het werkt

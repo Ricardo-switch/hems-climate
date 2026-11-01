@@ -105,6 +105,35 @@ export async function huisRoutes(d: Diensten, v: Verzoek): Promise<boolean> {
   }
 
   /*
+   * Witgoed starten (besluit 238): GET per apparaat of het kan en waarom niet;
+   * POST { id, start: true } drukt nu op de startknop.
+   */
+  if (path === '/api/witgoed') {
+    const w = d.options.witgoed;
+    const config = d.config();
+    if (w == null || config == null) {
+      sendJson(res, 503, { wachten: 'witgoed starten kan alleen in de add-on' });
+      return true;
+    }
+    if (method === 'GET') {
+      sendJson(res, 200, { apparaten: (config.deferrables ?? []).map((x) => ({ id: x.id, naam: x.name, ...w.stand(x.id) })) });
+      return true;
+    }
+    if (method !== 'POST') {
+      sendJson(res, 405, { fout: 'witgoed: GET of POST' });
+      return true;
+    }
+    const body = (await readJson(req).catch(() => null)) as Record<string, unknown> | null;
+    if (typeof body?.['id'] !== 'string' || body['start'] !== true) {
+      sendJson(res, 400, { fout: 'stuur { id, start: true }' });
+      return true;
+    }
+    const uit = await w.nuStarten(body['id']);
+    sendJson(res, uit.ok ? 200 : 409, uit.ok ? { ok: true } : { fout: uit.reden });
+    return true;
+  }
+
+  /*
    * Klimaat met de hand (besluit 235): GET wat er kan, per apparaat en per
    * stekker; POST een doel tot een tijd, een stekker aan, of terug.
    */
@@ -121,10 +150,11 @@ export async function huisRoutes(d: Diensten, v: Verzoek): Promise<boolean> {
       const knoppen = h.knoppen();
       const apparaten = (await h.hand.standen(knoppen.map((k) => k.id))).map((s) => {
         const knop = knoppen.find((k) => k.id === s.id);
-        if (knop) return { ...s, naam: knop.naam, kamer: knop.kamer, zoneId: null };
+        if (knop) return { ...s, naam: knop.naam, kamer: knop.kamer, zoneId: null, actuatorId: null };
         const a = config.actuators.find((x) => x.ref.id === s.id);
         const zone = zoneVan(s.id);
-        return { ...s, naam: a?.name ?? s.id, kamer: zone?.name ?? null, zoneId: zone?.id ?? null };
+        // Het klimaatapparaat uit de configuratie: zo vindt het blad van een apparaat in het huis zijn stand (ronde 5).
+        return { ...s, naam: a?.name ?? s.id, kamer: zone?.name ?? null, zoneId: zone?.id ?? null, actuatorId: a?.id ?? null };
       });
       const schakelaars = h.schakelaars().map((s) => ({ ...s, totMs: h.hand.schakelaarTot(s.id) }));
       // Het eind van het dagdeel: 22:00, of 's nachts twee uur, zoals de klimaatbrug.
@@ -150,6 +180,8 @@ export async function huisRoutes(d: Diensten, v: Verzoek): Promise<boolean> {
     }
     const id = typeof body['id'] === 'string' ? body['id'] : '';
     const totMs = Number(body['totMs']);
+    // Tot het doel (ronde 5): terug zodra de kamer het doel haalt, en uiterlijk op totMs.
+    const totDoel = body['totDoel'] === true;
     try {
       if (body['terug'] === true) {
         sendJson(res, (await h.hand.terugNu(id)) ? 200 : 404, { ok: true });
@@ -172,7 +204,7 @@ export async function huisRoutes(d: Diensten, v: Verzoek): Promise<boolean> {
           sendJson(res, 400, { fout: 'doelC is een getal' });
           return true;
         }
-        const uit = await h.hand.zetKnop(id, doel, totMs);
+        const uit = await h.hand.zetKnop(id, doel, totMs, totDoel);
         sendJson(res, uit.ok ? 200 : 400, uit.ok ? uit : { fout: uit.reden });
         return true;
       }
@@ -180,7 +212,7 @@ export async function huisRoutes(d: Diensten, v: Verzoek): Promise<boolean> {
         sendJson(res, 400, { fout: 'modus is verwarmen of koelen, doelC een getal' });
         return true;
       }
-      const uit = await h.hand.zet(id, modus, doel, totMs);
+      const uit = await h.hand.zet(id, modus, doel, totMs, totDoel);
       sendJson(res, uit.ok ? 200 : 400, uit.ok ? uit : { fout: uit.reden });
     } catch (error) {
       sendJson(res, 502, { fout: `Home Assistant weigerde: ${(error as Error).message}` });

@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Een apparaat bedienen (schets)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Een apparaat bedienen (schets, ronde 5 punt 2, 3 en 4, 1 november 2026).
+   *
+   * Eén blad per apparaat, of je nu via Apparaten of via het huis komt. Klimaat
+   * met de hand is geen los onderdeel meer: het blad van een klimaatapparaat
+   * (de draaiknop, Koelen/Verwarmen/Uit) krijgt "Hoe lang" erbij, met 1 uur,
+   * 2 uur, tot het eind van het dagdeel, of tot het doel bereikt is. De knop
+   * Met de hand en de lijst verdwijnen.
+   *
+   * Witgoed (de droger, de vaatwasser) wordt ook aanklikbaar: wacht hij op zon,
+   * dan kies je hoe laat hij uiterlijk klaar moet zijn; dan begint hij ook
+   * zonder zon op tijd. En alles wat zo loopt, staat bij Te doen › Vast en
+   * gepland, met Aanpassen en Terug.
+   *
+   * Standen: #klimaat de airco op zolder kiezen; #actief die airco met de hand
+   * aan, tot het doel; #droger de droger die op zon wacht; #tedoen Vast en
+   * gepland met beide erbij.
+   */
+  main { position: relative; padding: 22px 26px 20px 22px; display: flex; flex-direction: column; gap: 16px; min-height: 0; }
+  .kopregel { display: flex; justify-content: space-between; align-items: end; }
+  .kopregel .lead { margin-top: 4px; }
+  .veld { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 470px; gap: 16px; }
+
+  /* De kaarten van Apparaten, zoals nu; de gekozen kaart licht op. */
+  .kaarten { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-content: start; }
+  .kaart { padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; cursor: pointer; }
+  .kaart .kop { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 12px; align-items: center; }
+  .kaart .ik { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: rgba(255, 255, 255, 0.07); }
+  .kaart .ik svg { width: 22px; height: 22px; }
+  .kaart b { display: block; font-size: 16px; font-weight: 600; }
+  .kaart small { display: block; font-size: 12.5px; color: var(--gedempt); }
+  .kaart .kw { font-family: var(--kop); font-size: 22px; font-weight: 600; text-align: right; }
+  .kaart .kw small { text-align: right; }
+  .kaart .stand { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
+  .kaart .stand i { width: 8px; height: 8px; border-radius: 50%; }
+  .kaart .zin { font-size: 13px; color: var(--zacht); }
+  .kaart .hand { font-size: 13px; font-weight: 600; color: var(--zon-t); }
+  .kaart.gekozen { box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.5); }
+  .kaart.stil { opacity: 0.55; }
+
+  /* Het blad: draaiknop, wat, hoe lang, de dag als balk, en hoe het gaat. */
+  .blad { padding: 22px 24px; display: flex; flex-direction: column; gap: 14px; }
+  .blad .boven { display: flex; justify-content: space-between; align-items: start; }
+  .blad h2 { margin: 0; font-family: var(--kop); font-size: 26px; font-weight: 600; }
+  .blad .nu { margin-top: 3px; font-size: 14px; color: var(--zacht); }
+  .blad .nu b { font-weight: 600; }
+  .blad .sluit { width: 36px; height: 36px; border-radius: 50%; border: 0; background: rgba(255, 255, 255, 0.08); color: var(--tekst); font-size: 18px; }
+  .knop-rij { display: flex; align-items: center; justify-content: center; gap: 22px; }
+  .knop-rij button { width: 52px; height: 52px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.14); background: rgba(255, 255, 255, 0.04); color: var(--tekst); font-size: 24px; }
+  .wijzer { width: 210px; height: 190px; }
+  .seg { display: flex; padding: 3px; border-radius: 12px; background: rgba(255, 255, 255, 0.06); }
+  .seg button { flex: 1; height: 36px; border: 0; border-radius: 9px; background: transparent; color: var(--zacht); font: inherit; font-size: 13.5px; font-weight: 600; white-space: nowrap; }
+  .seg button[aria-pressed='true'] { background: rgba(255, 255, 255, 0.14); color: var(--tekst); }
+  .vraag > span { display: block; font-size: 12px; font-weight: 700; color: var(--gedempt); margin-bottom: 6px; letter-spacing: 0.02em; }
+  .balk24 { position: relative; height: 22px; border-radius: 8px; background: rgba(255, 255, 255, 0.05); overflow: hidden; }
+  .balk24 i { position: absolute; top: 0; bottom: 0; }
+  .balk24 i.nacht { background: rgba(143, 134, 255, 0.16); }
+  .balk24 i.dag { background: rgba(255, 255, 255, 0.07); }
+  .balk24 i.zon { top: auto; height: 100%; background: linear-gradient(180deg, rgba(247, 181, 72, 0.35), rgba(247, 181, 72, 0.05)); }
+  .balk24 i.hand { top: 4px; bottom: 4px; border-radius: 5px; background: linear-gradient(90deg, #f7b548, #ffd27a); }
+  .balk24 i.loopt { top: 4px; bottom: 4px; border-radius: 5px; background: rgba(110, 231, 183, 0.75); }
+  .balk24 i.uiterst { top: 0; bottom: 0; width: 2px; background: var(--gloed); }
+  .balk24 b { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: #fff; }
+  .assen { position: relative; height: 16px; margin-top: 4px; font-size: 11.5px; color: var(--gedempt); }
+  .assen span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+  .hoe { padding: 12px 14px; border-radius: 14px; background: rgba(255, 255, 255, 0.04); font-size: 13.5px; line-height: 1.5; color: var(--zacht); }
+  .hoe b { color: var(--tekst); font-weight: 600; }
+  .onder { margin-top: auto; display: flex; align-items: center; gap: 14px; }
+  .onder .terug { border: 0; background: none; color: var(--zacht); font: inherit; font-weight: 600; font-size: 14.5px; padding: 0; }
+  .onder .zet { margin-left: auto; height: 48px; padding: 0 24px; border-radius: 15px; border: 0; background: var(--tekst); color: var(--inkt); font: inherit; font-weight: 700; font-size: 15.5px; }
+  .tijd-kies { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; }
+  .tijd-kies button { width: 52px; height: 52px; border-radius: 16px; border: 0; background: rgba(255, 255, 255, 0.08); color: var(--tekst); font-size: 24px; }
+  .tijd-kies .getal { text-align: center; }
+  .tijd-kies .getal b { display: block; font-family: var(--kop); font-size: 64px; font-weight: 600; line-height: 1; letter-spacing: -0.03em; }
+  .tijd-kies .getal span { font-size: 13px; color: var(--gedempt); }
+  .ring-rij { display: flex; align-items: center; gap: 16px; }
+  .ring-rij svg { width: 72px; height: 72px; flex: none; }
+  .ring-rij b { display: block; font-size: 17px; }
+  .ring-rij span { font-size: 13.5px; color: var(--zacht); }
+
+  /* Te doen › Vast en gepland, met wat nu met de hand of op zon loopt. */
+  .gepland { padding: 18px 22px; display: flex; flex-direction: column; gap: 4px; }
+  .gepland h3 { margin: 8px 0 2px; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--gedempt); }
+  .regel { display: grid; grid-template-columns: 66px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 12px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+  .regel .t { font-family: var(--kop); font-size: 19px; font-weight: 600; }
+  .regel .t small { display: block; font-family: Figtree, sans-serif; font-size: 11px; font-weight: 600; color: var(--gedempt); }
+  .regel b { display: block; font-size: 15.5px; font-weight: 600; }
+  .regel span { font-size: 13px; color: var(--zacht); }
+  .regel span.zon { color: var(--zon-t); font-weight: 600; }
+  .regel .actie { font-size: 13.5px; font-weight: 700; color: var(--ijs-t); }
+  .regel.nieuw { background: rgba(247, 181, 72, 0.06); margin: 0 -10px; padding: 12px 10px; border-radius: 12px; border-top-color: transparent; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-dag">
+  <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+  <main>
+    <div class="kopregel">
+      <div><h1 class="kop-1" data-paginakop>Apparaten</h1><p class="lead" data-paginazin>Wat elk apparaat nu doet. Tik er een aan om het te bedienen.</p></div>
+      <span class="pil" style="height: 40px"><span class="stip" style="background: var(--zon)"></span>1,8 kW zon over</span>
+    </div>
+
+    <div class="veld" data-apparaten>
+      <div class="kaarten">
+        <section class="glas kaart" data-k="zolder">
+          <div class="kop"><span class="ik"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="6" width="18" height="8" rx="2"/><path d="M7 18c0-1.5 1-2 1-3M12 19c0-1.5 1-2 1-3M17 18c0-1.5 1-2 1-3"/></svg></span><div><b>Airco zolder</b><small>Zolder</small></div><div class="kw" data-zolder-kw>0,0<small>kW nu</small></div></div>
+          <div class="stand" data-zolder-stand><i style="background: var(--zon)"></i>Wacht op zon</div>
+          <div class="zin" data-zolder-zin>Zou verwarmen, maar te weinig zon over. Begint vanzelf bij 0,8 kW.</div>
+        </section>
+        <section class="glas kaart" data-k="droger">
+          <div class="kop"><span class="ik"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="13" r="4.5"/><path d="M7 6.5h2"/></svg></span><div><b>Droger</b><small>Bijkeuken</small></div><div class="kw">0,0<small>kW nu</small></div></div>
+          <div class="stand"><i style="background: var(--zon)"></i>Wacht op zon</div>
+          <div class="zin" data-droger-zin>Klaar om te starten. Begint als er 0,8 kW over is.</div>
+        </section>
+        <section class="glas kaart stil" data-k="nest">
+          <div class="kop"><span class="ik"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l2 2"/></svg></span><div><b>Nest thermostaat</b><small>Woonkamer</small></div><div class="kw">20°<small>doel</small></div></div>
+          <div class="stand"><i style="background: var(--gloed)"></i>Verwarmt</div>
+          <div class="zin">Volgt je regeling: overdag 20°.</div>
+        </section>
+        <section class="glas kaart stil" data-k="airco">
+          <div class="kop"><span class="ik"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="6" width="18" height="8" rx="2"/><path d="M7 18c0-1.5 1-2 1-3M12 19c0-1.5 1-2 1-3M17 18c0-1.5 1-2 1-3"/></svg></span><div><b>Airco woonkamer</b><small>Woonkamer</small></div><div class="kw">0,0<small>kW nu</small></div></div>
+          <div class="stand"><i style="background: var(--gedempt)"></i>Uit</div>
+          <div class="zin">Volgt je regeling: koelen boven 23°.</div>
+        </section>
+        <section class="glas kaart stil" data-k="vaat">
+          <div class="kop"><span class="ik"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M4 8h16M8 13h8M8 16h8"/></svg></span><div><b>Vaatwasser</b><small>Keuken</small></div><div class="kw">0,0<small>kW nu</small></div></div>
+          <div class="stand"><i style="background: var(--mint)"></i>Klaar</div>
+          <div class="zin">Om 13:05 klaar, op eigen zon.</div>
+        </section>
+        <section class="glas kaart stil" data-k="badkamer">
+          <div class="kop"><span class="ik"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><path d="M4 18h16M6 14h12M8 10h8"/></svg></span><div><b>Thermostaat badkamer</b><small>Badkamer</small></div><div class="kw">21°<small>doel</small></div></div>
+          <div class="stand"><i style="background: var(--mint)"></i>Op temperatuur</div>
+          <div class="zin">Volgt je regeling: overdag 21°.</div>
+        </section>
+      </div>
+
+      <!-- Het blad van een klimaatapparaat -->
+      <aside class="glas blad" data-blad="klimaat">
+        <div class="boven"><div><h2>Airco zolder</h2><p class="nu" data-k-nu>Nu 17,8° op zolder · <b style="color: var(--zon-t)">wacht op zon</b></p></div><button class="sluit" type="button" aria-label="Sluiten">×</button></div>
+        <div class="knop-rij"><button type="button" aria-label="Lager">−</button><svg class="wijzer" viewBox="0 0 210 190" data-wijzer></svg><button type="button" aria-label="Hoger">+</button></div>
+        <div class="seg"><button type="button">Koelen</button><button type="button" aria-pressed="true">Verwarmen</button><button type="button">Uit</button></div>
+        <div class="vraag"><span>HOE LANG</span><div class="seg"><button type="button">1 uur</button><button type="button">2 uur</button><button type="button">Tot 22:00</button><button type="button" aria-pressed="true">Tot het 21° is</button></div></div>
+        <div>
+          <div class="balk24"><i class="nacht" style="left: 0; width: 29.2%"></i><i class="dag" style="left: 29.2%; width: 62.5%"></i><i class="nacht" style="left: 91.7%; width: 8.3%"></i><i class="hand" style="left: 58.3%; width: 9%" data-k-hand></i><b style="left: 58.3%"></b></div>
+          <div class="assen"><span style="left: 0; transform: none">0</span><span style="left: 57.6%; transform: translateX(-100%); color: var(--tekst); font-weight: 700">nu</span><span style="left: 59%; transform: none; color: var(--zon-t); font-weight: 600" data-k-eind>± 16:10 op 21°</span><span style="right: 0; left: auto; transform: none">24</span></div>
+        </div>
+        <div class="hoe" data-k-hoe>Je regeling verwarmt de zolder alleen met zon over. De app zet de airco nu zelf op warm, <b>tot het 21° is</b>, en dan weer uit; uiterlijk om 22:00. Stroom van het net, zolang er geen zon is.</div>
+        <div class="onder"><button class="terug" type="button" data-k-terug hidden>Terug naar je regeling</button><button class="zet" type="button" data-k-zet>Verwarm tot 21°</button></div>
+      </aside>
+
+      <!-- Het blad van witgoed -->
+      <aside class="glas blad" data-blad="droger" hidden>
+        <div class="boven"><div><h2>Droger</h2><p class="nu">Klaar om te starten · <b style="color: var(--zon-t)">wacht op zon</b></p></div><button class="sluit" type="button" aria-label="Sluiten">×</button></div>
+        <div class="ring-rij"><svg viewBox="0 0 72 72"><circle cx="36" cy="36" r="30" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="7"/><circle cx="36" cy="36" r="30" fill="none" stroke="#f7b548" stroke-width="7" stroke-dasharray="40 189" stroke-linecap="round" transform="rotate(-90 36 36)"/><text x="36" y="41" text-anchor="middle" font-family="Bricolage Grotesque" font-weight="600" font-size="15" fill="#eef3f7">2:48</text></svg><div><b>Programma van 2 uur 48</b><span>Begint vanzelf als er 0,8 kW zon over is. Nu 1,8 kW over, dus zo.</span></div></div>
+        <div class="vraag"><span>UITERLIJK KLAAR</span>
+          <div class="tijd-kies"><button type="button" aria-label="Eerder">−</button><div class="getal"><b>18:00</b><span>dan begint hij uiterlijk om 15:12, ook zonder zon</span></div><button type="button" aria-label="Later">+</button></div>
+        </div>
+        <div>
+          <div class="balk24"><i class="nacht" style="left: 0; width: 23.2%"></i><i class="zon" style="left: 23.2%; width: 67.9%"></i><i class="nacht" style="left: 91.1%; width: 8.9%"></i><i class="loopt" style="left: 50.5%; width: 11.7%"></i><i class="uiterst" style="left: 75%"></i><b style="left: 50.5%"></b></div>
+          <div class="assen"><span style="left: 0; transform: none">0</span><span style="left: 49.8%; transform: translateX(-100%); color: var(--tekst); font-weight: 700">nu</span><span style="left: 51.2%; transform: none; color: var(--mint-t); font-weight: 600">op zon, klaar ± 15:00</span><span style="left: 75%; color: var(--gloed-t); font-weight: 600">18:00</span><span style="right: 0; left: auto; transform: none">24</span></div>
+        </div>
+        <div class="hoe">SunArc kiest het moment: <b>op zon als dat kan</b>, en anders op tijd om om 18:00 klaar te zijn. Je ziet het ook bij Te doen.</div>
+        <div class="onder"><button class="terug" type="button">Nu starten</button><button class="zet" type="button">Bewaar</button></div>
+      </aside>
+    </div>
+
+    <!-- Te doen › Vast en gepland -->
+    <div class="veld" data-tedoen hidden style="grid-template-columns: minmax(0, 1fr) 420px">
+      <section class="glas gepland">
+        <h3>Nu</h3>
+        <div class="regel nieuw"><div class="t">tot<small>21°</small></div><div><b>Airco zolder warm</b><span class="zon">met de hand, tot het 21° is · uiterlijk 22:00</span></div><span class="actie">Terug</span></div>
+        <div class="regel nieuw"><div class="t">18:00<small>uiterlijk</small></div><div><b>Droger op zon</b><span class="zon">wacht op 0,8 kW over · anders begint hij om 15:12</span></div><span class="actie">Aanpassen</span></div>
+        <h3>Vandaag nog</h3>
+        <div class="regel"><div class="t">17:21<small>zon −10</small></div><div><b>Screens dicht</b><span>Werkdagen, 10 min voor zonsondergang</span></div><span class="actie">Aanpassen</span></div>
+        <div class="regel"><div class="t">20:00</div><div><b>Lamp woonkamer aan</b><span>Elke dag</span></div><span class="actie">Aanpassen</span></div>
+        <h3>De rest van de week</h3>
+        <div class="regel"><div class="t">07:00<small>ma</small></div><div><b>Screens open</b><span>Werkdagen</span></div><span class="actie">Aanpassen</span></div>
+      </section>
+      <section class="glas blad">
+        <h2 style="font-size: 22px">Wat staat hier</h2>
+        <p class="hoe" style="margin: 0">Bovenaan wat nu met de hand of op zon loopt, met wanneer het ophoudt. Daaronder je vaste opdrachten. Een tik opent hetzelfde blad als bij Apparaten.</p>
+      </section>
+    </div>
+  </main>
+</div>
+<script src="../../frontend/kit/teksten.nl.js"></script>
+<script src="../../frontend/kit/teksten.en.js"></script>
+<script src="../../frontend/kit/taal.js"></script>
+<script src="../../frontend/kit/nav.js"></script>
+<script>
+  const stand = location.hash.slice(1) || 'klimaat';
+  const $ = (s) => document.querySelector(s);
+  nav.balk(document.getElementById('balk'), stand === 'tedoen' ? 'tedoen' : 'apparaten');
+
+  /** De draaiknop, zoals in het huis: een boog van 16° tot 30°, het doel en wat het nu is. */
+  function wijzer(doel, nu, kleur) {
+    const hoek = (c) => (-225 + ((c - 16) / 14) * 270) * (Math.PI / 180);
+    const punt = (c, r) => [105 + r * Math.cos(hoek(c)), 100 + r * Math.sin(hoek(c))];
+    const streep = [];
+    for (let c = 16; c <= 30; c += 0.5) {
+      const [x1, y1] = punt(c, 78), [x2, y2] = punt(c, c % 1 ? 86 : 90);
+      const tussen = (c >= Math.min(nu, doel) && c <= Math.max(nu, doel));
+      streep.push(`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${tussen ? kleur : 'rgba(255,255,255,0.18)'}" stroke-width="${tussen ? 3 : 2}" stroke-linecap="round"/>`);
+    }
+    const [dx, dy] = punt(doel, 64);
+    return `${streep.join('')}<circle cx="${dx.toFixed(1)}" cy="${dy.toFixed(1)}" r="6" fill="${kleur}"/>
+      <text x="105" y="110" text-anchor="middle" font-family="Bricolage Grotesque" font-weight="600" font-size="52" fill="#eef3f7">${String(doel).replace('.', ',')}°</text>
+      <text x="105" y="134" text-anchor="middle" font-family="Figtree" font-size="13" fill="#8494a5">nu ${String(nu).replace('.', ',')}°</text>`;
+  }
+  $('[data-wijzer]').innerHTML = wijzer(21, 17.8, '#ff9a6b');
+
+  const kies = (k) => document.querySelectorAll('.kaart').forEach((el) => {
+    el.classList.toggle('gekozen', el.dataset.k === k);
+    el.classList.toggle('stil', el.dataset.k !== k);
+  });
+  if (stand === 'klimaat') kies('zolder');
+  if (stand === 'actief') {
+    kies('zolder');
+    $('[data-zolder-kw]').innerHTML = '0,8<small>kW nu</small>';
+    $('[data-zolder-stand]').innerHTML = '<i style="background: var(--gloed)"></i>Verwarmt';
+    $('[data-zolder-zin]').className = 'hand';
+    $('[data-zolder-zin]').textContent = 'Met de hand warm, tot het 21° is · uiterlijk 22:00';
+    $('[data-k-nu]').innerHTML = 'Nu 18,9° op zolder · <b style="color: var(--gloed-t)">verwarmt</b> · <span style="color: var(--zon-t); font-weight: 600">met de hand</span>';
+    $('[data-wijzer]').innerHTML = wijzer(21, 18.9, '#ff9a6b');
+    $('[data-k-terug]').hidden = false;
+    $('[data-k-zet]').textContent = 'Bewaar';
+    $('[data-k-hoe]').innerHTML = 'Nog ongeveer <b>40 minuten</b> tot het 21° is; dan gaat de airco uit en volgt de zolder weer je regeling.';
+  }
+  if (stand === 'droger') {
+    kies('droger');
+    $('[data-blad="klimaat"]').hidden = true;
+    $('[data-blad="droger"]').hidden = false;
+  }
+  if (stand === 'tedoen') {
+    $('[data-apparaten]').hidden = true;
+    $('[data-tedoen]').hidden = false;
+    $('[data-paginakop]').textContent = 'Vast en gepland';
+    $('[data-paginazin]').textContent = 'Wat het huis vandaag en deze week voor je doet.';
+    document.querySelector('.kopregel .pil').hidden = true;
+  }
+</script>
+</body>
+</html>
