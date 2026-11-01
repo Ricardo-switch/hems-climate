@@ -320,6 +320,9 @@ verwijzing bestaat.
 - **Nieuw in Vast en gepland:** zeg het, of kies het zelf in vier stappen (wat,
   wanneer, hoe vaak, klaar), met de zin en de boog die meegroeien; ook klimaat
   met de hand en witgoed op een tijd ([240]).
+- **De integratie heet sunarc:** de add-on zet een oude installatie over, en de
+  integratie gaat naar de standaardlijst van HACS, zodat Home Assistant haar
+  installaties onder de eigen naam telt ([241]).
 - **In de add-on** opent de app, en een leeg huis begint met een welkom: het
   huis groeit uit Home Assistant, één knop naar Inrichten, of een back-up
   terugzetten. Alleen een verplichte keuze zonder voorstel wordt een vraag
@@ -795,4 +798,5 @@ verwijzing bestaat.
 [238]: DECISIONS.md#238-eén-blad-per-apparaat-klimaat-tot-het-doel-en-sunarc-start-de-droger
 [239]: DECISIONS.md#239-wat-de-app-zegt-klopt-met-wat-er-in-huis-gebeurt
 [240]: DECISIONS.md#240-nieuw-in-vast-en-gepland-zeg-het-of-kies-het-zelf-in-vier-stappen
+[241]: DECISIONS.md#241-de-integratie-heet-sunarc-en-gaat-naar-de-standaardlijst-van-hacs
 <!-- links:einde -->

@@ -1,5 +1,19 @@
 # Wat is er nieuw · What is new
 
+## 0.110.0
+
+*1 november 2026*
+
+**Beter**
+
+- De koppeling met Assist heet nu sunarc: de add-on zet hem over, met één tik bij Bewoners en toegang
+
+*English*
+
+**Improved**
+
+- The Assist link is now called sunarc: the add-on moves it over, with one tap under Residents and access
+
 ## 0.109.0
 
 *1 november 2026*

@@ -281,6 +281,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [153. De add-on komt kant-en-klaar van GitHub](#153-de-add-on-komt-kant-en-klaar-van-github)
 - [177. Universeel, deel 1: het wekwoord mee, Assist zonder NAS, en meldingen live](#177-universeel-deel-1-het-wekwoord-mee-assist-zonder-nas-en-meldingen-live)
 - [236. Klaar om te delen: AppArmor, één ondertekend image, experimenteel, en een verzorgde repository](#236-klaar-om-te-delen-apparmor-één-ondertekend-image-experimenteel-en-een-verzorgde-repository)
+- [241. De integratie heet sunarc, en gaat naar de standaardlijst van HACS](#241-de-integratie-heet-sunarc-en-gaat-naar-de-standaardlijst-van-hacs)
 
 **Kwaliteitsbewaking**
 
@@ -11139,6 +11140,41 @@ schetsen `Wand-Gepland-Nieuw` en `Tel-Gepland-Nieuw`.
   bij Functies aan staat (`gepland-uit.ts`). Via de assistent blijft het licht,
   scènes en schermen; voor klimaat en witgoed wijst hij naar Nieuw.
 - **Versie 0.109.0.**
+
+---
+
+## 241. De integratie heet sunarc, en gaat naar de standaardlijst van HACS
+
+*Onderwerp: uitrol en beheer · Status: geldig*
+
+1 november 2026. De bewoner wil zo hoog mogelijk komen in de cijfers van
+Home Assistant (analytics.home-assistant.io). Uitgezocht in de code van die
+site en in de Brands-repository:
+
+- Een add-on telt altijd mee, bij iedereen met basis-analytics aan.
+- Een eigen integratie telt alleen als haar naam in Brands staat of in de
+  standaardlijst van HACS. Brands neemt sinds Home Assistant 2026.3 geen eigen
+  integraties meer aan; die brengen hun pictogrammen zelf mee.
+- De naam `smart_climate` stond al in Brands, van een ander project. Wat
+  SunArc daar zou tellen, liep door elkaar met dat project.
+
+*Besluit:*
+
+- **De integratie heet `sunarc`** (versie 2.0.0). De technische namen van de
+  dienst blijven (besluit 222); alleen het domein van de integratie gaat om,
+  omdat dat de naam is waaronder Home Assistant telt.
+- **Een overstap zonder werk:** de add-on zet bij het starten zijn eigen oude
+  map `smart_climate` over naar `sunarc`. Een oude map via HACS of met de hand
+  blijft staan; de app zegt dan dat je hem in HACS bijwerkt. De knop "Zet de
+  koppeling over" herstart Home Assistant, voegt SunArc toe onder de nieuwe
+  naam, en haalt als vierde stap de oude koppeling weg: alleen de config
+  entries van `smart_climate`, alleen na die tik (dezelfde deur als besluit
+  202). De integratie ruimt haar oude zinnenbestand zelf op.
+- **Naar de standaardlijst van HACS:** de controles die HACS eist draaien
+  mee (`hacs/action` en `hassfest`). Na het samenvoegen een release van de
+  integratie (2.0.0, als Latest), en dan het verzoek bij HACS. Dat verzoek is
+  openbaar en gaat alleen met het akkoord van de bewoner.
+- **Versie 0.110.0.**
 
 ---
 

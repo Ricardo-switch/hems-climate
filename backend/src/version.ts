@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.109.0';
+export const VERSIE = '0.110.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,18 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.110.0',
+    datum: '2026-11-01',
+    beter: [
+      'De koppeling met Assist heet nu sunarc: de add-on zet hem over, met één tik bij Bewoners en toegang',
+    ],
+    en: {
+      beter: [
+        'The Assist link is now called sunarc: the add-on moves it over, with one tap under Residents and access',
+      ],
+    },
+  },
   {
     versie: '0.109.0',
     datum: '2026-11-01',
