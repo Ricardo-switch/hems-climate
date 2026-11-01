@@ -143,7 +143,7 @@ export interface LayoutRoom {
   readonly buiten?: LayoutOutside;
   /** Delen van de kamer, als die ze heeft: keuken en zithoek (95). */
   readonly zones: readonly LayoutZone[];
-  /** Alleen binnen: wat er warmt en koelt (besluit 132). Weg is: nog niets vastgelegd. */
+  /** Alleen binnen: wat er verwarmt en koelt (besluit 132). Weg is: nog niets vastgelegd. */
   readonly bronnen?: readonly Warmtebron[];
   /**
    * Wat de regeling met elk klimaatapparaat in de kamer doet (besluit 138):
@@ -406,7 +406,7 @@ export function validateLayout(body: unknown, known: LayoutKnown): { ok: true; l
       }
       if (me.length > 0) meten = me as string[];
     }
-    // Wat er warmt en koelt (besluit 132); buiten valt het weg. Een apparaat dat
+    // Wat er verwarmt en koelt (besluit 132); buiten valt het weg. Een apparaat dat
     // het huis niet meer kent, valt weg, en daarmee op zon: anders kan de
     // bewoner niets meer bewaren als er iets uit Home Assistant verdwijnt.
     let bronnen: Warmtebron[] | undefined;

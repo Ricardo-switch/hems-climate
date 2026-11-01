@@ -170,7 +170,8 @@ export function leesHerinnering(ruw: string, nuMs: number, tz: string): Herinner
 
 export type LijstSoort = 'boodschappen' | 'todo';
 
-const LIJST_WOORD = '(boodschappen(?:lijst(?:je)?)?|boodschappenlijst(?:je)?|shopping ?list|to ?do(?: ?lijst(?:je)?)?|todo(?: ?lijst)?|takenlijst|takenlijstje|lijst(?:je)?|list)';
+// Ook los geschreven, zoals Whisper het soms doet: "boodschappen lijst" (ronde 5).
+const LIJST_WOORD = '(boodschappen(?: ?lijst(?:je)?)?|shopping ?list|to ?do(?: ?lijst(?:je)?)?|todo(?: ?lijst)?|taken ?lijst(?:je)?|lijst(?:je)?|list)';
 const lijstSoort = (w: string): LijstSoort => (/boodschap|shopping/.test(w) ? 'boodschappen' : /to ?do|taken/.test(w) ? 'todo' : 'boodschappen');
 /** Lidwoorden en "nog" voor een ding: "de melk" is melk. */
 const ding = (s: string) => cap(s.replace(/^(?:nog |ook |even )*(?:de |het |een |wat |some |the |a )?/, '').trim());
@@ -180,10 +181,16 @@ const ding = (s: string) => cap(s.replace(/^(?:nog |ook |even )*(?:de |het |een 
  * geen melk meer", "zet de dakgoot op de to-do". Null als het dat niet is.
  */
 export function leesLijstZin(ruw: string): { readonly lijst: LijstSoort; readonly item: string } | null {
-  const k = kaal(ruw).replace(/^(?:kun je |kan je |wil je )/, '');
+  // Het wekwoord en beleefdheid horen niet bij wat er op de lijst moet (ronde 5): "hé huis, zet melk op de boodschappenlijst, alsjeblieft".
+  const k = kaal(ruw)
+    .replace(/^(?:he|hey|hoi|hallo|hi|ok|oke) (?:huis|home) /, '')
+    .replace(/ (?:alsjeblieft|alstublieft|graag|please|dank je|dankjewel|thanks)$/, '')
+    .replace(/^(?:kun je |kan je |wil je |could you |can you )/, '');
   // Een vraag zet niets op een lijst: "wat staat er op de boodschappenlijst".
   if (/^(?:wat|welke|hoe|wie|wanneer|staat|staan|is|zijn|what|which|how|who|is|are)\b/.test(k)) return null;
-  let m =new RegExp(`^(?:zet|doe|schrijf|voeg|add|put)\\s+(.+?)\\s+(?:op|bij|aan|on|to)\\s+(?:de |het |mijn |onze |the |my )?${LIJST_WOORD}(?: toe| erbij)?$`).exec(k);
+  // "Voeg melk toe aan de boodschappenlijst": het toe staat dan voor de lijst.
+  let m = new RegExp(`^voeg\\s+(.+?)\\s+toe\\s+(?:aan|bij)\\s+(?:de |het |mijn |onze )?${LIJST_WOORD}$`).exec(k);
+  if (!m) m = new RegExp(`^(?:zet|doe|schrijf|voeg|add|put)\\s+(.+?)\\s+(?:op|bij|aan|on|to)\\s+(?:de |het |mijn |onze |the |my )?${LIJST_WOORD}(?: toe| erbij)?$`).exec(k);
   if (!m) m = new RegExp(`^(.+?)\\s+(?:moet |mag )?(?:op|bij)\\s+(?:de |het |mijn |onze )?${LIJST_WOORD}(?: zetten| erbij)?$`).exec(k);
   if (m) {
     const item = ding(m[1]!);
@@ -414,6 +421,30 @@ export class Herinneringen {
     this.#lijst = [...this.#lijst, nieuw].slice(-MAX);
     await this.#bewaar();
     return nieuw;
+  }
+
+  /**
+   * Een nieuwe vaste of geplande opdracht uit Nieuw (besluit 240): het eerste
+   * moment rekent hij zelf uit, op de klok en de zon van hier. Null als er met
+   * die keus geen moment komt.
+   */
+  async plan(h: { readonly tekst: string; readonly voor: string | null; readonly naam: string | null; readonly opdracht: GeplandeOpdracht }): Promise<Herinnering | null> {
+    const ms = this.#volgende(h.opdracht, this.#nu());
+    return ms == null ? null : this.voeg({ ...h, ms });
+  }
+
+  /** De komende momenten van een opdracht, voor Klaar in Nieuw (besluit 240): op de klok en de zon van hier. */
+  momenten(o: GeplandeOpdracht, n = 7): number[] {
+    const uit: number[] = [];
+    let van = this.#nu();
+    while (uit.length < n) {
+      const v = this.#volgende(o, van);
+      if (v == null) break;
+      uit.push(v);
+      if (o.herhaal?.soort === 'een' || o.herhaal == null) break;
+      van = v + 60_000;
+    }
+    return uit;
   }
 
   async klaar(id: string): Promise<boolean> {

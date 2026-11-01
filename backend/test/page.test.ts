@@ -62,12 +62,12 @@ const THERMISCH_VOORBEELD = (nu: number): ThermischRapport => ({
   stand: 'leert',
   zones: [
     { id: 'woonkamer', naam: 'Woonkamer', k: 0.0082, tauUur: 122, rustUren: 555, zonPerKw: 0.28, zonKwartieren: 910, zeker: { afkoelen: 4, zon: 3 }, apparaten: [
-      { id: 'nest', naam: 'Nest', stand: 'warmt', perUur: null, kwartieren: 181, zeker: 0 },
-      { id: 'airco-woonkamer', naam: 'Airco woonkamer', stand: 'warmt', perUur: 1.02, kwartieren: 16, zeker: 1 },
+      { id: 'nest', naam: 'Nest', stand: 'verwarmt', perUur: null, kwartieren: 181, zeker: 0 },
+      { id: 'airco-woonkamer', naam: 'Airco woonkamer', stand: 'verwarmt', perUur: 1.02, kwartieren: 16, zeker: 1 },
       { id: 'airco-woonkamer', naam: 'Airco woonkamer', stand: 'koelt', perUur: -0.39, kwartieren: 294, zeker: 3 },
     ] },
     { id: 'zolder', naam: 'Zolder', k: 0.0102, tauUur: 98, rustUren: 541, zonPerKw: 0.29, zonKwartieren: 879, zeker: { afkoelen: 4, zon: 3 }, apparaten: [
-      { id: 'airco-zolder', naam: 'Airco zolder', stand: 'warmt', perUur: null, kwartieren: 0, zeker: 0 },
+      { id: 'airco-zolder', naam: 'Airco zolder', stand: 'verwarmt', perUur: null, kwartieren: 0, zeker: 0 },
       { id: 'airco-zolder', naam: 'Airco zolder', stand: 'koelt', perUur: -0.59, kwartieren: 63, zeker: 2 },
     ] },
   ],
@@ -134,7 +134,7 @@ let meldingenStore: MeldingenStore;
 /** Batterijen die een test erbij zet (besluit 122); leeg is: wat het huis zegt. */
 let extraBatterijen: HouseBattery[] = [];
 /** De integratie in Home Assistant (besluit 184), zoals de nagebootste add-on hem ziet. */
-let integratieNu: { kan: boolean; staat: 'nee' | 'add-on' | 'anders'; versie: string | null; nieuw: string | null; geladen: string | null; toegevoegd: boolean | null } = { kan: true, staat: 'nee', versie: null, nieuw: VERSIE, geladen: null, toegevoegd: null };
+let integratieNu: { kan: boolean; staat: 'nee' | 'add-on' | 'anders'; versie: string | null; nieuw: string | null; oud: 'nee' | 'add-on' | 'anders'; geladen: string | null; toegevoegd: boolean | null } = { kan: true, staat: 'nee', versie: null, nieuw: VERSIE, oud: 'nee', geladen: null, toegevoegd: null };
 /** De proefmeldingen die de app vroeg (besluit 183), per account. */
 const proefmeldingen: (string | null)[] = [];
 /** Een thuisbatterij en een auto die een test erbij zet (besluit 182); null is: wat het huis zegt. */
@@ -882,7 +882,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
    * Verwarmen en koelen per kamer (besluit 132): wat er hangt toevoegen, een
    * thermostaat aanvullen met vermogen, en op zon aanzetten.
    */
-  it('legt bij Indeling vast wat er in een kamer warmt, en zet het op zon', async () => {
+  it('legt bij Indeling vast wat er in een kamer verwarmt, en zet het op zon', async () => {
     const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
     await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
     await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
@@ -2967,7 +2967,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       // Zonder getallen op het huis.
       expect(await laag.locator('[data-nk-huis] .sc-label').count()).toBe(0);
       if (aanStand === 'dag') expect(await laag.locator('[data-nk-kop]').textContent()).toBe(await p.locator('#wand [data-kop]').textContent());
-      else expect(await laag.locator('[data-nk-rustig]').textContent()).toMatch(/^(Alles rustig|.+ (koelt|warmt))[.,]/);
+      else expect(await laag.locator('[data-nk-rustig]').textContent()).toMatch(/^(Alles rustig|.+ (koelt|verwarmt))[.,]/);
       await shot(aanStand);
       // Beweging houdt het display aan; het opent de app niet.
       server.wek('beweging');
@@ -3485,7 +3485,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     const p = await context.newPage();
     const fouten: string[] = [];
     p.on('pageerror', (e) => fouten.push(e.message));
-    integratieNu = { kan: true, staat: 'nee', versie: null, nieuw: VERSIE, geladen: null, toegevoegd: null };
+    integratieNu = { kan: true, staat: 'nee', versie: null, nieuw: VERSIE, oud: 'nee', geladen: null, toegevoegd: null };
     try {
       await p.goto(`${baseUrl}/toegang.html#assistent`);
       const knop = p.locator('#wand [data-integratie]');
@@ -3496,7 +3496,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await p.locator('#wand [data-vorm]', { hasText: 'neergezet door de add-on' }).waitFor();
       expect(await p.locator('#wand [data-vorm]').textContent()).toContain('Herstart Home Assistant');
       // Via HACS: de add-on blijft eraf.
-      integratieNu = { kan: true, staat: 'anders', versie: VERSIE, nieuw: VERSIE, geladen: VERSIE, toegevoegd: false };
+      integratieNu = { kan: true, staat: 'anders', versie: VERSIE, nieuw: VERSIE, oud: 'nee', geladen: VERSIE, toegevoegd: false };
       await p.reload();
       await p.locator('#wand [data-vorm]', { hasText: 'via HACS' }).waitFor();
       expect(await p.locator('#wand [data-integratie]').count()).toBe(0);
@@ -3509,7 +3509,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await expect.poll(() => p.locator('#wand [data-delen] .deel[href="#assistent"]').count()).toBe(0);
       expect(fouten).toEqual([]);
     } finally {
-      integratieNu = { kan: true, staat: 'nee', versie: null, nieuw: VERSIE, geladen: null, toegevoegd: null };
+      integratieNu = { kan: true, staat: 'nee', versie: null, nieuw: VERSIE, oud: 'nee', geladen: null, toegevoegd: null };
       await context.close();
     }
   }, 60_000);
@@ -4396,6 +4396,92 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     await tel.locator('.gp-regel').first().click();
     await tel.locator('.gp-blad [data-gp-bewaar]').waitFor();
     if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-gepland-tel-aanpassen.png') });
+    expect(fouten).toEqual([]);
+    await context.close();
+  }, 30_000);
+
+  /*
+   * Nieuw (besluit 240): zeg het, of kies het zelf in vier stappen; op de
+   * telefoon één stap per scherm. Klimaat met de hand op een tijd.
+   */
+  it('maakt bij Vast en gepland een nieuwe opdracht, zelf gekozen of gezegd', async () => {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, timezoneId: 'Europe/Amsterdam', locale: 'nl-NL' });
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+    await context.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    const nu = Date.now();
+    const gestuurd: Record<string, unknown>[] = [];
+    await context.route(`${baseUrl}/api/te-doen**`, async (route) => {
+      if (route.request().method() === 'POST') {
+        const b = route.request().postDataJSON() as Record<string, unknown>;
+        gestuurd.push(b);
+        if (b['actie'] === 'voorproef') return route.fulfill({ json: { ok: true, momenten: [1, 2, 3, 4, 5, 6, 7].map((d) => nu + d * 86_400_000) } });
+        return route.fulfill({ json: { ok: true, id: 'g9', ms: nu + 86_400_000 } });
+      }
+      return route.fulfill({ json: { aan: true, herinneringen: [], gepland: [], lijsten: [], afspraken: [], speelt: [], agendas: {} } });
+    });
+    await context.route(`${baseUrl}/api/huis**`, (route) =>
+      route.fulfill({ json: { etages: [{ id: 'beneden', naam: 'Beneden', ruimtes: [{ id: 'woonkamer', naam: 'Woonkamer', apparaten: [{ id: 'light.bank', naam: 'Lamp bank', soort: 'licht' }, { id: 'cover.screen', naam: 'Screen', soort: 'screen', scherm: { standKiezen: true } }], scenes: [{ id: 'scene.avond', naam: 'Avond' }] }] }] } }),
+    );
+    await context.route(`${baseUrl}/api/hand**`, (route) =>
+      route.fulfill({ json: { aan: true, apparaten: [{ id: 'climate.zolder', naam: 'Airco zolder', kamer: 'Zolder', modi: [{ modus: 'verwarmen', doelC: 20, min: 16, max: 30, stap: 0.5, niet: null }, { modus: 'koelen', doelC: 23, min: 16, max: 30, stap: 0.5, niet: null }] }], schakelaars: [], nu } }),
+    );
+    await context.route(`${baseUrl}/api/witgoed**`, (route) => route.fulfill({ json: { apparaten: [{ id: 'droger', naam: 'Droger', kan: true, reden: null, gestartMs: null }] } }));
+    await context.route(`${baseUrl}/api/vraag**`, (route) =>
+      route.fulfill({ json: { vraag: 'tedoen', taal: 'nl', antwoord: 'Zo: elke dag 10 minuten voor zonsondergang, doe de screens dicht.', voorstel: { tekst: 'Doe de screens dicht', wat: 'doe de screens dicht', stappen: [{ pad: 'api/scherm', body: { id: 'cover.screen', actie: 'dicht' } }], moment: { soort: 'zon', zon: 'onder', minuten: -10 }, herhaal: { soort: 'dag' }, ms: nu + 3_600_000 } } }),
+    );
+    await p.goto(`${baseUrl}/gepland.html`);
+    await p.locator('#wand [data-gp-nieuw]').click();
+    const wiz = p.locator('#wand .pl-wiz');
+    await wiz.locator('.pl-gaan').click();
+    // Wat: klimaat, de airco op zolder, een halve graad hoger, tot het doel.
+    await wiz.locator('[data-pl-soort="klimaat"]').click();
+    await wiz.locator('[data-pl-keuze="climate.zolder"]').click();
+    await wiz.locator('[data-pl-doel="1"]').click();
+    expect(await wiz.locator('.pl-voorbeeld .pl-zin').textContent()).toContain('airco zolder verwarmen tot 20,5°');
+    await wiz.locator('[data-pl-verder]').click();
+    // Wanneer: om 06:30.
+    await wiz.locator('[data-pl-tijd]').fill('06:30');
+    await wiz.locator('[data-pl-tijd]').dispatchEvent('change');
+    await wiz.locator('[data-pl-verder]').click();
+    // Hoe vaak: werkdagen.
+    await wiz.locator('[data-pl-herhaal="werkdagen"]').click();
+    await wiz.locator('[data-pl-verder]').click();
+    // Klaar: de komende dagen, van de dienst.
+    await expect.poll(() => wiz.locator('.pl-week > div').count()).toBe(7);
+    expect(await wiz.locator('.pl-voorbeeld .pl-zin').textContent()).toBe('Werkdagen, om 06:30, airco zolder verwarmen tot 20,5°.');
+    expect(await p.evaluate<boolean>('document.scrollingElement.scrollHeight <= innerHeight')).toBe(true);
+    if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-gepland-nieuw.png') });
+    await wiz.locator('[data-pl-verder]').click();
+    await expect.poll(() => gestuurd.some((b) => b['actie'] === 'plan')).toBe(true);
+    expect(gestuurd.find((b) => b['actie'] === 'plan')).toEqual({
+      actie: 'plan',
+      tekst: 'Airco zolder verwarmen tot 20,5°',
+      stappen: [{ pad: 'api/hand', body: { id: 'climate.zolder', modus: 'verwarmen', doelC: 20.5, tot: 'doel' } }],
+      moment: { soort: 'tijd', uur: 6, minuut: 30 },
+      herhaal: { soort: 'werkdagen' },
+      overslaanWeg: false,
+      aan: true,
+    });
+    await expect.poll(() => p.locator('[data-pl]').count()).toBe(0);
+    // Zeg het: een voorstel van de dienst, en meteen naar Klaar.
+    await p.locator('#wand [data-gp-nieuw]').click();
+    await wiz.locator('[data-pl-zeg] input').fill('doe elke dag tien minuten voor zonsondergang de screens dicht');
+    await wiz.locator('.pl-maak').click();
+    await expect.poll(() => wiz.locator('.pl-week > div').count()).toBe(7);
+    expect(await wiz.locator('.pl-voorbeeld .pl-zin').textContent()).toBe('Elke dag, 10 min voor zonsondergang, doe de screens dicht.');
+    await p.keyboard.press('Escape');
+    // Op de telefoon: een stap per scherm, van onderen.
+    await p.setViewportSize({ width: 390, height: 844 });
+    await p.locator('#tel [data-gp-nieuw]').click();
+    const tel = p.locator('#tel .pl-wiz');
+    await tel.locator('.pl-gaan').click();
+    expect(await tel.locator('.pl-stip i').count()).toBe(4);
+    expect(await tel.locator('.pl-voorbeeld').count()).toBe(0);
+    if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-gepland-nieuw-tel.png') });
     expect(fouten).toEqual([]);
     await context.close();
   }, 30_000);

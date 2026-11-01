@@ -185,6 +185,9 @@ export class NepHa {
     switch (b['type']) {
       case 'get_states':
         return this.standen;
+      // Een verzonnen plek midden in Nederland: voor de zon op de gevels en dag of nacht in de tekening.
+      case 'get_config':
+        return { time_zone: 'Europe/Amsterdam', latitude: 52.1, longitude: 5.1, location_name: 'Voorbeeldhuis', version: '2026.10.0' };
       case 'subscribe_events':
         this.#volgers.add({ verbinding, id });
         return null;

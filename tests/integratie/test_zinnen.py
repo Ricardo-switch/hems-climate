@@ -8,7 +8,7 @@ import sys
 import unittest
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "custom_components" / "smart_climate"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "custom_components" / "sunarc"))
 
 import zinnen  # noqa: E402
 
@@ -21,7 +21,7 @@ class ZinnenTest(unittest.TestCase):
         self.assertTrue(inhoud.startswith("# SunArc: de zinnen voor Assist."))
         self.assertEqual(json.loads("\n".join(r for r in inhoud.splitlines() if not r.startswith("#"))), GEGEVENS)
 
-    def test_per_taal_wat_smart_climate_gaf(self):
+    def test_per_taal_wat_sunarc_gaf(self):
         uit = zinnen.talen({"zinnen": {"nl": GEGEVENS, "en": {"language": "en"}, "../etc": GEGEVENS}})
         # Engels zonder zinnen, en een rare taalnaam, slaan we over.
         self.assertEqual(list(uit), ["nl"])

@@ -250,7 +250,10 @@ export async function todayReport(logDir: string, config: SiteConfig, nowMs: num
       const s = spans.get(id)!;
       const want = arbiterRunning(m, id) ? (m.handsOff ? actionOf(m.observed[id]) : m.arbiterAction[id] ?? actionOf(m.observed[id])) : null;
       s.openSc = step(s.sc, s.openSc, m.tMs, want === 'cool' || want === 'heat' ? want : null);
-      const real = observedRunning(m.observed[id]) ? actionOf(m.observed[id]) : null;
+      // Zegt het apparaat wat het doet (hvac_action, sinds 1 november 2026), dan dat: een Nest op
+      // "verwarmen naar 20°" die stil staat, verwarmt niet. Anders de stand, zoals eerder.
+      const doet = m.observedAction?.[id];
+      const real = doet != null ? (doet === 'heating' ? 'heat' : doet === 'cooling' ? 'cool' : null) : observedRunning(m.observed[id]) ? actionOf(m.observed[id]) : null;
       s.openNow = step(s.now, s.openNow, m.tMs, real);
     }
 

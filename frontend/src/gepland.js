@@ -24,10 +24,12 @@ const IK = {
   scherm: '<rect x="4" y="4" width="16" height="4" rx="1"/><path d="M6 8v11h12V8M6 13h12"/>',
   scene: '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',
   licht: '<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z"/>',
+  klimaat: '<path d="M12 3v10M8.5 16a3.5 3.5 0 1 0 7 0c0-1.3-.7-2.4-1.5-3V5a2 2 0 0 0-4 0v8c-.8.6-1.5 1.7-1.5 3z"/>',
+  witgoed: '<rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="13" r="4.5"/><path d="M7 6.5h2"/>',
 };
 const icoon = (g) => {
   const pad = g.opdracht?.stappen?.[0]?.pad ?? '';
-  const d = pad === 'api/scherm' ? IK.scherm : pad === 'api/scene' ? IK.scene : IK.licht;
+  const d = { 'api/scherm': IK.scherm, 'api/scene': IK.scene, 'api/hand': IK.klimaat, 'api/witgoed': IK.witgoed }[pad] ?? IK.licht;
   return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 };
 
@@ -176,7 +178,7 @@ function teken() {
   app.schaal?.();
   const tel = telStand();
   const kop = `<a class="terugje" href="tedoen.html">${esc(t('gp.terug'))}</a>
-    <div class="gp-kop"><div><h1 class="kop-1">${esc(t('gp.kop'))}</h1><p class="lead">${esc(t('gp.lead'))} <q>${esc(t('gp.voorbeeld'))}</q>.</p></div><a class="gp-nieuw" href="assistent.html#typ">${esc(t('gp.nieuw'))}</a></div>`;
+    <div class="gp-kop"><div><h1 class="kop-1">${esc(t('gp.kop'))}</h1><p class="lead">${esc(t('gp.lead'))} <q>${esc(t('gp.voorbeeld'))}</q>.</p></div><button type="button" class="gp-nieuw" data-gp-nieuw>${esc(t('gp.nieuw'))}</button></div>`;
   let html;
   if (!data) html = `${kop}<p class="mini">${esc(t('algemeen.laden'))}</p>`;
   else if (!data.aan) html = `${kop}<section class="glas gp-lijst"><p class="gp-leeg">${esc(t('tedoen.uit'))}</p></section>`;
@@ -249,6 +251,12 @@ document.addEventListener('click', async (e) => {
     return;
   }
   if ((x = el('[data-gp-open]'))) return openen(x.dataset.gpOpen);
+  // Nieuw (besluit 240): het blad met de stappen, of zeg het.
+  if (el('[data-gp-nieuw]')) {
+    open = null;
+    teken();
+    return plannen.open({ boog, herhaalNaam, zonNaam, stapperTekst, voorproef, zon: () => zon, klaar: () => laad() });
+  }
   if (!open) return;
   if (el('[data-gp-sluit]')) {
     open = null;
@@ -299,7 +307,7 @@ document.addEventListener('change', (e) => {
 });
 
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && open) {
+  if (e.key === 'Escape' && open && !plannen.isOpen()) {
     open = null;
     teken();
   } else if ((e.key === 'Enter' || e.key === ' ') && e.target.matches?.('[data-gp-open]')) {
@@ -312,3 +320,4 @@ app.start('tedoen');
 addEventListener('resize', () => teken());
 void laad();
 setInterval(() => void laad(), 60_000);
+addEventListener('voorbeeldklok', () => void laad());

@@ -112,8 +112,25 @@
       stand = { ...stand, gedaan: b.gedaan ?? stand.gedaan };
       zetPaginaKlok(b.nuMs);
       lijst();
-      global.dispatchEvent(new CustomEvent('voorbeeldklok'));
+      meld();
     }, 160);
+  }
+
+  /*
+   * De pagina's halen alles opnieuw bij `voorbeeldklok`, zodat de lijn van nu en
+   * de standen meelopen. Bij afspelen hooguit eens per tel, en de laatste altijd.
+   */
+  let gemeld = 0;
+  let straks = null;
+  function meld() {
+    clearTimeout(straks);
+    const wacht = gemeld + 1000 - Date.now();
+    if (wacht > 0) {
+      straks = setTimeout(meld, wacht);
+      return;
+    }
+    gemeld = Date.now();
+    global.dispatchEvent(new CustomEvent('voorbeeldklok'));
   }
 
   $('[data-vb-schuif]').addEventListener('input', (e) => zetKlok({ ...stand.klok, minuut: Number(e.target.value) }));

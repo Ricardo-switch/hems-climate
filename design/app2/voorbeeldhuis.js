@@ -21,7 +21,7 @@
     const avond = !licht || tijd === 'avond';
     const droger = !winter && m >= 690 && m < 860;
     const koelt = !winter && licht && m > 660 && m < 1020;
-    const warmt = winter && m > 360 && m < 1350;
+    const verwarmt = winter && m > 360 && m < 1350;
     const laadtAuto = !winter && licht && m > 660 && m < 990;
     const batterijLaadt = kw > 1.5;
     const batterij = Math.round(Math.max(18, Math.min(96, winter ? 40 + kw * 10 : 30 + (Math.min(m, 1020) - 540) / 7)));
@@ -36,7 +36,7 @@
       etages: [
         { naam: 'Begane grond', kamers: [
           { naam: 'Keuken', gewicht: 0.9, temp: winter ? '20,4°' : '23,2°', zin: droger ? 'droger, op zon' : lamp ? 'licht aan' : 'rustig', stand: droger ? 'wacht' : lamp ? 'lamp' : 'goed', apparaten: [{ soort: 'droger', aan: droger, x: 0.6 }, { soort: 'lamp', aan: lamp, x: 0.3 }] },
-          { naam: 'Woonkamer', gewicht: 1.35, temp: winter ? '20,8°' : koelt ? '23,6°' : '24,4°', zin: koelt ? 'koelt op zon' : warmt ? 'warmtepomp verwarmt' : 'op temperatuur', stand: koelt ? 'koelt' : warmt ? 'warmt' : 'goed', apparaten: [{ soort: 'airco', aan: koelt, stand: 'koelt' }, { soort: 'vloer' }, { soort: 'bank' }, { soort: 'lamp', aan: avond, x: 0.5 }] },
+          { naam: 'Woonkamer', gewicht: 1.35, temp: winter ? '20,8°' : koelt ? '23,6°' : '24,4°', zin: koelt ? 'koelt op zon' : verwarmt ? 'warmtepomp verwarmt' : 'op temperatuur', stand: koelt ? 'koelt' : verwarmt ? 'verwarmt' : 'goed', apparaten: [{ soort: 'airco', aan: koelt, stand: 'koelt' }, { soort: 'vloer' }, { soort: 'bank' }, { soort: 'lamp', aan: avond, x: 0.5 }] },
         ] },
         { naam: 'Eerste', kamers: [
           { naam: 'Badkamer', gewicht: 0.8, temp: winter ? '21,5°' : '23,5°', zin: 'op temperatuur', stand: 'goed', apparaten: [{ soort: 'vloer' }] },
@@ -44,7 +44,7 @@
         ] },
         { dak: true, kamers: [{ naam: 'Zolder', temp: winter ? '17,2°' : '25,4°', zin: winter ? 'wacht op zon' : licht ? 'wacht op meer zon' : 'rustig', stand: licht ? 'wacht' : 'rust', apparaten: [{ soort: 'airco', aan: false }] }] },
       ],
-      buitenunit: { aan: warmt || koelt },
+      buitenunit: { aan: verwarmt || koelt },
       batterij: { procent: batterij, stand: batterijLaadt ? 'laadt' : voedt ? 'ontlaadt' : 'rust' },
       auto: { procent: auto, stand: laadtAuto ? 'laadt' : 'rust', bron: 'zon', kleur: '#7f97b0' },
       net: true,
@@ -59,13 +59,13 @@
       ],
     };
     const kop = winter
-      ? (warmt && kw > 0.8 ? 'De warmtepomp draait op zon' : warmt ? 'Het huis warmt op' : 'Het huis rust')
+      ? (verwarmt && kw > 0.8 ? 'De warmtepomp draait op zon' : verwarmt ? 'Het huis verwarmt' : 'Het huis rust')
       : koelt ? 'Het huis koelt op zon' : voedt && m < 1380 ? 'De batterij neemt het over' : licht ? 'Het huis wacht op zon' : 'Het huis rust';
     const stroom = kw > 0
-      ? `${kommaKw(kw)} kW van de panelen${koelt ? ', ook naar de airco' : warmt ? ', naar de warmtepomp' : ''}${batterijLaadt ? ' en de batterij' : ''}.${voedt ? ` De batterij (${batterij}%) vult aan.` : ''}`
+      ? `${kommaKw(kw)} kW van de panelen${koelt ? ', ook naar de airco' : verwarmt ? ', naar de warmtepomp' : ''}${batterijLaadt ? ' en de batterij' : ''}.${voedt ? ` De batterij (${batterij}%) vult aan.` : ''}`
       : `Geen zon. ${voedt ? `De batterij (${batterij}%) voedt het huis.` : 'Wat het huis gebruikt, komt van het net, op het daltarief.'}`;
     const lucht = tijd === 'nacht' ? 'lucht-nacht' : tijd === 'avond' ? 'lucht-avond' : tijd === 'ochtend' ? 'lucht-ochtend' : 'lucht-dag';
-    return { model, kop, stroom, lucht, kw, batterij, auto, droger, koelt, warmt };
+    return { model, kop, stroom, lucht, kw, batterij, auto, droger, koelt, verwarmt };
   }
 
   /** De baan onder de dag: nacht, zon, wat er gebeurt, en waar je bent. Breedte b in eenheden van de viewBox. */

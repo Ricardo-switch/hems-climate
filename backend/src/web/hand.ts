@@ -8,7 +8,7 @@
  * - Verwarmen met een airco doet de regeling alleen met zon of als hulp. Met de
  *   hand zet de app daarom de knop van die airco op het doel (dan ziet de
  *   regeling een handmatige stand en stopt ze niet bij stroom van het net) en
- *   zet ze de airco zelf op warm. Een smalle deur: alleen deze airco's, alleen
+ *   zet ze de airco zelf op verwarmen. Een smalle deur: alleen deze airco's, alleen
  *   warm of uit en een temperatuur.
  * - Een schakelbare warmtebron die niet in de regeling zit (zoals een paneel op
  *   een slimme stekker), zet de app direct aan.
@@ -31,7 +31,7 @@ export type HandModus = 'verwarmen' | 'koelen';
 interface ModusDef {
   readonly knop: string;
   readonly standaard: string;
-  /** De airco zelf op warm (de regeling verwarmt er alleen mee met zon of als hulp). */
+  /** De airco zelf op verwarmen (de regeling verwarmt er alleen mee met zon of als hulp). */
   readonly direct?: boolean;
   /** Koelen kan alleen als de koelstrategie van de regeling aan staat. */
   readonly koelstrategie?: boolean;
@@ -64,7 +64,7 @@ export const HAND: readonly ApparaatDef[] = [
 
 /** Alle knoppen die de hand mag verzetten. */
 export const HAND_KNOPPEN: readonly string[] = HAND.flatMap((a) => [a.verwarmen?.knop, a.koelen?.knop].filter((k): k is string => k != null));
-/** De airco's die de hand zelf op warm mag zetten. */
+/** De airco's die de hand zelf op verwarmen mag zetten. */
 export const HAND_KLIMAAT: readonly string[] = HAND.filter((a) => a.verwarmen?.direct || a.koelen?.direct).map((a) => a.klimaat);
 
 export const HAND_BESTAND = 'handbediening.json';
@@ -80,7 +80,7 @@ export interface HandDeur {
   readonly state: (id: string) => Toestand | undefined;
   readonly zet: (knop: string, waarde: number) => Promise<void>;
   readonly kies: (select: string, optie: string) => Promise<void>;
-  /** Een airco op warm met een temperatuur, of uit. */
+  /** Een airco op verwarmen met een temperatuur, of uit. */
   readonly klimaat: (id: string, stand: { readonly warm: number } | 'uit') => Promise<void>;
   readonly schakel: (id: string, aan: boolean) => Promise<void>;
   /** Alleen het doel van een thermostaat, zoals een radiatorknop. */
@@ -97,7 +97,7 @@ export interface HandTerug {
   readonly knop?: string;
   readonly gezet?: number;
   readonly terug?: number;
-  /** De airco die de app zelf op warm zette, of de stekker die hij aanzette. */
+  /** De airco die de app zelf op verwarmen zette, of de stekker die hij aanzette. */
   readonly direct?: boolean;
   /** Een radiatorknop buiten de regeling: terug naar zijn eigen doel van daarvoor, niet uit. */
   readonly thermostaat?: boolean;
@@ -449,7 +449,7 @@ export function handVraag(hand: Handbediening, config: SiteConfig, tekst: string
     const tot = klok(totMs, config.timezone);
     const apparaat = config.actuators.find((x) => x.ref.id === def.klimaat)?.name ?? naam;
     const antwoord = p.direct
-      ? nl ? `Ik zet ${apparaat.toLowerCase().startsWith('airco') ? `de ${apparaat.toLowerCase()}` : apparaat} op warm, ${doel}, tot ${tot}.` : `I am turning ${apparaat} to heat, ${doel}, until ${tot}.`
+      ? nl ? `Ik zet ${apparaat.toLowerCase().startsWith('airco') ? `de ${apparaat.toLowerCase()}` : apparaat} op verwarmen, ${doel}, tot ${tot}.` : `I am turning ${apparaat} to heat, ${doel}, until ${tot}.`
       : wens === 'koelen'
         ? nl ? `Ik zet ${metLidwoord(naam)} op ${doel} om te koelen, tot ${tot}.` : `I am setting ${naam} to cool to ${doel}, until ${tot}.`
         : nl ? `Ik zet ${metLidwoord(naam)} op ${doel}, tot ${tot}. Daarna weer ${graad(p.terugC)}.` : `I am setting ${naam} to ${doel}, until ${tot}. Then back to ${graad(p.terugC)}.`;

@@ -43,7 +43,7 @@
     const binnen = (etages ?? []).filter((e) => e.id !== 'buiten');
     return [...binnen.reverse(), ...(etages ?? []).filter((e) => e.id === 'buiten')];
   }
-  /** Wat er in een kamer warmt of koelt (besluit 132), in woorden. */
+  /** Wat er in een kamer verwarmt of koelt (besluit 132), in woorden. */
   const BRON_NAAM = Object.fromEntries(['radiator', 'vloer', 'vloer-elektrisch', 'paneel', 'kachel', 'airco'].map((s) => [s, global.taal.t(`bron.${s}`)]));
   const ELEKTRISCH = new Set(['vloer-elektrisch', 'paneel', 'kachel']);
   /** "Vloerverwarming en infraroodpaneel". */
@@ -68,7 +68,7 @@
     if (!k) return null;
     // In de schaduw gebeurt "zou verwarmen" niet echt (besluit 226): rustig, geen oranje gloed in de kamer.
     if ((k.soort === 'heat' || k.soort === 'cool') && k.klopt === false) return 'rust';
-    return { cool: 'koelt', heat: 'warmt', wait: 'wacht', ok: 'goed' }[k.soort] ?? null;
+    return { cool: 'koelt', heat: 'verwarmt', wait: 'wacht', ok: 'goed' }[k.soort] ?? null;
   }
 
   function kortVan(zoneId, state) {
@@ -100,10 +100,11 @@
     const bronVan = (a) => bronnen.find((b) => b.apparaat && (b.apparaat === a.actuatorId || b.apparaat === a.id));
     const vloer = (b) => b.soorten.some((x) => x === 'vloer' || x === 'vloer-elektrisch');
     for (const a of klimaat) {
-      const aan = a.aan || ACTIEF.test(a.klimaat?.actieCode ?? '');
+      // Zegt het apparaat wat het doet, dan dat (1 november 2026): een Nest op "verwarmen" die stilstaat, gloeit niet.
+      const aan = a.klimaat?.actieCode ? ACTIEF.test(a.klimaat.actieCode) : a.aan;
       const warm = /verwarmt/.test(a.klimaat?.actieCode ?? '');
       const b = bronVan(a);
-      if (a.klimaat?.kanKoelen) apparaten.push({ soort: 'airco', aan, naam: a.id, stand: warm ? 'warmt' : 'koelt' });
+      if (a.klimaat?.kanKoelen) apparaten.push({ soort: 'airco', aan, naam: a.id, stand: warm ? 'verwarmt' : 'koelt' });
       else if (b && !b.soorten.includes('radiator')) {
         if (vloer(b)) apparaten.push({ soort: 'vloer', aan });
       } else apparaten.push({ soort: 'radiator', aan });
@@ -365,7 +366,7 @@
     const jacuzzi = alles.find((a) => a.warmte?.soort === 'jacuzzi');
     if (jacuzzi) {
       const w = jacuzzi.warmte;
-      delen.tuin = { ...(delen.tuin ?? { id: null, naam: global.t('huis.buiten.tuin'), tuinhuis: false, tuinhuisAan: false, overstekAan: false, lampen: [], zonnescherm: null }), jacuzzi: { temp: w.tempC, stand: jacuzzi.aan ? 'warmt' : 'rust', zon: jacuzzi.aan && w.opZon } };
+      delen.tuin = { ...(delen.tuin ?? { id: null, naam: global.t('huis.buiten.tuin'), tuinhuis: false, tuinhuisAan: false, overstekAan: false, lampen: [], zonnescherm: null }), jacuzzi: { temp: w.tempC, stand: jacuzzi.aan ? 'verwarmt' : 'rust', zon: jacuzzi.aan && w.opZon } };
     }
     const piekW = (zon?.panelen ?? []).reduce((t, p) => t + (p.wattpiek ?? 0), 0);
     // Wat voor huis het is (besluit 190); een appartement in een gebouw van drie lagen.

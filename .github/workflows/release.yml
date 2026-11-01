@@ -6,7 +6,7 @@
 # tekst die Home Assistant bij de update toont.
 #
 # De release wordt níet "Latest": HACS leest de laatste release voor de
-# integratie (custom_components/smart_climate), en die heeft een eigen versie.
+# integratie (custom_components/sunarc), en die heeft een eigen versie.
 
 name: release
 

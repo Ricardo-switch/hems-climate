@@ -19,7 +19,7 @@ name: SunArc
 # Gelijk aan VERSIE in backend/src/version.ts; een test houdt ze gelijk. De
 # Supervisor ziet een update zodra dit nummer op `main` omhooggaat, en haalt dan
 # het image met dat nummer op (besluit 153).
-version: 0.107.0
+version: 0.110.0
 slug: hems_climate
 description: >-
   Klimaat en zon in één app: kijkt mee met je verwarming, airco's en
@@ -44,7 +44,7 @@ arch:
 # zich aan, met zijn adres en de sleutel voor de vragen van Assist. Home
 # Assistant toont dan "Nieuw apparaat gevonden".
 discovery:
-  - smart_climate
+  - sunarc
 
 # De weergave gaat via Ingress en dus door de inlog van Home Assistant.
 ingress: true
@@ -94,7 +94,8 @@ map:
   - addon_config:rw
   # De configuratie van Home Assistant (besluit 184), alleen om de integratie
   # SunArc neer te zetten voor wie geen HACS heeft: na een tik van de
-  # beheerder, en alleen in custom_components/smart_climate.
+  # beheerder, en alleen in custom_components/sunarc (en de oude naam smart_climate
+  # weghalen als die van de add-on was).
   - homeassistant_config:rw
 
 # De drie technische getallen zijn optioneel (0.92.0): een nieuwe gebruiker ziet

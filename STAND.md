@@ -132,7 +132,7 @@ verwijzing bestaat.
 - **Uitstelbare apparaten:** de droger staat in de schaduw. Elke beslissing zegt
   of hij nu op zon zou starten, met de airco's voor; echt starten hoort bij B
   ([98]). Voor hoe laat hij klaar moet zijn, kies je per keer ([101]).
-- **Warmte bewaren:** een boiler of jacuzzi warmt op zon op tot een doel, houdt
+- **Warmte bewaren:** een boiler of jacuzzi verwarmt op zon tot een doel, houdt
   een ondergrens vast en haalt "klaar om" op tijd, zonder zon in de daluren;
   achteraan in de lijst Op zon, en eerst in de schaduw ([186]).
 - **Terugkijken:** Opbrengst rekent per dag, week, maand of jaar met de meters
@@ -288,7 +288,7 @@ verwijzing bestaat.
 - **Versie 0.9.0**, met wat er nieuw is; elke kamer heet overal zoals in
   Indeling; Comfort heeft een schakelaar per dagdeel; de batterijen zijn altijd
   te zien ([131]).
-- **Per kamer** staat bij Indeling wat er warmt en koelt; een elektrische bron
+- **Per kamer** staat bij Indeling wat er verwarmt en koelt; een elektrische bron
   mag op zon opwarmen, en Wat je huis kan zegt in welke kamers iets werkt
   ([132]).
 - **Comfort** zegt per dagdeel wanneer het aan- en uitgaat, wat er op zon
@@ -314,6 +314,15 @@ verwijzing bestaat.
 - **Eén blad per apparaat:** een tik op een kaart bij Apparaten opent de
   bediening, ook tot het doel; witgoed dat op zon wacht kiest een uiterste
   eindtijd, en SunArc drukt zelf op de startknop van de droger ([238]).
+- **Wat de app zegt, klopt:** verwarmt of koelt een apparaat echt, dan staat dat er;
+  een kamer boven het doel is op temperatuur; Vandaag zegt "zou" als het apparaat
+  iets anders deed, en thuiskomen telt meteen voor het comfort ([239]).
+- **Nieuw in Vast en gepland:** zeg het, of kies het zelf in vier stappen (wat,
+  wanneer, hoe vaak, klaar), met de zin en de boog die meegroeien; ook klimaat
+  met de hand en witgoed op een tijd ([240]).
+- **De integratie heet sunarc:** de add-on zet een oude installatie over, en de
+  integratie gaat naar de standaardlijst van HACS, zodat Home Assistant haar
+  installaties onder de eigen naam telt ([241]).
 - **In de add-on** opent de app, en een leeg huis begint met een welkom: het
   huis groeit uit Home Assistant, één knop naar Inrichten, of een back-up
   terugzetten. Alleen een verplichte keuze zonder voorstel wordt een vraag
@@ -459,7 +468,7 @@ verwijzing bestaat.
   Tot stap B verwarmt de assistent via de knoppen van het oude systeem, als
   de bewoner dat aanzet: een graad hoger tot 22:00, daarna terug ([210]).
   Met de hand kan elk klimaatapparaat, tot een eindtijd: via zijn knop, en een
-  airco op warm ook zelf, met een eigen smalle deur ([235]).
+  airco op verwarmen ook zelf, met een eigen smalle deur ([235]).
   De dienst verstaat zelf met Whisper in huis, rechtstreeks; meer screens gaan
   samen, en het venster sluit na een opdracht ([211]). De stem kies je bij
   Functies › Stem en luisteren, vrouw of man, Google HD of in huis, met een
@@ -787,4 +796,7 @@ verwijzing bestaat.
 [236]: DECISIONS.md#236-klaar-om-te-delen-apparmor-één-ondertekend-image-experimenteel-en-een-verzorgde-repository
 [237]: DECISIONS.md#237-het-voorbeeldhuis-de-app-op-een-nagemaakt-home-assistant-met-een-dag-om-door-te-spelen
 [238]: DECISIONS.md#238-eén-blad-per-apparaat-klimaat-tot-het-doel-en-sunarc-start-de-droger
+[239]: DECISIONS.md#239-wat-de-app-zegt-klopt-met-wat-er-in-huis-gebeurt
+[240]: DECISIONS.md#240-nieuw-in-vast-en-gepland-zeg-het-of-kies-het-zelf-in-vier-stappen
+[241]: DECISIONS.md#241-de-integratie-heet-sunarc-en-gaat-naar-de-standaardlijst-van-hacs
 <!-- links:einde -->

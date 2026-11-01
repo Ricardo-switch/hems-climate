@@ -9,7 +9,7 @@
 <style>
   /*
    * Verwarmen en koelen per kamer (schets, 14 oktober 2026). In Indeling, bij
-   * de kamer: wat er hangt, hoe het warmt of koelt, en hoe je het regelt. Een
+   * de kamer: wat er hangt, hoe het verwarmt of koelt, en hoe je het regelt. Een
    * elektrische bron met een vermogen. Is iets niet slim, dan staat er een
    * idee bij, geen tekort. Vier standen: de badkamer (zonder hash), de
    * hobbykamer (#hobby), de woonkamer (#woon) en iets toevoegen (#nieuw).
@@ -33,7 +33,7 @@
   .soorten span.aan { background: var(--tekst); color: var(--inkt); }
   .label { font-size: 12.5px; color: var(--gedempt); font-weight: 600; }
 
-  /* Een bron: wat het is, hoe het warmt, hoe je het regelt. */
+  /* Een bron: wat het is, hoe het verwarmt, hoe je het regelt. */
   .bron { padding: 12px 14px; border-radius: 16px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.07); display: flex; flex-direction: column; gap: 8px; }
   .bron .boven { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 10px; align-items: center; }
   .bron .ikoon { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: rgba(255, 122, 77, 0.14); }
@@ -101,7 +101,7 @@
           <div class="opzon">Mag opwarmen op zon<span class="schakel" role="switch" aria-checked="true"></span></div>
         </div>
         <span class="plus">+ Iets toevoegen</span>
-        <p class="mini" style="margin: 0">Het huis rekent elektrische warmte mee voor je zekering, en ziet zo waarom de kamer opwarmt.</p>
+        <p class="mini" style="margin: 0">Het huis rekent elektrische warmte mee voor je zekering, en ziet zo waarom de kamer verwarmt.</p>
       </aside>
 
       <!-- De hobbykamer: een paneel dat niet slim is. Geen vermogen, geen aansluiting: daar doet het huis niets mee. -->
@@ -141,7 +141,7 @@
           <div class="regelt">1 radiator met een slimme knop<b style="font-size: 13px; display: inline; margin-left: auto">Sonoff</b><span class="mini">batterij 100%</span></div>
         </div>
         <span class="plus">+ Iets toevoegen</span>
-        <p class="mini" style="margin: 0">Met een knop op elke radiator warmt het huis per kamer, in plaats van overal tegelijk.</p>
+        <p class="mini" style="margin: 0">Met een knop op elke radiator verwarmt het huis per kamer, in plaats van overal tegelijk.</p>
       </aside>
 
       <!-- Iets toevoegen. Gaat hij met de hand, dan is het daarmee klaar. -->

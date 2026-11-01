@@ -190,7 +190,7 @@
     const kent = zones.length > 0 && zones.every((z) => z.zeker.afkoelen >= 3);
     const wacht = zones.flatMap((z) => z.apparaten.filter((a) => a.perUur == null));
     const uren = Math.max(0, ...zones.map((z) => z.rustUren));
-    const nu = !r ? t('kan.thermisch.nu') : !kent ? t('kan.thermisch.uren', { n: uren }) : wacht.some((a) => a.stand === 'warmt') ? t('kan.thermisch.wachtWarmen') : wacht.length ? t('kan.thermisch.wachtKoelen') : t('kan.thermisch.kent');
+    const nu = !r ? t('kan.thermisch.nu') : !kent ? t('kan.thermisch.uren', { n: uren }) : wacht.some((a) => a.stand === 'verwarmt') ? t('kan.thermisch.wachtWarmen') : wacht.length ? t('kan.thermisch.wachtKoelen') : t('kan.thermisch.kent');
     const nodig = [
       ...(kent ? [] : [t('kan.thermisch.nodig.nachten')]),
       ...[...new Map(wacht.map((a) => [`${a.id}:${a.stand}`, a])).values()].map((a) => t(a.kwartieren >= 8 ? 'kan.thermisch.nodig.onduidelijk' : `kan.thermisch.nodig.${a.stand}`, { naam: a.naam })),
@@ -206,7 +206,7 @@
       ga: t('kan.optijd'),
       gaHref: 'huis-kan.html#optijd',
       // Hoe ver het leren is, voor de waaier: afkoelen, zon en de beste warmer per kamer.
-      deel: zones.length ? zones.reduce((t, z) => t + (z.zeker.afkoelen + z.zeker.zon + Math.max(0, ...z.apparaten.filter((a) => a.stand === 'warmt').map((a) => a.zeker))) / 12, 0) / zones.length : 0,
+      deel: zones.length ? zones.reduce((t, z) => t + (z.zeker.afkoelen + z.zeker.zon + Math.max(0, ...z.apparaten.filter((a) => a.stand === 'verwarmt').map((a) => a.zeker))) / 12, 0) / zones.length : 0,
       thermisch: zones.length ? r : null,
       extra: [sinds && uren ? t('kan.thermisch.sinds', { datum: sinds, n: uren }) : '', zones.length ? t('kan.thermisch.perUur') : ''].filter(Boolean).join(' ') || null,
       wanneer: nodig.length ? nodig.slice(0, 3) : [t('kan.thermisch.nodig.niets')],

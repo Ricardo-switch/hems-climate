@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telefoon · Nieuw in Vast en gepland</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Nieuw op de telefoon (schets bij Wand-Gepland-Nieuw, 1 november 2026).
+   * Gekozen door Ricardo: één stap per scherm, als blad van onderen. Bovenaan
+   * de zin die meegroeit, onderaan Verder; de boog alleen bij Klaar. "Zeg het"
+   * staat in het blad zelf: SunArc vult de stappen in en springt naar Klaar.
+   * Standen: #kies (zonder hash), #wat, #wanneer, #hoevaak, #klaar.
+   */
+  .tel { overflow: hidden; }
+  .inhoud { padding: 16px 16px 110px; display: flex; flex-direction: column; gap: 14px; opacity: 0.35; }
+  .inhoud h1 { font-size: 32px; }
+  .inhoud .glas { height: 180px; }
+  .tabs { position: fixed; left: 12px; right: 12px; bottom: 14px; }
+  .achter { position: fixed; inset: 0; background: rgba(4, 8, 16, 0.6); z-index: 60; }
+  .blad { box-sizing: border-box; position: fixed; left: 0; right: 0; bottom: 0; top: 54px; padding: 10px 18px 22px; border-radius: 26px 26px 0 0; display: flex; flex-direction: column; gap: 14px; background: #0e1726; z-index: 61; }
+  .greep { align-self: center; width: 40px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.18); }
+  .bovenaan { display: flex; align-items: center; gap: 10px; }
+  .bovenaan .stip { display: flex; gap: 5px; flex: 1; }
+  .bovenaan .stip i { width: 22px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.14); }
+  .bovenaan .stip i.ja { background: var(--mint); }
+  .bovenaan .stip i.nu { background: var(--tekst); }
+  .sluit { width: 32px; height: 32px; border-radius: 50%; border: 0; background: rgba(255, 255, 255, 0.08); color: var(--tekst); font-size: 16px; }
+  .zin { font-family: var(--kop); font-size: 24px; font-weight: 600; line-height: 1.2; }
+  .zin em { font-style: normal; color: var(--zon-t); }
+  .zin .leeg { color: rgba(170, 185, 200, 0.35); }
+  .blad h2 { margin: 4px 0 0; font-size: 13px; font-weight: 700; color: var(--gedempt); letter-spacing: 0.02em; }
+  .seg { display: flex; padding: 3px; border-radius: 12px; background: rgba(255, 255, 255, 0.06); }
+  .seg button { flex: 1; min-width: 0; height: 36px; border: 0; border-radius: 9px; background: transparent; color: var(--zacht); font: inherit; font-size: 13.5px; font-weight: 600; white-space: nowrap; }
+  .seg button[aria-pressed='true'] { background: rgba(255, 255, 255, 0.14); color: var(--tekst); }
+  .soorten { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .soorten button { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 2px 8px; border-radius: 14px; border: 1.5px solid transparent; background: rgba(255, 255, 255, 0.05); color: var(--zacht); font: inherit; font-size: 12px; font-weight: 600; }
+  .soorten button svg { width: 22px; height: 22px; }
+  .soorten button[aria-pressed='true'] { border-color: var(--tekst); color: var(--tekst); background: rgba(255, 255, 255, 0.09); }
+  .keus { display: flex; flex-direction: column; border-radius: 15px; background: rgba(255, 255, 255, 0.05); padding: 2px 14px; }
+  .keus div { display: flex; align-items: center; padding: 12px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); font-size: 15px; }
+  .keus div:first-child { border-top: 0; }
+  .keus div span { flex: 1; }
+  .keus div small { color: var(--gedempt); font-size: 12.5px; margin-right: 10px; }
+  .keus div.ja { font-weight: 700; }
+  .keus div.ja::after { content: '✓'; color: var(--mint); font-weight: 800; }
+  .stapper { display: flex; align-items: center; gap: 10px; }
+  .stapper button { width: 44px; height: 44px; border-radius: 13px; border: 0; background: rgba(255, 255, 255, 0.08); color: var(--tekst); font-size: 20px; }
+  .stapper b { flex: 1; text-align: center; font-family: var(--kop); font-size: 22px; font-weight: 600; }
+  .zo { font-size: 13px; color: var(--zon-t); }
+  .rij { display: flex; align-items: center; gap: 10px; font-size: 14.5px; padding: 12px 14px; border-radius: 15px; background: rgba(255, 255, 255, 0.05); }
+  .rij span { flex: 1; }
+  .rij small { display: block; font-size: 12px; color: var(--gedempt); }
+  .schakelaar { position: relative; flex: none; width: 44px; height: 26px; border-radius: 999px; border: 0; padding: 0; background: rgba(255, 255, 255, 0.14); }
+  .schakelaar::after { content: ''; position: absolute; left: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: #c9d3dc; }
+  .schakelaar[aria-checked='true'] { background: var(--mint); }
+  .schakelaar[aria-checked='true']::after { left: 21px; background: #fff; }
+  .onder { margin-top: auto; display: flex; align-items: center; gap: 12px; }
+  .onder .terug { border: 0; background: none; color: var(--zacht); font: inherit; font-weight: 600; font-size: 15px; padding: 0; }
+  .onder .verder { flex: 1; height: 50px; border-radius: 16px; border: 0; background: var(--tekst); color: var(--inkt); font: inherit; font-weight: 700; font-size: 16px; }
+  .onder .verder.zon { background: var(--zon); }
+  /* Het begin: twee wegen onder elkaar. */
+  .weg { display: flex; flex-direction: column; gap: 10px; padding: 18px; border-radius: 22px; }
+  .weg h3 { margin: 0; font-family: var(--kop); font-size: 22px; font-weight: 600; }
+  .weg p { margin: 0; font-size: 14px; color: var(--zacht); }
+  .weg.zeg { background: radial-gradient(120% 90% at 0% 0%, rgba(143, 134, 255, 0.28), rgba(143, 134, 255, 0.05) 60%), rgba(255, 255, 255, 0.03); border: 1px solid rgba(143, 134, 255, 0.35); }
+  .weg.zelf { background: radial-gradient(120% 90% at 100% 0%, rgba(247, 181, 72, 0.22), rgba(247, 181, 72, 0.04) 60%), rgba(255, 255, 255, 0.03); border: 1px solid rgba(247, 181, 72, 0.3); }
+  .invoer { display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 14px; border-radius: 15px; background: rgba(5, 10, 20, 0.6); border: 1px solid rgba(143, 134, 255, 0.4); font-size: 14px; color: var(--gedempt); }
+  .invoer span { flex: 1; }
+  .invoer button { width: 40px; height: 40px; border-radius: 12px; border: 0; background: var(--violet); color: #0b1424; display: grid; place-items: center; }
+  .invoer svg { width: 20px; height: 20px; }
+  .weg .gaan { height: 46px; border-radius: 14px; border: 0; background: var(--zon); color: #0b1424; font: inherit; font-weight: 700; font-size: 15px; }
+  .boogje { border-radius: 18px; background: rgba(5, 10, 20, 0.45); }
+  .boogje svg { display: block; width: 100%; height: 150px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="tel lucht lucht-dag">
+  <div class="inhoud"><h1 class="kop-1">Vast en gepland</h1><div class="glas"></div><div class="glas"></div></div>
+  <nav class="tabs" id="tabs" aria-label="Hoofdmenu"></nav>
+  <div class="achter"></div>
+  <aside class="blad" role="dialog" aria-label="Nieuw">
+    <div class="greep"></div>
+    <div class="bovenaan"><div class="stip" id="stip"></div><button class="sluit" type="button" aria-label="Sluiten">×</button></div>
+
+    <div data-stand="kies" class="weg zeg">
+      <h3>Zeg het</h3>
+      <p>Zoals je het tegen iemand zou zeggen.</p>
+      <div class="invoer"><span>Elke werkdag om zeven het licht in de badkamer aan</span><button type="button" aria-label="Inspreken"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button></div>
+    </div>
+    <div data-stand="kies" class="weg zelf">
+      <h3>Kies het zelf</h3>
+      <p>Wat, wanneer, hoe vaak. Zonder te typen.</p>
+      <button class="gaan" type="button">Begin</button>
+    </div>
+
+    <div class="zin" id="zin" data-stand="wat wanneer hoevaak klaar"></div>
+
+    <div data-stand="wat">
+      <h2>WAT</h2>
+      <div class="soorten">
+        <button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z"/></svg>Licht</button>
+        <button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>Scène</button>
+        <button type="button" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="4" width="16" height="4" rx="1"/><path d="M6 8v11h12V8M6 13h12"/></svg>Screens</button>
+        <button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v10M8.5 16a3.5 3.5 0 1 0 7 0c0-1.3-.7-2.4-1.5-3V5a2 2 0 0 0-4 0v8c-.8.6-1.5 1.7-1.5 3z"/></svg>Klimaat</button>
+        <button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="13" r="4.5"/></svg>Witgoed</button>
+      </div>
+    </div>
+    <div data-stand="wat" class="keus"><div class="ja"><span>Alle screens</span><small>3</small></div><div><span>Screen groot</span><small>woonkamer</small></div><div><span>Screen klein</span><small>woonkamer</small></div><div><span>Screen slaapkamer</span><small>slaapkamer</small></div></div>
+    <div data-stand="wat" class="seg"><button type="button" aria-pressed="true">Dicht</button><button type="button">Half</button><button type="button">Open</button></div>
+
+    <div data-stand="wanneer" class="seg"><button type="button">Tijd</button><button type="button">Zon op</button><button type="button" aria-pressed="true">Zon onder</button></div>
+    <div data-stand="wanneer" class="stapper"><button type="button" aria-label="Eerder">−</button><b>10 min ervoor</b><button type="button" aria-label="Later">+</button></div>
+    <div data-stand="wanneer" class="zo">Vandaag om 16:49, morgen om 16:47</div>
+
+    <div data-stand="hoevaak" class="keus"><div><span>Eén keer</span><small>vandaag 16:49</small></div><div class="ja"><span>Elke dag</span></div><div><span>Werkdagen</span></div><div><span>Weekend</span></div><div><span>Kies dagen</span></div></div>
+    <div data-stand="hoevaak" class="rij"><span>Overslaan als niemand thuis is<small>Op vakantie ook</small></span><button class="schakelaar" role="switch" aria-checked="false" aria-label="Overslaan als niemand thuis is"></button></div>
+
+    <div data-stand="klaar" class="boogje"><svg id="boog" viewBox="0 0 358 150"></svg></div>
+    <div data-stand="klaar" class="keus"><div><span>Vandaag</span><small>16:49</small></div><div><span>Morgen</span><small>16:47</small></div><div><span>Dinsdag</span><small>16:45</small></div></div>
+
+    <div class="onder" data-stand="wat wanneer hoevaak klaar"><button class="terug" type="button">‹ Terug</button><button class="verder" type="button" id="verder">Verder</button></div>
+  </aside>
+</div>
+<script src="../../frontend/kit/teksten.nl.js"></script>
+<script src="../../frontend/kit/teksten.en.js"></script>
+<script src="../../frontend/kit/taal.js"></script>
+<script src="../../frontend/kit/nav.js"></script>
+<script>
+  if (nav.tabs) nav.tabs(document.getElementById('tabs'), 'tedoen');
+  const STAPPEN = ['wat', 'wanneer', 'hoevaak', 'klaar'];
+  const stand = location.hash.slice(1) || 'kies';
+  for (const el of document.querySelectorAll('[data-stand]')) el.hidden = !el.dataset.stand.split(' ').includes(stand);
+  const nr = STAPPEN.indexOf(stand);
+  document.getElementById('stip').innerHTML = nr < 0 ? '' : STAPPEN.map((s, i) => `<i class="${i < nr ? 'ja' : i === nr ? 'nu' : ''}"></i>`).join('');
+  if (stand === 'klaar') { const v = document.getElementById('verder'); v.textContent = 'Bewaar'; v.classList.add('zon'); }
+  const deel = (i, tekst, leeg) => (nr >= i ? tekst : `<span class="leeg">${leeg}</span>`);
+  document.getElementById('zin').innerHTML = `${deel(2, 'Elke dag', 'Hoe vaak')}, ${deel(1, '<em>10 min voor zonsondergang</em>', 'wanneer')}, ${deel(0, 'alle screens dicht', 'wat')}.`;
+  const W = 358, L = 12, R = 12, HOR = 118, TOP = 24;
+  const OP = 7 + 29 / 60, ONDER = 16 + 59 / 60, NU = 15 + 10 / 60, NIEUW = 16 + 49 / 60;
+  const x = (u) => L + (u / 24) * (W - L - R);
+  const y = (u) => (u <= OP || u >= ONDER ? HOR : HOR - (HOR - TOP) * Math.sin(Math.PI * (u - OP) / (ONDER - OP)));
+  const pad = (van, tot) => Array.from({ length: 61 }, (_, i) => { const u = van + (i / 60) * (tot - van); return `${i ? 'L' : 'M'}${x(u).toFixed(1)},${y(u).toFixed(1)}`; }).join(' ');
+  let s = `<defs><linearGradient id="zb" x1="0" x2="1"><stop offset="0" stop-color="#6ee7b7"/><stop offset="0.5" stop-color="#f7b548"/><stop offset="1" stop-color="#8f86ff"/></linearGradient></defs>`;
+  s += `<line x1="${x(0)}" x2="${x(24)}" y1="${HOR}" y2="${HOR}" stroke="rgba(255,255,255,0.14)"/>`;
+  s += `<path d="${pad(OP, ONDER)}" stroke="url(#zb)" stroke-width="4" stroke-linecap="round" fill="none"/>`;
+  s += `<path d="${pad(ONDER, 24)}" stroke="rgba(143,134,255,0.6)" stroke-width="2.5" stroke-dasharray="2 6" fill="none"/>`;
+  s += `<circle cx="${x(NU)}" cy="${y(NU)}" r="7" fill="#ffd27a"/>`;
+  s += `<circle cx="${x(NIEUW)}" cy="${y(NIEUW)}" r="7" fill="#0b1424" stroke="#fff" stroke-width="3"/><text x="${x(NIEUW) - 10}" y="${y(NIEUW) - 14}" text-anchor="end" font-size="15" font-weight="700" fill="#fff" font-family="Bricolage Grotesque">16:49</text>`;
+  for (const u of [0, 6, 12, 18, 24]) s += `<text x="${x(u)}" y="${HOR + 22}" text-anchor="${u === 0 ? 'start' : u === 24 ? 'end' : 'middle'}" font-size="11" fill="rgba(170,185,200,0.7)" font-family="Figtree">${String(u).padStart(2, '0')}:00</text>`;
+  document.getElementById('boog').innerHTML = s;
+</script>
+</body>
+</html>

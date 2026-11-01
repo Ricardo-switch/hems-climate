@@ -318,7 +318,8 @@
       history.replaceState(null, '', location.pathname);
       return zodraKlaar(0);
     }
-    if (!gezien()) zodraKlaar(0);
+    // Niet vanzelf in het voorbeeldhuis: daar wijst Probeer dit de weg (besluit 237).
+    if (!gezien() && !/\/voorbeeld\//.test(location.pathname)) zodraKlaar(0);
   }
 
   global.rondleiding = { start, stop, STOPS, actief: () => nu >= 0 };

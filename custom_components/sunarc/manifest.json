@@ -1,0 +1,20 @@
+{
+  "domain": "sunarc",
+  "name": "SunArc",
+  "after_dependencies": [
+    "hassio"
+  ],
+  "codeowners": [
+    "@Ricardo-switch"
+  ],
+  "config_flow": true,
+  "dependencies": [
+    "conversation"
+  ],
+  "documentation": "https://github.com/Ricardo-switch/SunARC-HA-APP#ask-sunarc-through-assist",
+  "integration_type": "service",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/Ricardo-switch/SunARC-HA-APP/issues",
+  "requirements": [],
+  "version": "2.0.0"
+}

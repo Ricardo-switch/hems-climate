@@ -56,11 +56,18 @@ describe('welk comfort geldt (besluit 147)', () => {
     expect(chooseProfile(config, state({ ricardo: { thuis: false, sinds: LANG }, noor: { thuis: false, sinds: LANG } }))).toMatchObject({ id: 'ricardo', reason: 'niemand', home: [] });
   });
 
-  it('wacht tien minuten: wie net weg is, telt nog als thuis, en wie net thuis is nog als weg', () => {
+  it('wacht tien minuten bij weggaan: wie net weg is, telt nog als thuis', () => {
     const net = NOW - PROFILE_SETTLE_MS / 2;
     expect(chooseProfile(config, state({ ricardo: { thuis: false, sinds: net }, noor: { thuis: true, sinds: LANG } }))?.id).toBe('ricardo');
-    expect(chooseProfile(config, state({ ricardo: { thuis: false, sinds: LANG }, noor: { thuis: true, sinds: net } }))).toMatchObject({ id: 'ricardo', reason: 'niemand' });
     expect(chooseProfile(config, state({ ricardo: { thuis: false, sinds: NOW - PROFILE_SETTLE_MS - 1 }, noor: { thuis: true, sinds: LANG } }))?.id).toBe('noor');
+  });
+
+  it('wie thuiskomt, telt meteen: twee die vlak na elkaar thuiskomen, wisselen het comfort niet heen en weer', () => {
+    // 1 november 2026: Noor 19:33, Ricardo 19:34. Met rust bij aankomst was het
+    // eerst Ricardo (niemand thuis), om 19:43 Noor en om 19:44 weer Ricardo.
+    const noorThuis = NOW - 60_000;
+    expect(chooseProfile(config, state({ ricardo: { thuis: false, sinds: LANG }, noor: { thuis: true, sinds: noorThuis } }))).toMatchObject({ id: 'noor', reason: 'thuis' });
+    expect(chooseProfile(config, state({ ricardo: { thuis: true, sinds: NOW }, noor: { thuis: true, sinds: noorThuis } }))).toMatchObject({ id: 'ricardo', reason: 'thuis' });
   });
 
   it('"toch die van Ricardo" geldt tot er iemand thuiskomt of weggaat', () => {

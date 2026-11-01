@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AssistentAan, voegToeViaFlow, type AanzetDeuren } from '../src/web/assistent-aan.js';
+import { AssistentAan, oudeWegViaRest, voegToeViaFlow, type AanzetDeuren } from '../src/web/assistent-aan.js';
 
 /* De assistent met één knop (besluit 202): neerzetten, herstarten en toevoegen. */
 function deuren(o: Partial<AanzetDeuren> & { log?: string[] } = {}): AanzetDeuren & { log: string[] } {
@@ -57,7 +57,7 @@ describe('de assistent met één knop (besluit 202)', () => {
     }) as unknown as typeof fetch;
     expect(await voegToeViaFlow('http://supervisor/core/api', 't', 'http://sc:8099', 'geheim', f)).toEqual({ ok: true });
     expect(vragen).toEqual([
-      { url: 'http://supervisor/core/api/config/config_entries/flow', body: { handler: 'smart_climate', show_advanced_options: false } },
+      { url: 'http://supervisor/core/api/config/config_entries/flow', body: { handler: 'sunarc', show_advanced_options: false } },
       { url: 'http://supervisor/core/api/config/config_entries/flow/abc', body: { adres: 'http://sc:8099', sleutel: 'geheim' } },
     ]);
     // Staat hij er al: ook goed. Bereikt Home Assistant hem niet: dat zegt hij.
@@ -66,5 +66,26 @@ describe('de assistent met één knop (besluit 202)', () => {
     let n = 0;
     const weg = (async () => new Response(JSON.stringify(n++ === 0 ? { flow_id: 'x', type: 'form' } : { type: 'form', errors: { base: 'niet_bereikbaar' } }))) as unknown as typeof fetch;
     expect(await voegToeViaFlow('b', 't', 'a', 's', weg)).toEqual({ ok: false, reden: 'Home Assistant bereikt SunArc niet' });
+  });
+
+  it('haalt de koppeling onder de oude naam weg, na het toevoegen onder sunarc (2 november 2026)', async () => {
+    const log: string[] = [];
+    const a = new AssistentAan(deuren({ log, toegevoegd: async () => true, geladen: async () => true, oudeKoppeling: async () => true, oudeWeg: async () => (log.push('oud weg'), { ok: true }) }));
+    await a.start();
+    expect(a.stand).toMatchObject({ bezig: false, klaar: ['neerzetten', 'herstarten', 'toevoegen', 'oudeWeg'], fout: null });
+    expect(log).toEqual(['neer', 'oud weg']);
+    // Zonder oude koppeling: geen vierde stap.
+    const b = new AssistentAan(deuren({ oudeKoppeling: async () => false, oudeWeg: async () => ({ ok: true }) }));
+    await b.start();
+    expect(b.stand.klaar).toEqual(['neerzetten', 'herstarten', 'toevoegen']);
+  });
+
+  it('haalt alleen de opgegeven oude koppelingen weg, via de configuratie van Home Assistant', async () => {
+    const vragen: string[] = [];
+    const f = (async (url: string, init: { method: string }) => (vragen.push(`${init.method} ${url}`), new Response('{}', { status: url.endsWith('/weg') ? 404 : 200 }))) as unknown as typeof fetch;
+    expect(await oudeWegViaRest('http://supervisor/core/api', 't', ['abc', 'weg'], f)).toEqual({ ok: true });
+    expect(vragen).toEqual(['DELETE http://supervisor/core/api/config/config_entries/entry/abc', 'DELETE http://supervisor/core/api/config/config_entries/entry/weg']);
+    const nee = (async () => new Response('{}', { status: 500 })) as unknown as typeof fetch;
+    expect(await oudeWegViaRest('b', 't', ['abc'], nee)).toEqual({ ok: false, reden: 'Home Assistant gaf 500 bij het weghalen van de oude koppeling' });
   });
 });

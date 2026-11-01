@@ -65,7 +65,7 @@ installeer dan de integratie SunArc: via HACS, of met de knop in de app
 bij Instellingen › Bewoners en toegang › Sleutel voor de assistent (besluit
 184). De add-on meldt zich daarna vanzelf aan; geen YAML. Daarvoor mag de
 add-on in de configuratie van Home Assistant schrijven, en dat doet hij alleen
-na die tik, in `custom_components/smart_climate`.
+na die tik, in `custom_components/sunarc`.
 
 Wil je het bestand liever zelf schrijven, dan kan dat ook: de add-on heeft een
 eigen map onder `/addon_configs/`, bereikbaar met de bestandseditor of de

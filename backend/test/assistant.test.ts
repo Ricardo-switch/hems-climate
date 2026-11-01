@@ -639,6 +639,27 @@ describe('de stand per kamer voor de kaart (besluit 94)', () => {
     expect(residentView(config, view({ accepted: [coolOnSun], observed: uit })).kop.titel).toBe('De zolder is warm');
   });
 
+  it('noemt een kamer boven het doel niet fris, ook als SunArc nog even door zou verwarmen (1 november 2026)', () => {
+    // 20,2° bij doel 20°: SunArc stopt pas iets boven het doel, de Nest staat stil.
+    const perZone = [{ zoneId: 'woonkamer', temperatureC: 20.2, humidityPct: 60, targetC: 20, heatTargetC: 20, coolTargetC: 25, demand: 'heat' as const, reason: 'zone_below_setpoint' as const }];
+    const heat = { strategyId: 'comfort', zoneId: 'woonkamer', actuatorId: 'nest', action: 'heat' as const, priority: 10, budgetW: 0, reason: 'zone_below_setpoint' as const };
+    const v = view({ explanation: explanation({ perZone, solarProductionW: 0 }), accepted: [heat], observedAction: { nest: 'idle' } });
+    expect([room(v, 'woonkamer').soort, room(v, 'woonkamer').kort]).toEqual(['ok', 'Op temperatuur']);
+    expect(residentView(config, v).kop.titel).not.toMatch(/fris/);
+    // Onder het doel wel: dan zou SunArc verwarmen, en is het er fris.
+    const koud = view({ explanation: explanation({ perZone: [{ ...perZone[0]!, temperatureC: 19.4 }], solarProductionW: 0 }), accepted: [heat], observedAction: { nest: 'idle' } });
+    expect(room(koud, 'woonkamer').kort).toBe('Zou verwarmen');
+  });
+
+  it('zegt "verwarmt" zodra een apparaat echt verwarmt, ook als SunArc niets zou doen (1 november 2026)', () => {
+    const v = view({ observedAction: { nest: 'heating' } });
+    const r = room(v, 'woonkamer');
+    expect([r.soort, r.kort, r.actuatorId, r.klopt]).toEqual(['heat', 'Verwarmt', 'nest', true]);
+    expect(r.zin).toContain('verwarmt nu.');
+    // Staat hij stil in de stand verwarmen, dan niet.
+    expect(room(view({ observedAction: { nest: 'idle' } }), 'woonkamer').soort).not.toBe('heat');
+  });
+
   it('wacht op zon, of zegt waarom het wacht', () => {
     expect(room(view({ rejected: [{ intent: coolOnSun, blockedBy: 'insufficient_power_budget' }] }), 'zolder').kort).toBe('Wacht op meer zon');
     expect(room(view({ rejected: [{ intent: coolOnSun, blockedBy: 'insufficient_current_budget' }] }), 'zolder').kort).toBe(

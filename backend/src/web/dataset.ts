@@ -150,7 +150,7 @@ const EXPECTED_INPUTS: readonly {
   },
   {
     id: 'opbrengst zonnepanelen',
-    purpose: 'maat voor instraling; zonder deze kolom is niet te berekenen hoeveel de zon een kamer opwarmt',
+    purpose: 'maat voor instraling; zonder deze kolom is niet te berekenen hoeveel de zon een kamer verwarmt',
     present: (m) => m.solarW != null,
   },
 ];

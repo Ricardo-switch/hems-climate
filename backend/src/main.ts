@@ -12,7 +12,7 @@
  */
 
 import { Integratie } from './web/integratie.js';
-import { AssistentAan, voegToeViaFlow } from './web/assistent-aan.js';
+import { AssistentAan, oudeWegViaRest, voegToeViaFlow } from './web/assistent-aan.js';
 import { PushStore, alsMelding, ontvangersVan, paneelVan, proefTekst, teSturen, telefoonVan, vindTelefoons, type Telefoon } from './web/push.js';
 import { hostname } from 'node:os';
 import { loadDotEnv, tokenComplaint } from './env.js';
@@ -95,6 +95,7 @@ import { BRUG_ENTITEITEN, KlimaatBrug, MODUS_OPTIES } from './web/klimaatbrug.js
 import { HAND_KLIMAAT, HAND_KNOPPEN, Handbediening } from './web/hand.js';
 import { Voorbeeld } from './web/voorbeeld.js';
 import { Witgoed } from './web/witgoed.js';
+import { voerStapUit, type GeplandeDeuren } from './web/gepland-uit.js';
 import { kiesVerstaan, Verstaan } from './web/verstaan.js';
 
 
@@ -461,7 +462,7 @@ const client = new HaClient({
   // of er nog iets terug moet. Alleen in de add-on (zie `klimaatBrug`).
   allowKnoppen: (): { readonly entiteiten: readonly string[]; readonly opties: readonly string[] } =>
     klimaatAan() || (klimaatBrug?.terugzetten.length ?? 0) > 0 || (handbediening?.terugzetten.length ?? 0) > 0 ? { entiteiten: [...new Set([...BRUG_ENTITEITEN, ...HAND_KNOPPEN])], opties: MODUS_OPTIES } : { entiteiten: [], opties: [] },
-  // Klimaat met de hand (besluit 235): de airco's op warm en de stekkers, als de brug aan staat of er nog iets terug moet.
+  // Klimaat met de hand (besluit 235): de airco's op verwarmen en de stekkers, als de brug aan staat of er nog iets terug moet.
   // Witgoed starten (ronde 5, besluit 238): alleen de startknop van een droger of vaatwasser, alleen in de add-on.
   allowStart: (): readonly string[] => witgoed?.knoppen() ?? [],
   allowHand: (): { readonly klimaat: readonly string[]; readonly schakelaars: readonly string[] } =>
@@ -1270,11 +1271,26 @@ const teDoen: TeDoenDienst = {
 async function voerGeplandUit(h: Herinnering): Promise<void> {
   const f = functiesNu();
   const vol = f ? volledig(f, functiesKeuzes()) : null;
+  const mag = vol?.licht.bedienen !== false;
+  // Klimaat met de hand en witgoed (besluit 240): dezelfde deuren als besluit 235 en 238.
+  const hand = handbediening && klimaatAan() ? handbediening : null;
+  const deuren: GeplandeDeuren = {
+    licht: lightSwitch && mag ? (b) => lightSwitch.switch(b) : null,
+    scene: lightSwitch?.scenesEnabled && mag ? (b) => lightSwitch.scene(b) : null,
+    scherm: coverSwitch && vol?.schermen.bedienen !== false ? (b) => coverSwitch.move(b) : null,
+    hand: hand
+      ? {
+          zet: (id, modus, doelC, totMs, totDoel) => hand.zet(id, modus, doelC, totMs, totDoel),
+          zetKnop: (id, doelC, totMs, totDoel) => hand.zetKnop(id, doelC, totMs, totDoel),
+          schakelAan: (id, totMs) => hand.schakelAan(id, totMs),
+          isKnop: (id) => handKnoppen().some((k) => k.id === id),
+        }
+      : null,
+    witgoed: witgoed ? (id) => witgoed!.nuStarten(id) : null,
+    tz: siteConfig?.timezone ?? 'Europe/Amsterdam',
+  };
   for (const s of h.opdracht?.stappen ?? []) {
-    let r: { readonly ok: boolean; readonly reden?: string } | null = null;
-    if (s.pad === 'api/licht' && lightSwitch && vol?.licht.bedienen !== false) r = await lightSwitch.switch(s.body);
-    else if (s.pad === 'api/scene' && lightSwitch?.scenesEnabled && vol?.licht.bedienen !== false) r = await lightSwitch.scene(s.body);
-    else if (s.pad === 'api/scherm' && coverSwitch && vol?.schermen.bedienen !== false) r = await coverSwitch.move(s.body);
+    const r = await voerStapUit(s, deuren);
     if (r == null) console.warn(`[gepland] ${s.pad} staat niet aan; "${h.tekst}" niet gedaan`);
     else if (!r.ok) console.warn(`[gepland] "${h.tekst}" lukte niet: ${r.reden ?? ''}`);
   }
@@ -1543,7 +1559,7 @@ const sleutel = logDir !== '' ? await leesOfMaakSleutel(join(logDir, 'sleutel-as
  * van Home Assistant (`/homeassistant` in de add-on). Bij het starten de nieuwe
  * versie, als de add-on hem eerder neerzette.
  */
-const integratie = version.installatie === 'add-on' ? new Integratie('/app/integratie/smart_climate', '/homeassistant') : null;
+const integratie = version.installatie === 'add-on' ? new Integratie('/app/integratie/sunarc', '/homeassistant') : null;
 void integratie?.bijwerken().catch(() => false);
 /**
  * Hoe de integratie erbij staat, met de versie die Home Assistant nu geladen
@@ -1555,19 +1571,31 @@ async function integratieStand() {
   const stand = await integratie!.stand();
   let geladen: string | null = null;
   try {
-    const m = await client.query<{ version?: string }>('manifest/get', { integration: 'smart_climate' });
+    const m = await client.query<{ version?: string }>('manifest/get', { integration: 'sunarc' });
     geladen = typeof m?.version === 'string' ? m.version : null;
   } catch {
     // Niet geladen: nog niet herstart, of hij staat er niet.
   }
   let toegevoegd: boolean | null = null;
   try {
-    const lijst = await client.query<unknown[]>('config_entries/get', { domain: 'smart_climate' });
+    const lijst = await client.query<unknown[]>('config_entries/get', { domain: 'sunarc' });
     toegevoegd = Array.isArray(lijst) && lijst.length > 0;
   } catch {
     // Onbekend: dan zegt de app er niets over.
   }
-  return { ...stand, geladen, toegevoegd };
+  // De koppeling onder de oude naam (tot 2 november 2026): de knop haalt hem weg na het toevoegen.
+  const oudeKoppeling = (await oudeKoppelingen()).length > 0;
+  return { ...stand, geladen, toegevoegd, oudeKoppeling };
+}
+
+/** De config entries van de integratie onder haar oude naam, smart_climate. */
+async function oudeKoppelingen(): Promise<string[]> {
+  try {
+    const lijst = await client.query<{ entry_id?: unknown }[]>('config_entries/get', { domain: 'smart_climate' });
+    return Array.isArray(lijst) ? lijst.map((x) => x.entry_id).filter((x): x is string => typeof x === 'string') : [];
+  } catch {
+    return [];
+  }
 }
 
 /*
@@ -1580,7 +1608,7 @@ if (sleutel && version.installatie === 'add-on' && webPort != null && process.en
   void fetch('http://supervisor/discovery', {
     method: 'POST',
     headers: { authorization: `Bearer ${process.env['SUPERVISOR_TOKEN']}`, 'content-type': 'application/json' },
-    body: JSON.stringify({ service: 'smart_climate', config: { host: hostname(), port: webPort, sleutel } }),
+    body: JSON.stringify({ service: 'sunarc', config: { host: hostname(), port: webPort, sleutel } }),
   })
     .then((r) => {
       if (!r.ok) console.warn(`Aanmelden bij Home Assistant voor de integratie lukte niet (${r.status}).`);
@@ -1627,6 +1655,8 @@ const assistentAan = integratie && sleutel && webPort != null && supervisorToken
           setTimeout(() => void kijk(), 2_000);
         }),
       voegToe: () => voegToeViaFlow('http://supervisor/core/api', supervisorToken, `http://${hostname()}:${webPort}`, sleutel),
+      oudeKoppeling: async () => (await oudeKoppelingen()).length > 0,
+      oudeWeg: async () => oudeWegViaRest('http://supervisor/core/api', supervisorToken, await oudeKoppelingen()),
       nu: () => Date.now(),
     })
   : null;

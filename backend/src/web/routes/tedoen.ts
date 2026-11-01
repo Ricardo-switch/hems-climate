@@ -13,7 +13,8 @@ import { uitspraak } from '../uitspraak.js';
 import { startOfLocalDay } from '../today.js';
 import type { AgendaKeus } from '../voorkeuren.js';
 import type { Diensten, Verzoek } from '../diensten.js';
-import type { Herhaal, Moment } from '../gepland.js';
+import type { Stap } from '../brein.js';
+import { leesStap, type Herhaal, type Moment } from '../gepland.js';
 import {
   afvalBak,
   afvalSoort,
@@ -26,6 +27,7 @@ import {
   leesTeDoenVraag,
   type Aanpassing,
   type Afspraak,
+  type GeplandeOpdracht,
   type Herinnering,
   type Herinneringen,
   type LijstItem,
@@ -195,6 +197,32 @@ export function leesAanpassing(body: Record<string, unknown>): Aanpassing | stri
   return w;
 }
 
+/**
+ * Een nieuwe opdracht uit Nieuw (besluit 240): een naam, één tot zes stappen
+ * door de deuren die later mogen, en verplicht wanneer en hoe vaak. Aan en
+ * overslaan als niemand thuis is mogen weg. Een tekst als er iets niet klopt.
+ */
+export function leesPlan(body: Record<string, unknown>): { readonly tekst: string; readonly opdracht: GeplandeOpdracht } | string {
+  const tekst = typeof body['tekst'] === 'string' ? body['tekst'].trim() : '';
+  if (tekst === '' || tekst.length > 120) return 'tekst is 1 tot 120 tekens';
+  const ruw = body['stappen'];
+  if (!Array.isArray(ruw) || ruw.length < 1 || ruw.length > 6) return 'stappen is een lijst van 1 tot 6';
+  const stappen: Stap[] = [];
+  for (const s of ruw) {
+    const st = leesStap(s);
+    if (typeof st === 'string') return st;
+    stappen.push(st);
+  }
+  if (body['moment'] === undefined || body['herhaal'] === undefined) return 'moment en herhaal horen erbij';
+  const w = leesAanpassing(body);
+  if (typeof w === 'string') return w;
+  const moment = w.moment!;
+  return {
+    tekst,
+    opdracht: { stappen, zon: moment.soort === 'zon' ? moment.zon : null, moment, herhaal: w.herhaal!, aan: w.aan ?? true, ...(w.overslaanWeg ? { overslaanWeg: true } : {}) },
+  };
+}
+
 /** Eén handeling: toevoegen, afvinken, een herinnering, gedaan of later. */
 export async function handel(t: TeDoenDienst, body: Record<string, unknown>, wie: Visitor | null): Promise<{ status: number; antwoord: Record<string, unknown> }> {
   const keus = t.keus();
@@ -226,6 +254,23 @@ export async function handel(t: TeDoenDienst, body: Record<string, unknown>, wie
       const ok = await t.herinneringen.pasAan(id, w);
       return ok ? { status: 200, antwoord: { ok: true } } : { status: 404, antwoord: { fout: 'die opdracht is er niet, of er komt met die keus geen moment meer' } };
     }
+    // Nieuw in Vast en gepland (besluit 240): wat, wanneer en hoe vaak in één keer.
+    if (actie === 'plan') {
+      const p = leesPlan(body);
+      if (typeof p === 'string') return { status: 400, antwoord: { fout: p } };
+      const account = wie?.userId ?? null;
+      const naam = account ? t.naamVan(account) : null;
+      const g = await t.herinneringen.plan({ tekst: p.tekst, voor: naam ? account : null, naam, opdracht: p.opdracht });
+      return g ? { status: 200, antwoord: { ok: true, id: g.id, ms: g.ms } } : { status: 409, antwoord: { fout: 'met die keus komt er geen moment' } };
+    }
+    // De komende momenten bij een keus, zonder iets te bewaren (Klaar in Nieuw).
+    if (actie === 'voorproef') {
+      if (body['moment'] === undefined || body['herhaal'] === undefined) return { status: 400, antwoord: { fout: 'moment en herhaal horen erbij' } };
+      const w = leesAanpassing(body);
+      if (typeof w === 'string') return { status: 400, antwoord: { fout: w } };
+      const momenten = t.herinneringen.momenten({ stappen: [], zon: w.moment!.soort === 'zon' ? w.moment!.zon : null, moment: w.moment!, herhaal: w.herhaal! });
+      return { status: 200, antwoord: { ok: true, momenten } };
+    }
     if (actie === 'annuleer') {
       const id = typeof body['id'] === 'string' ? body['id'] : '';
       const g = (await t.herinneringen.gepland()).find((x) => x.id === id);
@@ -252,7 +297,7 @@ export async function handel(t: TeDoenDienst, body: Record<string, unknown>, wie
   } catch (error) {
     return { status: 502, antwoord: { fout: `Home Assistant weigerde: ${(error as Error).message}` } };
   }
-  return { status: 400, antwoord: { fout: 'actie is toevoegen, klaar, open, opruimen, herinner, gedaan, later, aanpassen of annuleer' } };
+  return { status: 400, antwoord: { fout: 'actie is toevoegen, klaar, open, opruimen, herinner, gedaan, later, aanpassen, plan, voorproef of annuleer' } };
 }
 
 /* ------------------------------------------------------------ de assistent */

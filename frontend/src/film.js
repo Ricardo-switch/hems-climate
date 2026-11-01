@@ -466,7 +466,7 @@
   /** Het huis bij een shot, uit dezelfde opbouw als Thuis (huismodel.tekening). */
   function model(d, c, b) {
     const m = new Date().getMonth() + 1;
-    const stand = m >= 4 && m <= 9 ? 'koelt' : 'warmt';
+    const stand = m >= 4 && m <= 9 ? 'koelt' : 'verwarmt';
     const avond = b.tijd === 'avond' || b.soort === 'slot';
     const kamer = (r) => {
       const k = hm().kamerModel(r, null);

@@ -195,7 +195,7 @@ describe('de jacuzzi op zon (besluit 186)', () => {
 });
 
 describe('de boiler (besluit 186)', () => {
-  it('warmt op zon tot het doel, en eens per week tegen legionella', () => {
+  it('verwarmt op zon tot het doel, en eens per week tegen legionella', () => {
     const cfg = metBuffers(boiler);
     expect(uitleg(state({ gridPowerW: -800 }, { boiler: { temp: 55, legionellaAtMs: NOW - 2 * DAG } }), cfg, 'boiler')).toMatchObject({ state: 'would_heat', targetC: 65 });
     expect(uitleg(state({ gridPowerW: -800 }, { boiler: { temp: 65, legionellaAtMs: NOW - 2 * DAG } }), cfg, 'boiler')).toMatchObject({ state: 'full' });

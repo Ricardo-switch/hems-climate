@@ -26,7 +26,7 @@ import type { ActuatorState } from './state.js';
 import type { ClaimOutcome, SunClaim } from './deferrable.js';
 import { claimKey, vrijVoorDraaiend } from './warmtebuffer.js';
 
-/** De strategie die op zon opwarmt of koelt (strategies/pvSurplus.ts); die voorstellen ordent de volgorde op zon. */
+/** De strategie die op zon verwarmt of koelt (strategies/pvSurplus.ts); die voorstellen ordent de volgorde op zon. */
 const PV_SURPLUS = 'pv-surplus';
 
 /** Verschil waarboven een nieuw setpoint de moeite van sturen waard is. */
@@ -203,7 +203,7 @@ function windDownIntent(
 
 /*
  * De volgorde op zon (besluit 176). Comfort en bijspringen gaan altijd voor;
- * daarna komen de voorstellen om op zon op te warmen of te koelen, en de
+ * daarna komen de voorstellen om op zon te verwarmen of te koelen, en de
  * apparaten die op zon wachten, door elkaar in de volgorde die de bewoner
  * koos. Een zone of apparaat dat er niet in staat, komt achteraan: zones in hun
  * gewone volgorde, dan de apparaten.

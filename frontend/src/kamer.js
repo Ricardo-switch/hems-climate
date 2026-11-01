@@ -411,6 +411,8 @@ function strookVandaag(d, kleur) {
 }
 
 const MEEKIJKEN = t('kamer.meekijken');
+/** Telt de tekeningen, voor een eigen naam per verloop. */
+let tekeningNr = 0;
 
 /**
  * Een klimaatapparaat dat met de hand kan (besluit 238): hetzelfde blad als bij
@@ -444,12 +446,14 @@ function aircoBlad(k, d) {
     return `<line x1="${a1}" y1="${b1}" x2="${a2}" y2="${b2}" stroke="#F7B548" stroke-width="3" stroke-linecap="round"/>`;
   })();
   const lucht = d.aan ? `<g stroke="${kleur}" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.8"><path class="sc-lucht" d="M110 206 q 6 14 0 26"/><path class="sc-lucht" style="animation-delay: .3s" d="M150 206 q 6 14 0 26"/><path class="sc-lucht" style="animation-delay: .6s" d="M190 206 q 6 14 0 26"/></g>` : '';
+  // Een eigen naam per tekening: de wand en de telefoon staan allebei in de pagina, en een verborgen verloop tekent niet (ronde 5).
+  const n = ++tekeningNr;
   const svg = `<svg viewBox="0 0 300 290" role="img" aria-label="${esc(nu == null ? t('kamer.doelLabel', { doel: nl(doel) }) : t('kamer.doelNuLabel', { doel: nl(doel), nu: nl(nu) }))}">
-    <defs><linearGradient id="ring" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="${kleur}"/><stop offset="1" stop-color="#8F86FF"/></linearGradient>
-      <radialGradient id="koud"><stop offset="0" stop-color="${kleur}" stop-opacity="${d.aan ? 0.28 : 0.1}"/><stop offset="1" stop-color="${kleur}" stop-opacity="0"/></radialGradient></defs>
-    <circle cx="150" cy="150" r="140" fill="url(#koud)"/>
+    <defs><linearGradient id="ring-${n}" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="${kleur}"/><stop offset="1" stop-color="#8F86FF"/></linearGradient>
+      <radialGradient id="koud-${n}"><stop offset="0" stop-color="${kleur}" stop-opacity="${d.aan ? 0.28 : 0.1}"/><stop offset="1" stop-color="${kleur}" stop-opacity="0"/></radialGradient></defs>
+    <circle cx="150" cy="150" r="140" fill="url(#koud-${n})"/>
     <path d="M ${sx} ${sy} A 118 118 0 1 1 ${ex} ${ey}" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="16" stroke-linecap="round"/>
-    <path d="M ${sx} ${sy} A 118 118 0 ${groot} 1 ${dx} ${dy}" fill="none" stroke="url(#ring)" stroke-width="16" stroke-linecap="round"/>
+    <path d="M ${sx} ${sy} A 118 118 0 ${groot} 1 ${dx} ${dy}" fill="none" stroke="url(#ring-${n})" stroke-width="16" stroke-linecap="round"/>
     <circle cx="${dx}" cy="${dy}" r="13" fill="#EEF3F7"/>
     ${nuStreep}
     <g font-family="Figtree" font-size="11" fill="#7F8E9C"><text x="54" y="262" text-anchor="middle">16°</text><text x="246" y="262" text-anchor="middle">30°</text></g>
@@ -503,12 +507,13 @@ function nestBlad(k, d) {
     const aan = 10 + (i / 59) * 20 <= doel;
     tikken.push(`<line x1="${(150 + Math.cos(a) * 92).toFixed(1)}" y1="${(145 + Math.sin(a) * 92).toFixed(1)}" x2="${(150 + Math.cos(a) * r2).toFixed(1)}" y2="${(145 + Math.sin(a) * r2).toFixed(1)}" stroke="${aan ? '#FF7A4D' : 'rgba(255,255,255,0.25)'}"/>`);
   }
+  const n = ++tekeningNr;
   const svg = `<svg viewBox="0 0 300 290" role="img" aria-label="${esc(`${t('kamer.thermostaat')}: ${nu == null ? t('kamer.doelLabel', { doel: nl(doel) }) : t('kamer.doelNuLabel', { doel: nl(doel), nu: nl(nu) })}${brandt ? `, ${t('kamer.verwarmt')}` : ''}`)}">
-    <defs><radialGradient id="schijf" cx="0.45" cy="0.4"><stop offset="0" stop-color="#2a3442"/><stop offset="1" stop-color="#0e141c"/></radialGradient>
-      <radialGradient id="gloed"><stop offset="0.6" stop-color="#FF7A4D" stop-opacity="${brandt ? 0.45 : 0}"/><stop offset="1" stop-color="#FF7A4D" stop-opacity="0"/></radialGradient></defs>
-    <circle cx="150" cy="145" r="140" fill="url(#gloed)"/>
+    <defs><radialGradient id="schijf-${n}" cx="0.45" cy="0.4"><stop offset="0" stop-color="#2a3442"/><stop offset="1" stop-color="#0e141c"/></radialGradient>
+      <radialGradient id="gloed-${n}"><stop offset="0.6" stop-color="#FF7A4D" stop-opacity="${brandt ? 0.45 : 0}"/><stop offset="1" stop-color="#FF7A4D" stop-opacity="0"/></radialGradient></defs>
+    <circle cx="150" cy="145" r="140" fill="url(#gloed-${n})"/>
     <circle cx="150" cy="145" r="112" fill="#c9d2db"/>
-    <circle cx="150" cy="145" r="104" fill="url(#schijf)"/>
+    <circle cx="150" cy="145" r="104" fill="url(#schijf-${n})"/>
     <g stroke-width="3" stroke-linecap="round">${tikken.join('')}</g>
     <text x="150" y="150" text-anchor="middle" font-family="Bricolage Grotesque" font-weight="600" font-size="56" fill="#EEF3F7">${nl(doel, Number.isInteger(doel) ? 0 : 1)}</text>
     <text x="150" y="176" text-anchor="middle" font-family="Figtree" font-size="13" fill="${brandt ? '#FFB090' : '#B8C4CF'}">${esc(t(brandt ? 'kamer.verwarmt' : d.radiatorknop && d.stand !== 'uit' ? 'kamer.klaar' : 'kamer.uit'))}${nu == null ? '' : `, ${esc(t('kamer.nu', { graden: nl(nu) }))}`}</text>
@@ -579,17 +584,18 @@ function screenBlad(k, d) {
   // Zon op dit scherm: alleen op de gevel waar het hangt (besluit 145); weet het huis die niet, dan niets.
   const gevel = d.scherm?.gevel ? (zon?.gevels ?? []).find((g) => g.id === d.scherm.gevel.id) : null;
   const zonNu = gevel?.inDeZon ? [gevel.naam.toLowerCase()] : [];
+  const n = ++tekeningNr;
   const svg = `<svg viewBox="0 0 300 290" role="img" aria-label="${esc(t('kamer.scherm.label', { pct: Math.round(dicht * 100) }))}" ${sleep && bedienen ? `data-schermsleep="${esc(d.id)}" style="touch-action: none; cursor: ns-resize"` : ''}>
-    <defs><linearGradient id="raamlucht" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5d8fc0"/><stop offset="1" stop-color="#9cc1e0"/></linearGradient>
-      <pattern id="doek" width="8" height="6" patternUnits="userSpaceOnUse"><rect width="8" height="6" fill="#3d4a5a"/><rect width="8" height="1.2" fill="#4c5b6d"/></pattern>
-      <linearGradient id="straal" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F7B548" stop-opacity="0.55"/><stop offset="1" stop-color="#F7B548" stop-opacity="0"/></linearGradient></defs>
+    <defs><linearGradient id="raamlucht-${n}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5d8fc0"/><stop offset="1" stop-color="#9cc1e0"/></linearGradient>
+      <pattern id="doek-${n}" width="8" height="6" patternUnits="userSpaceOnUse"><rect width="8" height="6" fill="#3d4a5a"/><rect width="8" height="1.2" fill="#4c5b6d"/></pattern>
+      <linearGradient id="straal-${n}" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F7B548" stop-opacity="0.55"/><stop offset="1" stop-color="#F7B548" stop-opacity="0"/></linearGradient></defs>
     <rect x="0" y="0" width="300" height="290" rx="16" fill="#26313f"/>
-    ${zonNu.length ? '<polygon points="300,0 300,120 120,290 40,290" fill="url(#straal)" opacity="0.6"/><circle cx="282" cy="22" r="14" fill="#FFD27A"/>' : ''}
+    ${zonNu.length ? `<polygon points="300,0 300,120 120,290 40,290" fill="url(#straal-${n})" opacity="0.6"/><circle cx="282" cy="22" r="14" fill="#FFD27A"/>` : ''}
     <rect x="46" y="26" width="208" height="20" rx="5" fill="#4a5768"/>
-    <rect x="56" y="46" width="188" height="214" rx="4" fill="url(#raamlucht)" stroke="#6b7a8c" stroke-width="6"/>
+    <rect x="56" y="46" width="188" height="214" rx="4" fill="url(#raamlucht-${n})" stroke="#6b7a8c" stroke-width="6"/>
     <line x1="150" y1="46" x2="150" y2="260" stroke="#6b7a8c" stroke-width="5"/>
     <rect x="64" y="160" width="76" height="92" fill="#ffffff" opacity="0.12"/>
-    <rect data-doek x="52" y="46" width="196" height="${doekH}" fill="url(#doek)" ${doekH > 0 ? '' : 'style="display: none"'}/>
+    <rect data-doek x="52" y="46" width="196" height="${doekH}" fill="url(#doek-${n})" ${doekH > 0 ? '' : 'style="display: none"'}/>
     <rect data-lat x="48" y="${42 + doekH}" width="204" height="9" rx="4" fill="#5b6a7c"/>
     ${sleep && bedienen ? `<g data-greep transform="translate(0 ${doekH})"><rect x="126" y="38" width="48" height="17" rx="8.5" fill="#EEF3F7"/><line x1="138" y1="46.5" x2="162" y2="46.5" stroke="#0b1424" stroke-width="2" stroke-linecap="round"/></g>` : ''}
     <line x1="270" y1="46" x2="270" y2="260" stroke="#ffffff" stroke-opacity="0.15" stroke-width="4" stroke-linecap="round"/>
@@ -907,6 +913,8 @@ addEventListener('hashchange', () => {
 });
 void laadAlles();
 setInterval(() => void laadAlles(), 60_000);
+// In het voorbeeldhuis verschuift de klok (besluit 237): dan meteen vers.
+addEventListener('voorbeeldklok', () => void laadAlles());
 // Lampen, screens en beweging live (21 oktober 2026); een meting hooguit om de vijf tellen, zoals eerst.
 app.bijVerandering('huis', laadHuis, { rustig: 5_000 });
 app.live((nieuw) => {

@@ -700,7 +700,7 @@ export function discover(r: Registers): Proposal {
         toelichting:
           'De regeling gebruikt hem niet. Hij gaat mee het logboek in als maat ' +
           'voor instraling, zodat later te berekenen valt hoeveel de zon een ' +
-          'kamer opwarmt. Overslaan mag.',
+          'kamer verwarmt. Overslaan mag.',
         huidig: production.entity_id,
         opties: productionCandidates.map((e) => e.entity_id),
         magLeeg: true,
@@ -712,7 +712,7 @@ export function discover(r: Registers): Proposal {
       pad: 'solarProduction',
       tekst:
         'geen sensor herkend die de opbrengst van zonnepanelen meet. Zonder die ' +
-        'maat kan later niet worden uitgerekend hoeveel de zon een kamer opwarmt.',
+        'maat kan later niet worden uitgerekend hoeveel de zon een kamer verwarmt.',
     });
   }
 

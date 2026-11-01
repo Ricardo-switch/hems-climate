@@ -288,7 +288,7 @@ export class WebServer {
       (this.#d.options.voorkeuren != null && path === '/api/voorkeuren') ||
       // Wat de bewoner over het sluipverbruik zegt (besluit 88, 192): één korte zin, in het eigen bestand.
       (this.#d.options.sluipverbruik != null && path === '/api/sluipverbruik') ||
-      // De integratie neerzetten (besluit 184): alleen custom_components/smart_climate, na een tik van de beheerder.
+      // De integratie neerzetten (besluit 184): alleen custom_components/sunarc, na een tik van de beheerder.
       (this.#d.options.integratie != null && path === '/api/integratie') ||
       // Helemaal in huis (besluit 203): de spraakassistent maken, na een tik van de beheerder.
       (this.#d.options.stemInHuis != null && path === '/api/stem-in-huis') ||

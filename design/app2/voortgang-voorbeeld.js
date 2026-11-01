@@ -29,7 +29,7 @@ const GROEPEN = [
     { id: 'afwezig', kort: 'Afwezig', titel: 'Afwezig en vakantie', stand: 'kijkt', wat: 'Vanzelf zuinig als niemand thuis is.', weet: ['weet wie er thuis is via de telefoons'], komt: ['zelf regelen na een winter meekijken'] },
   ]],
   ['leert', 'Leert', [
-    { id: 'optijd', kort: 'Op tijd warm', titel: 'Op tijd warm of koel', stand: 'leert', deel: 0.25, wat: 'Hoe snel elke kamer opwarmt en afkoelt, zodat het huis op tijd begint en niet te vroeg.', weet: ['54 dagen meegekeken, sinds 5 september', 'elke stand van de regeling gezien, ook verwarmen'], komt: ['een winter: 0 van 30 dagen', 'op zijn vroegst klaar eind december'], balk: { tekst: 'Winterdagen', van: 0, tot: 30 } },
+    { id: 'optijd', kort: 'Op tijd warm', titel: 'Op tijd warm of koel', stand: 'leert', deel: 0.25, wat: 'Hoe snel elke kamer verwarmt en afkoelt, zodat het huis op tijd begint en niet te vroeg.', weet: ['54 dagen meegekeken, sinds 5 september', 'elke stand van de regeling gezien, ook verwarmen'], komt: ['een winter: 0 van 30 dagen', 'op zijn vroegst klaar eind december'], balk: { tekst: 'Winterdagen', van: 0, tot: 30 } },
     { id: 'gevoel', kort: 'Wat je prettig vindt', titel: 'Wat jij prettig vindt', stand: 'werkt', wat: 'Tik op Thuis hoe het voelt; het huis past zich aan.', weet: ['12 keer gezegd hoe het voelde', 'Woonkamer een halve graad warmer'] },
     { id: 'ligging', kort: 'Ligging panelen', titel: 'Ligging van de panelen', stand: 'leert', deel: 4 / 7, wat: 'Naar welke kant de panelen liggen en hoe schuin. Daarmee weet het hoeveel zon er komt, en wanneer.', weet: ['oost en west, helling ± 50°', '4 zonnige dagen vergeleken'], komt: ['nog 3 zonnige dagen'], balk: { tekst: 'Zonnige dagen', van: 4, tot: 7 } },
   ]],

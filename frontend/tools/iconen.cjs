@@ -9,7 +9,7 @@
 //   frontend/kit/zon.svg            de zon als stem in rust, voor de kleine bollen
 //   frontend/src/icoon-*.png        de app, ook maskable en de beta met een label
 //   addon/icon.png, addon/logo.png  de add-on in Home Assistant
-//   custom_components/smart_climate/brand/  de integratie (de assistent) in Home Assistant
+//   custom_components/sunarc/brand/  de integratie (de assistent) in Home Assistant
 // De PNG's tekent de Chromium van Playwright uit backend/.
 const fs = require('fs');
 const path = require('path');
@@ -136,7 +136,7 @@ function rond() {
   await png(icoon(), 'addon/icon.png', 128);
   await png(logo('beide'), 'addon/logo.png', 250, 100, true);
   // De integratie (Home Assistant 2026.3 en later leest `brand/` in de integratie zelf).
-  const brand = 'custom_components/smart_climate/brand';
+  const brand = 'custom_components/sunarc/brand';
   fs.mkdirSync(path.join(wortel, brand), { recursive: true });
   await png(vierkant(), `${brand}/icon.png`, 256);
   await png(vierkant(), `${brand}/icon@2x.png`, 512);

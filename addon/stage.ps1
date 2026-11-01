@@ -80,7 +80,7 @@ $mappen = @(
   # Het wekwoord "Hé huis" (besluit 177): run.sh zet het klaar voor openWakeWord.
   @{ Van = 'addon/wekwoord'; Naar = 'wekwoord' }
   # De integratie voor Home Assistant (besluit 184): de add-on zet hem neer voor wie geen HACS heeft.
-  @{ Van = 'custom_components/smart_climate'; Naar = 'integratie/smart_climate' }
+  @{ Van = 'custom_components/sunarc'; Naar = 'integratie/sunarc' }
 )
 
 if (Test-Path $Doel) { Remove-Item $Doel -Recurse -Force }

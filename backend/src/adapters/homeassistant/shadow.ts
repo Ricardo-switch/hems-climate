@@ -598,6 +598,7 @@ export class ShadowRunner {
     }
 
     const observed = this.#observation();
+    const observedAction = this.#observedAction();
     const legacyRef = this.#config.migration?.legacyExplanation;
     const legacy = legacyRef ? this.#store.state(legacyRef.id) : null;
 
@@ -614,7 +615,7 @@ export class ShadowRunner {
       accepted: decision.accepted,
       rejected: decision.rejected,
       observed,
-      observedAction: this.#observedAction(),
+      observedAction,
       legacy,
     };
     // Een kapotte luisteraar mag de opname niet meeslepen. De schaduwmodus
@@ -649,6 +650,9 @@ export class ShadowRunner {
     // De warmtebuffers (besluit 186): stand, reden, temperatuur en of hij stookt.
     const warmte = e.heatStores?.map((h) => [h.id, h.state, h.reason, h.temperatureC ?? null, h.heating]);
     const phaseFields = {
+      // Wat elk apparaat zegt dat het echt doet (`hvac_action`, 1 november 2026): "heat@20"
+      // zegt alleen de stand, niet of de ketel brandt. Vandaag zegt er "ging verwarmen" mee.
+      ...(Object.keys(observedAction).length > 0 ? { doet: observedAction } : {}),
       ...(fasen ? { fasen } : {}),
       ...(stroomGeweigerd.length > 0 ? { stroomGeweigerd } : {}),
       ...(uitstel ? { uitstel } : {}),

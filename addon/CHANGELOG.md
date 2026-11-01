@@ -1,5 +1,83 @@
 # Wat is er nieuw · What is new
 
+## 0.110.0
+
+*1 november 2026*
+
+**Beter**
+
+- De koppeling met Assist heet nu sunarc: de add-on zet hem over, met één tik bij Bewoners en toegang
+
+*English*
+
+**Improved**
+
+- The Assist link is now called sunarc: the add-on moves it over, with one tap under Residents and access
+
+## 0.109.0
+
+*1 november 2026*
+
+**Nieuw**
+
+- Nieuw bij Vast en gepland: zeg het, of kies het zelf in vier stappen
+- De zin en de boog groeien mee terwijl je kiest, en Klaar laat je komende dagen zien
+- Klimaat met de hand en witgoed kun je nu ook op een tijd zetten
+
+*English*
+
+**New**
+
+- New under Fixed and planned: say it, or choose it yourself in four steps
+- The sentence and the arc grow while you choose, and Done shows your coming days
+- Climate by hand and appliances can now be set for a time too
+
+## 0.108.0
+
+*1 november 2026*
+
+**Nieuw**
+
+- Het voorbeeldhuis heeft prijzen, panelen en een aansluiting, en de lijn van nu loopt mee als je de dag afspeelt
+- De uitleg in Home Assistant is opnieuw geschreven voor wie begint
+
+**Beter**
+
+- Verwarmt of koelt een apparaat echt, dan staat dat er, ook als SunArc het anders zou doen
+- Een kamer op of boven het doel heet niet meer fris
+- Vandaag zegt alleen "ging verwarmen" als het apparaat het echt deed, en "met de zon mee" alleen als de zon de reden was
+- Overal gewone woorden voor verwarmen
+
+**Opgelost**
+
+- Het comfort wisselde twee keer als twee bewoners vlak na elkaar thuiskwamen
+- Het voorbeeldhuis viel weg bij het afspelen van de dag
+- De assistent verstaat "zet melk op de boodschappenlijst"
+- Op de telefoon viel het blad achter de balk van het voorbeeld
+- Vandaag zei na een herstart dat de droger klaar was na 0 minuten
+
+*English*
+
+**New**
+
+- The example home has prices, panels and a connection, and the now line follows when you play the day
+- The guide in Home Assistant is rewritten for new users
+
+**Improved**
+
+- When a device really heats or cools, the app says so, even if SunArc would do otherwise
+- A room at or above its target is no longer called chilly
+- Today only says "started heating" when the device really did, and "along with the sun" only when the sun was the reason
+- Plain words for heating everywhere
+
+**Fixed**
+
+- Comfort switched twice when two residents came home shortly after each other
+- The example home dropped out while playing the day
+- The assistant understands "put milk on the shopping list"
+- On the phone the sheet fell behind the example bar
+- After a restart, Today said the dryer was done after 0 minutes
+
 ## 0.107.0
 
 *1 november 2026*
@@ -93,7 +171,7 @@
 **Nieuw**
 
 - Klimaat met de hand: op Apparaten zet je de Nest, de airco's, de badkamer, de radiatorknop in de keuken of een paneel op een stekker tot een tijd
-- De zolder warm gaat nu ook zonder zon: de app zet de airco zelf op warm, en op tijd weer uit
+- Verwarmen van de zolder gaat nu ook zonder zon: de app zet de airco zelf op verwarmen, en op tijd weer uit
 
 *English*
 
@@ -1480,7 +1558,7 @@
 
 **Nieuw**
 
-- Een kaart Boiler: hoe warm de boiler of jacuzzi is, en of hij op zon opwarmt
+- Een kaart Boiler: hoe warm de boiler of jacuzzi is, en of hij op zon verwarmt
 
 **Beter**
 
@@ -1578,7 +1656,7 @@
 
 **Nieuw**
 
-- Een boiler of jacuzzi kan op zon: hij warmt op met wat er over is, houdt een ondergrens vast en is zonder zon op tijd warm in de daluren
+- Een boiler of jacuzzi kan op zon: hij verwarmt met wat er over is, houdt een ondergrens vast en is zonder zon op tijd warm in de daluren
 - Bij de jacuzzi kies je klaar om: vanavond, morgen of later, en hij is dan op badtemperatuur
 
 **Opgelost**
@@ -2713,7 +2791,7 @@
 
 **Beter**
 
-- Verwarmen in plaats van warmen
+- Gewone woorden: verwarmen
 
 **Opgelost**
 

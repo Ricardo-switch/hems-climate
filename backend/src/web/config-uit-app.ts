@@ -1,6 +1,6 @@
 /**
  * De configuratie met alles wat de app erover legt: de aansluiting (besluit
- * 103), de regeling per kamer (138), meten met (123), wat er per kamer warmt
+ * 103), de regeling per kamer (138), meten met (123), wat er per kamer verwarmt
  * (132), comfort (130) en comfort per bewoner (147). Bij het starten, en
  * meteen als de bewoner iets verandert: dan neemt de regeling het over zonder
  * herstart.

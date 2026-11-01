@@ -18,7 +18,7 @@ export interface ResidentBuffer {
   readonly stookt: boolean;
   /** Op zon, van het net, of geen van beide: voor de kleur. */
   readonly bron: 'zon' | 'net' | null;
-  /** "Warmt op zon". */
+  /** "Verwarmt op zon". */
   readonly kop: string;
   readonly zin: string;
   /** De watertemperatuur van nu; null zonder meter. */
@@ -47,7 +47,7 @@ const WOORDEN = {
       vol: 'Vol',
       onbekend: 'Niet te lezen',
     },
-    zon: (doel: number | null) => (doel != null ? `Er is zon over: hij zou nu opwarmen naar ${doel}°.` : 'Er is zon over: hij zou nu aangaan tot hij vol is.'),
+    zon: (doel: number | null) => (doel != null ? `Er is zon over: hij zou nu verwarmen naar ${doel}°.` : 'Er is zon over: hij zou nu aangaan tot hij vol is.'),
     onder: (min: number) => `Onder ${min}°: hij zou nu bijwarmen, ook zonder zon.`,
     klaarOm: (by: string, doel: number) => `Anders is hij om ${by} niet op ${doel}°. Daarom zou hij nu beginnen, ook zonder zon.`,
     goedkoop: (by: string | null, doel: number | null) =>
@@ -55,9 +55,9 @@ const WOORDEN = {
     legionella: (c: number) => `Eens per week naar ${c}° tegen legionella. Er was deze week geen zon voor, dus nu in de goedkoopste uren.`,
     wachtZon: (zon: number | null, min: number, latest: string | null, by: string | null) =>
       latest && by
-        ? `Hij warmt op zodra er zon over is. Komt die niet, dan begint hij om ${latest}, op tijd voor ${by}.`
+        ? `Hij verwarmt zodra er zon over is. Komt die niet, dan begint hij om ${latest}, op tijd voor ${by}.`
         : zon != null
-          ? `Hij warmt op zodra er zon over is, tot ${zon}°. Minstens ${min}° houdt hij altijd vast.`
+          ? `Hij verwarmt zodra er zon over is, tot ${zon}°. Minstens ${min}° houdt hij altijd vast.`
           : 'Hij gaat aan zodra er zon over is, tot hij vol is.',
     stabilisatie: 'Er startte net iets anders. Over een paar minuten kijkt het huis opnieuw.',
     failsafe: 'Een meter is even niet te lezen; de regeling wacht.',

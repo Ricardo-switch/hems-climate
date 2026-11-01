@@ -191,3 +191,44 @@ export function leesZonMinuten(tekst: string): { readonly zon: Zon; readonly min
   const zon: Zon = /onder|sunset/.test(m[4]!) ? 'onder' : 'op';
   return { zon, minuten: voor ? -n : n, rest: ` ${tekst} `.replace(m[0], ' ').replace(/\s+/g, ' ').trim() };
 }
+
+/*
+ * Wat een geplande opdracht mag doen (besluit 218): licht, scènes en schermen,
+ * en sinds besluit 240 ook klimaat met de hand (besluit 235) en witgoed starten
+ * (besluit 238). Dezelfde deuren als op de pagina; er komt geen deur bij. De
+ * dienst kijkt bij het uitvoeren nog eens of het bij Functies aan staat.
+ */
+export const LATER_MAG: ReadonlySet<string> = new Set(['api/licht', 'api/scene', 'api/scherm', 'api/hand', 'api/witgoed']);
+/** Hoe lang klimaat met de hand duurt als hij op zijn moment aangaat. */
+export const HAND_TOT = ['uur1', 'uur2', 'dagdeel', 'doel'] as const;
+export type HandTot = (typeof HAND_TOT)[number];
+
+const LICHT_DOEL = ['lamp', 'kamer', 'zone', 'etage', 'buiten', 'huis'];
+const isId = (v: unknown, re: RegExp = /^[a-z_]+\.[\w-]{1,120}$/) => typeof v === 'string' && re.test(v);
+
+/** Eén stap voor later, nagekeken op zijn vorm; een tekst als hij niet klopt. */
+export function leesStap(s: unknown): { readonly pad: string; readonly body: Readonly<Record<string, unknown>> } | string {
+  if (typeof s !== 'object' || s == null || Array.isArray(s)) return 'een stap is { pad, body }';
+  const { pad, body } = s as Record<string, unknown>;
+  if (typeof pad !== 'string' || !LATER_MAG.has(pad)) return `pad is een van ${[...LATER_MAG].join(', ')}`;
+  if (typeof body !== 'object' || body == null || Array.isArray(body) || JSON.stringify(body).length > 600) return 'body is een klein object';
+  const b = body as Record<string, unknown>;
+  if (pad === 'api/licht') {
+    if (typeof b['doel'] !== 'string' || !LICHT_DOEL.includes(b['doel']) || typeof b['aan'] !== 'boolean') return 'licht: doel en aan';
+  } else if (pad === 'api/scene') {
+    if (!isId(b['id'], /^scene\.[\w-]{1,120}$/)) return 'scène: id is een scene';
+  } else if (pad === 'api/scherm') {
+    if (!isId(b['id'], /^cover\.[\w-]{1,120}$/) || !['open', 'dicht', 'stand'].includes(String(b['actie']))) return 'scherm: id en actie open, dicht of stand';
+    if (b['actie'] === 'stand' && !(Number.isInteger(b['standPct']) && (b['standPct'] as number) >= 0 && (b['standPct'] as number) <= 100)) return 'scherm: standPct van 0 tot 100';
+  } else if (pad === 'api/hand') {
+    if (!isId(b['id'], /^(?:climate|switch)\.[\w-]{1,120}$/) || !(HAND_TOT as readonly string[]).includes(String(b['tot']))) return 'klimaat: id en tot (uur1, uur2, dagdeel of doel)';
+    if (String(b['id']).startsWith('climate.')) {
+      const doel = b['doelC'];
+      if (typeof doel !== 'number' || doel < 5 || doel > 35) return 'klimaat: doelC van 5 tot 35';
+      if (b['modus'] !== undefined && b['modus'] !== 'verwarmen' && b['modus'] !== 'koelen') return 'klimaat: modus is verwarmen of koelen';
+    }
+  } else if (pad === 'api/witgoed') {
+    if (!isId(b['id'], /^[\w.-]{1,120}$/) || b['start'] !== true) return 'witgoed: id en start';
+  }
+  return { pad, body: b };
+}
