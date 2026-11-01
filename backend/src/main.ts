@@ -12,7 +12,7 @@
  */
 
 import { Integratie } from './web/integratie.js';
-import { AssistentAan, voegToeViaFlow } from './web/assistent-aan.js';
+import { AssistentAan, oudeWegViaRest, voegToeViaFlow } from './web/assistent-aan.js';
 import { PushStore, alsMelding, ontvangersVan, paneelVan, proefTekst, teSturen, telefoonVan, vindTelefoons, type Telefoon } from './web/push.js';
 import { hostname } from 'node:os';
 import { loadDotEnv, tokenComplaint } from './env.js';
@@ -1559,7 +1559,7 @@ const sleutel = logDir !== '' ? await leesOfMaakSleutel(join(logDir, 'sleutel-as
  * van Home Assistant (`/homeassistant` in de add-on). Bij het starten de nieuwe
  * versie, als de add-on hem eerder neerzette.
  */
-const integratie = version.installatie === 'add-on' ? new Integratie('/app/integratie/smart_climate', '/homeassistant') : null;
+const integratie = version.installatie === 'add-on' ? new Integratie('/app/integratie/sunarc', '/homeassistant') : null;
 void integratie?.bijwerken().catch(() => false);
 /**
  * Hoe de integratie erbij staat, met de versie die Home Assistant nu geladen
@@ -1571,19 +1571,31 @@ async function integratieStand() {
   const stand = await integratie!.stand();
   let geladen: string | null = null;
   try {
-    const m = await client.query<{ version?: string }>('manifest/get', { integration: 'smart_climate' });
+    const m = await client.query<{ version?: string }>('manifest/get', { integration: 'sunarc' });
     geladen = typeof m?.version === 'string' ? m.version : null;
   } catch {
     // Niet geladen: nog niet herstart, of hij staat er niet.
   }
   let toegevoegd: boolean | null = null;
   try {
-    const lijst = await client.query<unknown[]>('config_entries/get', { domain: 'smart_climate' });
+    const lijst = await client.query<unknown[]>('config_entries/get', { domain: 'sunarc' });
     toegevoegd = Array.isArray(lijst) && lijst.length > 0;
   } catch {
     // Onbekend: dan zegt de app er niets over.
   }
-  return { ...stand, geladen, toegevoegd };
+  // De koppeling onder de oude naam (tot 2 november 2026): de knop haalt hem weg na het toevoegen.
+  const oudeKoppeling = (await oudeKoppelingen()).length > 0;
+  return { ...stand, geladen, toegevoegd, oudeKoppeling };
+}
+
+/** De config entries van de integratie onder haar oude naam, smart_climate. */
+async function oudeKoppelingen(): Promise<string[]> {
+  try {
+    const lijst = await client.query<{ entry_id?: unknown }[]>('config_entries/get', { domain: 'smart_climate' });
+    return Array.isArray(lijst) ? lijst.map((x) => x.entry_id).filter((x): x is string => typeof x === 'string') : [];
+  } catch {
+    return [];
+  }
 }
 
 /*
@@ -1596,7 +1608,7 @@ if (sleutel && version.installatie === 'add-on' && webPort != null && process.en
   void fetch('http://supervisor/discovery', {
     method: 'POST',
     headers: { authorization: `Bearer ${process.env['SUPERVISOR_TOKEN']}`, 'content-type': 'application/json' },
-    body: JSON.stringify({ service: 'smart_climate', config: { host: hostname(), port: webPort, sleutel } }),
+    body: JSON.stringify({ service: 'sunarc', config: { host: hostname(), port: webPort, sleutel } }),
   })
     .then((r) => {
       if (!r.ok) console.warn(`Aanmelden bij Home Assistant voor de integratie lukte niet (${r.status}).`);
@@ -1643,6 +1655,8 @@ const assistentAan = integratie && sleutel && webPort != null && supervisorToken
           setTimeout(() => void kijk(), 2_000);
         }),
       voegToe: () => voegToeViaFlow('http://supervisor/core/api', supervisorToken, `http://${hostname()}:${webPort}`, sleutel),
+      oudeKoppeling: async () => (await oudeKoppelingen()).length > 0,
+      oudeWeg: async () => oudeWegViaRest('http://supervisor/core/api', supervisorToken, await oudeKoppelingen()),
       nu: () => Date.now(),
     })
   : null;

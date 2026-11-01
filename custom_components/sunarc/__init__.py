@@ -32,13 +32,19 @@ from homeassistant.helpers.event import async_track_time_interval
 
 from .api import SmartClimateApi, SmartClimateFout
 from .const import CONF_ADRES, CONF_SLEUTEL, DOMAIN, GEEN_ANTWOORD, KAMERS_ELKE_MINUTEN
-from .zinnen import BESTAND, INTENTIE, talen
+from .zinnen import BESTAND, INTENTIE, OUD_BESTAND, talen
 
 _LOGGER = logging.getLogger(__name__)
 
 
 def _zinnenpad(hass: HomeAssistant, taal: str) -> Path:
     return Path(hass.config.path("custom_sentences", taal, BESTAND))
+
+
+def _weg_oud(hass: HomeAssistant) -> None:
+    """De zinnen van de integratie onder haar oude naam weghalen (2 november 2026)."""
+    for pad in Path(hass.config.path("custom_sentences")).glob(f"*/{OUD_BESTAND}"):
+        pad.unlink()
 
 
 def _schrijf(pad: Path, inhoud: str) -> bool:
@@ -108,6 +114,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         raise ConfigEntryNotReady(str(fout)) from fout
     hass.data[DOMAIN] = api
     intent.async_register(hass, VraagHandler())
+    # Onder de oude naam (smart_climate) schreef de integratie een eigen bestand; dat is nu van niemand meer.
+    await hass.async_add_executor_job(_weg_oud, hass)
     await _zinnen_bij(hass, api)
 
     async def elke_keer(_: Any) -> None:

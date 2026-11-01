@@ -114,7 +114,7 @@ er zo weinig mogelijk (beveiligingscijfer 8, het hoogste):
   altijd met een eindtijd. De regeling zelf schrijft niets tot het echte
   regelen begint.
 - **De configuratie van Home Assistant (schrijven):** alleen voor de
-  integratie SunArc, na jouw tik, in `custom_components/smart_climate`.
+  integratie SunArc, na jouw tik, in `custom_components/sunarc`.
 - **`share` (schrijven):** het beslislogboek in `/share/hems`, en het
   wekwoord in `/share/openwakeword`.
 - **Een eigen AppArmor-profiel:** de dienst mag alleen in deze mappen

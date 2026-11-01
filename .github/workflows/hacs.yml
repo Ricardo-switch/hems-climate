@@ -1,0 +1,39 @@
+# De integratie in HACS (2 november 2026): de controles die HACS eist voor de
+# standaardlijst. Pas als een integratie daar staat, telt analytics.home-assistant.io
+# haar installaties mee (Brands neemt sinds Home Assistant 2026.3 geen eigen
+# integraties meer aan).
+#
+# - hacs/action kijkt of de repository past: hacs.json, de manifest, de
+#   pictogrammen in custom_components/sunarc/brand, een release.
+# - hassfest is de controle van Home Assistant zelf op de integratie.
+
+name: hacs
+
+on:
+  push:
+    branches: [main, beta]
+    paths: ['custom_components/**', 'hacs.json', '.github/workflows/hacs.yml']
+  pull_request:
+    paths: ['custom_components/**', 'hacs.json', '.github/workflows/hacs.yml']
+  schedule:
+    - cron: '17 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hacs:
+    name: HACS
+    runs-on: ubuntu-latest
+    steps:
+      - uses: hacs/action@main
+        with:
+          category: integration
+
+  hassfest:
+    name: hassfest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: home-assistant/actions/hassfest@master

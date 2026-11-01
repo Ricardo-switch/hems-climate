@@ -134,7 +134,7 @@ let meldingenStore: MeldingenStore;
 /** Batterijen die een test erbij zet (besluit 122); leeg is: wat het huis zegt. */
 let extraBatterijen: HouseBattery[] = [];
 /** De integratie in Home Assistant (besluit 184), zoals de nagebootste add-on hem ziet. */
-let integratieNu: { kan: boolean; staat: 'nee' | 'add-on' | 'anders'; versie: string | null; nieuw: string | null; geladen: string | null; toegevoegd: boolean | null } = { kan: true, staat: 'nee', versie: null, nieuw: VERSIE, geladen: null, toegevoegd: null };
+let integratieNu: { kan: boolean; staat: 'nee' | 'add-on' | 'anders'; versie: string | null; nieuw: string | null; oud: 'nee' | 'add-on' | 'anders'; geladen: string | null; toegevoegd: boolean | null } = { kan: true, staat: 'nee', versie: null, nieuw: VERSIE, oud: 'nee', geladen: null, toegevoegd: null };
 /** De proefmeldingen die de app vroeg (besluit 183), per account. */
 const proefmeldingen: (string | null)[] = [];
 /** Een thuisbatterij en een auto die een test erbij zet (besluit 182); null is: wat het huis zegt. */
@@ -3485,7 +3485,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     const p = await context.newPage();
     const fouten: string[] = [];
     p.on('pageerror', (e) => fouten.push(e.message));
-    integratieNu = { kan: true, staat: 'nee', versie: null, nieuw: VERSIE, geladen: null, toegevoegd: null };
+    integratieNu = { kan: true, staat: 'nee', versie: null, nieuw: VERSIE, oud: 'nee', geladen: null, toegevoegd: null };
     try {
       await p.goto(`${baseUrl}/toegang.html#assistent`);
       const knop = p.locator('#wand [data-integratie]');
@@ -3496,7 +3496,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await p.locator('#wand [data-vorm]', { hasText: 'neergezet door de add-on' }).waitFor();
       expect(await p.locator('#wand [data-vorm]').textContent()).toContain('Herstart Home Assistant');
       // Via HACS: de add-on blijft eraf.
-      integratieNu = { kan: true, staat: 'anders', versie: VERSIE, nieuw: VERSIE, geladen: VERSIE, toegevoegd: false };
+      integratieNu = { kan: true, staat: 'anders', versie: VERSIE, nieuw: VERSIE, oud: 'nee', geladen: VERSIE, toegevoegd: false };
       await p.reload();
       await p.locator('#wand [data-vorm]', { hasText: 'via HACS' }).waitFor();
       expect(await p.locator('#wand [data-integratie]').count()).toBe(0);
@@ -3509,7 +3509,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await expect.poll(() => p.locator('#wand [data-delen] .deel[href="#assistent"]').count()).toBe(0);
       expect(fouten).toEqual([]);
     } finally {
-      integratieNu = { kan: true, staat: 'nee', versie: null, nieuw: VERSIE, geladen: null, toegevoegd: null };
+      integratieNu = { kan: true, staat: 'nee', versie: null, nieuw: VERSIE, oud: 'nee', geladen: null, toegevoegd: null };
       await context.close();
     }
   }, 60_000);

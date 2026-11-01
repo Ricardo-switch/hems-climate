@@ -5,7 +5,9 @@
  *
  * 1. de integratie SunArc neerzetten (besluit 184);
  * 2. Home Assistant herstarten, als hij die versie nog niet geladen heeft;
- * 3. de integratie toevoegen, met het adres en de sleutel van de add-on.
+ * 3. de integratie toevoegen, met het adres en de sleutel van de add-on;
+ * 4. de koppeling onder de oude naam (smart_climate) weghalen, als die er nog
+ *    is (2 november 2026): de integratie heet nu sunarc.
  *
  * Herstarten en toevoegen is schrijven naar Home Assistant, buiten de grens
  * van licht, scènes en schermen; daarom alleen na die tik, en alleen deze twee
@@ -13,7 +15,7 @@
  * herstarten opnieuw laadt, ziet waar het is.
  */
 
-export type AanzetStap = 'neerzetten' | 'herstarten' | 'toevoegen';
+export type AanzetStap = 'neerzetten' | 'herstarten' | 'toevoegen' | 'oudeWeg';
 
 export interface AanzetStand {
   readonly bezig: boolean;
@@ -37,6 +39,10 @@ export interface AanzetDeuren {
   /** Tot Home Assistant weer verbonden is en de integratie kent; werpt na de grens. */
   wachtOpHerstart(): Promise<void>;
   voegToe(): Promise<{ readonly ok: true } | { readonly ok: false; readonly reden: string }>;
+  /** Of Home Assistant de integratie nog onder de oude naam heeft (smart_climate). */
+  oudeKoppeling?(): Promise<boolean>;
+  /** Die oude koppeling weghalen, na het toevoegen onder de nieuwe naam. */
+  oudeWeg?(): Promise<{ readonly ok: true } | { readonly ok: false; readonly reden: string }>;
   nu(): number;
 }
 
@@ -82,6 +88,12 @@ export class AssistentAan {
         if (!toe.ok) throw new Error(toe.reden);
       }
       klaar.push('toevoegen');
+      if (d.oudeWeg && (await d.oudeKoppeling?.())) {
+        zet('oudeWeg');
+        const weg = await d.oudeWeg();
+        if (!weg.ok) throw new Error(weg.reden);
+        klaar.push('oudeWeg');
+      }
       zet(null);
     } catch (error) {
       this.#stand = { ...this.#stand, bezig: false, stap: null, klaar: [...klaar], fout: (error as Error).message || 'het lukte niet' };
@@ -91,12 +103,12 @@ export class AssistentAan {
 
 /**
  * Toevoegen via de configuratie van Home Assistant (REST, via de proxy van de
- * Supervisor): een nieuwe stroom voor `smart_climate`, en die meteen invullen
+ * Supervisor): een nieuwe stroom voor `sunarc`, en die meteen invullen
  * met het adres en de sleutel. Staat hij er al, dan is dat ook goed.
  */
 export async function voegToeViaFlow(basis: string, token: string, adres: string, sleutel: string, f: typeof fetch = fetch): Promise<{ ok: true } | { ok: false; reden: string }> {
   const headers = { authorization: `Bearer ${token}`, 'content-type': 'application/json' };
-  const start = await f(`${basis}/config/config_entries/flow`, { method: 'POST', headers, body: JSON.stringify({ handler: 'smart_climate', show_advanced_options: false }) });
+  const start = await f(`${basis}/config/config_entries/flow`, { method: 'POST', headers, body: JSON.stringify({ handler: 'sunarc', show_advanced_options: false }) });
   if (!start.ok) return { ok: false, reden: `Home Assistant gaf ${start.status} bij toevoegen` };
   const flow = (await start.json()) as { flow_id?: string; type?: string; reason?: string };
   if (flow.type === 'abort') return flow.reason === 'already_configured' ? { ok: true } : { ok: false, reden: flow.reason ?? 'Home Assistant stopte het toevoegen' };
@@ -107,4 +119,17 @@ export async function voegToeViaFlow(basis: string, token: string, adres: string
   if (uit.type === 'create_entry' || (uit.type === 'abort' && uit.reason === 'already_configured')) return { ok: true };
   const fout = uit.errors?.['base'] ?? uit.reason ?? 'onbekend';
   return { ok: false, reden: fout === 'niet_bereikbaar' ? 'Home Assistant bereikt SunArc niet' : fout === 'sleutel' ? 'de sleutel klopt niet' : `toevoegen lukte niet (${fout})` };
+}
+
+/**
+ * De koppeling onder de oude naam weghalen (2 november 2026), via de
+ * configuratie van Home Assistant: alleen de config entries van het domein
+ * `smart_climate`, en pas als die onder `sunarc` er is.
+ */
+export async function oudeWegViaRest(basis: string, token: string, ids: readonly string[], f: typeof fetch = fetch): Promise<{ ok: true } | { ok: false; reden: string }> {
+  for (const id of ids) {
+    const r = await f(`${basis}/config/config_entries/entry/${encodeURIComponent(id)}`, { method: 'DELETE', headers: { authorization: `Bearer ${token}` } });
+    if (!r.ok && r.status !== 404) return { ok: false, reden: `Home Assistant gaf ${r.status} bij het weghalen van de oude koppeling` };
+  }
+  return { ok: true };
 }

@@ -17,7 +17,7 @@ from homeassistant.helpers import intent
 
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.smart_climate.const import DOMAIN
+from custom_components.sunarc.const import DOMAIN
 
 try:
     from homeassistant.helpers.service_info.hassio import HassioServiceInfo
@@ -58,7 +58,7 @@ async def basis(hass: HomeAssistant) -> None:
 
 
 def _zinnen(hass: HomeAssistant) -> Path:
-    return Path(hass.config.path("custom_sentences", "nl", "smart_climate.yaml"))
+    return Path(hass.config.path("custom_sentences", "nl", "sunarc.yaml"))
 
 
 async def test_met_de_hand_toevoegen_met_adres_en_sleutel(hass: HomeAssistant, aioclient_mock) -> None:
@@ -161,7 +161,7 @@ async def test_assist_herkent_een_engelse_zin(hass: HomeAssistant, aioclient_moc
     entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
-    assert await hass.async_add_executor_job(Path(hass.config.path("custom_sentences", "en", "smart_climate.yaml")).exists)
+    assert await hass.async_add_executor_job(Path(hass.config.path("custom_sentences", "en", "sunarc.yaml")).exists)
 
     async def zeg(zin: str) -> str:
         uit = await hass.services.async_call("conversation", "process", {"text": zin, "language": "en"}, blocking=True, return_response=True)
@@ -175,3 +175,16 @@ async def test_assist_herkent_een_engelse_zin(hass: HomeAssistant, aioclient_moc
     assert "v=doe" in vraag and "wens=koelen" in vraag and "kamer=woonkamer" in vraag and "temperatuur=21" in vraag
     await zeg("what are you doing right now")
     assert "v=nu" in str(aioclient_mock.mock_calls[-1][1])
+
+
+async def test_ruimt_de_zinnen_onder_de_oude_naam_op(hass: HomeAssistant, aioclient_mock) -> None:
+    """Tot 2 november 2026 heette de integratie smart_climate; haar zinnenbestand gaat weg bij het opzetten."""
+    oud = Path(hass.config.path("custom_sentences", "nl", "smart_climate.yaml"))
+    await hass.async_add_executor_job(lambda: (oud.parent.mkdir(parents=True, exist_ok=True), oud.write_text("# oud", "utf-8")))
+    aioclient_mock.get(f"{ADRES}/api/assist", json=INFO)
+    entry = MockConfigEntry(domain=DOMAIN, data={"adres": ADRES, "sleutel": SLEUTEL}, unique_id=DOMAIN)
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    assert not await hass.async_add_executor_job(oud.exists)
+    assert await hass.async_add_executor_job(_zinnen(hass).exists)

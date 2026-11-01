@@ -14,7 +14,7 @@ You will get an answer within a week. A fix ships as a new add-on version; the c
 
 - The add-on and its web app, including the separate port for Tailscale (decision 160).
 - The narrow write paths to Home Assistant (lights, scenes, blinds, by-hand climate). Anything that writes outside them is a bug.
-- The Home Assistant integration in `custom_components/smart_climate`.
+- The Home Assistant integration in `custom_components/sunarc`.
 
 ## Supported versions
 

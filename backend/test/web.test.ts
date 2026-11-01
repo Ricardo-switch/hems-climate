@@ -492,7 +492,7 @@ describe('welke versie er draait (besluit 54)', () => {
     const addon = await readFile(new URL('../../addon/config.yaml', import.meta.url), 'utf-8');
     expect(/^version: (\S+)$/m.exec(addon)?.[1]).toBe(VERSIE);
     // De integratie in Home Assistant (besluit 184) heeft een eigen nummer: een update van de app vraagt geen herstart.
-    expect(await pakket('../../custom_components/smart_climate/manifest.json')).toMatch(/^\d+\.\d+\.\d+$/);
+    expect(await pakket('../../custom_components/sunarc/manifest.json')).toMatch(/^\d+\.\d+\.\d+$/);
     expect(NIEUW[0]?.versie).toBe(VERSIE);
     // Elke versie zegt iets, in nieuw, beter of opgelost (besluit 133).
     for (const n of NIEUW) expect([...(n.nieuw ?? []), ...(n.beter ?? []), ...(n.opgelost ?? [])].length).toBeGreaterThan(0);

@@ -1487,7 +1487,7 @@ let aanKijk = null;
 function assistentBlok() {
   const i = d.integ;
   if (!i) return '';
-  if (i.toegevoegd === true && !i.aanzetten?.bezig) return regel({ ik: 'praat', titel: t('inr.as.aan'), zin: t('inr.as.aanZin'), rechts: '✓', toon: 'mint' });
+  if (i.toegevoegd === true && !i.oudeKoppeling && !i.aanzetten?.bezig) return regel({ ik: 'praat', titel: t('inr.as.aan'), zin: t('inr.as.aanZin'), rechts: '✓', toon: 'mint' });
   const a = i.aanzetten;
   if (!a) return '';
   // Loopt het, dan elke drie tellen kijken waar het is; ook als de pagina tijdens het herstarten opnieuw laadde.
@@ -1500,7 +1500,8 @@ function assistentBlok() {
     }, 3000);
   }
   const nog = a.stap === 'herstarten' && a.herstartMs ? Math.max(5, 60 - Math.round((Date.now() - a.herstartMs) / 1000)) : null;
-  const stappen = AAN_STAPPEN.map((s, n) => {
+  const lijst = i.oudeKoppeling || a.stap === 'oudeWeg' || a.klaar.includes('oudeWeg') ? [...AAN_STAPPEN, 'oudeWeg'] : AAN_STAPPEN;
+  const stappen = lijst.map((s, n) => {
     const klaar = a.klaar.includes(s);
     const nu = a.bezig && a.stap === s;
     return `<li><span class="nr${klaar ? ' klaar' : nu ? ' bezig' : ''}">${klaar ? '✓' : nu ? '' : n + 1}</span><span>${esc(t(`inr.as.s.${s}`))}</span><small>${nu && nog != null ? esc(t('inr.as.nog', { n: nog })) : ''}</small></li>`;
@@ -1513,7 +1514,7 @@ function assistentBlok() {
 /** Of de assistent nog aan moet (besluit 202): in de add-on, niet via HACS, nog niet toegevoegd en niet al bezig. */
 function assistentNogAan() {
   const i = d.integ;
-  return !!(i?.aanzetten && !i.aanzetten.bezig && i.staat !== 'anders' && i.toegevoegd !== true);
+  return !!(i?.aanzetten && !i.aanzetten.bezig && i.staat !== 'anders' && (i.toegevoegd !== true || i.oudeKoppeling === true));
 }
 async function zetAssistentAan() {
   const res = await deur('api/integratie', { aanzetten: true }).catch(() => null);

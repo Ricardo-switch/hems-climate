@@ -3,7 +3,7 @@
  * update van de app in Home Assistant geen herstart vraagt. Die versie gaat
  * alleen omhoog als de code van de integratie verandert; dan pas zien HACS en
  * de knop in de app een nieuwe versie. Deze test bewaakt dat: verandert er iets
- * in custom_components/smart_climate zonder nieuwe versie, dan faalt hij.
+ * in custom_components/sunarc zonder nieuwe versie, dan faalt hij.
  *
  * Na een wijziging aan de integratie: verhoog `version` in manifest.json, zet
  * hieronder de nieuwe versie en de vingerafdruk die de test noemt, en maak na
@@ -17,9 +17,9 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-const VINGER = { versie: '1.2.0', afdruk: '98d32af772b5d833' };
+const VINGER = { versie: '2.0.0', afdruk: '9a957cf60ab0e9c1' };
 
-const MAP = fileURLToPath(new URL('../../custom_components/smart_climate/', import.meta.url));
+const MAP = fileURLToPath(new URL('../../custom_components/sunarc/', import.meta.url));
 
 async function bestanden(map: string, pad = ''): Promise<string[]> {
   const uit: string[] = [];

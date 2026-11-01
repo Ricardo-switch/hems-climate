@@ -117,7 +117,7 @@ function assistentVorm() {
 
 /**
  * De integratie neerzetten (besluit 184): via HACS, of voor wie dat niet heeft
- * met een knop; de add-on kopieert dan alleen custom_components/smart_climate.
+ * met een knop; de add-on kopieert dan alleen custom_components/sunarc.
  * Home Assistant laadt hem na een herstart, en dat doe je zelf.
  */
 /** De stappen in HACS, met het adres om te kopiëren. */
@@ -154,17 +154,20 @@ function aanzetVorm(i) {
       teken();
     }, 3000);
   }
-  const zin = a.bezig ? `${t(`inr.as.s.${a.stap}`)}…` : a.fout ? t('inr.as.fout', { fout: a.fout }) : t('inr.as.zin');
+  // De oude naam (2 november 2026): dezelfde knop zet de koppeling over naar sunarc.
+  const over = i.oudeKoppeling === true;
+  const zin = a.bezig ? `${t(`inr.as.s.${a.stap}`)}…` : a.fout ? t('inr.as.fout', { fout: a.fout }) : t(over ? 'inr.as.overzetten' : 'inr.as.zin');
   return `<p class="klein" style="margin: 0${a.fout && !a.bezig ? '; color: var(--gloed-t)' : ''}" aria-live="polite">${esc(zin)}</p>
-    ${a.bezig ? '' : `<button type="button" class="knop knop-licht" data-assistent-aan style="align-self: start">${esc(t(a.fout ? 'inr.as.opnieuw' : 'inr.as.knop'))}</button>`}${eenmalig()}`;
+    ${a.bezig ? '' : `<button type="button" class="knop knop-licht" data-assistent-aan style="align-self: start">${esc(t(a.fout ? 'inr.as.opnieuw' : over ? 'inr.as.overzetKnop' : 'inr.as.knop'))}</button>`}${eenmalig()}`;
 }
 
 function integratieVorm() {
   const i = integratie;
   const zin = integratieZin ? `<p class="mini" style="margin: 0" aria-live="polite">${esc(integratieZin)}</p>` : '';
   // Met één knop, in de add-on, zolang hij nog niet werkt (of het net loopt).
-  if (i?.aanzetten && i.staat !== 'anders' && (i.aanzetten.bezig || i.toegevoegd !== true || i.geladen !== i.versie)) return aanzetVorm(i);
+  if (i?.aanzetten && i.staat !== 'anders' && (i.aanzetten.bezig || i.toegevoegd !== true || i.geladen !== i.versie || i.oudeKoppeling === true)) return aanzetVorm(i);
   if (!i?.kan) return `<p class="klein" style="margin: 0">${esc(t('toegang.viaHACS'))}</p>${hacsStappen()}${eenmalig()}`;
+  if (i.staat === 'anders' && i.oud === 'anders') return `<p class="klein" style="margin: 0">${t('toegang.oudeNaamHACS')}</p>${zin}`;
   if (i.staat === 'anders') return `<p class="klein" style="margin: 0">${i.versie ? metHtml('toegang.staatHACSVersie', { versie: i.versie }) : t('toegang.staatHACS')}</p>${toegevoegdZin(i)}${zin}`;
   if (i.staat === 'nee') {
     return `<p class="klein" style="margin: 0">${t('toegang.zonderHACS')}</p>
