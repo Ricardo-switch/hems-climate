@@ -210,6 +210,31 @@ export class WebServer {
     }
 
     /*
+     * Het voorbeeldhuis (besluit 237): alles onder `voorbeeld/` gaat naar een
+     * eigen proces met een nagemaakt Home Assistant, ook in een huis zonder
+     * configuratie. De inlog is hierboven al nagekeken; een opdracht moet net als
+     * elders JSON zijn en van de eigen pagina komen.
+     */
+    const voorbeeld = this.#d.options.voorbeeld;
+    if (voorbeeld != null && (path === '/voorbeeld' || path.startsWith('/voorbeeld/'))) {
+      if (path === '/voorbeeld' || path === '/voorbeeld/') {
+        res.writeHead(302, { location: path === '/voorbeeld' ? 'voorbeeld/thuis.html' : 'thuis.html', 'cache-control': 'no-store' });
+        res.end();
+        return;
+      }
+      if (method !== 'GET' && method !== 'HEAD' && method !== 'POST') {
+        sendJson(res, 405, { fout: 'GET of POST' });
+        return;
+      }
+      if (method === 'POST' && (!String(req.headers['content-type'] ?? '').toLowerCase().startsWith('application/json') || !sameOrigin(req))) {
+        sendJson(res, 403, { fout: 'alleen JSON, vanaf de eigen pagina' });
+        return;
+      }
+      await voorbeeld.verzoek(req, res, path.slice('/voorbeeld'.length), url.search);
+      return;
+    }
+
+    /*
      * In de add-on is de app de voordeur (besluit 154). Zonder configuratie is
      * het huis leeg: elke pagina van de app gaat dan naar het welkom. De
      * cijferpagina blijft bestaan voor wie hem direct opent.
@@ -375,7 +400,8 @@ export class WebServer {
     // De voordeur: op de NAS de cijfers, in de add-on de app of het welkom (besluit 154).
     const voordeur = path !== '/' ? path : this.#d.options.onboarding == null ? 'index.html' : this.#d.options.config == null ? 'begin.html' : 'thuis.html';
     // Een eigen server (de NAS, die beta volgt) geeft een eigen naam en icoon, zodat hij op een startscherm niet lijkt op de add-on.
-    const target = this.#d.options.version?.installatie === 'server' ? (BETA_ICOON[voordeur] ?? voordeur) : voordeur;
+    // Het voorbeeldhuis (besluit 237) draait als eigen server, maar is geen beta.
+    const target = this.#d.options.version?.installatie === 'server' && process.env['HEMS_VOORBEELD'] !== '1' ? (BETA_ICOON[voordeur] ?? voordeur) : voordeur;
     const since = req.headers['if-modified-since'];
     if (
       await sendFile(

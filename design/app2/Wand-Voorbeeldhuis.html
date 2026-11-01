@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Voorbeeldhuis (schets)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Het voorbeeldhuis (schets, 1 november 2026). Vanuit het welkom en Inrichten
+   * open je een verzonnen huis met alles erin: warmtepomp, airco's, panelen,
+   * thuisbatterij, laadpaal, droger, screens. Elke knop werkt, maar alleen in
+   * het voorbeeld; er gaat niets naar je eigen Home Assistant.
+   *
+   * Drie dingen maken het anders dan je eigen huis:
+   *  - een violette rand om het hele scherm, en rechtsboven "Voorbeeldhuis" met
+   *    Terug naar mijn huis;
+   *  - onderaan de dag om door te spelen: schuif door de uren, kies zomer of
+   *    winter, of druk op afspelen;
+   *  - rechts "Probeer dit": zes dingen om te doen, die zich afvinken.
+   *
+   * Standen: zonder hash 12:40 in de zomer; #avond 20:15 in de zomer;
+   * #winter 07:30 in de winter. De schuif werkt ook echt in de schets.
+   */
+  .wand { position: relative; }
+  .wand::after { content: ''; position: absolute; inset: 0; border: 3px solid rgba(143, 134, 255, 0.55); border-radius: inherit; box-shadow: inset 0 0 40px rgba(143, 134, 255, 0.18); pointer-events: none; z-index: 20; }
+  main { position: relative; padding: 22px 26px 20px 22px; }
+  .kopregel { display: flex; justify-content: space-between; align-items: baseline; }
+  .tijd { font-family: var(--kop); font-weight: 600; font-size: 60px; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+  .datum { color: var(--zacht); font-size: 17px; margin-left: 14px; }
+  .voorbeeld { display: flex; align-items: center; gap: 10px; }
+  .voorbeeld .pil { background: rgba(143, 134, 255, 0.18); color: var(--violet-t); border-color: rgba(143, 134, 255, 0.4); font-weight: 700; }
+  .voorbeeld .pil .stip { background: var(--violet); }
+  .voorbeeld .knop { height: 40px; padding: 0 16px; font-size: 14px; }
+  .titel { position: absolute; left: 22px; top: 108px; width: 380px; z-index: 2; }
+  .titel .lead { margin-top: 12px; }
+  .podium { position: absolute; left: 0; top: 96px; width: 860px; height: 588px; }
+  .rechts { position: absolute; right: 26px; top: 96px; width: 352px; display: flex; flex-direction: column; gap: 14px; }
+  .kaart { padding: 18px 20px; }
+  .kaart-kop { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  .probeer { background: linear-gradient(165deg, rgba(143, 134, 255, 0.16), rgba(143, 134, 255, 0.04)); border-color: rgba(143, 134, 255, 0.34); }
+  .probeer ol { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; }
+  .probeer li { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 9px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); font-size: 14.5px; }
+  .probeer li:first-child { border-top: 0; }
+  .probeer li i { width: 22px; height: 22px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.22); display: grid; place-items: center; font-style: normal; font-size: 12px; font-weight: 800; }
+  .probeer li.klaar i { background: var(--violet); border-color: var(--violet); color: #0b1424; }
+  .probeer li.klaar span { color: var(--zacht); text-decoration: line-through; text-decoration-color: rgba(255, 255, 255, 0.25); }
+  .probeer li em { font-style: normal; font-size: 12.5px; font-weight: 700; color: var(--violet-t); }
+  .probeer .voet { margin: 8px 0 0; font-size: 12.5px; color: var(--gedempt); }
+  /* De dag om door te spelen, waar op Thuis de vraagbalk staat. */
+  .dag { position: absolute; left: 22px; right: 26px; bottom: 20px; height: 92px; border-radius: 22px; display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 0 16px 0 12px; background: rgba(9, 15, 28, 0.66); border: 1px solid rgba(143, 134, 255, 0.3); backdrop-filter: blur(12px); }
+  .speel { width: 48px; height: 48px; border-radius: 50%; border: 0; background: var(--violet); color: #0b1424; font-size: 18px; display: grid; place-items: center; cursor: pointer; }
+  .baan { position: relative; height: 64px; }
+  .baan svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .baan input { position: absolute; left: 0; right: 0; bottom: 4px; width: 100%; margin: 0; opacity: 0; height: 40px; cursor: ew-resize; }
+  .seizoen { display: flex; flex-direction: column; align-items: end; gap: 6px; }
+  .seizoen .chips.seg { width: 172px; }
+  .seizoen .mini { white-space: nowrap; }
+  .vraag { position: absolute; right: 26px; bottom: 126px; width: 352px; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 18px; background: rgba(9, 15, 28, 0.6); border: 1px solid var(--glas-rand); }
+  .vraag span.v { flex: 1; color: var(--zacht); font-size: 14.5px; }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-dag" id="wand">
+  <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+  <main>
+    <div class="kopregel">
+      <div><span class="tijd" data-tijd>12:40</span><span class="datum" data-datum>woensdag 15 juli · voorbeeld</span></div>
+      <div class="voorbeeld">
+        <span class="pil"><span class="stip"></span>Voorbeeldhuis</span>
+        <button class="knop" type="button">Terug naar mijn huis</button>
+      </div>
+    </div>
+
+    <div class="titel">
+      <h1 class="kop-1" data-kop>Het huis koelt op zon</h1>
+      <p class="lead">Alles hier is een voorbeeld en werkt echt. Tik op een kamer, een lamp of de droger; er gaat niets naar je eigen huis.</p>
+    </div>
+
+    <div class="podium" id="podium"></div>
+
+    <aside class="rechts">
+      <section class="glas kaart">
+        <div class="kaart-kop"><h2 class="kop-3">Waar de stroom heen gaat</h2><span class="mini">nu</span></div>
+        <p class="klein" data-stroom style="margin: 0"></p>
+      </section>
+
+      <section class="glas kaart probeer">
+        <div class="kaart-kop"><h2 class="kop-3">Probeer dit</h2><span class="mini">2 van 6</span></div>
+        <ol>
+          <li class="klaar"><i>✓</i><span>Doe de lamp in de keuken aan</span><em></em></li>
+          <li class="klaar"><i>✓</i><span>Start de droger op zon</span><em></em></li>
+          <li><i></i><span>Schuif naar de avond: de batterij neemt het over</span><em>Doe het</em></li>
+          <li><i></i><span>Vraag: "waarom koelt de woonkamer?"</span><em>Vraag</em></li>
+          <li><i></i><span>Zet de zolder warm tot 22:00</span><em>Doe het</em></li>
+          <li><i></i><span>Elke dag om zeven de screens open</span><em>Plan</em></li>
+        </ol>
+        <p class="voet">Alles wat je hier zet, is weg als je teruggaat.</p>
+      </section>
+    </aside>
+
+    <div class="vraag"><span class="bol adem" style="width: 34px; height: 34px"></span><span class="v">Vraag het voorbeeldhuis iets</span></div>
+
+    <div class="dag" aria-label="De dag van het voorbeeld">
+      <button class="speel" type="button" aria-label="Afspelen" data-speel>▶</button>
+      <div class="baan">
+        <svg viewBox="0 0 640 64" preserveAspectRatio="none" aria-hidden="true" data-baan></svg>
+        <input type="range" min="0" max="1439" step="5" value="760" aria-label="Tijd van de dag" data-schuif>
+      </div>
+      <div class="seizoen">
+        <div class="chips seg" role="group" aria-label="Seizoen"><button class="chip" type="button" data-seizoen="zomer" aria-pressed="true">Zomer</button><button class="chip" type="button" data-seizoen="winter" aria-pressed="false">Winter</button></div>
+        <span class="mini" data-dagzin></span>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="../../frontend/kit/teksten.nl.js"></script>
+<script src="../../frontend/kit/teksten.en.js"></script>
+<script src="../../frontend/kit/taal.js"></script>
+<script src="../../frontend/kit/nav.js"></script>
+<script src="../../frontend/kit/huis.js"></script>
+<script src="voorbeeldhuis.js"></script>
+<script>
+  nav.balk(document.getElementById('balk'), 'thuis');
+  const $ = (s) => document.querySelector(s);
+  const vb = window.voorbeeldhuis;
+  let seizoen = 'zomer';
+  let minuut = 760;
+
+  function toon() {
+    const nu = vb.moment(minuut, seizoen);
+    huis.teken(document.getElementById('podium'), nu.model, { breedte: 860, hoogte: 588, schuifX: 18, schuifY: 14 });
+    $('#wand').className = `wand lucht ${nu.lucht}`;
+    $('[data-tijd]').textContent = vb.uur(minuut);
+    $('[data-datum]').textContent = `${vb.DATUM[seizoen]} · voorbeeld`;
+    $('[data-kop]').textContent = nu.kop;
+    $('[data-stroom]').textContent = nu.stroom;
+    $('[data-schuif]').value = String(minuut);
+    $('[data-baan]').innerHTML = vb.baan(minuut, seizoen);
+    $('[data-dagzin]').textContent = `Zon op ${vb.uur(vb.ZON[seizoen][0])} · onder ${vb.uur(vb.ZON[seizoen][1])}`;
+    document.querySelectorAll('[data-seizoen]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.seizoen === seizoen)));
+  }
+
+  $('[data-schuif]').addEventListener('input', (e) => { minuut = +e.target.value; toon(); });
+  document.querySelectorAll('[data-seizoen]').forEach((b) => b.addEventListener('click', () => { seizoen = b.dataset.seizoen; toon(); }));
+  let klok = null;
+  $('[data-speel]').addEventListener('click', (e) => {
+    if (klok) { clearInterval(klok); klok = null; e.target.textContent = '▶'; return; }
+    e.target.textContent = '❚❚';
+    klok = setInterval(() => { minuut = (minuut + 10) % 1440; toon(); }, 120);
+  });
+
+  if (location.hash === '#avond') minuut = 1215;
+  if (location.hash === '#winter') { seizoen = 'winter'; minuut = 450; }
+  toon();
+</script>
+</body>
+</html>

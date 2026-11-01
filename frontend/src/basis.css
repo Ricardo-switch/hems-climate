@@ -644,3 +644,55 @@ html.sc-stil::view-transition-group(*), html.sc-stil::view-transition-old(*), ht
 .hand-laag:not(.tel) .hand-vak:has(.hand-blad) .hand-lijstsluit { display: none; }
 #tel .hand-knop { height: 36px; padding: 0 12px; font-size: 13px; }
 .hand-knop { flex: none; height: 40px; padding: 0 16px; border-radius: 13px; border: 0; background: var(--tekst); color: var(--inkt); font: inherit; font-size: 14.5px; font-weight: 700; cursor: pointer; }
+
+/*
+ * Het voorbeeldhuis (besluit 237): een violette rand om het hele scherm, en
+ * onderaan de balk met de dag, het seizoen, Probeer dit en Terug (voorbeeld.js).
+ * Op de wand staat hij waar Thuis de vraagbalk heeft; op de telefoon boven de tabs.
+ */
+html.sc-voorbeeld body::after { content: ''; position: fixed; inset: 0; border: 3px solid rgb(143 134 255 / 0.6); box-shadow: inset 0 0 36px rgb(143 134 255 / 0.18); pointer-events: none; z-index: 90; }
+html.sc-voorbeeld:not(.tel-stand) .dok { visibility: hidden; }
+.vb-balk { position: fixed; z-index: 91; left: 50%; bottom: 14px; transform: translateX(-50%); width: min(1180px, calc(100vw - 28px)); box-sizing: border-box; display: grid; grid-template-columns: 46px minmax(0, 1fr) auto auto auto auto; gap: 14px; align-items: center; padding: 10px 12px; border-radius: 22px; background: rgb(9 15 28 / 0.86); border: 1px solid rgb(143 134 255 / 0.36); backdrop-filter: blur(14px); color: var(--tekst); font-family: var(--romp, Figtree, sans-serif); }
+.vb-speel { width: 46px; height: 46px; border-radius: 50%; border: 0; background: var(--violet); color: #0b1424; font-size: 17px; cursor: pointer; }
+.vb-baan { position: relative; height: 56px; min-width: 0; }
+.vb-baan svg { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 46px; overflow: visible; }
+.vb-baan input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: ew-resize; }
+.vb-uur { position: absolute; left: 0; top: -2px; font-family: var(--kop); font-weight: 600; font-size: 17px; font-variant-numeric: tabular-nums; }
+.vb-seizoen { width: 168px; }
+.vb-probeer { height: 40px; padding: 0 14px; border-radius: 13px; border: 1px solid rgb(143 134 255 / 0.4); background: rgb(143 134 255 / 0.16); color: var(--violet-t); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.vb-probeer b { font-weight: 600; color: var(--zacht); margin-left: 4px; }
+.vb-naam { display: inline-flex; align-items: center; gap: 7px; font-size: 13.5px; font-weight: 700; color: var(--violet-t); white-space: nowrap; }
+.vb-naam i { width: 8px; height: 8px; border-radius: 50%; background: var(--violet); }
+.vb-terug { height: 40px; padding: 0 14px; border-radius: 13px; border: 0; background: var(--tekst); color: var(--inkt, #0b1424); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.vb-lijst { position: absolute; right: 12px; bottom: calc(100% + 10px); width: 360px; padding: 16px 18px; border-radius: 20px; background: #121b2e; border: 1px solid rgb(143 134 255 / 0.34); box-shadow: 0 20px 60px rgb(0 0 0 / 0.5); }
+.vb-lijst[hidden] { display: none; }
+.vb-lijst h2 { margin: 0 0 6px; font-family: var(--kop); font-size: 18px; font-weight: 600; }
+.vb-lijst ol { list-style: none; margin: 0; padding: 0; }
+.vb-lijst li { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 9px 0; border-top: 1px solid rgb(255 255 255 / 0.06); font-size: 14px; }
+.vb-lijst li:first-child { border-top: 0; }
+.vb-lijst li i { width: 20px; height: 20px; border-radius: 50%; border: 2px solid rgb(255 255 255 / 0.22); display: grid; place-items: center; font-style: normal; font-size: 11px; font-weight: 800; }
+.vb-lijst li.klaar i { background: var(--violet); border-color: var(--violet); color: #0b1424; }
+.vb-lijst li.klaar span { color: var(--zacht); text-decoration: line-through; text-decoration-color: rgb(255 255 255 / 0.25); }
+.vb-lijst li button { border: 0; background: none; color: var(--violet-t); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.vb-lijst p { margin: 8px 0 0; font-size: 12.5px; color: var(--gedempt); }
+/* Op de telefoon: twee rijen boven de tabs, zonder de naam. */
+html.tel-stand .vb-balk { bottom: 88px; width: calc(100vw - 20px); grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: 'speel baan baan' 'seizoen probeer terug'; gap: 8px 10px; padding: 8px 10px; }
+html.tel-stand .vb-speel { grid-area: speel; width: 40px; height: 40px; justify-self: start; }
+html.tel-stand .vb-baan { grid-area: baan; height: 46px; }
+html.tel-stand .vb-seizoen { grid-area: seizoen; width: auto; }
+html.tel-stand .vb-probeer { grid-area: probeer; height: 34px; padding: 0 10px; font-size: 13px; }
+html.tel-stand .vb-terug { grid-area: terug; height: 34px; padding: 0 10px; font-size: 13px; }
+html.tel-stand .vb-naam { display: none; }
+html.tel-stand .vb-lijst { left: 0; right: 0; width: auto; }
+html.tel-stand.sc-voorbeeld #tel { padding-bottom: 150px; }
+
+/* De regel naar het voorbeeldhuis, op het welkom en bij Inrichten (besluit 237). */
+.voorbeeld-regel { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; gap: 14px; align-items: center; max-width: 470px; padding: 12px 16px 12px 12px; border-radius: 18px; text-decoration: none; color: var(--tekst); background: linear-gradient(160deg, rgb(143 134 255 / 0.18), rgb(143 134 255 / 0.05)); border: 1px solid rgb(143 134 255 / 0.36); }
+.voorbeeld-regel .huisje { width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center; background: rgb(143 134 255 / 0.22); color: var(--violet-t); }
+.voorbeeld-regel .huisje svg { width: 22px; height: 22px; }
+.voorbeeld-regel b { display: block; font-size: 15.5px; }
+.voorbeeld-regel span span { font-size: 13.5px; color: var(--zacht); }
+.voorbeeld-regel i { font-style: normal; font-size: 22px; color: var(--violet-t); }
+.vb-terug .vb-kort { display: none; }
+html.tel-stand .vb-terug .vb-lang { display: none; }
+html.tel-stand .vb-terug .vb-kort { display: inline; }

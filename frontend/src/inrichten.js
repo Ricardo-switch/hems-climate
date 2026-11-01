@@ -266,6 +266,15 @@ function tellingen() {
   return { etages, kamers: binnen().length, buiten: buitenRuimtes().length, apparaten, klimaat: binnen().flatMap(klimaatIn).length, panelen, cameras: (d.functies?.gevonden?.cameras ?? []).length };
 }
 /* Het startscherm (besluit 190): zes getallen, de eerste vier tikken open tot een lijst. */
+/** Naar het voorbeeldhuis (besluit 237): een huis met alles erin, om eerst mee te spelen. */
+function voorbeeldRegel() {
+  return `<a class="voorbeeld-regel" href="voorbeeld/thuis.html?van=inrichten">
+      <span class="huisje" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/></svg></span>
+      <span><b>${esc(t('voorbeeld.ingang'))}</b><span>${esc(t('voorbeeld.ingangZin'))}</span></span>
+      <i aria-hidden="true">›</i>
+    </a>`;
+}
+
 function welkom() {
   if (lijst) return welkomLijst();
   const n = tellingen();
@@ -313,13 +322,15 @@ function welkomSkelet(tel) {
   const woorden = `<span class="wk-hallo" data-wk-hallo></span><h1 class="wk-kop">${esc(t('inr.wk.kop1'))} <em>${esc(t('inr.wk.kop2'))}</em></h1><p class="wk-zin">${esc(t('inr.wk.zin'))} <b>${esc(t('inr.wk.klopt'))}</b></p>${beloftes}`;
   const begin = `<a class="knop knop-licht wk-begin" href="#woning">${esc(t('inr.begin'))}${PIJL}</a>`;
   const terug = `<a class="wk-terug" href="toegang.html">${esc(t('inr.wk.backup'))}</a>`;
+  // Het logo voluit (1 november 2026): het teken, de naam en wat ARC betekent.
+  const merk = `<span class="wk-merk"><img src="kit/merk.svg" alt=""><span><span class="wk-woord">SunArc</span><span class="wk-arc">${t('over.arc')}</span></span></span>`;
   if (tel) {
-    return `<span class="wk-merk"><i aria-hidden="true"></i>SunArc</span><div class="wk-podium" data-wk-podium aria-hidden="true"></div><div class="wk-getallen" data-wk-getallen></div>
+    return `${merk}<div class="wk-podium" data-wk-podium aria-hidden="true"></div><div class="wk-getallen" data-wk-getallen></div>
       <div class="wk-tekst">${woorden}</div>
-      <div class="wk-doen">${begin}<div class="wk-onder"><span>${esc(t('inr.telStappen', { n: STAPPEN.length }))}</span>${terug}</div></div>`;
+      <div class="wk-doen">${begin}${voorbeeldRegel()}<div class="wk-onder"><span>${esc(t('inr.telStappen', { n: STAPPEN.length }))}</span>${terug}</div></div>`;
   }
   return `<div class="wk-podium" data-wk-podium aria-hidden="true"></div><svg class="wk-lijn" data-wk-lijn aria-hidden="true"></svg><div class="wk-labels" data-wk-labels></div>
-    <div class="wk-links"><span class="wk-merk"><i aria-hidden="true"></i>SunArc</span><div class="wk-midden">${woorden}<div class="wk-doen">${begin}${terug}</div></div><span class="wk-voet">${esc(t('inr.wk.voet', { n: STAPPEN.length }))}</span></div>
+    <div class="wk-links">${merk}<div class="wk-midden">${woorden}<div class="wk-doen">${begin}${terug}</div>${voorbeeldRegel()}</div><span class="wk-voet">${esc(t('inr.wk.voet', { n: STAPPEN.length }))}</span></div>
     <div class="glas wk-zoekt" data-wk-zoekt aria-live="polite"><i aria-hidden="true"></i><span></span></div>`;
 }
 /** Wat er gevonden is, met hoeveel er tijdens het opbouwen al staat. */

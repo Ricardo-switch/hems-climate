@@ -366,8 +366,13 @@
   body.inr-groot [data-welkom] { display: block; }
   #wand { position: relative; }
   #wand .welkom-groot { position: absolute; inset: 0; overflow: hidden; }
-  .welkom-groot .wk-merk { display: flex; align-items: center; gap: 12px; font-family: var(--kop); font-weight: 600; font-size: 19px; }
-  .welkom-groot .wk-merk i { width: 34px; height: 34px; border-radius: 10px; background: url('kit/icoon-klein.svg') center / cover; display: block; }
+  /* Het logo voluit (1 november 2026), zoals bij Over deze app. */
+  .welkom-groot .wk-merk { display: flex; align-items: center; gap: 18px; color: var(--tekst); }
+  .welkom-groot .wk-merk img { width: 112px; height: auto; display: block; }
+  .welkom-groot .wk-woord { display: block; font-family: var(--kop); font-weight: 700; font-size: 46px; letter-spacing: -0.04em; line-height: 1; }
+  .welkom-groot .wk-arc { display: block; margin-top: 6px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--zacht); }
+  .welkom-groot .wk-arc b { color: var(--zon-t); font-weight: 800; }
+  .welkom-groot .voorbeeld-regel { margin-top: 4px; }
   .welkom-groot .wk-hallo { font-size: 17px; font-weight: 700; color: var(--mint-t); letter-spacing: 0.02em; }
   /* Licht: het verloop is te zacht op een lichte lucht, dan één donkere kleur. */
   .sc-licht .welkom-groot .wk-kop em { background: none; color: var(--gloed-t); }
@@ -405,8 +410,13 @@
   @keyframes wk-puls { 0% { box-shadow: 0 0 0 0 rgba(110, 231, 183, 0.6); } 70% { box-shadow: 0 0 0 9px rgba(110, 231, 183, 0); } 100% { box-shadow: 0 0 0 0 rgba(110, 231, 183, 0); } }
   /* Alleen bij het welkom (28 oktober 2026): zonder body.inr-groot stond het op de telefoon onder elke stap. */
   body.inr-groot #tel .welkom-groot { position: relative; min-height: 100dvh; display: flex; flex-direction: column; }
-  #tel .wk-merk { position: absolute; left: 22px; top: 20px; z-index: 1; font-size: 16px; gap: 10px; }
-  #tel .wk-merk i { width: 28px; height: 28px; border-radius: 9px; }
+  #tel .wk-merk { position: absolute; left: 22px; top: 20px; z-index: 1; gap: 12px; }
+  #tel .wk-merk img { width: 66px; }
+  #tel .wk-woord { font-size: 28px; }
+  #tel .wk-arc { font-size: 8.5px; margin-top: 4px; }
+  #tel .wk-doen .voorbeeld-regel { grid-template-columns: minmax(0, 1fr) auto; max-width: none; min-height: 48px; padding: 0 16px; }
+  #tel .wk-doen .voorbeeld-regel .huisje, #tel .wk-doen .voorbeeld-regel span span { display: none; }
+  #tel .wk-doen .voorbeeld-regel b { color: var(--violet-t); font-size: 14.5px; }
   #tel .wk-podium { height: 300px; flex: none; margin: 18px -10px 0; }
   #tel .wk-getallen { display: flex; gap: 8px; overflow-x: auto; padding: 0 22px 2px; scrollbar-width: none; flex: none; touch-action: pan-x; }
   #tel .wk-getal { flex: none; display: flex; align-items: center; gap: 7px; padding: 6px 13px 6px 6px; border-radius: 999px; font: inherit; font-size: 13px; color: var(--zacht); font-weight: 600; }
