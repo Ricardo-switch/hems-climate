@@ -38,12 +38,20 @@
   .doen .knop { height: 56px; font-size: 17px; border-radius: 18px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 10px 34px rgba(111, 211, 255, 0.3); }
   .doen .knop svg { width: 19px; height: 19px; }
   .doen .onder { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--gedempt); }
+  /* Het logo voluit, en het voorbeeldhuis (1 november 2026). */
+  .voluit { display: flex; align-items: center; gap: 12px; }
+  .voluit img { width: 66px; height: auto; display: block; }
+  .voluit .woord { display: block; font-family: var(--kop); font-weight: 700; font-size: 28px; letter-spacing: -0.04em; line-height: 1; }
+  .voluit .arc { display: block; margin-top: 4px; font-size: 8.5px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--zacht); }
+  .voluit .arc b { color: var(--zon-t); font-weight: 800; }
+  .voorbeeld { display: flex; align-items: center; justify-content: space-between; height: 48px; padding: 0 16px; border-radius: 16px; text-decoration: none; color: var(--violet-t); background: rgba(143, 134, 255, 0.14); border: 1px solid rgba(143, 134, 255, 0.36); font-size: 14.5px; }
+  .voorbeeld i { font-style: normal; font-size: 20px; }
   .doen .terug { font-weight: 600; color: var(--zacht); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(255, 255, 255, 0.25); }
 </style>
 </head>
 <body class="lucht lucht-ochtend">
   <div class="scherm">
-    <span class="kop"><i aria-hidden="true"></i>SunArc</span>
+    <span class="kop voluit"><img src="../../frontend/kit/merk.svg" alt=""><span><span class="woord">SunArc</span><span class="arc"><b>A</b>utonomous <b>R</b>esidential <b>C</b>limate</span></span></span>
     <div id="podium"></div>
     <div class="gevonden" id="gevonden"></div>
     <div class="tekst">
@@ -58,6 +66,7 @@
     </div>
     <div class="doen">
       <button class="knop knop-licht">Begin <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      <a class="voorbeeld" href="Tel-Voorbeeldhuis.html"><b>Eerst rondkijken in een voorbeeldhuis</b><i aria-hidden="true">›</i></a>
       <div class="onder"><span>19 stappen, zo'n tien minuten</span><a class="terug" href="#">Ik heb een back-up</a></div>
     </div>
   </div>

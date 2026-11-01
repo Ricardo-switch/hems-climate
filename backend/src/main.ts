@@ -93,6 +93,7 @@ import { FeedbackLog } from './web/feedback.js';
 import { laadWekmodellen, type Wekmodellen } from './web/wekwoord.js';
 import { BRUG_ENTITEITEN, KlimaatBrug, MODUS_OPTIES } from './web/klimaatbrug.js';
 import { HAND_KLIMAAT, HAND_KNOPPEN, Handbediening } from './web/hand.js';
+import { Voorbeeld } from './web/voorbeeld.js';
 import { kiesVerstaan, Verstaan } from './web/verstaan.js';
 
 
@@ -272,6 +273,15 @@ const { tickSeconds, logDir } = startup;
 const webPort = startup.web.port;
 const webDir = startup.web.dir ?? defaultWebDir(packageRoot);
 
+/*
+ * Het voorbeeldhuis (besluit 237) draait deze dienst in een eigen proces, op een
+ * nagemaakt Home Assistant. De deuren die alleen in de add-on open staan
+ * (meldingen, lijsten, de klimaatbrug, met de hand) staan daar ook open: ze gaan
+ * naar het nagemaakte huis.
+ */
+const voorbeeldProces = process.env['HEMS_VOORBEELD'] === '1';
+const inHuisMetDeuren = Boolean(process.env['SUPERVISOR_TOKEN']) || voorbeeldProces;
+
 const strategies = defaultStrategies();
 
 // De configuratie wordt hier gelezen én gecontroleerd. Een fout erin is een
@@ -442,10 +452,10 @@ const client = new HaClient({
   allowUpdate: () => (version.installatie === 'add-on' ? (eigenUpdate(allStates.values())?.entity_id ?? null) : null),
   // Een melding naar de telefoon van een bewoner (besluit 183): alleen notify.mobile_app_…, en alleen
   // in de add-on; de NAS kijkt mee en blijft stil, anders kwam elke melding dubbel.
-  allowNotify: Boolean(process.env['SUPERVISOR_TOKEN']),
+  allowNotify: inHuisMetDeuren,
   // Te doen (besluit 216): iets op een lijst van Home Assistant zetten of afvinken, op een tik of zin
   // van de bewoner. Alleen in de add-on, zoals de meldingen: de NAS kijkt mee.
-  allowTodo: Boolean(process.env['SUPERVISOR_TOKEN']),
+  allowTodo: inHuisMetDeuren,
   // De klimaatbrug (besluit 210): alleen de knoppen van het oude systeem, als de brug aan staat
   // of er nog iets terug moet. Alleen in de add-on (zie `klimaatBrug`).
   allowKnoppen: (): { readonly entiteiten: readonly string[]; readonly opties: readonly string[] } =>
@@ -578,7 +588,7 @@ setInterval(() => void spraakBij(), 5 * 60_000).unref();
  * mee en blijft eraf, anders zou een opdracht twee keer gaan. Elke minuut zet
  * hij terug wat voorbij zijn tijd is, ook als de brug intussen uit ging.
  */
-const klimaatBrug: KlimaatBrug | null = process.env['SUPERVISOR_TOKEN']
+const klimaatBrug: KlimaatBrug | null = inHuisMetDeuren
   ? new KlimaatBrug({
       state: (id) => allStates.get(id),
       zet: (knop, waarde): Promise<void> => client.callService('input_number', 'set_value', { value: waarde }, { entity_id: knop }),
@@ -595,7 +605,7 @@ function klimaatAan(): boolean {
  * warm ook zelf, en een stekker met een warmtebron die niet in de regeling zit.
  * Alleen in de add-on en als de brug aan staat, net als de klimaatbrug.
  */
-const handbediening: Handbediening | null = process.env['SUPERVISOR_TOKEN']
+const handbediening: Handbediening | null = inHuisMetDeuren
   ? new Handbediening({
       state: (id) => allStates.get(id),
       zet: (knop, waarde): Promise<void> => client.callService('input_number', 'set_value', { value: waarde }, { entity_id: knop }),
@@ -1660,6 +1670,7 @@ function stilzetten(): void {
 function herstart(): void {
   console.log('SunArc start opnieuw (besluit 151).');
   setTimeout(() => process.exit(OPNIEUW_STARTEN), 3_000);
+  voorbeeld?.stop();
   void (web?.stop() ?? Promise.resolve()).finally(() => process.exit(OPNIEUW_STARTEN));
 }
 /** De instellingen en de apparaten voor de export (besluit 151), en welke namen eruit moeten. */
@@ -1740,9 +1751,17 @@ const gegevens =
         herstart,
       };
 
+/*
+ * Het voorbeeldhuis (besluit 237): een eigen proces, pas als iemand het opent.
+ * Niet in dat proces zelf, en alleen met een gebouwde voorbeeldstart ernaast.
+ */
+const voorbeeldScript = join(dirname(fileURLToPath(import.meta.url)), 'voorbeeld', 'start.js');
+const voorbeeld = !voorbeeldProces && webPort != null && existsSync(voorbeeldScript) ? new Voorbeeld({ script: voorbeeldScript, webDir, write: (r) => console.warn(r) }) : null;
+
 if (webPort != null) {
   web = new WebServer({
     access,
+    ...(voorbeeld ? { voorbeeld } : {}),
     ...(eigenPoort ? { eigenPoort } : {}),
     ...(gegevens ? { gegevens } : {}),
     port: webPort,
@@ -2081,6 +2100,7 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
     console.log('\nafsluiten…');
     runner?.stop();
     analyse?.stop();
+    voorbeeld?.stop();
     void web?.stop().finally(() => process.exit(0));
     if (web == null) process.exit(0);
   });

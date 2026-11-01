@@ -17,8 +17,12 @@
    */
   main { height: 800px; box-sizing: border-box; padding: 30px 40px 30px 52px; display: grid; grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr); gap: 24px; }
   .links { display: flex; flex-direction: column; min-height: 0; }
-  .merk { display: flex; align-items: center; gap: 12px; font-family: var(--kop); font-weight: 600; font-size: 20px; color: var(--tekst); }
-  .merk i { width: 34px; height: 34px; border-radius: 10px; background: url('../../frontend/kit/icoon-klein.svg') center / cover; display: block; }
+  /* Het logo voluit (1 november 2026): het teken, de naam en wat hij betekent, zoals bij Over deze app. */
+  .merk { display: flex; align-items: center; gap: 18px; }
+  .merk img { width: 112px; height: auto; display: block; }
+  .merk .woord { display: block; font-family: var(--kop); font-weight: 700; font-size: 46px; letter-spacing: -0.04em; line-height: 1; }
+  .merk .arc { display: block; margin-top: 6px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--zacht); }
+  .merk .arc b { color: var(--zon-t); font-weight: 800; }
   .midden { margin: auto 0; display: flex; flex-direction: column; gap: 22px; }
   h1 { margin: 0; font-family: var(--kop); font-size: 64px; font-weight: 700; line-height: 1; letter-spacing: -0.03em; }
   h1 em { font-style: normal; background: linear-gradient(90deg, #f7b548, #ff7a4d 55%, #8f86ff); -webkit-background-clip: text; background-clip: text; color: transparent; }
@@ -33,6 +37,13 @@
   .doen .knop { height: 54px; padding: 0 26px; font-size: 17px; border-radius: 16px; }
   .doen .terug { font-size: 15px; font-weight: 600; color: var(--zacht); text-decoration: underline; text-underline-offset: 4px; text-decoration-color: rgba(255, 255, 255, 0.25); }
   .voet { font-size: 13px; color: var(--gedempt); }
+  /* Het voorbeeldhuis (1 november 2026): rondkijken voordat je je eigen huis inricht. */
+  .voorbeeld { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; gap: 14px; align-items: center; max-width: 470px; padding: 12px 16px 12px 12px; border-radius: 18px; text-decoration: none; color: var(--tekst); background: linear-gradient(160deg, rgba(143, 134, 255, 0.18), rgba(143, 134, 255, 0.05)); border: 1px solid rgba(143, 134, 255, 0.36); }
+  .voorbeeld .huisje { width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center; background: rgba(143, 134, 255, 0.22); color: var(--violet-t); }
+  .voorbeeld .huisje svg { width: 22px; height: 22px; }
+  .voorbeeld b { display: block; font-size: 15.5px; }
+  .voorbeeld span span { font-size: 13.5px; color: var(--zacht); }
+  .voorbeeld i { font-style: normal; font-size: 22px; color: var(--violet-t); }
   .rechts { position: relative; min-height: 0; display: flex; flex-direction: column; }
   #podium { flex: 1; min-height: 0; }
   .gevonden { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); display: flex; align-items: center; gap: 16px; padding: 12px 20px; white-space: nowrap; }
@@ -47,7 +58,7 @@
 <div class="wand lucht lucht-ochtend" style="grid-template-columns: 1fr">
   <main>
     <div class="links">
-      <span class="merk"><i aria-hidden="true"></i>SunArc</span>
+      <span class="merk"><img src="../../frontend/kit/merk.svg" alt=""><span><span class="woord">SunArc</span><span class="arc"><b>A</b>utonomous <b>R</b>esidential <b>C</b>limate</span></span></span>
       <div class="midden">
         <h1>Welkom <em>thuis.</em></h1>
         <p class="lead">SunArc laat je huis meedenken met de zon. Het kijkt naar je verwarming, airco's en panelen, en zegt bij elk besluit waarom.</p>
@@ -60,6 +71,11 @@
           <button class="knop knop-licht">Richt je huis in</button>
           <a class="terug" href="#">Ik heb een back-up</a>
         </div>
+        <a class="voorbeeld" href="Wand-Voorbeeldhuis.html">
+          <span class="huisje" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/></svg></span>
+          <span><b>Eerst rondkijken in een voorbeeldhuis</b><span>Alles erin en alles werkt: speel met de knoppen en schuif door de dag.</span></span>
+          <i aria-hidden="true">›</i>
+        </a>
       </div>
       <span class="voet">Inrichten duurt ongeveer tien minuten. Alles blijft in je eigen huis.</span>
     </div>

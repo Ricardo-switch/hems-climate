@@ -1,5 +1,29 @@
 # Wat is er nieuw · What is new
 
+## 0.106.0
+
+*1 november 2026*
+
+**Nieuw**
+
+- Een voorbeeldhuis om mee te spelen: vanaf het welkom en Inrichten een huis met alles erin, waar elke knop werkt
+- Schuif door een zomer- of winterdag en zie wat het huis doet: koelen op zon, de droger, de batterij die 's avonds het huis voedt
+
+**Beter**
+
+- Het welkom toont het logo voluit
+
+*English*
+
+**New**
+
+- An example home to play with: from the welcome and Setup, a home with everything in it, where every button works
+- Slide through a summer or winter day and see what the home does: cooling on sun, the dryer, the battery powering the home in the evening
+
+**Improved**
+
+- The welcome shows the full logo
+
 ## 0.105.0
 
 *1 november 2026*

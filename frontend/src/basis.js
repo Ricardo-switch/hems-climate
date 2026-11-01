@@ -10,6 +10,42 @@
 
 (function (global) {
   /*
+   * Het voorbeeldhuis (besluit 237): onder `voorbeeld/` loopt de klok van de
+   * pagina mee met die van het voorbeeld (de dagschuif), en komt de balk van
+   * voorbeeld.js erbij. Het verschil met de echte tijd blijft tussen pagina's
+   * bewaard, zodat de klok niet eerst even de echte tijd toont.
+   */
+  if (/\/voorbeeld\//.test(global.location.pathname)) {
+    const Echt = global.Date;
+    const echtNu = Echt.now.bind(Echt);
+    let verschil = 0;
+    try {
+      verschil = Number(JSON.parse(global.sessionStorage.getItem('sc-voorbeeld-klok') ?? 'null')?.verschil) || 0;
+    } catch {}
+    class VoorbeeldDate extends Echt {
+      constructor(...a) {
+        if (a.length === 0) super(echtNu() + verschil);
+        else super(...a);
+      }
+      static now() {
+        return echtNu() + verschil;
+      }
+    }
+    global.Date = VoorbeeldDate;
+    global.scVoorbeeldVerschil = (nuMs) => {
+      verschil = nuMs - echtNu();
+      try {
+        global.sessionStorage.setItem('sc-voorbeeld-klok', JSON.stringify({ verschil }));
+      } catch {}
+    };
+    document.addEventListener('DOMContentLoaded', () => {
+      const s = document.createElement('script');
+      s.src = 'voorbeeld.js';
+      document.body.appendChild(s);
+    });
+  }
+
+  /*
    * De overgang tussen pagina's (@view-transition in basis.css). Breekt de
    * browser die af, omdat de pagina al te zien was, dan meldt hij dat als een
    * fout die niemand opvangt (CI, 30 oktober 2026). Die vangen we hier: de

@@ -113,6 +113,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [204. De standaard voor een nieuw huis, en terug naar standaard](#204-de-standaard-voor-een-nieuw-huis-en-terug-naar-standaard)
 - [220. Wat een nieuwe gebruiker tegenkwam](#220-wat-een-nieuwe-gebruiker-tegenkwam)
 - [223. De licentie: AGPL-3.0](#223-de-licentie-agpl-30)
+- [237. Het voorbeeldhuis: de app op een nagemaakt Home Assistant, met een dag om door te spelen](#237-het-voorbeeldhuis-de-app-op-een-nagemaakt-home-assistant-met-een-dag-om-door-te-spelen)
 
 **Meten, data en analyse**
 
@@ -10947,6 +10948,56 @@ een dag in de leerstand; experimenteel tot stap B.
 - **De naam van de repository blijft** `hems-climate`: Home Assistant maakt
   het kenmerk van de add-on uit het adres.
 - **Versie 0.105.0.**
+
+---
+
+## 237. Het voorbeeldhuis: de app op een nagemaakt Home Assistant, met een dag om door te spelen
+
+*Onderwerp: configuratie en onboarding · Status: geldig*
+
+1 november 2026, na ronde 4. De bewoner vroeg om een voorbeeldhuis bij
+Inrichten "dat al data en functies heeft om uit te proberen", om "te spelen
+met de knoppen in een virtueel huis". Gekozen na de schetsen
+`Wand-Voorbeeldhuis` en `Tel-Voorbeeldhuis`: de ingang op het welkom en bij
+Inrichten, een huis met alles erin, een dag om door te spelen, en elke knop
+werkt, maar alleen in het voorbeeld.
+
+*Besluit:*
+
+- **Een eigen proces met een nagemaakt Home Assistant** (`voorbeeld/`):
+  - `huis.ts`: een verzonnen huis met warmtepomp, twee airco's, badkamer,
+    negen lampen, twee screens, droger, thuisbatterij, auto met laadpaal,
+    P1-meter, omvormer en deurbel, en de configuratie van SunArc erbij. De
+    bewoners heten Sam en Noa. De klimaatapparaten dragen de namen van het
+    eerste huis, zodat klimaat met de hand (besluit 235) er ook werkt.
+  - `dag.ts`: wat het huis op elk moment van 15 juli of 13 januari doet:
+    zon, koelen, de droger op zon, de auto die laadt, de batterij die 's avonds
+    het huis voedt, de warmtepomp in de winter. Meterstanden voor een heel jaar
+    voor Opbrengst.
+  - `nep-ha.ts`: hetzelfde websocket-protocol als Home Assistant voor wat de
+    dienst gebruikt. Wat er bediend wordt, verandert alleen in het geheugen.
+  - `start.ts`: de gewone dienst (main.ts) op dat nagemaakte huis, op
+    127.0.0.1, in een tijdelijke map, met de klok op het moment van de
+    dagschuif. De meters en klimaat met de hand staan al aan, via de eigen
+    vragen van de dienst. Zo werken alle pagina's en de regeling echt.
+- **Alleen op verzoek, en los van je huis** (`web/voorbeeld.ts`): het proces
+  start als iemand `voorbeeld/` opent, en stopt na een half uur zonder bezoek
+  of bij Terug; alles is dan weg. Het krijgt het adres en de sleutel van je
+  eigen Home Assistant niet mee, en de Supervisor ook niet. De dienst kijkt
+  eerst de inlog en de herkomst na, en geeft het verzoek dan door; een
+  opdracht moet JSON zijn en van de eigen pagina komen, net als elders.
+- **In de app** (`voorbeeld.js`, alleen onder `voorbeeld/`): een violette rand
+  om het scherm, en onderaan een balk met de dag (schuif, afspelen, zomer of
+  winter), Probeer dit (zes dingen die zich afvinken) en Terug naar mijn huis.
+  De klok van de pagina loopt met die van het voorbeeld mee.
+- **De ingang:** op het welkom en op het welkom van Inrichten een violette
+  regel "Eerst rondkijken in een voorbeeldhuis". Daar staat nu ook het logo
+  voluit (het teken, SunArc en Autonomous Residential Climate). De zon van de
+  assistent komt pas later in Inrichten, bij de stem.
+- **Nog niet:** een Vandaag met de uren van vóór het openen (het voorbeeld
+  begint zijn logboek als je het opent), en de schermafdrukken en de film voor
+  de README uit het voorbeeld (de volgende stap).
+- **Versie 0.106.0.**
 
 ---
 

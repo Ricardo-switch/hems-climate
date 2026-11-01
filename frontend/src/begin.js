@@ -55,7 +55,17 @@ function welkom() {
     <div class="doen">
       <button type="button" class="knop knop-licht" data-inrichten${voorstel ? '' : ' disabled'}>${esc(t('begin.inrichten'))}</button>
       <button type="button" class="zacht onderlijn" data-backup>${esc(t('begin.backup'))}</button>
-    </div>`;
+    </div>
+    ${voorbeeldRegel('welkom')}`;
+}
+
+/** Naar het voorbeeldhuis (besluit 237): rondkijken voordat je je eigen huis inricht. */
+function voorbeeldRegel(van) {
+  return `<a class="voorbeeld-regel" href="voorbeeld/thuis.html?van=${van}">
+      <span class="huisje" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/></svg></span>
+      <span><b>${esc(t('voorbeeld.ingang'))}</b><span>${esc(t('voorbeeld.ingangZin'))}</span></span>
+      <i aria-hidden="true">›</i>
+    </a>`;
 }
 
 function vraag(i) {
@@ -294,6 +304,8 @@ addEventListener('resize', () => {
 });
 
 app.schaal();
+// Het logo voluit (1 november 2026): wat ARC betekent, in de taal van de app.
+document.querySelectorAll('[data-arc]').forEach((e) => (e.innerHTML = t('over.arc')));
 tekenLinks();
 tekenHuis();
 void laad();

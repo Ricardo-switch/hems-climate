@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telefoon · Voorbeeldhuis (schets)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Het voorbeeldhuis op de telefoon (schets bij Wand-Voorbeeldhuis, 1 november
+   * 2026). Bovenaan een violette regel met Terug; het huis; de dag als schuif
+   * net boven de tabs, altijd binnen bereik van je duim; daaronder Probeer dit.
+   * Standen: zonder hash 12:40 in de zomer, #winter 07:30 in de winter.
+   */
+  .tel { position: relative; }
+  .tel::after { content: ''; position: absolute; inset: 0; border: 3px solid rgba(143, 134, 255, 0.55); border-radius: inherit; pointer-events: none; z-index: 30; }
+  .regel { display: flex; align-items: center; gap: 10px; margin: 12px 14px 0; padding: 8px 8px 8px 14px; border-radius: 16px; background: rgba(143, 134, 255, 0.18); border: 1px solid rgba(143, 134, 255, 0.4); }
+  .regel b { flex: 1; color: var(--violet-t); font-size: 14px; }
+  .regel b span { display: block; font-weight: 500; font-size: 12px; color: var(--zacht); }
+  .regel button { height: 34px; padding: 0 14px; border-radius: 11px; border: 0; background: rgba(255, 255, 255, 0.1); color: var(--tekst); font: inherit; font-size: 13.5px; font-weight: 700; }
+  .boven { padding: 12px 18px 0; }
+  .tijd { font-family: var(--kop); font-weight: 600; font-size: 40px; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+  .tijd small { font-family: Figtree, sans-serif; font-size: 14px; font-weight: 500; color: var(--zacht); letter-spacing: 0; margin-left: 8px; }
+  .titel .kop-1 { font-size: 32px; margin-top: 4px; }
+  .podium { height: 330px; margin-top: -4px; }
+  .inhoud { padding: 0 14px 210px; display: flex; flex-direction: column; gap: 12px; }
+  .stroom { padding: 14px 16px; font-size: 14px; color: var(--zacht); }
+  .probeer { padding: 14px 16px; background: linear-gradient(165deg, rgba(143, 134, 255, 0.16), rgba(143, 134, 255, 0.04)); border-color: rgba(143, 134, 255, 0.34); }
+  .probeer ol { list-style: none; margin: 8px 0 0; padding: 0; }
+  .probeer li { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 9px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); font-size: 14px; }
+  .probeer li:first-child { border-top: 0; }
+  .probeer li i { width: 20px; height: 20px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.22); display: grid; place-items: center; font-style: normal; font-size: 11px; font-weight: 800; }
+  .probeer li.klaar i { background: var(--violet); border-color: var(--violet); color: #0b1424; }
+  .probeer li.klaar span { color: var(--zacht); text-decoration: line-through; text-decoration-color: rgba(255, 255, 255, 0.25); }
+  .probeer li em { font-style: normal; font-size: 12.5px; font-weight: 700; color: var(--violet-t); }
+  .dag { position: fixed; left: 10px; right: 10px; bottom: 92px; z-index: 25; padding: 10px 12px 8px; border-radius: 20px; background: rgba(9, 15, 28, 0.82); border: 1px solid rgba(143, 134, 255, 0.34); backdrop-filter: blur(14px); display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 4px 12px; align-items: center; }
+  .speel { width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--violet); color: #0b1424; font-size: 15px; grid-row: span 2; }
+  .dag .rij { display: flex; justify-content: space-between; align-items: center; }
+  .dag .rij b { font-family: var(--kop); font-size: 18px; font-variant-numeric: tabular-nums; }
+  .dag .chips.seg { width: 150px; }
+  .baan { position: relative; height: 44px; }
+  .baan svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .tabs { position: fixed; left: 12px; right: 12px; bottom: 14px; }
+</style>
+</head>
+<body>
+<div class="tel lucht lucht-dag" id="tel">
+  <div class="regel"><b>Voorbeeldhuis<span>Alles werkt; niets gaat naar je eigen huis</span></b><button type="button">Terug</button></div>
+  <div class="boven">
+    <div class="tijd"><span data-tijd>12:40</span><small data-datum>woensdag 15 juli</small></div>
+    <div class="titel"><h1 class="kop-1" data-kop>Het huis koelt op zon</h1></div>
+  </div>
+  <div class="podium" id="podium"></div>
+  <div class="inhoud">
+    <div class="glas stroom" data-stroom></div>
+    <section class="glas probeer">
+      <div style="display: flex; justify-content: space-between; align-items: baseline"><h2 class="kop-3">Probeer dit</h2><span class="mini">2 van 6</span></div>
+      <ol>
+        <li class="klaar"><i>✓</i><span>Doe de lamp in de keuken aan</span><em></em></li>
+        <li class="klaar"><i>✓</i><span>Start de droger op zon</span><em></em></li>
+        <li><i></i><span>Schuif naar de avond</span><em>Doe het</em></li>
+        <li><i></i><span>Vraag: "waarom koelt de woonkamer?"</span><em>Vraag</em></li>
+      </ol>
+    </section>
+  </div>
+  <div class="dag" aria-label="De dag van het voorbeeld">
+    <button class="speel" type="button" aria-label="Afspelen">▶</button>
+    <div class="rij"><b data-uur>12:40</b><div class="chips seg" role="group" aria-label="Seizoen"><button class="chip" type="button" data-seizoen="zomer">Zomer</button><button class="chip" type="button" data-seizoen="winter">Winter</button></div></div>
+    <div class="baan"><svg viewBox="0 0 300 80" preserveAspectRatio="none" aria-hidden="true" data-baan></svg></div>
+  </div>
+  <nav class="tabs" id="tabs" aria-label="Hoofdmenu"></nav>
+</div>
+<script src="../../frontend/kit/teksten.nl.js"></script>
+<script src="../../frontend/kit/teksten.en.js"></script>
+<script src="../../frontend/kit/taal.js"></script>
+<script src="../../frontend/kit/nav.js"></script>
+<script src="../../frontend/kit/huis.js"></script>
+<script src="voorbeeldhuis.js"></script>
+<script>
+  if (nav.tabs) nav.tabs(document.getElementById('tabs'), 'thuis');
+  const $ = (s) => document.querySelector(s);
+  const vb = window.voorbeeldhuis;
+  const winter = location.hash === '#winter';
+  const seizoen = winter ? 'winter' : 'zomer';
+  const minuut = winter ? 450 : 760;
+  const nu = vb.moment(minuut, seizoen);
+  // Op de smalle telefoon geen kaartjes naast het huis: de regel eronder zegt het.
+  huis.teken(document.getElementById('podium'), { ...nu.model, labels: [] }, { breedte: 390, hoogte: 330, marge: 0.04 });
+  $('#tel').className = `tel lucht ${nu.lucht}`;
+  $('[data-tijd]').textContent = vb.uur(minuut);
+  $('[data-uur]').textContent = vb.uur(minuut);
+  $('[data-datum]').textContent = `${vb.DATUM[seizoen]} · voorbeeld`;
+  $('[data-kop]').textContent = nu.kop;
+  $('[data-stroom]').textContent = nu.stroom;
+  $('[data-baan]').innerHTML = vb.baan(minuut, seizoen, 300, true);
+  document.querySelectorAll('[data-seizoen]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.seizoen === seizoen)));
+</script>
+</body>
+</html>
