@@ -459,7 +459,9 @@ verwijzing bestaat.
   Assistant, en het afval en je agenda's, met je stem en in een eigen tab
   Te doen; de instellingen van de assistent staan bij Instellingen ›
   Assistent ([216], [217]). Een opdracht kan ook later: op een tijd of na
-  zonsondergang, en wat gepland staat zie je bij Te doen ([218]). Wie thuis
+  zonsondergang, en wat gepland staat zie je bij Te doen ([218]); ook steeds,
+  met de zon en minuten, te pauzeren en aan te passen op Vast en gepland
+  ([234]). Wie thuis
   is, ziet zijn eigen agenda's ook op de wand ([219]).
 - **Een kamer doet mee** met de regeling van een andere kamer, zoals een
   slaapkamer met de airco in de wasruimte ([142]).
@@ -765,4 +767,5 @@ verwijzing bestaat.
 [231]: DECISIONS.md#231-hoe-je-huis-warmte-vasthoudt-het-thermisch-model-leert-en-laat-zien
 [232]: DECISIONS.md#232-het-logo-naast-de-klok-en-over-deze-app
 [233]: DECISIONS.md#233-wat-whisper-vast-verkeerd-hoort-rechtzetten
+[234]: DECISIONS.md#234-vast-en-gepland-herhalen-de-zon-met-minuten-en-aanpassen
 <!-- links:einde -->

@@ -13,6 +13,7 @@ import { uitspraak } from '../uitspraak.js';
 import { startOfLocalDay } from '../today.js';
 import type { AgendaKeus } from '../voorkeuren.js';
 import type { Diensten, Verzoek } from '../diensten.js';
+import type { Herhaal, Moment } from '../gepland.js';
 import {
   afvalBak,
   afvalSoort,
@@ -23,6 +24,7 @@ import {
   leesLijst,
   leesLijstZin,
   leesTeDoenVraag,
+  type Aanpassing,
   type Afspraak,
   type Herinnering,
   type Herinneringen,
@@ -164,6 +166,35 @@ export async function teDoenRoutes(d: Diensten, v: Verzoek): Promise<boolean> {
   return true;
 }
 
+/** Wat een aanpassing mag zeggen (besluit 234); een tekst als er iets niet klopt. */
+export function leesAanpassing(body: Record<string, unknown>): Aanpassing | string {
+  const w: { aan?: boolean; overslaanWeg?: boolean; moment?: Moment; herhaal?: Herhaal } = {};
+  if (body['aan'] !== undefined) {
+    if (typeof body['aan'] !== 'boolean') return 'aan is waar of onwaar';
+    w.aan = body['aan'];
+  }
+  if (body['overslaanWeg'] !== undefined) {
+    if (typeof body['overslaanWeg'] !== 'boolean') return 'overslaanWeg is waar of onwaar';
+    w.overslaanWeg = body['overslaanWeg'];
+  }
+  const m = body['moment'] as Record<string, unknown> | undefined;
+  if (m !== undefined) {
+    if (m?.['soort'] === 'tijd' && Number.isInteger(m['uur']) && Number.isInteger(m['minuut']) && (m['uur'] as number) >= 0 && (m['uur'] as number) <= 23 && (m['minuut'] as number) >= 0 && (m['minuut'] as number) <= 59) {
+      w.moment = { soort: 'tijd', uur: m['uur'] as number, minuut: m['minuut'] as number };
+    } else if (m?.['soort'] === 'zon' && (m['zon'] === 'op' || m['zon'] === 'onder') && Number.isInteger(m['minuten']) && Math.abs(m['minuten'] as number) <= 180) {
+      w.moment = { soort: 'zon', zon: m['zon'], minuten: m['minuten'] as number };
+    } else return 'moment is een tijd (uur, minuut) of de zon (op of onder, minuten van -180 tot 180)';
+  }
+  const h = body['herhaal'] as Record<string, unknown> | undefined;
+  if (h !== undefined) {
+    const soort = h?.['soort'];
+    if (soort === 'een' || soort === 'dag' || soort === 'werkdagen' || soort === 'weekend') w.herhaal = { soort };
+    else if (soort === 'dagen' && Array.isArray(h['dagen']) && h['dagen'].length > 0 && h['dagen'].every((d) => Number.isInteger(d) && d >= 1 && d <= 7)) w.herhaal = { soort, dagen: [...new Set(h['dagen'] as number[])].sort((a, b) => a - b) };
+    else return 'herhaal is een, dag, werkdagen, weekend, of dagen met de dagen 1 (maandag) tot 7';
+  }
+  return w;
+}
+
 /** Eén handeling: toevoegen, afvinken, een herinnering, gedaan of later. */
 export async function handel(t: TeDoenDienst, body: Record<string, unknown>, wie: Visitor | null): Promise<{ status: number; antwoord: Record<string, unknown> }> {
   const keus = t.keus();
@@ -186,6 +217,14 @@ export async function handel(t: TeDoenDienst, body: Record<string, unknown>, wie
       await t.lijst(lijstId, actie !== 'toevoegen' && uid ? uid : tekst, actie);
       vergeetLijsten();
       return { status: 200, antwoord: { ok: true } };
+    }
+    // Vast en gepland (besluit 234): aan of uit, het moment, hoe vaak, overslaan als niemand thuis is.
+    if (actie === 'aanpassen') {
+      const id = typeof body['id'] === 'string' ? body['id'] : '';
+      const w = leesAanpassing(body);
+      if (typeof w === 'string') return { status: 400, antwoord: { fout: w } };
+      const ok = await t.herinneringen.pasAan(id, w);
+      return ok ? { status: 200, antwoord: { ok: true } } : { status: 404, antwoord: { fout: 'die opdracht is er niet, of er komt met die keus geen moment meer' } };
     }
     if (actie === 'annuleer') {
       const id = typeof body['id'] === 'string' ? body['id'] : '';
@@ -213,7 +252,7 @@ export async function handel(t: TeDoenDienst, body: Record<string, unknown>, wie
   } catch (error) {
     return { status: 502, antwoord: { fout: `Home Assistant weigerde: ${(error as Error).message}` } };
   }
-  return { status: 400, antwoord: { fout: 'actie is toevoegen, klaar, open, opruimen, herinner, gedaan, later of annuleer' } };
+  return { status: 400, antwoord: { fout: 'actie is toevoegen, klaar, open, opruimen, herinner, gedaan, later, aanpassen of annuleer' } };
 }
 
 /* ------------------------------------------------------------ de assistent */

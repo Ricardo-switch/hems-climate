@@ -9,7 +9,7 @@ import type { Lang } from '../assistant.js';
 import type { Visitor } from '../auth.js';
 import { deelVan, herkenDelen, samen, type Stap } from '../brein.js';
 import type { Diensten } from '../diensten.js';
-import { isAnnuleer, isGeplandVraag, leesPlanTijd, type PlanTijd } from '../gepland.js';
+import { isAnnuleer, isGeplandVraag, leesPlanTijd, type Herhaal, type Moment, type PlanTijd } from '../gepland.js';
 import { klok } from '../klimaatbrug.js';
 import { herkenOpdracht, type Bedienbaar, type Herkend } from '../opdracht.js';
 import type { Herinnering, Herinneringen } from '../tedoen.js';
@@ -25,23 +25,51 @@ const BEDIEN = /\b(lamp|lampen|licht|lichten|verlichting|spots?|plafonniere|scen
 const nl = (lang: Lang) => lang === 'nl';
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-/** "om 21:43", "morgen om 07:00", "na zonsondergang, om 17:21". */
-export function wanneerZin(ms: number, zon: PlanTijd['zon'], nuMs: number, tz: string, lang: Lang): string {
+/** "na zonsondergang", "10 minuten voor zonsondergang", "een kwartier na zonsopkomst". */
+export function zonZin(zon: 'onder' | 'op', minuten: number, lang: Lang): string {
+  const naam = zon === 'onder' ? (nl(lang) ? 'zonsondergang' : 'sunset') : nl(lang) ? 'zonsopkomst' : 'sunrise';
+  if (minuten === 0) return zon === 'onder' ? (nl(lang) ? 'na zonsondergang' : 'after sunset') : nl(lang) ? 'bij zonsopkomst' : 'at sunrise';
+  const n = Math.abs(minuten);
+  const duur = nl(lang) ? (n === 15 ? 'een kwartier' : n === 30 ? 'een half uur' : n === 60 ? 'een uur' : `${n} minuten`) : n === 15 ? 'a quarter of an hour' : n === 30 ? 'half an hour' : n === 60 ? 'an hour' : `${n} minutes`;
+  return `${duur} ${minuten < 0 ? (nl(lang) ? 'voor' : 'before') : nl(lang) ? 'na' : 'after'} ${naam}`;
+}
+
+/** "om 21:43", "morgen om 07:00", "na zonsondergang, om 17:21", "10 minuten voor zonsondergang, om 16:49". */
+export function wanneerZin(ms: number, zon: PlanTijd['zon'], nuMs: number, tz: string, lang: Lang, minuten = 0): string {
   const dag = dagWoord(ms, nuMs, tz, lang);
   const vandaag = dag === (nl(lang) ? 'vandaag' : 'today');
   const tijd = `${nl(lang) ? 'om' : 'at'} ${klok(ms, tz)}`;
-  if (zon) {
-    const moment = zon === 'onder' ? (nl(lang) ? 'na zonsondergang' : 'after sunset') : nl(lang) ? 'bij zonsopkomst' : 'at sunrise';
-    return `${vandaag ? '' : `${dag} `}${moment}, ${tijd}`;
-  }
+  if (zon) return `${vandaag ? '' : `${dag} `}${zonZin(zon, minuten, lang)}, ${tijd}`;
   return `${vandaag ? '' : `${dag} `}${tijd}`;
+}
+
+const DAG_NL = ['maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag', 'zondag'];
+const DAG_EN = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+/** "elke dag", "elke werkdag", "in het weekend", "elke maandag en woensdag"; leeg bij één keer (besluit 234). */
+export function herhaalZin(h: Herhaal | undefined, lang: Lang): string {
+  if (!h || h.soort === 'een') return '';
+  if (h.soort === 'dag') return nl(lang) ? 'elke dag' : 'every day';
+  if (h.soort === 'werkdagen') return nl(lang) ? 'elke werkdag' : 'every weekday';
+  if (h.soort === 'weekend') return nl(lang) ? 'in het weekend' : 'at weekends';
+  const namen = (h.dagen ?? []).map((d) => (nl(lang) ? DAG_NL : DAG_EN)[d - 1]).filter(Boolean) as string[];
+  const lijst = namen.length <= 1 ? (namen[0] ?? '') : `${namen.slice(0, -1).join(', ')} ${nl(lang) ? 'en' : 'and'} ${namen.at(-1)}`;
+  return `${nl(lang) ? 'elke' : 'every'} ${lijst}`;
+}
+
+/** Het moment op een dag, zonder dag: "om 07:00", "10 minuten voor zonsondergang". */
+export function momentZin(m: Moment, lang: Lang): string {
+  if (m.soort === 'zon') return zonZin(m.zon, m.minuten, lang);
+  return `${nl(lang) ? 'om' : 'at'} ${String(m.uur).padStart(2, '0')}:${String(m.minuut).padStart(2, '0')}`;
 }
 
 /** Wat de keuze zegt als je doorvraagt: de tijd erbij, zodat hij gepland blijft. */
 function tijdWoorden(p: PlanTijd, nuMs: number, tz: string, lang: Lang): string {
   const dag = dagWoord(p.ms, nuMs, tz, lang);
   const vandaag = dag === (nl(lang) ? 'vandaag' : 'today');
-  if (p.zon) return `${vandaag ? '' : `${dag} `}${p.zon === 'onder' ? (nl(lang) ? 'na zonsondergang' : 'after sunset') : nl(lang) ? 'bij zonsopkomst' : 'at sunrise'}`;
+  const vaak = herhaalZin(p.herhaal, lang);
+  if (vaak) return `${vaak} ${momentZin(p.moment, lang)}`;
+  if (p.zon) return `${vandaag ? '' : `${dag} `}${zonZin(p.zon, p.moment.soort === 'zon' ? p.moment.minuten : 0, lang)}`;
   return `${vandaag ? '' : `${dag} `}${nl(lang) ? 'om' : 'at'} ${klok(p.ms, tz)}`;
 }
 
@@ -53,7 +81,11 @@ function antwoord(tekst: string, lang: Lang, extra: Record<string, unknown> = {}
 /** Wat er gepland staat, als zin. */
 function geplandZin(lijst: readonly Herinnering[], nuMs: number, tz: string, lang: Lang): string {
   if (!lijst.length) return nl(lang) ? 'Er staat niets gepland.' : 'Nothing is planned.';
-  const regels = lijst.slice(0, 4).map((g) => `${wanneerZin(g.ms, g.opdracht?.zon ?? null, nuMs, tz, lang)}: ${g.tekst.charAt(0).toLowerCase()}${g.tekst.slice(1)}`);
+  const regels = lijst.slice(0, 4).map((g) => {
+    const vaak = herhaalZin(g.opdracht?.herhaal, lang);
+    const minuten = g.opdracht?.moment?.soort === 'zon' ? g.opdracht.moment.minuten : 0;
+    return `${vaak ? `${vaak}, ` : ''}${wanneerZin(g.ms, g.opdracht?.zon ?? null, nuMs, tz, lang, minuten)}: ${g.tekst.charAt(0).toLowerCase()}${g.tekst.slice(1)}`;
+  });
   const meer = lijst.length > 4 ? (nl(lang) ? ` En nog ${lijst.length - 4}.` : ` And ${lijst.length - 4} more.`) : '';
   return `${nl(lang) ? 'Gepland' : 'Planned'}: ${regels.join('; ')}.${meer}`;
 }
@@ -118,8 +150,17 @@ export async function planZin(
   const account = wie?.userId ?? null;
   const naam = account ? naamVan(account) : null;
   const label = cap(rest);
-  const g = await store.voeg({ tekst: label, ms: p.ms, voor: naam ? account : null, naam, opdracht: { stappen, zon: p.zon } });
-  const wanneer = wanneerZin(g.ms, p.zon, nuMs, tz, lang);
-  const zin = nl(lang) ? `Goed, ${wanneer} doe ik dit: ${rest}.` : `All right, ${wanneer} I will do this: ${rest}.`;
+  const g = await store.voeg({ tekst: label, ms: p.ms, voor: naam ? account : null, naam, opdracht: { stappen, zon: p.zon, moment: p.moment, herhaal: p.herhaal, aan: true } });
+  const minuten = p.moment.soort === 'zon' ? p.moment.minuten : 0;
+  const vaak = herhaalZin(p.herhaal, lang);
+  // Steeds (besluit 234): wat hij vastlegde, en wanneer de eerste keer is.
+  const eerste = `${dagWoord(g.ms, nuMs, tz, lang)} ${nl(lang) ? 'om' : 'at'} ${klok(g.ms, tz)}`;
+  const zin = vaak
+    ? nl(lang)
+      ? `Goed, ${vaak} ${momentZin(p.moment, lang)}: ${rest}. De eerste keer is ${eerste}.`
+      : `All right, ${vaak} ${momentZin(p.moment, lang)}: ${rest}. The first time is ${eerste}.`
+    : nl(lang)
+      ? `Goed, ${wanneerZin(g.ms, p.zon, nuMs, tz, lang, minuten)} doe ik dit: ${rest}.`
+      : `All right, ${wanneerZin(g.ms, p.zon, nuMs, tz, lang, minuten)} I will do this: ${rest}.`;
   return antwoord(zin, lang, { feiten: [{ bron: 'tedoen.tijd', tekst: klok(g.ms, tz) }], gepland: { id: g.id, ms: g.ms } });
 }

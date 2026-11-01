@@ -38,7 +38,7 @@ function huis(): Bedienbaar {
 describe('wanneer, uit een opdracht', () => {
   it('leest een gewone tijd en laat de opdracht over', () => {
     const p = leesPlanTijd('Zet over 5 minuten de lamp in de keuken aan', NU, TZ, PLEK);
-    expect(p).toEqual({ ms: NU + 5 * 60_000, rest: 'zet de lamp in de keuken aan', zon: null });
+    expect(p).toMatchObject({ ms: NU + 5 * 60_000, rest: 'zet de lamp in de keuken aan', zon: null, herhaal: { soort: 'een' } });
     expect(leesPlanTijd('doe om 22:00 de screens dicht', NU, TZ, PLEK)).toMatchObject({ ms: om(2, 22), rest: 'doe de screens dicht', zon: null });
     expect(leesPlanTijd('morgen om 7 uur het licht in de keuken aan', NU, TZ, PLEK)).toMatchObject({ ms: om(3, 7), zon: null });
     // Zonder tijd: gewoon nu.
