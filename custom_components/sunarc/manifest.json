@@ -1,6 +1,9 @@
 {
   "domain": "sunarc",
   "name": "SunArc",
+  "after_dependencies": [
+    "hassio"
+  ],
   "codeowners": [
     "@Ricardo-switch"
   ],
