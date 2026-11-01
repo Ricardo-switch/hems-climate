@@ -93,6 +93,31 @@
   .blad .som .uren i { display: block; border-radius: 3px 3px 1px 1px; background: rgb(var(--wit) / 0.08); }
   .blad .som .uren i.aan { background: var(--zon); }
   .blad .som .assen { display: flex; justify-content: space-between; font-size: 11px; color: var(--gedempt); margin-top: 4px; }
+  /* Hoe je huis warmte vasthoudt (besluit 231): een dag zonder verwarming, twee getallen, en per kamer wat het weet. */
+  .blad .thermisch { display: flex; flex-direction: column; gap: 10px; }
+  .blad .thermisch .bovenin { display: grid; grid-template-columns: minmax(0, 1fr) 230px; gap: 18px; }
+  .blad .thermisch .grafiek { padding: 10px 14px 6px; border-radius: 18px; background: rgb(var(--wit) / 0.04); }
+  .blad .thermisch svg { display: block; width: 100%; height: 96px; font-size: 11px; }
+  .blad .thermisch svg line { stroke: rgb(var(--wit) / 0.07); }
+  .blad .thermisch svg text { fill: var(--gedempt); }
+  .blad .thermisch svg text.naam { font-size: 12px; font-weight: 700; }
+  .blad .thermisch svg .lijn { fill: none; stroke-width: 2.5; stroke-linecap: round; }
+  .blad .thermisch .vast { display: flex; flex-direction: column; justify-content: center; gap: 10px; }
+  .blad .thermisch .vast .getal { font-family: var(--kop); font-size: 32px; font-weight: 600; line-height: 1; }
+  .blad .thermisch .vast .getal.klein { font-size: 22px; }
+  .blad .thermisch .vast .getal small { font-family: var(--romp); font-size: 13.5px; font-weight: 500; color: var(--zacht); margin-left: 6px; }
+  .blad .thermisch .vast p { margin: 3px 0 0; font-size: 13px; line-height: 1.4; color: var(--zacht); }
+  .blad .thermisch .kamers { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 0 22px; }
+  .blad .thermisch h5 { margin: 0 0 2px; font-family: var(--kop); font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .blad .thermisch h5 i { width: 10px; height: 3px; border-radius: 2px; }
+  .blad .thermisch .weet { display: grid; grid-template-columns: minmax(0, 1fr) auto 40px; gap: 0 10px; align-items: baseline; padding: 3px 0; border-top: 1px solid rgb(var(--wit) / 0.06); font-size: 13.5px; }
+  .blad .thermisch .weet:first-of-type { border-top: 0; }
+  .blad .thermisch .weet span { color: var(--zacht); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .blad .thermisch .weet b { font-family: var(--kop); font-weight: 600; font-size: 14.5px; white-space: nowrap; }
+  .blad .thermisch .weet b.nog { font-family: var(--romp); font-size: 12.5px; color: var(--gedempt); }
+  .blad .thermisch .zeker { display: inline-flex; gap: 3px; align-self: center; }
+  .blad .thermisch .zeker i { width: 7px; height: 4px; border-radius: 2px; background: rgb(var(--wit) / 0.12); }
+  .blad .thermisch .zeker i.ja { background: var(--violet); }
   .blad .waar { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
   .kamerkaart { padding: 12px 14px; border-radius: 16px; background: rgba(110, 231, 183, 0.06); border: 1px solid rgba(110, 231, 183, 0.22); }
   .kamerkaart b { display: block; font-size: 15px; }
@@ -141,6 +166,8 @@
   #tel .podium { height: 300px; margin: 0; }
   #tel .blad { position: fixed; left: 8px; right: 8px; top: auto; bottom: 8px; max-height: 84vh; border-radius: 26px; z-index: 30; }
   #tel .blad .twee { grid-template-columns: 1fr; }
+  #tel .blad .thermisch .bovenin { grid-template-columns: 1fr; gap: 10px; }
+  #tel .blad .thermisch .kamers { grid-template-columns: 1fr; gap: 10px; }
 </style>
 </head>
 <body class="lucht lucht-dag">

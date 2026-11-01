@@ -119,6 +119,9 @@ verwijzing bestaat.
 - **Zonder thuisbatterij** rekent de app het afgelopen jaar per uur na: welke
   maat past, wat er dan nog van het net kwam, en wanneer hij had bijgesprongen
   ([230]).
+- **Hoe je huis warmte vasthoudt:** het eerste deel van het thermisch model
+  (D) leert per kamer afkoelen, zon en elk apparaat uit het logboek, en laat
+  het zien onder Leren. De regeling gebruikt het nog niet ([231]).
 - **De zonnesensor:** elk merk omvormer werkt; de app meet hoe snel de sensor is
   ([89]).
 - **Sturen:** alleen wat afwijkt. Slimmere timing moet eerst in de replay winnen
@@ -757,4 +760,5 @@ verwijzing bestaat.
 [228]: DECISIONS.md#228-minder-bubbels
 [229]: DECISIONS.md#229-twee-paginas-rustiger-wat-je-huis-kan-en-hoe-ver-je-huis-is
 [230]: DECISIONS.md#230-een-thuisbatterij-op-je-eigen-uren
+[231]: DECISIONS.md#231-hoe-je-huis-warmte-vasthoudt-het-thermisch-model-leert-en-laat-zien
 <!-- links:einde -->

@@ -20,6 +20,7 @@ import { leesToelichting } from '../sluipverbruik.js';
 import { isDal } from '../tarief.js';
 import { taalVan, type Diensten, type Verzoek } from '../diensten.js';
 import { accuJaar } from '../accu.js';
+import { ThermischLeer } from '../thermisch.js';
 
 /** De routes van dit onderwerp; waar als het verzoek hier is afgehandeld. */
 export async function opbrengstRoutes(d: Diensten, v: Verzoek): Promise<boolean> {
@@ -122,6 +123,26 @@ export async function opbrengstRoutes(d: Diensten, v: Verzoek): Promise<boolean>
       const rapport = await d.vandaag(url.searchParams.get('dag') === 'gisteren');
       if (rapport == null) throw new Error('geen logboek');
       sendJson(res, 200, todayInLang(rapport, config, taalVan(url.searchParams.get('taal') ?? req.headers['x-taal'])));
+    } catch (error) {
+      sendJson(res, 500, { fout: (error as Error).message });
+    }
+    return true;
+  }
+
+  /*
+   * Hoe je huis warmte vasthoudt (besluit 231): per zone hoe snel hij afkoelt,
+   * wat de zon doet en wat elk apparaat doet, uit het logboek. Eén keer per dag
+   * uitgerekend; de eerste keer duurt het een paar seconden.
+   */
+  if (path === '/api/thermisch') {
+    const config = d.config();
+    if (logDir == null || config == null) {
+      sendJson(res, 503, { wachten: 'er wordt niet gelogd, dus er is niets om van te leren' });
+      return true;
+    }
+    d.thermisch ??= new ThermischLeer({ logDir });
+    try {
+      sendJson(res, 200, await d.thermisch.bijwerken(config));
     } catch (error) {
       sendJson(res, 500, { fout: (error as Error).message });
     }

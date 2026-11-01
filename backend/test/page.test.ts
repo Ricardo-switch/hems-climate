@@ -50,7 +50,28 @@ import { STANDAARD_TEL, VoorkeurenStore } from '../src/web/voorkeuren.js';
 import type { Opslag } from '../src/web/opslag.js';
 import { WeatherLog } from '../src/web/weather.js';
 import { EnergyStore, importFromPrefs, type EnergySource } from '../src/web/energy.js';
+import { THERMISCH_FILE, type ThermischRapport } from '../src/web/thermisch.js';
 import { ConnectionStore, connectionView, type FoundAppliance, type FoundPhase } from '../src/web/aansluiting.js';
+
+/** Wat het thermisch model zou hebben geleerd (besluit 231): twee kamers, de woonkamer zekerder dan de zolder. */
+const THERMISCH_VOORBEELD = (nu: number): ThermischRapport => ({
+  versie: 1,
+  dag: new Date(nu).toISOString().slice(0, 10),
+  sindsMs: Date.parse('2026-09-05T15:00:00Z'),
+  dagen: 56,
+  stand: 'leert',
+  zones: [
+    { id: 'woonkamer', naam: 'Woonkamer', k: 0.0082, tauUur: 122, rustUren: 555, zonPerKw: 0.28, zonKwartieren: 910, zeker: { afkoelen: 4, zon: 3 }, apparaten: [
+      { id: 'nest', naam: 'Nest', stand: 'warmt', perUur: null, kwartieren: 181, zeker: 0 },
+      { id: 'airco-woonkamer', naam: 'Airco woonkamer', stand: 'warmt', perUur: 1.02, kwartieren: 16, zeker: 1 },
+      { id: 'airco-woonkamer', naam: 'Airco woonkamer', stand: 'koelt', perUur: -0.39, kwartieren: 294, zeker: 3 },
+    ] },
+    { id: 'zolder', naam: 'Zolder', k: 0.0102, tauUur: 98, rustUren: 541, zonPerKw: 0.29, zonKwartieren: 879, zeker: { afkoelen: 4, zon: 3 }, apparaten: [
+      { id: 'airco-zolder', naam: 'Airco zolder', stand: 'warmt', perUur: null, kwartieren: 0, zeker: 0 },
+      { id: 'airco-zolder', naam: 'Airco zolder', stand: 'koelt', perUur: -0.59, kwartieren: 63, zeker: 2 },
+    ] },
+  ],
+});
 
 /**
  * Een Home Assistant met een Energie-dashboard (besluit 102): net, zon, gas en
@@ -265,6 +286,8 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
 
     dir = await mkdtemp(join(tmpdir(), 'hems-page-'));
     await writeLogs(dir);
+    // Hoe het huis warmte vasthoudt (besluit 231): wat het van vandaag al heeft uitgerekend.
+    await writeFile(join(dir, THERMISCH_FILE), JSON.stringify(THERMISCH_VOORBEELD(Date.now())));
     const review = new DivergenceCache({ logDir: dir, write: () => {}, now: () => Date.parse('2026-10-01T00:30:00Z') });
     await review.refresh();
     live = await liveSnapshot();
@@ -4187,6 +4210,49 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     expect(aan.slice(10, 15).some(Boolean)).toBe(false);
     expect(aan.slice(18, 24).every(Boolean)).toBe(true);
     if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-batterij.png') });
+    expect(fouten).toEqual([]);
+    await context.close();
+  }, 30_000);
+
+  /*
+   * Hoe je huis warmte vasthoudt (besluit 231): een regel onder Leren, en een
+   * blad met een dag zonder verwarming en per kamer wat het weet.
+   */
+  it('laat onder Leren zien hoe het huis warmte vasthoudt', async () => {
+    const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+    await context.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    await p.goto(`${baseUrl}/huis-kan.html`);
+    const regel = p.locator('#wand .vak.leren .regel', { hasText: 'Hoe je huis warmte vasthoudt' });
+    await regel.waitFor();
+    expect(await regel.textContent()).toContain('kent het afkoelen, wacht op het stoken');
+    expect(await p.locator('#wand .vak.leren .regel', { hasText: 'Op tijd warm of koel' }).textContent()).toContain('begint zodra het huis het stoken kent');
+    await regel.click();
+    const blad = p.locator('.thermisch').first();
+    await blad.locator('.lijn').first().waitFor();
+    expect(await blad.locator('.lijn').count()).toBe(2);
+    const tekst = (await blad.textContent()) ?? '';
+    // Acht uur bij 10° verschil: 0,0082 × 10 × 8 = 0,66.
+    expect(tekst).toMatch(/−0,7°\s*in een nacht/);
+    expect(tekst).toMatch(/Airco koelt\s*−0,4°/);
+    expect(tekst).toMatch(/Nest verwarmt\s*nog onduidelijk/);
+    expect(tekst).toMatch(/Airco verwarmt\s*nog niet gezien/);
+    expect(await p.locator('.blad', { hasText: 'Wat het nog nodig heeft' }).first().textContent()).toContain('Nest: het verwarmen is nog niet te zien');
+    if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-thermisch.png') });
+    // Past op de wand zonder te scrollen.
+    expect(await p.evaluate<boolean>("(() => { const b = [...document.querySelectorAll('.blad')].find((e) => e.offsetParent); const knop = b.querySelector('.onder a').getBoundingClientRect(); return knop.bottom <= b.getBoundingClientRect().bottom && knop.bottom <= innerHeight; })()")).toBe(true);
+    // Op de telefoon de kamers onder elkaar.
+    await p.setViewportSize({ width: 390, height: 844 });
+    await p.goto(`${baseUrl}/huis-kan.html#thermisch`);
+    const tel = p.locator('#tel .thermisch');
+    await tel.locator('.lijn').first().waitFor();
+    const kolommen = await p.evaluate<number>("getComputedStyle(document.querySelector('#tel .thermisch .kamers')).gridTemplateColumns.split(' ').length");
+    expect(kolommen).toBe(1);
+    if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-thermisch-tel.png'), fullPage: true });
     expect(fouten).toEqual([]);
     await context.close();
   }, 30_000);

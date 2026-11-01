@@ -11,6 +11,7 @@ import type { Geometry, SiteConfig } from '../core/model.js';
 import type { LiveSnapshot } from '../adapters/homeassistant/shadow.js';
 import { TodayCache, withHistory, type TodayReport } from './today.js';
 import { SolarHistory, learnSolar } from './solar-learn.js';
+import type { ThermischLeer } from './thermisch.js';
 import type { YieldReport } from './yield.js';
 import type { accuJaar } from './accu.js';
 import { LANGS } from './assistant.js';
@@ -60,6 +61,8 @@ export class Diensten {
   /** Het weerrapport, tien minuten vastgehouden: vijf dagen zon uitrekenen kost wat. */
   weather: { atMs: number; report: WeatherReport; geometry: Geometry } | null = null;
   solar: SolarHistory | null = null;
+  /** Hoe het huis warmte vasthoudt (besluit 231), één keer per dag geleerd. */
+  thermisch: ThermischLeer | null = null;
   /** Het gespreksgeheugen van de assistent (besluit 213): per scherm de laatste beurten. */
   readonly gesprekken = new Gesprekken();
 
