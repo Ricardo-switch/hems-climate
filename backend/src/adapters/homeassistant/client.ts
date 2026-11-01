@@ -302,7 +302,7 @@ export function isHandCall(
   const keys = Object.keys(data);
   if (domain === 'climate' && mag.klimaat.includes(id)) {
     if (service === 'set_hvac_mode') return keys.length === 1 && (data['hvac_mode'] === 'heat' || data['hvac_mode'] === 'off');
-    if (service === 'set_temperature') return keys.length === 1 && typeof data['temperature'] === 'number' && Number.isFinite(data['temperature']) && data['temperature'] >= 10 && data['temperature'] <= 30;
+    if (service === 'set_temperature') return keys.length === 1 && typeof data['temperature'] === 'number' && Number.isFinite(data['temperature']) && data['temperature'] >= 5 && data['temperature'] <= 30;
     if (service === 'turn_off') return keys.length === 0;
     return false;
   }

@@ -48,12 +48,12 @@ export const NIEUW: readonly Nieuw[] = [
     versie: '0.104.0',
     datum: '2026-11-01',
     nieuw: [
-      'Klimaat met de hand: op Apparaten zet je de Nest, de airco\'s, de badkamer of een paneel op een stekker tot een tijd',
+      'Klimaat met de hand: op Apparaten zet je de Nest, de airco\'s, de badkamer, de radiatorknop in de keuken of een paneel op een stekker tot een tijd',
       'De zolder warm gaat nu ook zonder zon: de app zet de airco zelf op warm, en op tijd weer uit',
     ],
     en: {
       nieuw: [
-        'Climate by hand: on Devices you set the Nest, the air conditioners, the bathroom or a panel on a plug until a time',
+        'Climate by hand: on Devices you set the Nest, the air conditioners, the bathroom, the kitchen radiator valve or a panel on a plug until a time',
         'Heating the attic now works without sun too: the app turns the air conditioner to heat itself, and off again on time',
       ],
     },

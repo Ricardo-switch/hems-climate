@@ -10861,10 +10861,14 @@ zet hem op 18° bij stroom van het net, tenzij een knop met de hand verzet is
     op het doel, zodat de regeling een handmatige stand ziet, en de airco zelf
     op warm. Gekozen door de bewoner: anders gaat de zolder pas aan als er zon
     is.
+  - een radiatorknop die niet in de regeling zit (zoals de Sonoff TRVZB in de
+    keuken, besluit 126): zijn eigen doel, direct; daarna terug naar het doel
+    van daarvoor, niet uit;
   - een stekker met een warmtebron die niet in de regeling zit, direct aan.
 - **Een negende smalle deur** in de client (`allowHand`, `isHandCall`):
   alleen `climate.set_hvac_mode` (warm of uit), `climate.set_temperature`
-  (10 tot 30°) en `climate.turn_off` op de twee airco's, en `switch.turn_on`
+  (5 tot 30°) en `climate.turn_off` op de twee airco's en de radiatorknoppen
+  buiten de regeling, en `switch.turn_on`
   of `turn_off` op de stekkers met een warmtebron uit Indeling. Koelen of een
   andere stand komt er niet door, en de Nest zelf ook niet; een test bewijst
   dat. Alleen in de add-on, alleen als "Klimaat via je eigen regeling" aan

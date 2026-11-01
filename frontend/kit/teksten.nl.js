@@ -3718,6 +3718,8 @@
   'hand.zinKoelen': 'Via de koelknop van je regeling. Je regeling koelt dan tot {doel}, ook zonder zon over; dat kost stroom van het net. Om {klok} terug naar {terug}.',
   'hand.zinBadkamer': 'Via de knop van je regeling: de vloer en het paneel gaan uit boven {doel}. Om {klok} terug naar {terug}.',
   'hand.zinDirect': 'Je regeling verwarmt met deze airco alleen met zon of als hulp. Met de hand zet de app hem zelf op warm, en zijn knop op {doel}, zodat je regeling hem laat staan. Om {klok} gaat hij uit.',
+  'hand.zinRadiator': 'Deze radiatorknop zit niet in je regeling: de app zet hem zelf op {doel}. Om {klok} terug naar {terug}, tenzij iemand hem intussen zelf verzette.',
+  'hand.doelRadiator': 'het doel van de knop, daarna weer {terug}',
   'hand.zinStekker': 'Deze stekker zit niet in je regeling: de app zet hem zelf aan. Om {klok} gaat hij weer uit.',
   'hand.nietKoelen': 'Koelen staat in je regeling uit. Zet de koelstrategie aan in Home Assistant, dan kan het met de hand.',
   'hand.nietVakantie': 'Je regeling staat op vakantie of koelen; dan verwarmt de app niet met de hand.',

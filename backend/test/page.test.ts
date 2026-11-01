@@ -4411,6 +4411,7 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
       apparaten: [
         { id: 'climate.beneden', naam: 'Nest beneden', kamer: 'Woonkamer', zoneId: 'woonkamer', modi: [modus('verwarmen', 20, 'knop')], hvac: 'heat', nuC: 19.6, actief: { modus: 'verwarmen', doelC: 21, totMs: nu + 5 * 3_600_000 } },
         { id: 'climate.air_conditioning_zolder', naam: 'Airco zolder', kamer: 'Zolder', zoneId: 'zolder', modi: [modus('verwarmen', 19, 'direct'), modus('koelen', 24, 'knop', 'koelstrategie')], hvac: 'off', nuC: 17.8, actief: null },
+        { id: 'climate.sonoff_thermostaat', soort: 'radiatorknop', naam: 'Radiatorknop keuken', kamer: 'Keuken', zoneId: null, modi: [modus('verwarmen', 17, 'direct')], hvac: 'heat', nuC: 18.4, actief: null },
       ],
       schakelaars: [{ id: 'switch.paneel_keuken', naam: 'Paneel keuken', kamer: 'Keuken', aan: false, totMs: null }],
     };
@@ -4447,11 +4448,18 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     await laag.locator('[data-hand-modus="koelen"]').click();
     expect(await laag.locator('.hand-hoe').textContent()).toContain('Koelen staat in je regeling uit');
     expect(await laag.locator('[data-hand-zet]').isDisabled()).toBe(true);
+    // De radiatorknop in de keuken: zijn eigen doel, en daarna terug naar wat het was.
+    await laag.locator('[data-hand-kies="climate.sonoff_thermostaat"]').click();
+    expect(await laag.locator('.hand-hoe').textContent()).toContain('Deze radiatorknop zit niet in je regeling');
+    await laag.locator('[data-hand-doel="1"]').click();
+    await laag.locator('[data-hand-zet]').click();
+    await expect.poll(() => gestuurd.length).toBe(2);
+    expect(gestuurd[1]).toMatchObject({ id: 'climate.sonoff_thermostaat', modus: 'verwarmen', doelC: 17.5 });
     // De stekker: aan tot een tijd.
     await laag.locator('[data-hand-kies="switch.paneel_keuken"]').click();
     await laag.locator('[data-hand-zet]').click();
-    await expect.poll(() => gestuurd.length).toBe(2);
-    expect(gestuurd[1]).toMatchObject({ id: 'switch.paneel_keuken' });
+    await expect.poll(() => gestuurd.length).toBe(3);
+    expect(gestuurd[2]).toMatchObject({ id: 'switch.paneel_keuken' });
     await p.keyboard.press('Escape');
     expect(await laag.count()).toBe(0);
     // Op de telefoon: eerst de lijst, dan het blad, van onderen.

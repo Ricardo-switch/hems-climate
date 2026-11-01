@@ -45,6 +45,10 @@ async function huis(extra: Record<string, Staat> = {}) {
       gedaan.push(`${id}=${stand === 'uit' ? 'uit' : `warm ${stand.warm}`}`);
       staten[id] = stand === 'uit' ? { state: 'off', attributes: {} } : { state: 'heat', attributes: { temperature: stand.warm } };
     },
+    temperatuur: async (id, c) => {
+      gedaan.push(`${id}=doel ${c}`);
+      staten[id] = { ...staten[id]!, attributes: { ...staten[id]!.attributes, temperature: c } };
+    },
     schakel: async (id, aan) => {
       gedaan.push(`${id}=${aan ? 'aan' : 'uit'}`);
       staten[id] = { state: aan ? 'on' : 'off', attributes: {} };
@@ -102,6 +106,19 @@ describe('klimaat met de hand (besluit 235)', () => {
     expect(await h.zet('climate.air_conditioning_zolder', 'koelen', 22, nu.ms + 3_600_000)).toMatchObject({ ok: false, reden: 'koelen staat in je regeling uit' });
   });
 
+  it('zet een radiatorknop buiten de regeling op zijn eigen doel, en daarna terug naar wat het was', async () => {
+    const knop = 'climate.sonoff_thermostaat';
+    const { h, gedaan, nu } = await huis({ [knop]: { state: 'heat', attributes: { temperature: 17, current_temperature: 18.4, min_temp: 5, max_temp: 35, target_temp_step: 0.5 } } });
+    const standen = await h.standen([knop]);
+    expect(standen.find((s) => s.id === knop)).toMatchObject({ soort: 'radiatorknop', modi: [{ doelC: 17, standaardC: 17, via: 'direct' }], nuC: 18.4 });
+    expect(await h.zetKnop(knop, 20.2, nu.ms + 3_600_000)).toEqual({ ok: true, doelC: 20, totMs: nu.ms + 3_600_000 });
+    expect(gedaan).toEqual([`${knop}=warm 20`]);
+    nu.ms += 3_600_000;
+    await h.ronde();
+    expect(gedaan.at(-1)).toBe(`${knop}=doel 17`);
+    expect(await h.zetKnop(knop, 40, nu.ms + 3_600_000)).toMatchObject({ ok: false });
+  });
+
   it('zet een stekker aan tot een tijd, en terug met de hand', async () => {
     const { h, gedaan, nu } = await huis();
     await h.schakelAan('switch.paneel_keuken', nu.ms + 2 * 3_600_000);
@@ -141,6 +158,7 @@ describe('de smalle deur voor met de hand (besluit 235)', () => {
     expect(isHandCall('climate', 'turn_off', {}, { entity_id: 'climate.air_conditioning_woonkamer' }, MAG)).toBe(true);
     expect(isHandCall('climate', 'set_hvac_mode', { hvac_mode: 'cool' }, { entity_id: 'climate.air_conditioning_zolder' }, MAG)).toBe(false);
     expect(isHandCall('climate', 'set_temperature', { temperature: 35 }, { entity_id: 'climate.air_conditioning_zolder' }, MAG)).toBe(false);
+    expect(isHandCall('climate', 'set_temperature', { temperature: 4 }, { entity_id: 'climate.air_conditioning_zolder' }, MAG)).toBe(false);
     expect(isHandCall('climate', 'set_temperature', { temperature: 20, hvac_mode: 'heat' }, { entity_id: 'climate.air_conditioning_zolder' }, MAG)).toBe(false);
     // De Nest zelf nooit: die gaat via zijn knop.
     expect(isHandCall('climate', 'set_temperature', { temperature: 21 }, { entity_id: 'climate.beneden' }, MAG)).toBe(false);

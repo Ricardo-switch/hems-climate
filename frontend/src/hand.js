@@ -60,6 +60,8 @@
     if (m.niet === 'koelstrategie') return { let: true, tekst: t('hand.nietKoelen') };
     if (m.niet === 'vakantie') return { let: true, tekst: t('hand.nietVakantie') };
     const terug = m.standaardC != null ? graden(m.standaardC) : '';
+    // Een radiatorknop buiten de regeling: de app zet hem zelf, en daarna terug naar zijn eigen doel.
+    if (a.soort === 'radiatorknop') return { tekst: t('hand.zinRadiator', { doel: graden(open.doel), klok, terug }) };
     if (m.via === 'direct') return { let: true, tekst: t('hand.zinDirect', { doel: graden(open.doel), klok }) };
     if (m.modus === 'koelen') return { tekst: t('hand.zinKoelen', { doel: graden(open.doel), klok, terug }) };
     if (/badkamer/.test(a.id)) return { tekst: t('hand.zinBadkamer', { doel: graden(open.doel), klok, terug }) };
@@ -79,8 +81,8 @@
     const wat = a.modi.length > 1 ? `<div class="hand-vraag"><span>${esc(t('hand.wat'))}</span>${seg(t('hand.wat'), a.modi.map((x) => [x.modus, t(`hand.modus.${x.modus}`), x.modus === m.modus, 'data-hand-modus']))}</div>` : '';
     const hoe = hoeZin(a, m, totMs);
     const kan = data.aan && !m.niet;
-    const zet = m.via === 'direct' ? t('hand.zetWarm', { klok: klokVan(totMs) }) : m.modus === 'koelen' ? t('hand.zetKoel', { doel: graden(open.doel) }) : a.actief ? t('hand.bewaar') : t('hand.zetOp', { doel: graden(open.doel) });
-    const doelZin = m.modus === 'koelen' ? t('hand.doelKoelen', { doel: graden(open.doel) }) : m.via === 'direct' ? t('hand.doelWarm', { doel: graden(open.doel) }) : t('hand.doelKnop', { standaard: m.standaardC != null ? graden(m.standaardC) : '–' });
+    const zet = a.soort === 'radiatorknop' ? (a.actief ? t('hand.bewaar') : t('hand.zetOp', { doel: graden(open.doel) })) : m.via === 'direct' ? t('hand.zetWarm', { klok: klokVan(totMs) }) : m.modus === 'koelen' ? t('hand.zetKoel', { doel: graden(open.doel) }) : a.actief ? t('hand.bewaar') : t('hand.zetOp', { doel: graden(open.doel) });
+    const doelZin = a.soort === 'radiatorknop' ? t('hand.doelRadiator', { terug: m.standaardC != null ? graden(m.standaardC) : '–' }) : m.modus === 'koelen' ? t('hand.doelKoelen', { doel: graden(open.doel) }) : m.via === 'direct' ? t('hand.doelWarm', { doel: graden(open.doel) }) : t('hand.doelKnop', { standaard: m.standaardC != null ? graden(m.standaardC) : '–' });
     return `${kop}
       <div class="hand-doel"><button type="button" data-hand-doel="-1" aria-label="${esc(t('hand.lager'))}" ${open.doel - m.stap < m.min ? 'disabled' : ''}>−</button><div class="getal"><b>${esc(graden(open.doel))}</b><span>${esc(doelZin)}</span></div><button type="button" data-hand-doel="1" aria-label="${esc(t('hand.hoger'))}" ${open.doel + m.stap > m.max ? 'disabled' : ''}>+</button></div>
       ${wat}

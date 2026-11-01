@@ -3713,6 +3713,8 @@
   'hand.zinKoelen': 'Through the cooling knob of your controller. It then cools to {doel}, even without spare sun; that uses power from the grid. At {klok} back to {terug}.',
   'hand.zinBadkamer': 'Through the knob of your controller: the floor and the panel switch off above {doel}. At {klok} back to {terug}.',
   'hand.zinDirect': 'Your controller only heats with this air conditioner on sun or as help. By hand the app turns it to heat itself, and its knob to {doel}, so your controller leaves it on. At {klok} it switches off.',
+  'hand.zinRadiator': 'This radiator valve is not part of your controller: the app sets it to {doel} itself. At {klok} back to {terug}, unless someone changed it in the meantime.',
+  'hand.doelRadiator': 'the valve target, then back to {terug}',
   'hand.zinStekker': 'This plug is not part of your controller: the app switches it on itself. At {klok} it switches off again.',
   'hand.nietKoelen': 'Cooling is off in your controller. Turn on the cooling strategy in Home Assistant, then it works by hand.',
   'hand.nietVakantie': 'Your controller is on holiday or cooling; then the app does not heat by hand.',

@@ -452,7 +452,7 @@ const client = new HaClient({
     klimaatAan() || (klimaatBrug?.terugzetten.length ?? 0) > 0 || (handbediening?.terugzetten.length ?? 0) > 0 ? { entiteiten: [...new Set([...BRUG_ENTITEITEN, ...HAND_KNOPPEN])], opties: MODUS_OPTIES } : { entiteiten: [], opties: [] },
   // Klimaat met de hand (besluit 235): de airco's op warm en de stekkers, als de brug aan staat of er nog iets terug moet.
   allowHand: (): { readonly klimaat: readonly string[]; readonly schakelaars: readonly string[] } =>
-    klimaatAan() || (handbediening?.terugzetten.length ?? 0) > 0 ? { klimaat: HAND_KLIMAAT, schakelaars: [...new Set([...handSchakelaars().map((s) => s.id), ...(handbediening?.terugzetten ?? []).filter((t) => t.modus === 'aan').map((t) => t.id)])] } : { klimaat: [], schakelaars: [] },
+    klimaatAan() || (handbediening?.terugzetten.length ?? 0) > 0 ? { klimaat: [...new Set([...HAND_KLIMAAT, ...handKnoppen().map((k) => k.id), ...(handbediening?.terugzetten ?? []).filter((t) => t.thermostaat).map((t) => t.id)])], schakelaars: [...new Set([...handSchakelaars().map((s) => s.id), ...(handbediening?.terugzetten ?? []).filter((t) => t.modus === 'aan').map((t) => t.id)])] } : { klimaat: [], schakelaars: [] },
 });
 
 // De twee verwijzen naar elkaar: de runner duwt besluiten naar de weergave, de
@@ -606,9 +606,15 @@ const handbediening: Handbediening | null = process.env['SUPERVISOR_TOKEN']
         await client.callService('climate', 'set_temperature', { temperature: stand.warm }, { entity_id: id });
       },
       schakel: (id, aan): Promise<void> => client.callService('switch', aan ? 'turn_on' : 'turn_off', {}, { entity_id: id }),
+      temperatuur: (id, c): Promise<void> => client.callService('climate', 'set_temperature', { temperature: c }, { entity_id: id }),
       map: logDir !== '' ? logDir : null,
     })
   : null;
+/** De radiatorknoppen buiten de regeling (besluit 126), met hun kamer: die zet de hand direct (besluit 235). */
+function handKnoppen(): { id: string; naam: string; kamer: string }[] {
+  const regeling = new Set((siteConfig?.actuators ?? []).map((a) => a.ref.id));
+  return (houseReport()?.etages ?? []).flatMap((e) => e.ruimtes.flatMap((r) => r.apparaten.filter((a) => a.radiatorknop && a.id.startsWith('climate.') && !regeling.has(a.id)).map((a) => ({ id: a.id, naam: a.naam, kamer: r.naam }))));
+}
 /** De stekkers met een warmtebron die niet in de regeling zitten (besluit 235). */
 function handSchakelaars(): { id: string; kamer: string; naam: string; aan: boolean }[] {
   const regeling = new Set((siteConfig?.actuators ?? []).map((a) => a.ref.id));
@@ -1762,7 +1768,7 @@ if (webPort != null) {
     ...(lightSwitch ? { lights: lightSwitch } : {}),
     ...(coverSwitch ? { covers: coverSwitch } : {}),
     ...(klimaatBrug ? { klimaat: { brug: klimaatBrug, aan: klimaatAan } } : {}),
-    ...(handbediening ? { hand: { hand: handbediening, aan: klimaatAan, schakelaars: handSchakelaars } } : {}),
+    ...(handbediening ? { hand: { hand: handbediening, aan: klimaatAan, schakelaars: handSchakelaars, knoppen: handKnoppen } } : {}),
     verstaanInHuis: () => kiesVerstaan([...allStates.keys()]),
     ...(layoutStore && siteConfig
       ? {

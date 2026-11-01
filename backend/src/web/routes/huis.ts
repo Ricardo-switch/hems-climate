@@ -118,7 +118,10 @@ export async function huisRoutes(d: Diensten, v: Verzoek): Promise<boolean> {
     if (method === 'GET') {
       const nu = Date.now();
       const zoneVan = (id: string) => config.zones.find((z) => z.actuatorIds.some((a) => config.actuators.find((x) => x.id === a)?.ref.id === id));
-      const apparaten = (await h.hand.standen()).map((s) => {
+      const knoppen = h.knoppen();
+      const apparaten = (await h.hand.standen(knoppen.map((k) => k.id))).map((s) => {
+        const knop = knoppen.find((k) => k.id === s.id);
+        if (knop) return { ...s, naam: knop.naam, kamer: knop.kamer, zoneId: null };
         const a = config.actuators.find((x) => x.ref.id === s.id);
         const zone = zoneVan(s.id);
         return { ...s, naam: a?.name ?? s.id, kamer: zone?.name ?? null, zoneId: zone?.id ?? null };
@@ -163,6 +166,16 @@ export async function huisRoutes(d: Diensten, v: Verzoek): Promise<boolean> {
       }
       const modus = body['modus'];
       const doel = Number(body['doelC']);
+      // Een radiatorknop buiten de regeling: zijn eigen doel, direct.
+      if (h.knoppen().some((k) => k.id === id)) {
+        if (!Number.isFinite(doel)) {
+          sendJson(res, 400, { fout: 'doelC is een getal' });
+          return true;
+        }
+        const uit = await h.hand.zetKnop(id, doel, totMs);
+        sendJson(res, uit.ok ? 200 : 400, uit.ok ? uit : { fout: uit.reden });
+        return true;
+      }
       if ((modus !== 'verwarmen' && modus !== 'koelen') || !Number.isFinite(doel)) {
         sendJson(res, 400, { fout: 'modus is verwarmen of koelen, doelC een getal' });
         return true;

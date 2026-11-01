@@ -83,6 +83,8 @@ export interface HandDeur {
   /** Een airco op warm met een temperatuur, of uit. */
   readonly klimaat: (id: string, stand: { readonly warm: number } | 'uit') => Promise<void>;
   readonly schakel: (id: string, aan: boolean) => Promise<void>;
+  /** Alleen het doel van een thermostaat, zoals een radiatorknop. */
+  readonly temperatuur: (id: string, c: number) => Promise<void>;
   readonly nu?: () => number;
   readonly map: string | null;
 }
@@ -97,6 +99,8 @@ export interface HandTerug {
   readonly terug?: number;
   /** De airco die de app zelf op warm zette, of de stekker die hij aanzette. */
   readonly direct?: boolean;
+  /** Een radiatorknop buiten de regeling: terug naar zijn eigen doel van daarvoor, niet uit. */
+  readonly thermostaat?: boolean;
   readonly totMs: number;
 }
 
@@ -116,6 +120,8 @@ export interface HandModusStand {
 
 export interface HandStand {
   readonly id: string;
+  /** Een radiatorknop buiten de regeling (besluit 126); weg bij een apparaat van de regeling. */
+  readonly soort?: 'radiatorknop';
   readonly modi: readonly HandModusStand[];
   /** Wat het apparaat nu doet (`heat`, `cool`, `off`), en zijn eigen temperatuur. */
   readonly hvac: string | null;
@@ -153,8 +159,11 @@ export class Handbediening {
     return [...this.#terug];
   }
 
-  /** De apparaten waarvan de knoppen er zijn, met hun stand. */
-  async standen(): Promise<HandStand[]> {
+  /**
+   * De apparaten waarvan de knoppen er zijn, met hun stand, en de
+   * radiatorknoppen buiten de regeling: hun eigen doel, binnen hun eigen bereik.
+   */
+  async standen(knoppen: readonly string[] = []): Promise<HandStand[]> {
     await this.#laad();
     const uit: HandStand[] = [];
     for (const a of HAND) {
@@ -185,7 +194,45 @@ export class Handbediening {
         actief: t ? { modus: t.modus, doelC: t.gezet ?? null, totMs: t.totMs } : null,
       });
     }
+    for (const id of knoppen) {
+      const k = this.#d.state(id);
+      const doel = Number(k?.attributes['temperature']);
+      if (!k || !Number.isFinite(doel)) continue;
+      const t = this.#terug.find((x) => x.id === id);
+      uit.push({
+        id,
+        soort: 'radiatorknop',
+        modi: [{ modus: 'verwarmen', doelC: doel, standaardC: t?.terug ?? doel, min: Number(k.attributes['min_temp'] ?? 5), max: Number(k.attributes['max_temp'] ?? 30), stap: Number(k.attributes['target_temp_step'] ?? 0.5) || 0.5, via: 'direct', niet: null }],
+        hvac: k.state,
+        nuC: typeof k.attributes['current_temperature'] === 'number' ? (k.attributes['current_temperature'] as number) : null,
+        actief: t ? { modus: t.modus, doelC: t.gezet ?? null, totMs: t.totMs } : null,
+      });
+    }
     return uit;
+  }
+
+  /**
+   * Een radiatorknop buiten de regeling met de hand: zijn eigen doel tot een
+   * tijd. Daarna terug naar het doel van daarvoor, niet uit.
+   */
+  async zetKnop(id: string, doelC: number, totMs: number): Promise<HandUitkomst> {
+    await this.#laad();
+    const nu = this.#nu();
+    if (!(totMs > nu && totMs <= nu + HAND_MAX_MS)) return { ok: false, reden: 'tot wanneer ligt in de komende twaalf uur' };
+    const k = this.#d.state(id);
+    const was = Number(k?.attributes['temperature']);
+    if (!k || !Number.isFinite(was)) return { ok: false, reden: 'die radiatorknop is er niet' };
+    const stap = Number(k.attributes['target_temp_step'] ?? 0.5) || 0.5;
+    const doel = Math.round(doelC / stap) * stap;
+    const min = Number(k.attributes['min_temp'] ?? 5);
+    const max = Number(k.attributes['max_temp'] ?? 30);
+    if (!Number.isFinite(doel) || doel < min || doel > max) return { ok: false, reden: `de knop gaat van ${min} tot ${max}` };
+    await this.#d.klimaat(id, { warm: doel });
+    // Al met de hand: het doel van daarvoor blijft wat terug moet.
+    const eerder = this.#terug.find((t) => t.id === id);
+    this.#terug = [...this.#terug.filter((t) => t.id !== id), { id, modus: 'verwarmen', gezet: doel, terug: eerder?.terug ?? was, thermostaat: true, totMs }];
+    await this.#bewaar();
+    return { ok: true, doelC: doel, totMs };
   }
 
   /** Of de schakelaar met de hand aan staat, en tot wanneer. */
@@ -309,6 +356,13 @@ export class Handbediening {
       if ((altijd || staat === t.gezet) && staat !== t.terug) {
         await this.#d.zet(t.knop, t.terug);
         gedaan.push(`${t.knop} terug naar ${t.terug}`);
+      }
+    }
+    if (t.thermostaat && t.terug != null) {
+      const s = this.#d.state(t.id);
+      if (altijd || Number(s?.attributes['temperature']) === t.gezet) {
+        await this.#d.temperatuur(t.id, t.terug);
+        gedaan.push(`${t.id} terug naar ${t.terug}`);
       }
     }
     if (t.direct) {
