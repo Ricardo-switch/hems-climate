@@ -1,0 +1,16 @@
+name: An idea
+description: Something SunArc could do, or do better. Nederlands mag ook.
+labels: [idee]
+body:
+  - type: textarea
+    id: wat
+    attributes:
+      label: What would you like?
+      description: Describe it from your home, not as a solution. "My heat pump runs at night while the sun is free at noon" says more than "add a setting".
+    validations:
+      required: true
+  - type: textarea
+    id: huis
+    attributes:
+      label: Your home
+      description: Which devices are involved (heat pump, air conditioner, thermostat, solar inverter, battery, meter)?

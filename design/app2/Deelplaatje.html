@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SunArc · deelplaatje</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@500;600&display=swap">
+<style>
+  /*
+   * Het plaatje bij een gedeelde link naar de repository (besluit 236), 1280 × 640.
+   * Links het teken en de naam, rechts de wand. Render: node render.cjs Deelplaatje.html:1280:640
+   * Uploaden kan alleen de eigenaar: Settings › General › Social preview.
+   */
+  html, body { margin: 0; }
+  body { width: 1280px; height: 640px; overflow: hidden; background: radial-gradient(120% 90% at 85% 10%, #1d2f52 0%, #0b1424 60%); color: #eef3f7; font-family: Figtree, sans-serif; position: relative; }
+  .links { position: absolute; left: 72px; top: 0; bottom: 0; width: 470px; display: flex; flex-direction: column; justify-content: center; gap: 22px; }
+  .merk { width: 150px; height: auto; }
+  h1 { margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 92px; letter-spacing: -0.04em; line-height: 0.95; }
+  h1 b { color: #f7b548; font-weight: 800; }
+  h1 i { font-style: normal; color: #6fd3ff; }
+  p { margin: 0; font-size: 27px; line-height: 1.35; color: #b8c4cf; font-weight: 500; }
+  .labels { display: flex; gap: 10px; flex-wrap: wrap; }
+  .labels span { font-size: 17px; font-weight: 600; padding: 7px 14px; border-radius: 99px; background: rgba(255, 255, 255, 0.08); color: #dfe7ee; }
+  .wand { position: absolute; left: 590px; top: 70px; width: 820px; border-radius: 22px; border: 6px solid #1a2438; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55); }
+</style>
+</head>
+<body>
+  <div class="links">
+    <img class="merk" src="../../frontend/kit/merk.svg" alt="">
+    <h1><b>Sun</b><i>Arc</i></h1>
+    <p>Climate and sun in one app for Home Assistant. Your home thinks along with the sun, and says why.</p>
+    <div class="labels"><span>Home Assistant add-on</span><span>Local</span><span>Wall tablet + phone</span></div>
+  </div>
+  <img class="wand" src="screens/Wand-Thuis.png" alt="">
+</body>
+</html>

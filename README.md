@@ -4,142 +4,159 @@
 
 <p align="center"><sub>AUTONOMOUS RESIDENTIAL CLIMATE</sub></p>
 
-<p align="center"><b>Klimaat en zon in één app, voor Home Assistant.</b><br>
-Je huis denkt mee met de zon: het kijkt naar je verwarming, airco's en zonnepanelen,<br>
-en zegt bij elk besluit waarom.</p>
+<p align="center"><b>Climate and sun in one app, for Home Assistant.</b><br>
+Your home thinks along with the sun: it watches your heating, air conditioners and solar panels,<br>
+and explains every decision it makes.</p>
 
-<p align="center"><img src="design/app2/screens/Wand-Thuis.png" alt="Thuis op een tablet aan de muur: het huis in 3D, met de zon, de panelen en per kamer de temperatuur" width="900"></p>
+<p align="center">
+<a href="https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2FRicardo-switch%2Fhems-climate"><img src="https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg" alt="Add the repository to your Home Assistant"></a>
+</p>
 
-<p align="center"><sub>Beelden uit het ontwerp. Wat de app vandaag al doet en wat nog komt, staat hieronder.</sub></p>
+<p align="center">
+<img alt="Version" src="https://img.shields.io/badge/dynamic/yaml?url=https%3A%2F%2Fraw.githubusercontent.com%2FRicardo-switch%2Fhems-climate%2Fmain%2Faddon%2Fconfig.yaml&query=%24.version&label=version&color=f7b548">
+<img alt="Stage: experimental" src="https://img.shields.io/badge/stage-experimental-e58a3a">
+<img alt="aarch64 and amd64" src="https://img.shields.io/badge/arch-aarch64%20%7C%20amd64-6fd3ff">
+<img alt="License AGPL-3.0" src="https://img.shields.io/badge/license-AGPL--3.0-8f86ff">
+</p>
+
+<p align="center"><b>English</b> · <a href="README.nl.md">Nederlands</a></p>
+
+<p align="center"><img src="design/app2/screens/Wand-Thuis.png" alt="Home on a wall tablet: the house in 3D, with the sun, the solar panels and the temperature in every room" width="900"></p>
+
+<p align="center"><sub>Images from the design, in Dutch. What the app already does and what is still to come is described below.</sub></p>
 
 ---
 
-## Wat is het?
+## What is it?
 
-SunArc is een add-on voor Home Assistant met een eigen app voor de tablet aan de muur en voor je telefoon. Het haalt je huis uit Home Assistant (etages, kamers, apparaten, sensoren) en tekent het als een opengewerkt poppenhuis. Daarin zie je in één oogopslag wat er gebeurt: waar het warm is, wat er draait en hoeveel zon je panelen leveren.
+SunArc is a Home Assistant add-on with its own app for a wall tablet and your phone. It takes your home from Home Assistant (floors, rooms, devices, sensors) and draws it as an open dollhouse. At a glance you see what is going on: where it is warm, what is running and how much sun your panels deliver.
 
-Achter de app zit een regeling die elke ronde beslist wat het huis zou moeten doen. Comfort eerst, en zon die over is, gaat naar je eigen huis voordat hij het net op gaat. Bij elk besluit staat waarom, in gewone taal.
+Behind the app is a controller that decides, round after round, what the house should do. Comfort comes first, and spare sun goes to your own home before it goes to the grid. Every decision comes with the reason, in plain words.
 
-**Eerlijk over de stand van nu:** SunArc kijkt mee. Het beslist en legt alles vast, maar schakelt je verwarming en airco's nog niet. Echt regelen komt pas na een volledige winter meekijken, met een bewijsrapport dat het beter doet dan je huidige regeling. Lampen, scènes en schermen bedien je wel al vanuit de app.
+**Honest about where it stands:** SunArc is watching. It decides and records everything, but it does not control your heating and air conditioners on its own yet. Real control comes after a full winter of watching, with a report that proves it does better than your current setup. That is why the add-on is marked *experimental*. Lights, scenes and blinds can already be controlled from the app, and so can climate by hand, always with an end time.
 
-## Wat het kan
+## What it does
 
-**Je huis in één beeld**
-- Het huis in 3D, uit wat Home Assistant al weet. Je deelt het in per etage, kamer en zone.
-- Per kamer de temperatuur, wat er warmt of koelt, en welke sensoren meetellen.
-- Batterijen van sensoren en het filter van je airco, met een melding als het tijd is.
+**Your home in one picture**
+- The house in 3D, built from what Home Assistant already knows. You arrange it by floor, room and zone.
+- Per room the temperature, what is heating or cooling, and which sensors count.
+- Sensor batteries and the air conditioner filter, with a reminder when it is time.
 
-**Comfort en zon**
-- Comfort per kamer en per dagdeel, en per bewoner: de eerste op volgorde die thuis is, bepaalt het comfort.
-- Een stroombudget per fase, zodat je hoofdzekering het houdt.
-- Wanneer de droger op zon zou starten, met een eindtijd die je zelf kiest.
-- Het weer voor vandaag en vijf dagen, met wat je panelen dan leveren. Het huis leert hoeveel zon je dak bij heldere lucht vangt.
+**Comfort and sun**
+- Comfort per room and per part of the day, and per resident: the first one home, in your order, sets the comfort.
+- A power budget per phase, so your main fuse holds.
+- When the dryer would start on sun, with a deadline you choose.
+- The weather for today and five days ahead, with what your panels will deliver. The house learns how much sun your roof catches on a clear day.
+- **Learning:** how fast your home cools down and warms up, and what the sun adds.
 
-**Terugkijken**
-- **Vandaag:** de dag in de tijd, met wat het huis deed en waarom.
-- **Opbrengst** per dag, week, maand of jaar, met de prijzen van je eigen contract (normaal en dal, salderen en daarna).
-- De zonverwachting naast wat er echt kwam.
+**Looking back**
+- **Today:** the day on a timeline, with what the house did and why.
+- **Yield** per day, week, month or year, with the prices of your own contract (peak and off-peak, net metering and after).
+- The solar forecast next to what actually came.
+- No home battery? The app replays the past year hour by hour, with the size that fits your home.
 
-**Bedienen en vragen**
-- Lampen, Hue-scènes en schermen, met een tik.
-- Camera's per kamer, en het beeld van de deurbel als er wordt aangebeld.
-- **De assistent:** stel een vraag in je eigen woorden ("waarom wacht de zolder?"), en het huis antwoordt, hardop met de stem uit Home Assistant. Op de wand met "Hé huis", op de telefoon met de microfoon.
+**Control and ask**
+- Lights, Hue scenes and blinds, with one tap.
+- **Climate by hand:** the thermostat or an air conditioner until a time, then back to your schedule.
+- **Fixed and planned:** "every weekday, a quarter of an hour before sunset, close the blinds", and the house keeps doing it.
+- Cameras per room, and the doorbell image when someone rings.
+- **The assistant:** ask in your own words ("why is the attic waiting?") and the house answers, out loud with the voice from Home Assistant. On the wall with a wake word, on the phone with the microphone.
 
-**Van jou**
-- Alles draait in je eigen huis. Je gegevens gaan nergens heen; alleen het weerbericht wordt opgehaald.
-- Inloggen gaat met je account van Home Assistant. Elke bewoner heeft een eigen plek, en een tablet aan de muur is gewoon een scherm.
-- Een back-up van je instellingen in één klein bestand, en weer terugzetten.
+**Yours**
+- Everything runs in your own home. Your data goes nowhere; only the weather forecast is fetched.
+- You sign in with your Home Assistant account. Every resident has their own place, and a wall tablet is simply a screen.
+- A backup of your settings in one small file, and restoring it.
+- The app speaks English and Dutch.
 
 <table>
 <tr>
-<td width="50%"><img src="design/app2/screens/Wand-Vandaag.png" alt="Vandaag: de zon, de temperatuur en per apparaat wanneer het draaide, met waarom"></td>
-<td width="50%"><img src="design/app2/screens/Wand-Assistent-Gesprek.png" alt="De assistent: een vraag stellen aan je huis"></td>
+<td width="50%"><img src="design/app2/screens/Wand-Vandaag.png" alt="Today: the sun, the temperature and per device when it ran, with why"></td>
+<td width="50%"><img src="design/app2/screens/Wand-Assistent-Gesprek.png" alt="The assistant: asking your home a question"></td>
 </tr>
 <tr>
-<td><sub><b>Vandaag</b>: wat het huis deed, en waarom.</sub></td>
-<td><sub><b>De assistent</b>: vraag het je huis.</sub></td>
+<td><sub><b>Today</b>: what the house did, and why.</sub></td>
+<td><sub><b>The assistant</b>: ask your home.</sub></td>
 </tr>
 <tr>
-<td><img src="design/app2/screens/Wand-Welkom.png" alt="Het welkom in een nieuw huis, met het huis dat groeit uit Home Assistant"></td>
-<td align="center"><img src="design/app2/screens/Thuis.png" alt="Thuis op de telefoon" width="220"></td>
+<td><img src="design/app2/screens/Wand-Welkom.png" alt="The welcome in a new home, with the house growing from Home Assistant"></td>
+<td align="center"><img src="design/app2/screens/Thuis.png" alt="Home on the phone" width="220"></td>
 </tr>
 <tr>
-<td><sub><b>Welkom</b>: je huis groeit uit wat Home Assistant kent.</sub></td>
-<td align="center"><sub><b>Op je telefoon</b>: dezelfde app.</sub></td>
+<td><sub><b>Welcome</b>: your home grows from what Home Assistant knows.</sub></td>
+<td align="center"><sub><b>On your phone</b>: the same app.</sub></td>
 </tr>
 </table>
 
-## Wat er nog komt
+## What is still to come
 
-- **Echt regelen** van verwarming en airco's, na een winter meekijken met dertig winterdagen bewijs.
-- Tarieven per uur en prognoses, en een thermisch model dat leert hoe je huis afkoelt en opwarmt.
+- **Real control** of heating and air conditioners, after a winter of watching with thirty winter days of evidence.
+- What the house learns this winter about your boiler and ventilation, used by the controller itself.
 
-Een thuisbatterij en een laadpaal laat SunArc zien, maar stuurt het niet zelf.
+SunArc shows a home battery and an EV charger, but does not steer them itself.
 
-## Installeren
+## Install
 
-Je hebt Home Assistant met add-ons nodig (Home Assistant OS of Supervised), op een Raspberry Pi of een gewone pc (aarch64 of amd64).
+You need Home Assistant with add-ons (Home Assistant OS or Supervised), on a Raspberry Pi or a regular PC (aarch64 or amd64).
 
-1. Ga naar **Instellingen → Add-ons → Add-on store**. Kies rechtsboven de drie puntjes → **Repositories**, en voeg toe:
+1. Tap the **Add repository** button above. Or go to **Settings → Add-ons → Add-on store**, choose the three dots at the top right → **Repositories**, and add:
    ```
    https://github.com/Ricardo-switch/hems-climate
    ```
-2. Kies **SunArc** → **Installeren**, en daarna **Starten**. Zet **In zijbalk tonen** aan.
-3. Open SunArc in de zijbalk. Een nieuw huis begint met een welkom: je huis groeit uit wat Home Assistant kent, en met één knop ga je inrichten. Dat duurt ongeveer tien minuten.
+2. Choose **SunArc** → **Install**, then **Start**. Turn on **Show in sidebar**.
+3. Open SunArc in the sidebar. A new home starts with a welcome: your house grows from what Home Assistant knows, and one button starts the setup. It takes about ten minutes.
 
-Updates komen via Home Assistant. Zet op de add-on-pagina **Automatisch bijwerken** aan als dat vanzelf moet.
+Updates come through Home Assistant. Turn on **Auto update** on the add-on page if you want them to arrive by themselves. What is new in each version is in the [releases](https://github.com/Ricardo-switch/hems-climate/releases) and in the add-on itself.
 
-### Assist vraagt SunArc
+### Ask SunArc through Assist
 
-Wil je SunArc ook vragen via Assist van Home Assistant ("waarom draait de zolder?", "wat doe je nu?"), dan heb je de integratie **SunArc** nodig. Geen YAML: de add-on meldt zich vanzelf aan.
+To ask SunArc through Home Assistant's Assist ("why is the attic running?", "what are you doing?"), you need the **SunArc** integration. No YAML: the add-on announces itself.
 
-- **Met HACS:** kies in HACS de drie puntjes → **Eigen repositories**, voeg `https://github.com/Ricardo-switch/hems-climate` toe als **Integratie**, installeer **SunArc** en herstart Home Assistant.
-- **Zonder HACS:** open SunArc → **Instellingen → Bewoners en toegang → Sleutel voor de assistent** en tik op **Zet de integratie in Home Assistant**. Herstart daarna Home Assistant.
+- **Without HACS:** open SunArc → **Settings → Residents and access → Key for the assistant** and tap **Put the integration in Home Assistant**. Then restart Home Assistant.
+- **With HACS:** in HACS choose the three dots → **Custom repositories**, add `https://github.com/Ricardo-switch/hems-climate` as an **Integration**, install **SunArc** and restart Home Assistant.
 
-Home Assistant toont dan **Nieuw apparaat gevonden: SunArc**; klik op **Toevoegen**. Dat doe je één keer: een update van SunArc vraagt daarna geen herstart, want de zinnen en de antwoorden komen uit de add-on. De integratie heeft een eigen versie, die alleen omhoog gaat als hij zelf verandert. De integratie houdt de zinnen en de kamers van je huis zelf bij. Alles leest alleen: een opdracht als "koel de zolder naar 21" krijgt als antwoord wat SunArc zou doen.
+Home Assistant then shows **New device discovered: SunArc**; click **Add**. You do this once: later SunArc updates need no restart, because the sentences and answers come from the add-on. The integration has its own version, which only goes up when it changes itself.
 
-Werkt het met jouw apparaten? SunArc werkt met wat je huis heeft. Een airco, een thermostaat, een slimme meter, panelen van elk merk: het doet wat jouw opstelling toelaat, en zegt bij **Wat je huis kan** wat het daardoor (nog) niet kan.
+Does it work with your devices? SunArc works with what your home has. An air conditioner, a thermostat, a smart meter, panels of any brand: it does what your setup allows, and **What your home can do** tells you what it cannot do (yet) because of that.
 
-## Hoe het werkt
+## Safe
 
-- **Een pure kern.** Strategieën doen elk een voorstel (comfort, warmte bijspringen, zon over), en één arbiter beslist binnen een budget aan vermogen. De kern doet geen in- of uitvoer en leest geen klok, dus elk besluit is na te rekenen.
-- **Alles wordt vastgelegd.** Elk besluit, met de stand van het huis en de versie die het nam. Daar komt het bewijs voor het echte regelen uit.
-- **Wat per huis verschilt, is een instelling**, niet code. Wat Home Assistant al weet, stelt de app voor; jij bevestigt.
+- The app sits behind the Home Assistant login (Ingress). No port is open, unless you turn on the separate port for Tailscale yourself.
+- Its own AppArmor profile: security rating 8, the highest.
+- The images are built on GitHub and signed with Cosign.
+- SunArc writes to Home Assistant only through narrow doors: lights, scenes, blinds, and climate by hand with an end time. A test proves nothing else gets through. Why the add-on may write to the Home Assistant configuration is explained in the add-on documentation.
+- Found a weakness? See [SECURITY.md](SECURITY.md).
 
-Meer lezen:
-- [STAND.md](STAND.md): per onderwerp hoe het nu werkt.
-- [DECISIONS.md](DECISIONS.md): elk besluit, met waarom en wat het kostte.
-- [Architecture.md](Architecture.md): de opbouw.
-- [design/app2](design/app2): de schetsen van de app. De schets is de code: de app tekent het huis met dezelfde bestanden.
+## How it works
 
-## Meebouwen
+- **A pure core.** Strategies each make a proposal (comfort, heat assist, spare sun), and one arbiter decides within a power budget. The core does no input or output and reads no clock, so every decision can be recomputed.
+- **Everything is recorded.** Every decision, with the state of the house and the version that made it. That is where the evidence for real control comes from.
+- **What differs per home is a setting**, not code. What Home Assistant already knows, the app suggests; you confirm.
 
-De dienst is TypeScript op Node 22, de app gewone HTML en JavaScript met Tailwind.
+The project is written in Dutch, including the decision log. Read more:
+- [STAND.md](STAND.md): how each part works today.
+- [DECISIONS.md](DECISIONS.md): every decision, with why and what it cost.
+- [Architecture.md](Architecture.md): how it is built.
+- [design/app2](design/app2): the sketches of the app. The sketch is the code: the app draws the house with the same files.
+- [docs/oude-regeling](docs/oude-regeling): the YAML setup that SunArc replaces.
+
+## Contributing
+
+The service is TypeScript on Node 22, the app plain HTML and JavaScript with Tailwind.
 
 ```bash
 cd backend && npm ci && npm test
 ```
 
-Het werk gaat naar `beta`. De CI controleert elke push (typecheck, lint, tests, de pagina in een browser en het image), en naar `main` gaat het alleen via een pull request. `main` is wat Home Assistant installeert.
+Work goes to `beta`. CI checks every push (typecheck, lint, tests, the page in a browser and the image), and only a pull request goes to `main`. `main` is what Home Assistant installs. A bug or an idea? Open an [issue](https://github.com/Ricardo-switch/hems-climate/issues/new/choose); English or Dutch.
 
-## Licentie
+## License
 
-SunArc is vrije software onder de [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0). Je mag het gebruiken, aanpassen en delen. Wie een aangepaste versie verspreidt, of hem als dienst of op een apparaat aanbiedt, deelt de broncode onder dezelfde licentie.
+SunArc is free software under the [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0). You may use, change and share it. Anyone who distributes a changed version, or offers it as a service or on a device, shares the source code under the same license.
 
-De naam SunArc en het teken vallen niet onder deze licentie.
+The name SunArc and the mark are not covered by this license.
 
-Van anderen, elk met een eigen licentie:
+From others, each with its own license:
 
-- [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) van Kazuhiko Arase, MIT: de QR-code bij Bewoners.
-- De letters [Bricolage Grotesque](https://fonts.google.com/specimen/Bricolage+Grotesque) en [Figtree](https://fonts.google.com/specimen/Figtree), SIL Open Font License 1.1.
-- De twee voorstappen van het wekwoord uit [openWakeWord](https://github.com/dscripka/openWakeWord) (`melspectrogram.onnx` en `embedding_model.onnx`), CC BY-NC-SA 4.0: niet voor commercieel gebruik.
-
----
-
-<details>
-<summary><b>In English</b></summary>
-
-**SunArc** is a Home Assistant add-on with its own app for a wall tablet and your phone. It draws your home as a 3D dollhouse from what Home Assistant already knows, and decides around the clock what your heating, air conditioners and solar surplus should do, explaining every decision in plain words. Today it runs in *shadow mode*: it decides and records everything, but does not switch climate devices yet; lights, scenes and blinds can already be controlled from the app. Real control comes after a full winter of evidence. Everything runs locally. The app speaks Dutch and English.
-
-Install: add `https://github.com/Ricardo-switch/hems-climate` as an add-on repository in Home Assistant and install **SunArc** (aarch64 and amd64).
-</details>
+- [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) by Kazuhiko Arase, MIT: the QR code for residents.
+- The typefaces [Bricolage Grotesque](https://fonts.google.com/specimen/Bricolage+Grotesque) and [Figtree](https://fonts.google.com/specimen/Figtree), SIL Open Font License 1.1.
+- The two front stages of the wake word from [openWakeWord](https://github.com/dscripka/openWakeWord) (`melspectrogram.onnx` and `embedding_model.onnx`), CC BY-NC-SA 4.0: not for commercial use.

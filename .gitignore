@@ -30,9 +30,13 @@ backend/test-results/
 
 # ---- gegevens ----------------------------------------------------------
 # Logboeken en datasets horen niet in de code-repository; die halen we van
-# de NAS met sync-start-divergence.ps1.
+# de NAS met tools/sync-start-divergence.ps1.
 backend/data/
 deploy.log
+
+# De reparaties aan het oude YAML-systeem voor dit huis: alleen lokaal
+# (besluit 236). Wat er openbaar van is, staat in docs/oude-regeling.
+ha-fixes/
 
 # ---- lokale rommel -----------------------------------------------------
 .DS_Store

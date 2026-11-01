@@ -25,9 +25,9 @@
     Slaat het ophalen over en analyseert wat er lokaal staat.
 
 .EXAMPLE
-    .\sync-start-divergence.ps1
-    .\sync-start-divergence.ps1 -Dagen 7
-    .\sync-start-divergence.ps1 -Json | Out-File rapport.json
+    .\tools\sync-start-divergence.ps1
+    .\tools\sync-start-divergence.ps1 -Dagen 7
+    .\tools\sync-start-divergence.ps1 -Json | Out-File rapport.json
 #>
 [CmdletBinding()]
 param(
@@ -41,7 +41,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 # Paden ten opzichte van dit script, zodat een verplaatste map niets breekt.
-$Backend  = Join-Path $PSScriptRoot 'backend'
+$Backend  = Join-Path (Split-Path $PSScriptRoot -Parent) 'backend'
 $LokaalPad = Join-Path $Backend 'data\shadow'
 $NasPad   = '\\NAS\docker\hems-climate\logs'
 

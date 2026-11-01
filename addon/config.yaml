@@ -19,13 +19,16 @@ name: SunArc
 # Gelijk aan VERSIE in backend/src/version.ts; een test houdt ze gelijk. De
 # Supervisor ziet een update zodra dit nummer op `main` omhooggaat, en haalt dan
 # het image met dat nummer op (besluit 153).
-version: 0.104.0
+version: 0.105.0
 slug: hems_climate
 description: >-
   Klimaat en zon in één app: kijkt mee met je verwarming, airco's en
   zonnepanelen, legt elk besluit vast en laat zien wat het huis zou doen.
   Lampen, scènes en schermen bedien je vanuit de app.
 url: https://github.com/Ricardo-switch/hems-climate
+# Experimenteel tot stap B (besluit 236): SunArc kijkt mee en regelt het
+# klimaat nog niet zelf. Home Assistant zet er een label bij.
+stage: experimental
 
 # Kant-en-klaar gebouwd door GitHub (`.github/workflows/addon.yml`), zodat de
 # Pi bij een update niets zelf hoeft te bouwen. `{arch}` vult de Supervisor in.
@@ -84,7 +87,7 @@ init: false
 map:
   # Het beslislogboek. In `share` en niet in `data`, zodat je er met de
   # Samba-add-on bij kunt om het naar je werkstation te halen — precies wat
-  # sync-start-divergence.ps1 doet.
+  # tools/sync-start-divergence.ps1 doet.
   - share:rw
   # De configuratie van de installatie. Hoort bij de installatie en niet bij de
   # code (besluit 21); hier kun je hem met de bestandseditor bewerken.

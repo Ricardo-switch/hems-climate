@@ -1,0 +1,54 @@
+# Een release per versie (besluit 236).
+#
+# Na het samenvoegen zet de tag `v<versie>` op de commit van main (zie
+# versies in de herinneringen van het project). Deze workflow maakt daar een
+# release "SunArc <versie>" bij, met de tekst uit addon/CHANGELOG.md: dezelfde
+# tekst die Home Assistant bij de update toont.
+#
+# De release wordt níet "Latest": HACS leest de laatste release voor de
+# integratie (custom_components/smart_climate), en die heeft een eigen versie.
+
+name: release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Bestaande tag, bijvoorbeeld v0.104.0
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - name: tekst uit de changelog
+        id: tekst
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          versie="${TAG#v}"
+          # Alles onder "## <versie>" tot de volgende "## ".
+          awk -v v="## ${versie}" '$0==v{a=1;next} a&&/^## /{exit} a' addon/CHANGELOG.md > notities.md
+          test -s notities.md || { echo "::error::Geen tekst voor ${versie} in addon/CHANGELOG.md"; exit 1; }
+          echo "versie=$versie" >> "$GITHUB_OUTPUT"
+
+      - name: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag || github.ref_name }}
+          VERSIE: ${{ steps.tekst.outputs.versie }}
+        run: |
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release edit "$TAG" --title "SunArc $VERSIE" --notes-file notities.md --latest=false
+          else
+            gh release create "$TAG" --title "SunArc $VERSIE" --notes-file notities.md --latest=false --verify-tag
+          fi

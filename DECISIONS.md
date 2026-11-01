@@ -276,6 +276,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [152. Openbaar, en het werk gaat via beta](#152-openbaar-en-het-werk-gaat-via-beta)
 - [153. De add-on komt kant-en-klaar van GitHub](#153-de-add-on-komt-kant-en-klaar-van-github)
 - [177. Universeel, deel 1: het wekwoord mee, Assist zonder NAS, en meldingen live](#177-universeel-deel-1-het-wekwoord-mee-assist-zonder-nas-en-meldingen-live)
+- [236. Klaar om te delen: AppArmor, één ondertekend image, experimenteel, en een verzorgde repository](#236-klaar-om-te-delen-apparmor-één-ondertekend-image-experimenteel-en-een-verzorgde-repository)
 
 **Kwaliteitsbewaking**
 
@@ -10887,6 +10888,65 @@ zet hem op 18° bij stroom van het net, tenzij een knop met de hand verzet is
 - **Met je stem:** gaat een kamer niet via de klimaatbrug, zoals de zolder,
   dan met de hand: "zet de zolder op 21" zet de airco op warm tot 22:00.
 - **Versie 0.104.0.** Bij stap B verdwijnt de omweg: dan regelt de app zelf.
+
+---
+
+## 236. Klaar om te delen: AppArmor, één ondertekend image, experimenteel, en een verzorgde repository
+
+*Onderwerp: uitrol en beheer · Status: geldig*
+
+1 november 2026, ronde 4 uit het rapport "SunArc polijsten", punt 7. Een
+officiële lijst om SunArc aan te melden bestaat niet; een add-on vindt zijn
+gebruikers via zijn eigen repository, een knop "Toevoegen aan Home Assistant"
+en het forum. Wel stelt Home Assistant eisen aan een add-on die je met een
+gerust hart deelt. De bewoner koos: de techniek, een verzorgde GitHub en de
+beelden; de README in het Engels met het Nederlands ernaast; AppArmor eerst
+een dag in de leerstand; experimenteel tot stap B.
+
+*Besluit:*
+
+- **Een eigen AppArmor-profiel** (`addon/apparmor.txt`): het beveiligingscijfer
+  gaat van 7 naar 8, het hoogste. Het opstartscript mag ruim, zoals in het
+  voorbeeld van Home Assistant; de dienst (node) draait in een eigen profiel
+  dat alleen schrijft in de mappen uit config.yaml (`/config`, `/share`,
+  `/data`, `/homeassistant`) en `/tmp`. Een test houdt die lijst vast.
+  **Eerst in de leerstand** (`complain`): niets wordt tegengehouden, alles
+  buiten het profiel komt in het logboek van de host. Na een dag op de Pi
+  wordt het profiel aangevuld en gaat `complain` eraf, in een eigen versie.
+- **Bouwen met de stappen van Home Assistant** (`home-assistant/builder`
+  2026.09.0): per soort een image op een eigen machine, **ondertekend met
+  Cosign** zonder sleutel, met de identiteit van de workflow, en daarna één
+  naam voor beide soorten (`ghcr.io/ricardo-switch/hems-climate`). config.yaml
+  wijst nog naar de namen per soort: het nieuwe pakket op GitHub is eerst
+  privé, en moet één keer openbaar gezet worden voordat de Pi het kan ophalen.
+  De soorten staan alleen nog in config.yaml; de workflow leest ze daar.
+- **Een vaste basis:** `ghcr.io/home-assistant/base:3.24` in plaats van
+  "latest", voor beide soorten één naam. Een nieuwere basis is een eigen stap.
+- **Stadium experimenteel** tot stap B: Home Assistant zet er een label bij.
+- **De uitleg van de add-on** (DOCS) zegt welke rechten hij vraagt en
+  waarom, ook het schrijven in de configuratie van Home Assistant.
+- **Het logo** bleek al sinds 0.94.1 leesbaar op licht en donker; Home
+  Assistant kent geen apart donker logo voor een add-on.
+- **De repository:**
+  - de README in het Engels, `README.nl.md` ernaast, met de knop van My Home
+    Assistant, labels (versie, experimenteel, soorten, licentie) en een stuk
+    over veiligheid;
+  - een release per versie, vanzelf bij de tag, met de tekst uit de
+    changelog (`release.yml`); niet als "Latest", want HACS leest die voor
+    de integratie;
+  - sjablonen voor een fout en een idee, en `SECURITY.md` (melden via GitHub,
+    privé);
+  - de bovenste map opgeruimd: het oude YAML-systeem en de reparaties eraan
+    naar `docs/oude-regeling/`, het ophaalscript naar `tools/`. De werkmap
+    `ha-fixes/` blijft alleen lokaal;
+  - een plaatje voor gedeelde links (`design/app2/Deelplaatje.html`,
+    1280 × 640). Uploaden kan alleen de eigenaar.
+- **De beelden** van de echte app en een korte film komen uit het
+  voorbeeldhuis dat hierna komt: dat heeft gegevens, zonder de namen van dit
+  huis.
+- **De naam van de repository blijft** `hems-climate`: Home Assistant maakt
+  het kenmerk van de add-on uit het adres.
+- **Versie 0.105.0.**
 
 ---
 

@@ -26,7 +26,7 @@ frontend/dist
 automatic_backup_*
 *.tar
 *.tar.gz
-legacy_code
+docs
 ha-fixes
 design
 HA export

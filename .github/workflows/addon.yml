@@ -1,8 +1,14 @@
-# De images van de add-on (besluit 153).
+# De images van de add-on (besluit 153, 236).
 #
 # Home Assistant ziet een update zodra `version` in addon/config.yaml op `main`
-# omhooggaat, en haalt dan ghcr.io/ricardo-switch/{arch}-hems-climate:<versie>
-# op. Dit bouwt die images, zodat de Pi zelf niets hoeft te bouwen.
+# omhooggaat, en haalt dan het image met dat nummer op. Dit bouwt die images,
+# zodat de Pi zelf niets hoeft te bouwen.
+#
+# Sinds besluit 236 met de bouwstappen van Home Assistant zelf
+# (home-assistant/builder): per soort een image op een eigen machine van die
+# soort, ondertekend met Cosign, en daarna één naam voor beide soorten
+# (ghcr.io/ricardo-switch/hems-climate). De losse namen per soort
+# ({arch}-hems-climate) blijven bestaan; config.yaml wijst er nog naar.
 #
 # - Op een pull request naar main: bouwen, niet versturen. Zo blijkt vóór het
 #   samenvoegen dat het image er komt.
@@ -25,10 +31,11 @@ on:
 
 permissions:
   contents: read
-  packages: write
 
 env:
-  IMAGE: ghcr.io/ricardo-switch/{arch}-hems-climate
+  # Kleine letters: een naam op ghcr.io mag geen hoofdletters hebben.
+  REGISTRY: ghcr.io/ricardo-switch
+  NAAM: hems-climate
 
 jobs:
   klaarzetten:
@@ -36,16 +43,30 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       versie: ${{ steps.versie.outputs.versie }}
+      soorten: ${{ steps.versie.outputs.soorten }}
+      matrix: ${{ steps.matrix.outputs.matrix }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: versie
+      # De versie en de soorten uit config.yaml, zodat er één plek is die ze noemt.
+      - name: versie en soorten
         id: versie
         run: |
           versie=$(sed -n 's/^version: //p' addon/config.yaml)
           test -n "$versie"
+          soorten=$(awk '/^arch:/{a=1;next} a&&/^  - /{print $2;next} a{exit}' addon/config.yaml | jq -Rnc '[inputs]')
+          test "$soorten" != "[]"
           echo "versie=$versie" >> "$GITHUB_OUTPUT"
-          echo "Versie $versie"
+          echo "soorten=$soorten" >> "$GITHUB_OUTPUT"
+          echo "Versie $versie voor $soorten"
+
+      - name: per soort een machine
+        id: matrix
+        uses: home-assistant/builder/actions/prepare-multi-arch-matrix@2026.09.0
+        with:
+          architectures: ${{ steps.versie.outputs.soorten }}
+          image-name: ${{ env.NAAM }}
+          registry-prefix: ${{ env.REGISTRY }}
 
       # Dezelfde platte vorm als een lokale add-on, met hetzelfde script. Dat
       # staat alleen hier, omdat PowerShell op de arm-machine niet zeker is.
@@ -64,63 +85,65 @@ jobs:
   bouwen:
     name: image ${{ matrix.arch }}
     needs: klaarzetten
-    # Elke soort op een eigen machine van die soort: geen nabootsing, en
-    # voor een openbare repository kosten beide niets.
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+      # Cosign ondertekent zonder sleutel, met de identiteit van deze workflow.
+      id-token: write
+      packages: write
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - arch: aarch64
-            platform: linux/arm64
-            runner: ubuntu-24.04-arm
-          - arch: amd64
-            platform: linux/amd64
-            runner: ubuntu-latest
-    runs-on: ${{ matrix.runner }}
-    env:
-      VERSIE: ${{ needs.klaarzetten.outputs.versie }}
+      matrix: ${{ fromJSON(needs.klaarzetten.outputs.matrix) }}
     steps:
       - uses: actions/download-artifact@v4
         with:
           name: dist-addon
           path: dist-addon
 
-      - uses: docker/login-action@v3
+      - name: welke code, en wanneer
+        id: tijd
+        run: |
+          echo "commit=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          echo "nu=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
+      - name: bouwen, en na het samenvoegen versturen en ondertekenen
+        uses: home-assistant/builder/actions/build-image@2026.09.0
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          arch: ${{ matrix.arch }}
+          context: dist-addon
+          image: ${{ matrix.image }}
+          image-tags: |
+            ${{ needs.klaarzetten.outputs.versie }}
+            latest
+          version: ${{ needs.klaarzetten.outputs.versie }}
+          push: ${{ github.event_name != 'pull_request' }}
+          # Een versie die er al is, wordt niet overschreven.
+          skip-existing: ${{ needs.klaarzetten.outputs.versie }}
+          container-registry-password: ${{ secrets.GITHUB_TOKEN }}
+          build-args: |
+            HEMS_COMMIT=${{ steps.tijd.outputs.commit }}
+            HEMS_GEBOUWD=${{ steps.tijd.outputs.nu }}
+          labels: |
+            io.hass.type=addon
+            io.hass.name=SunArc
+            io.hass.url=https://github.com/Ricardo-switch/hems-climate
 
-      - name: wat er moet gebeuren
-        id: plan
-        run: |
-          naam="${IMAGE/\{arch\}/${{ matrix.arch }}}:${VERSIE}"
-          echo "naam=$naam" >> "$GITHUB_OUTPUT"
-          versturen=false
-          if [ "${{ github.event_name }}" != "pull_request" ]; then
-            if docker manifest inspect "$naam" > /dev/null 2>&1; then
-              echo "::notice::$naam bestaat al; alleen bouwen. Verhoog de versie om bewoners iets nieuws te geven."
-            else
-              versturen=true
-            fi
-          fi
-          echo "versturen=$versturen" >> "$GITHUB_OUTPUT"
-          echo "$naam, versturen: $versturen"
-
-      - uses: docker/setup-buildx-action@v3
-
-      - name: bouwen
-        working-directory: dist-addon
-        run: |
-          basis=$(sed -n 's/^  ${{ matrix.arch }}: //p' build.yaml)
-          test -n "$basis"
-          if [ "${{ steps.plan.outputs.versturen }}" = "true" ]; then uit=--push; else uit=--load; fi
-          docker buildx build . \
-            --platform "${{ matrix.platform }}" \
-            --build-arg BUILD_FROM="$basis" \
-            --build-arg BUILD_ARCH="${{ matrix.arch }}" \
-            --build-arg BUILD_VERSION="$VERSIE" \
-            --build-arg HEMS_COMMIT="${GITHUB_SHA::7}" \
-            --build-arg HEMS_GEBOUWD="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            --tag "${{ steps.plan.outputs.naam }}" \
-            "$uit"
+  een-naam:
+    name: één naam voor beide soorten
+    needs: [klaarzetten, bouwen]
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      packages: write
+    steps:
+      - uses: home-assistant/builder/actions/publish-multi-arch-manifest@2026.09.0
+        with:
+          architectures: ${{ needs.klaarzetten.outputs.soorten }}
+          image-name: ${{ env.NAAM }}
+          registry-prefix: ${{ env.REGISTRY }}
+          image-tags: |
+            ${{ needs.klaarzetten.outputs.versie }}
+            latest
+          skip-existing: ${{ needs.klaarzetten.outputs.versie }}
+          container-registry-password: ${{ secrets.GITHUB_TOKEN }}

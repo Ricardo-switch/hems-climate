@@ -25,7 +25,7 @@ webweergave in `frontend/` wordt in hetzelfde image gebouwd.
 
 In `src/` staat trouwens niet de hele repository: `deploy.sh` beperkt de werkmap
 met sparse-checkout tot `backend`, `frontend`, `config` en `deploy`, plus de
-bestanden in de wortel. `HA export/`, `legacy_code/` en `ha-fixes/` zijn naslag
+bestanden in de wortel. `HA export/` en `docs/` zijn naslag
 voor het ontwikkelen en horen niet op een server (besluit 35). Een bestaande
 volle kloon ruimt zichzelf op bij de eerstvolgende uitrol. Daar hoort de
 `.dockerignore` in de wortel bij; die in `backend/` doet niets meer.

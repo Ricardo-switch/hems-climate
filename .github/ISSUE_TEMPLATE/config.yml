@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: A security problem
+    url: https://github.com/Ricardo-switch/hems-climate/security/advisories/new
+    about: Please report it privately, not as an issue.
