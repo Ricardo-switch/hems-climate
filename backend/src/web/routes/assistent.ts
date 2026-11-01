@@ -9,6 +9,7 @@ import { assistKamers } from '../assist.js';
 import { ask, LANGS, parseQuestion } from '../assistant.js';
 import type { BrugVraag, Lang, Question } from '../assistant.js';
 import { brugVraag, brugZone, klok } from '../klimaatbrug.js';
+import { handVraag } from '../hand.js';
 import type { SiteConfig } from '../../core/model.js';
 import { uitspraak } from '../uitspraak.js';
 import { afsluiter, begrijp, isHalf, isRuis, MAX_TEKST, verbeter } from '../woordzoeker.js';
@@ -403,10 +404,18 @@ function huisNamen(d: Diensten, config: SiteConfig): string[] {
   return [...config.zones.map((z) => z.name), ...b.kamers.map((k) => k.naam), ...b.zones.map((z) => z.naam), ...b.lampen.map((l) => l.naam), ...b.schermen.map((s) => s.naam), ...b.scenes.map((s) => s.naam)];
 }
 
-/** De klimaatbrug voor de assistent, of null als hij uit staat of het oude systeem er niet is. */
+/**
+ * De klimaatbrug voor de assistent, of null als hij uit staat of het oude
+ * systeem er niet is. Gaat een kamer niet via de brug (zoals de zolder), dan
+ * met de hand (besluit 235).
+ */
 function klimaatBrugVoor(d: Diensten, config: SiteConfig, tekst: string | null): BrugVraag | null {
   const k = d.options.klimaat;
-  return k != null && k.aan() && k.brug.beschikbaar ? brugVraag(k.brug, config, tekst) : null;
+  const brug = k != null && k.aan() && k.brug.beschikbaar ? brugVraag(k.brug, config, tekst) : null;
+  const h = d.options.hand;
+  const hand = h != null && h.aan() ? handVraag(h.hand, config, tekst) : null;
+  if (!brug) return hand;
+  return hand ? (wens, zone, temp, lang) => brug(wens, zone, temp, lang) ?? hand(wens, zone, temp, lang) : brug;
 }
 
 /** De keuzes die de pagina meestuurt: hooguit vier, elk een label en een zin, en anders geen. */

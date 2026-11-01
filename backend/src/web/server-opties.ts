@@ -44,6 +44,7 @@ import type { BewonersView, Wie } from './bewoners.js';
 import type { MeldingenStore } from './meldingen.js';
 import type { Stem } from './stem.js';
 import type { KlimaatBrug } from './klimaatbrug.js';
+import type { Handbediening } from './hand.js';
 
 /** De versie die het image meekreeg bij het bouwen. */
 export interface Version {
@@ -361,6 +362,8 @@ export interface WebOptions {
    * Alleen in de add-on; `aan` is de schakelaar bij Functies › Praten.
    */
   readonly klimaat?: { readonly brug: KlimaatBrug; readonly aan: () => boolean };
+  /** Klimaat met de hand (besluit 235): de apparaten, of de brug aan staat, en de stekkers met een warmtebron. */
+  readonly hand?: { readonly hand: Handbediening; readonly aan: () => boolean; readonly schakelaars: () => readonly { readonly id: string; readonly kamer: string; readonly naam: string; readonly aan: boolean }[] };
   /** De spraak naar tekst in huis waarmee de dienst verstaat (besluit 211), of null. */
   readonly verstaanInHuis?: () => string | null;
   /**

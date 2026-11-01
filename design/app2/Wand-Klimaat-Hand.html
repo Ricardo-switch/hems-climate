@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Klimaat met de hand</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Klimaat met de hand (schets, ronde 3 uit "SunArc polijsten", 1 november
+   * 2026, punt 5 van het rapport). Tot stap B regelt de oude regeling; de app
+   * bedient het klimaat via zijn knoppen (de klimaatbrug, besluit 210), zodat
+   * de regeling zich eraan houdt tot het eind van het dagdeel. Wat de regeling
+   * niet stuurt (de Sonoff in de keuken), bedient de app direct.
+   *
+   * Op Apparaten, onder Klimaat: elk apparaat met wat het nu doet, en wat met de
+   * hand staat in zonkleur met wanneer het terug gaat. Een tik opent het blad:
+   * het doel met min en plus, hoe lang, en eerlijk via welke knop het gaat en
+   * wat de regeling ermee doet. Rustig (besluit 228): één balk voor hoe lang,
+   * geen wolk knoppen.
+   * Gekozen door Ricardo (1 november 2026): de zolder warm zet de airco direct
+   * aan tot de gekozen tijd (een nieuwe smalle deur naar climate.*, alleen na
+   * een tik of zin van een bewoner); met de hand mogen de Nest, de airco in de
+   * woonkamer, de badkamer en het paneel in de keuken (en de zolder); standaard
+   * tot het eind van het dagdeel, of 1 of 2 uur.
+   * Standen: zonder hash de Nest, #airco de airco in de woonkamer (koelen of
+   * warm), #zolder de airco op zolder (warm alleen met zon of als hulp),
+   * #actief de lijst met twee apparaten met de hand.
+   */
+  main { position: relative; padding: 22px 26px 20px 22px; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+  .kopregel { display: flex; justify-content: space-between; align-items: end; gap: 24px; }
+  .kopregel .lead { max-width: 60ch; margin-top: 6px; }
+  .seg { display: inline-flex; padding: 3px; border-radius: 12px; background: rgba(255, 255, 255, 0.06); }
+  .seg button { height: 34px; padding: 0 16px; border: 0; border-radius: 9px; background: transparent; color: var(--zacht); font: inherit; font-size: 14px; font-weight: 600; }
+  .seg button[aria-pressed='true'] { background: rgba(255, 255, 255, 0.14); color: var(--tekst); }
+  .veld { flex: 1; min-height: 0; display: grid; grid-template-columns: 430px minmax(0, 1fr); gap: 16px; }
+
+  /* De apparaten: wat ze nu doen; met de hand in zonkleur. */
+  .lijst { padding: 12px 18px; display: flex; flex-direction: column; }
+  .lijst h3 { margin: 4px 0 4px; font-size: 13px; font-weight: 700; color: var(--gedempt); }
+  .apparaat { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; gap: 0 12px; align-items: center; padding: 11px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+  .apparaat:first-of-type { border-top: 0; }
+  .apparaat svg { width: 24px; height: 24px; }
+  .apparaat b { display: block; font-size: 15.5px; font-weight: 600; }
+  .apparaat span { display: block; font-size: 13px; color: var(--gedempt); }
+  .apparaat span.hand { color: var(--zon-t); font-weight: 600; }
+  .apparaat .temp { font-family: var(--kop); font-size: 22px; font-weight: 600; text-align: right; }
+  .apparaat .temp small { display: block; font-family: Figtree, sans-serif; font-size: 11.5px; font-weight: 600; color: var(--gedempt); }
+  .apparaat.gekozen { background: rgba(255, 255, 255, 0.07); border-radius: 12px; margin: 0 -8px; padding: 11px 8px; border-top-color: transparent; }
+  .lijst .tip { margin-top: auto; font-size: 12.5px; color: var(--gedempt); }
+
+  /* Het blad: het doel groot, hoe lang, en eerlijk hoe het gaat. */
+  .blad { padding: 22px 26px; display: flex; flex-direction: column; gap: 16px; }
+  .blad .boven { display: flex; align-items: start; justify-content: space-between; gap: 16px; }
+  .blad h2 { margin: 0; font-family: var(--kop); font-size: 28px; font-weight: 600; }
+  .blad .nu { margin-top: 4px; font-size: 14.5px; color: var(--zacht); }
+  .blad .nu b { color: var(--gloed-t); font-weight: 600; }
+  .doel { display: flex; align-items: center; justify-content: center; gap: 34px; padding: 6px 0; }
+  .doel button { width: 64px; height: 64px; border-radius: 22px; border: 0; background: rgba(255, 255, 255, 0.08); color: var(--tekst); font-size: 30px; font-weight: 500; }
+  .doel .getal { text-align: center; min-width: 200px; }
+  .doel .getal b { display: block; font-family: var(--kop); font-size: 92px; font-weight: 600; line-height: 1; letter-spacing: -0.03em; }
+  .doel .getal span { display: block; margin-top: 6px; font-size: 14px; color: var(--gedempt); }
+  .vraag { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .vraag > span { font-size: 14px; font-weight: 600; color: var(--zacht); }
+  /* Vandaag: de dagdelen van je regeling, en met de hand in zonkleur van nu tot de eindtijd. */
+  .dagbalk { display: flex; flex-direction: column; gap: 6px; }
+  .balk24 { position: relative; height: 26px; border-radius: 9px; background: rgba(255, 255, 255, 0.05); overflow: hidden; }
+  .balk24 i { position: absolute; top: 0; bottom: 0; }
+  .balk24 i.nacht { background: rgba(143, 134, 255, 0.16); }
+  .balk24 i.dag { background: rgba(255, 255, 255, 0.07); }
+  .balk24 i.hand { top: 5px; bottom: 5px; border-radius: 6px; background: linear-gradient(90deg, #f7b548, #ffd27a); }
+  .balk24 b.nu { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: #fff; }
+  .dagbalk .assen { position: relative; height: 16px; font-size: 12px; color: var(--gedempt); }
+  .dagbalk .assen span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+  .dagbalk .assen span:nth-child(1) { left: 0; transform: none; }
+  .dagbalk .assen span:nth-child(2) { left: 29.2%; }
+  .dagbalk .assen span:nth-child(3) { left: 63.2%; color: var(--tekst); font-weight: 700; }
+  .dagbalk .assen span:nth-child(4) { left: 91.7%; color: var(--zon-t); font-weight: 600; }
+  .dagbalk .assen span:nth-child(5) { right: 0; left: auto; transform: none; }
+  .hoe { padding: 14px 16px; border-radius: 16px; background: rgba(255, 255, 255, 0.04); font-size: 14px; line-height: 1.5; color: var(--zacht); }
+  .hoe b { color: var(--tekst); font-weight: 600; }
+  .hoe.let { background: rgba(247, 181, 72, 0.07); box-shadow: inset 0 0 0 1px rgba(247, 181, 72, 0.25); }
+  .onder { margin-top: auto; display: flex; align-items: center; gap: 14px; }
+  .onder .terug { border: 0; background: none; color: var(--zacht); font: inherit; font-weight: 600; font-size: 14.5px; padding: 0; }
+  .onder .zet { margin-left: auto; height: 48px; padding: 0 26px; border-radius: 15px; border: 0; background: var(--tekst); color: var(--inkt); font: inherit; font-weight: 700; font-size: 16px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-dag">
+  <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+  <main>
+    <div class="kopregel">
+      <div>
+        <h1 class="kop-1">Apparaten</h1>
+        <p class="lead">Klimaat met de hand: tot de app zelf regelt, gaat het via de knoppen van je eigen regeling. Die houdt zich eraan tot de tijd die je kiest.</p>
+      </div>
+      <div class="seg"><button type="button">Nu</button><button type="button" aria-pressed="true">Klimaat</button><button type="button">Licht</button><button type="button">Op zon</button></div>
+    </div>
+
+    <div class="veld">
+      <section class="glas lijst">
+        <h3>Klimaat</h3>
+        <div class="apparaat" data-a="nest"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l2 2"/></svg><div><b>Nest beneden</b><span data-nest-zin>volgt je regeling · verwarmt</span></div><div class="temp" data-nest-temp>20°<small>doel</small></div></div>
+        <div class="apparaat" data-a="airco"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="6" width="18" height="8" rx="2"/><path d="M7 18c0-1.5 1-2 1-3M12 19c0-1.5 1-2 1-3M17 18c0-1.5 1-2 1-3"/></svg><div><b>Airco woonkamer</b><span data-airco-zin>volgt je regeling · uit</span></div><div class="temp">23°<small>koelen bij</small></div></div>
+        <div class="apparaat" data-a="zolder"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="6" width="18" height="8" rx="2"/><path d="M7 18c0-1.5 1-2 1-3M12 19c0-1.5 1-2 1-3M17 18c0-1.5 1-2 1-3"/></svg><div><b>Airco zolder</b><span>volgt je regeling · uit</span></div><div class="temp">19°<small>warm bij zon</small></div></div>
+        <div class="apparaat"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><path d="M4 18h16M6 14h12M8 10h8"/></svg><div><b>Badkamer</b><span>vloer en paneel · tot 22° overdag</span></div><div class="temp">22°<small>uit boven</small></div></div>
+        <div class="apparaat"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="5" width="16" height="12" rx="2"/><path d="M8 20h8"/></svg><div><b>Paneel keuken</b><span>niet in je regeling · uit</span></div><div class="temp">uit<small>direct</small></div></div>
+        <p class="tip">Zeg ook "zet de woonkamer op 21" of "maak de zolder koeler". Bij stap B regelt de app zelf, en verdwijnt de omweg.</p>
+      </section>
+
+      <section class="glas blad">
+        <div class="boven">
+          <div><h2 data-titel>Nest beneden</h2><p class="nu" data-nu>Nu 19,6° in de woonkamer · <b>de cv brandt</b></p></div>
+        </div>
+        <div class="doel"><button type="button" aria-label="Lager">−</button><div class="getal"><b data-doel>21°</b><span data-doel-zin>de dagtemperatuur, nu 20°</span></div><button type="button" aria-label="Hoger">+</button></div>
+        <div class="vraag" data-modus hidden><span>Wat</span><div class="seg"><button type="button" aria-pressed="true">Koelen</button><button type="button">Warm</button><button type="button">Uit</button></div></div>
+        <div class="vraag"><span>Hoe lang</span><div class="seg"><button type="button">1 uur</button><button type="button">2 uur</button><button type="button" aria-pressed="true" data-tot>Tot 22:00</button></div></div>
+        <div class="dagbalk" aria-label="Vandaag: je regeling, en met de hand van nu tot 22:00">
+          <div class="balk24"><i class="nacht" style="left: 0; width: 29.2%"></i><i class="dag" style="left: 29.2%; width: 62.5%"></i><i class="nacht" style="left: 91.7%; width: 8.3%"></i><i class="hand" style="left: 63.2%; width: 28.5%"></i><b class="nu" style="left: 63.2%"></b></div>
+          <div class="assen"><span>0</span><span>7:00 dag 20°</span><span>nu</span><span>22:00 terug</span><span>24</span></div>
+        </div>
+        <div class="hoe" data-hoe>Via de knop van je regeling: <b>dagtemperatuur Nest</b>. Binnen drie minuten doet de regeling de rest, met al zijn eigen beveiligingen. Om 22:00 gaat de knop terug naar 20°, tenzij iemand hem intussen zelf verzette.</div>
+        <div class="onder"><button class="terug" type="button" data-terug hidden>Terug naar je regeling</button><button class="zet" type="button" data-zet>Zet op 21°</button></div>
+      </section>
+    </div>
+  </main>
+</div>
+<script src="../../frontend/kit/teksten.nl.js"></script>
+<script src="../../frontend/kit/teksten.en.js"></script>
+<script src="../../frontend/kit/taal.js"></script>
+<script src="../../frontend/kit/nav.js"></script>
+<script>
+  nav.balk(document.getElementById('balk'), 'apparaten');
+  const stand = location.hash.slice(1);
+  const $ = (s) => document.querySelector(s);
+  const kies = (a) => document.querySelector(`[data-a="${a}"]`).classList.add('gekozen');
+  if (stand === 'airco') {
+    kies('airco');
+    $('[data-titel]').textContent = 'Airco woonkamer';
+    $('[data-nu]').innerHTML = 'Nu 24,2° · <b style="color: var(--ijs-t)">staat uit</b>';
+    $('[data-doel]').textContent = '22°';
+    $('[data-doel-zin]').textContent = 'koelen tot het 22° is';
+    $('[data-modus]').hidden = false;
+    $('[data-hoe]').innerHTML = 'Via de knop van je regeling: <b>koelen woonkamer</b>. Je regeling koelt dan tot 22°, ook zonder zon over; dat kost stroom van het net. Om 22:00 terug naar 23°.';
+    $('[data-zet]').textContent = 'Koel tot 22°';
+  } else if (stand === 'zolder') {
+    kies('zolder');
+    $('[data-titel]').textContent = 'Airco zolder';
+    $('[data-nu]').innerHTML = 'Nu 17,8° op zolder · staat uit';
+    $('[data-doel]').textContent = '20°';
+    $('[data-doel-zin]').textContent = 'warm tot het 20° is';
+    $('[data-modus]').hidden = false;
+    document.querySelectorAll('[data-modus] button').forEach((b, i) => b.setAttribute('aria-pressed', String(i === 1)));
+    $('[data-hoe]').classList.add('let');
+    $('[data-hoe]').innerHTML = 'Let op: je regeling verwarmt de zolder <b>alleen met zon over of als hulp</b> voor de cv. Met de knop zet je het doel op 20°, maar de airco gaat pas aan als er zon is. Wil je hem nu warm, dan zet de app hem direct aan, tot 22:00.';
+    $('[data-zet]').textContent = 'Nu warm, tot 22:00';
+  } else if (stand === 'actief') {
+    kies('nest');
+    $('[data-nest-zin]').className = 'hand';
+    $('[data-nest-zin]').textContent = 'met de hand op 21° · tot 22:00';
+    $('[data-nest-temp]').innerHTML = '21°<small>doel</small>';
+    $('[data-airco-zin]').className = 'hand';
+    $('[data-airco-zin]').textContent = 'met de hand koelen tot 22° · nog 1 uur';
+    $('[data-nu]').innerHTML = 'Nu 19,8° in de woonkamer · <b>de cv brandt</b> · <span style="color: var(--zon-t); font-weight: 600">met de hand tot 22:00</span>';
+    $('[data-doel-zin]').textContent = 'de dagtemperatuur, standaard 20°';
+    $('[data-terug]').hidden = false;
+    $('[data-zet]').textContent = 'Bewaar';
+  } else kies('nest');
+</script>
+</body>
+</html>

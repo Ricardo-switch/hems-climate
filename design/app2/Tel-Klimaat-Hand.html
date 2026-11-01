@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Telefoon · Klimaat met de hand</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Klimaat met de hand op de telefoon (schets bij Wand-Klimaat-Hand, 1
+   * november 2026): de apparaten onder Klimaat, en het blad van onderen met het
+   * doel, hoe lang, de dag als balk en via welke knop het gaat.
+   * Standen: zonder hash de lijst, #blad het blad van de Nest.
+   */
+  .tel { overflow: hidden; }
+  .inhoud { padding: 16px 16px 110px; display: flex; flex-direction: column; gap: 14px; }
+  .inhoud h1 { font-size: 32px; }
+  .seg { display: flex; padding: 3px; border-radius: 12px; background: rgba(255, 255, 255, 0.06); }
+  .seg button { flex: 1; height: 34px; border: 0; border-radius: 9px; background: transparent; color: var(--zacht); font: inherit; font-size: 13.5px; font-weight: 600; }
+  .seg button[aria-pressed='true'] { background: rgba(255, 255, 255, 0.14); color: var(--tekst); }
+  .lijst { padding: 6px 14px; }
+  .apparaat { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 10px; align-items: center; padding: 11px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+  .apparaat:first-of-type { border-top: 0; }
+  .apparaat b { display: block; font-size: 15px; font-weight: 600; }
+  .apparaat span { display: block; font-size: 12.5px; color: var(--gedempt); }
+  .apparaat span.hand { color: var(--zon-t); font-weight: 600; }
+  .apparaat .temp { font-family: var(--kop); font-size: 20px; font-weight: 600; text-align: right; }
+  .apparaat .temp small { display: block; font-family: Figtree, sans-serif; font-size: 11px; font-weight: 600; color: var(--gedempt); }
+  .tabs { position: fixed; left: 12px; right: 12px; bottom: 14px; }
+  .achter { position: fixed; inset: 0; background: rgba(4, 8, 16, 0.6); z-index: 60; }
+  .blad { position: fixed; left: 8px; right: 8px; bottom: 8px; padding: 18px 18px 20px; border-radius: 26px; display: flex; flex-direction: column; gap: 14px; background: #0e1726; z-index: 61; }
+  .blad .boven { display: flex; align-items: start; gap: 10px; }
+  .blad .boven div { flex: 1; }
+  .blad h2 { margin: 0; font-family: var(--kop); font-size: 22px; font-weight: 600; }
+  .blad .nu { margin-top: 2px; font-size: 13px; color: var(--zacht); }
+  .blad .nu b { color: var(--gloed-t); font-weight: 600; }
+  .blad .sluit { width: 32px; height: 32px; border-radius: 50%; border: 0; background: rgba(255, 255, 255, 0.08); color: var(--tekst); font-size: 16px; }
+  .doel { display: flex; align-items: center; justify-content: space-between; }
+  .doel button { width: 56px; height: 56px; border-radius: 19px; border: 0; background: rgba(255, 255, 255, 0.08); color: var(--tekst); font-size: 26px; }
+  .doel .getal { text-align: center; }
+  .doel .getal b { display: block; font-family: var(--kop); font-size: 64px; font-weight: 600; line-height: 1; }
+  .doel .getal span { font-size: 12.5px; color: var(--gedempt); }
+  .vraag > span { display: block; font-size: 12px; font-weight: 700; color: var(--gedempt); margin-bottom: 6px; }
+  .balk24 { position: relative; height: 20px; border-radius: 7px; background: rgba(255, 255, 255, 0.05); overflow: hidden; }
+  .balk24 i { position: absolute; top: 0; bottom: 0; }
+  .balk24 i.nacht { background: rgba(143, 134, 255, 0.16); }
+  .balk24 i.dag { background: rgba(255, 255, 255, 0.07); }
+  .balk24 i.hand { top: 4px; bottom: 4px; border-radius: 5px; background: linear-gradient(90deg, #f7b548, #ffd27a); }
+  .balk24 b { position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; }
+  .assen { position: relative; height: 16px; font-size: 11.5px; color: var(--gedempt); margin-top: 4px; }
+  .assen span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+  .assen b { color: var(--zon-t); }
+  .hoe { padding: 12px 14px; border-radius: 14px; background: rgba(255, 255, 255, 0.04); font-size: 13px; line-height: 1.5; color: var(--zacht); }
+  .hoe b { color: var(--tekst); }
+  .zet { height: 48px; border-radius: 15px; border: 0; background: var(--tekst); color: var(--inkt); font: inherit; font-weight: 700; font-size: 16px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="tel lucht lucht-dag">
+  <div class="inhoud">
+    <h1 class="kop-1">Apparaten</h1>
+    <div class="seg"><button type="button">Nu</button><button type="button" aria-pressed="true">Klimaat</button><button type="button">Licht</button><button type="button">Op zon</button></div>
+    <section class="glas lijst">
+      <div class="apparaat"><div><b>Nest beneden</b><span class="hand">met de hand op 21° · tot 22:00</span></div><div class="temp">21°<small>doel</small></div></div>
+      <div class="apparaat"><div><b>Airco woonkamer</b><span>volgt je regeling · uit</span></div><div class="temp">23°<small>koelen bij</small></div></div>
+      <div class="apparaat"><div><b>Airco zolder</b><span>volgt je regeling · uit</span></div><div class="temp">19°<small>warm bij zon</small></div></div>
+      <div class="apparaat"><div><b>Badkamer</b><span>vloer en paneel</span></div><div class="temp">22°<small>uit boven</small></div></div>
+      <div class="apparaat"><div><b>Paneel keuken</b><span>niet in je regeling</span></div><div class="temp">uit<small>direct</small></div></div>
+    </section>
+  </div>
+  <nav class="tabs" id="tabs" aria-label="Hoofdmenu"></nav>
+
+  <div class="achter" data-blad hidden></div>
+  <aside class="blad" data-blad hidden>
+    <div class="boven"><div><h2>Nest beneden</h2><p class="nu">Nu 19,6° in de woonkamer · <b>de cv brandt</b></p></div><button class="sluit" type="button" aria-label="Sluiten">×</button></div>
+    <div class="doel"><button type="button" aria-label="Lager">−</button><div class="getal"><b>21°</b><span>de dagtemperatuur, nu 20°</span></div><button type="button" aria-label="Hoger">+</button></div>
+    <div class="vraag"><span>Hoe lang</span><div class="seg"><button type="button">1 uur</button><button type="button">2 uur</button><button type="button" aria-pressed="true">Tot 22:00</button></div></div>
+    <div><div class="balk24"><i class="nacht" style="left: 0; width: 29.2%"></i><i class="dag" style="left: 29.2%; width: 62.5%"></i><i class="nacht" style="left: 91.7%; width: 8.3%"></i><i class="hand" style="left: 63.2%; width: 28.5%"></i><b style="left: 63.2%"></b></div><div class="assen"><span style="left: 0; transform: none">0</span><span style="left: 63.2%">nu</span><span style="left: 91.7%; transform: translateX(-100%)"><b>22:00 terug</b></span></div></div>
+    <div class="hoe">Via de knop van je regeling: <b>dagtemperatuur Nest</b>. Om 22:00 terug naar 20°.</div>
+    <button class="zet" type="button">Zet op 21°</button>
+  </aside>
+</div>
+<script src="../../frontend/kit/teksten.nl.js"></script>
+<script src="../../frontend/kit/teksten.en.js"></script>
+<script src="../../frontend/kit/taal.js"></script>
+<script src="../../frontend/kit/nav.js"></script>
+<script>
+  if (nav.tabs) nav.tabs(document.getElementById('tabs'), 'apparaten');
+  document.querySelectorAll('[data-blad]').forEach((el) => (el.hidden = location.hash !== '#blad'));
+</script>
+</body>
+</html>

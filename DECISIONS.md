@@ -44,6 +44,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [172. De app is af: opruimen, wat er nog komt, en talen later](#172-de-app-is-af-opruimen-wat-er-nog-komt-en-talen-later)
 - [184. De integratie Smart Climate: Assist zonder YAML](#184-de-integratie-smart-climate-assist-zonder-yaml)
 - [210. De klimaatbrug: tot stap B via de knoppen van het oude systeem](#210-de-klimaatbrug-tot-stap-b-via-de-knoppen-van-het-oude-systeem)
+- [235. Klimaat met de hand: elk apparaat, via de knop of direct, met een eindtijd](#235-klimaat-met-de-hand-elk-apparaat-via-de-knop-of-direct-met-een-eindtijd)
 
 **Kern en regeling**
 
@@ -10828,6 +10829,60 @@ de hand daarna, met een eigen schets.
   de volgende is, in plaats van de losse lijst met Annuleren.
 - Het blijft binnen wat de app mag: licht, scènes en schermen (besluit 218).
 - **Versie 0.103.0.**
+
+---
+
+## 235. Klimaat met de hand: elk apparaat, via de knop of direct, met een eindtijd
+
+*Onderwerp: visie en principes · Status: geldig*
+
+1 november 2026, ronde 3 uit het rapport "SunArc polijsten", punt 5. De
+bewoner bedient de airco of de thermostaat soms met de hand via het oude
+systeem, en vroeg of SunArc dat ook kan. Tot stap B blijft het regelen bij de
+oude regeling (besluit 15, 64); de klimaatbrug (besluit 210) deed alleen de
+Nest en het koelen in de woonkamer. Gekozen na de schetsen `Wand-Klimaat-Hand`
+en `Tel-Klimaat-Hand`.
+
+*Wat de oude regeling doet* (nagelezen in `klimaat_controller_apply`): in de
+winter verwarmt zij met een airco alleen met zon over (`pv_verwarmen`) of als
+hulp voor de cv. Staat een airco op warm, dan neemt het pv-deel het over: het
+zet hem op 18° bij stroom van het net, tenzij een knop met de hand verzet is
+(`manuele_override_actief`), of als de kamer warm genoeg is.
+
+*Besluit:*
+
+- **Elk klimaatapparaat met de hand** (`web/hand.ts`, `api/hand`):
+  - de Nest via de dagtemperatuur, 's nachts eerst de modus op dag, zoals de
+    klimaatbrug;
+  - koelen met een airco via zijn koelknop, alleen als de koelstrategie aan
+    staat;
+  - de badkamer via de uit-temperatuur overdag;
+  - **verwarmen met een airco** (woonkamer en zolder): de knop van die airco
+    op het doel, zodat de regeling een handmatige stand ziet, en de airco zelf
+    op warm. Gekozen door de bewoner: anders gaat de zolder pas aan als er zon
+    is.
+  - een stekker met een warmtebron die niet in de regeling zit, direct aan.
+- **Een negende smalle deur** in de client (`allowHand`, `isHandCall`):
+  alleen `climate.set_hvac_mode` (warm of uit), `climate.set_temperature`
+  (10 tot 30°) en `climate.turn_off` op de twee airco's, en `switch.turn_on`
+  of `turn_off` op de stekkers met een warmtebron uit Indeling. Koelen of een
+  andere stand komt er niet door, en de Nest zelf ook niet; een test bewijst
+  dat. Alleen in de add-on, alleen als "Klimaat via je eigen regeling" aan
+  staat bij Functies, of als er nog iets terug moet. De regeling van SunArc
+  zelf schrijft nog steeds niets tot stap B.
+- **Altijd met een eindtijd:** 1 uur, 2 uur, of het eind van het dagdeel
+  (22:00, 's nachts twee uur). Dan gaat de knop terug naar zijn standaard en
+  de airco of stekker uit, maar alleen als ze nog staan zoals de app ze zette:
+  wie intussen zelf iets verzette, wint. Wat terug moet staat in
+  `handbediening.json`. "Terug naar je regeling" doet het meteen.
+- **Op Apparaten** een knop "Met de hand": een laag met links de apparaten en
+  rechts het blad (het doel met min en plus, warm of koelen, hoe lang, de dag
+  als balk, en eerlijk via welke knop het gaat en wat de regeling ermee doet).
+  Wat met de hand staat, staat in zonkleur op de kaart. Op de telefoon eerst
+  de lijst, dan het blad van onderen.
+- **Met je stem:** gaat een kamer niet via de klimaatbrug, zoals de zolder,
+  dan met de hand: "zet de zolder op 21" zet de airco op warm tot 22:00.
+- **Versie 0.104.0.** Bij stap B verdwijnt de omweg: dan regelt de app zelf.
 
 ---
 

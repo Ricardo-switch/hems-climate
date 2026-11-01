@@ -279,10 +279,12 @@ function klimaatKaart({ a, r }) {
   el.dataset.actief = String(doet || bew?.soort === 'wait');
   // Alleen "SunArc zou: …": dan kan hij samen met de andere kaarten bovenaan (besluit 226).
   if (vanSC && zin === vanSC && rest && !doet && bew?.soort !== 'wait') el.dataset.zou = rest;
+  // Met de hand (besluit 235): in zonkleur, met wanneer het terug gaat.
+  const metHand = hand.data()?.apparaten?.find((x) => x.id === a.id && x.actief);
   el.innerHTML = `
     <div class="kopje"><span class="ik${a.klimaat?.kanKoelen ? '' : ' warm'}">${a.klimaat?.kanKoelen ? IK.airco : IK.warm}</span><div><b>${esc(a.naam)}</b><span class="mini">${esc(r.naam)}</span></div><div class="kw">${kw}</div></div>
     <div class="stand"><i style="background: ${stand[1]}"></i>${esc(stand[0])}</div>
-    ${zin ? `<p class="mini zin">${esc(zin)}</p>` : ''}
+    ${metHand ? `<p class="mini zin" style="color: var(--zon-t); font-weight: 600">${esc(huismodel.metHoofdletter(hand.nuZin(metHand)))}</p>` : zin ? `<p class="mini zin">${esc(zin)}</p>` : ''}
     ${labels ? `<p class="mini etiket">${esc(labels)}</p>` : ''}
     ${dag}`;
   return el;
@@ -449,6 +451,19 @@ addEventListener('standwissel', teken);
 
 app.start('apparaten');
 void laadAlles();
+// Klimaat met de hand (besluit 235): de knop als er iets met de hand kan.
+async function laadHand() {
+  const h = await hand.laad();
+  const kan = (h?.apparaten?.length ?? 0) + (h?.schakelaars?.length ?? 0) > 0;
+  $$('[data-hand-open]').forEach((b) => (b.hidden = !kan));
+  teken();
+}
+void laadHand();
+setInterval(() => void laadHand(), 60_000);
+addEventListener('handveranderd', () => void laadAlles());
+document.addEventListener('click', (e) => {
+  if (e.target.closest('[data-hand-open]')) void hand.openen();
+});
 setInterval(() => void laadAlles(), 60_000);
 app.live((nieuw) => {
   state = nieuw;
