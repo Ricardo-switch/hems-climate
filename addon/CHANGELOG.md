@@ -1,5 +1,19 @@
 # Wat is er nieuw · What is new
 
+## 0.102.1
+
+*1 november 2026*
+
+**Beter**
+
+- De assistent verstaat woorden van je huis beter: airco, screen, jacuzzi, plafonnière en welterusten
+
+*English*
+
+**Improved**
+
+- The assistant understands words of your home better: air conditioning, screen, jacuzzi, ceiling light and good night
+
 ## 0.102.0
 
 *1 november 2026*

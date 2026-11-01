@@ -453,7 +453,8 @@ verwijzing bestaat.
   vandaag en gisteren, en "doe maar terug" zet het weer zoals het was ([213]).
   Met geluid in de kamer is je eigen stem de maat voor het einde van je zin,
   en een bijna goed verstaan woord wordt ook op klank rechtgezet, zodat het
-  snelle Whisper-model volstaat ([215]). Te doen: herinneringen die de wand
+  snelle Whisper-model volstaat ([215]); wat small-int8 vast verkeerd hoort
+  ("IJko", "schreeuwen"), staat in een eigen lijst ([233]). Te doen: herinneringen die de wand
   hardop zegt en naar je telefoon gaan, de boodschappen en to-do van Home
   Assistant, en het afval en je agenda's, met je stem en in een eigen tab
   Te doen; de instellingen van de assistent staan bij Instellingen ›
@@ -763,4 +764,5 @@ verwijzing bestaat.
 [230]: DECISIONS.md#230-een-thuisbatterij-op-je-eigen-uren
 [231]: DECISIONS.md#231-hoe-je-huis-warmte-vasthoudt-het-thermisch-model-leert-en-laat-zien
 [232]: DECISIONS.md#232-het-logo-naast-de-klok-en-over-deze-app
+[233]: DECISIONS.md#233-wat-whisper-vast-verkeerd-hoort-rechtzetten
 <!-- links:einde -->
