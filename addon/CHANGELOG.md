@@ -1,5 +1,23 @@
 # Wat is er nieuw · What is new
 
+## 0.109.0
+
+*1 november 2026*
+
+**Nieuw**
+
+- Nieuw bij Vast en gepland: zeg het, of kies het zelf in vier stappen
+- De zin en de boog groeien mee terwijl je kiest, en Klaar laat je komende dagen zien
+- Klimaat met de hand en witgoed kun je nu ook op een tijd zetten
+
+*English*
+
+**New**
+
+- New under Fixed and planned: say it, or choose it yourself in four steps
+- The sentence and the arc grow while you choose, and Done shows your coming days
+- Climate by hand and appliances can now be set for a time too
+
 ## 0.108.0
 
 *1 november 2026*

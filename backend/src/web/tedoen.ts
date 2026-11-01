@@ -423,6 +423,30 @@ export class Herinneringen {
     return nieuw;
   }
 
+  /**
+   * Een nieuwe vaste of geplande opdracht uit Nieuw (besluit 240): het eerste
+   * moment rekent hij zelf uit, op de klok en de zon van hier. Null als er met
+   * die keus geen moment komt.
+   */
+  async plan(h: { readonly tekst: string; readonly voor: string | null; readonly naam: string | null; readonly opdracht: GeplandeOpdracht }): Promise<Herinnering | null> {
+    const ms = this.#volgende(h.opdracht, this.#nu());
+    return ms == null ? null : this.voeg({ ...h, ms });
+  }
+
+  /** De komende momenten van een opdracht, voor Klaar in Nieuw (besluit 240): op de klok en de zon van hier. */
+  momenten(o: GeplandeOpdracht, n = 7): number[] {
+    const uit: number[] = [];
+    let van = this.#nu();
+    while (uit.length < n) {
+      const v = this.#volgende(o, van);
+      if (v == null) break;
+      uit.push(v);
+      if (o.herhaal?.soort === 'een' || o.herhaal == null) break;
+      van = v + 60_000;
+    }
+    return uit;
+  }
+
   async klaar(id: string): Promise<boolean> {
     return this.#zet(id, (h) => ({ ...h, status: 'klaar', sindsMs: this.#nu() }));
   }

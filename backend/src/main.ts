@@ -95,6 +95,7 @@ import { BRUG_ENTITEITEN, KlimaatBrug, MODUS_OPTIES } from './web/klimaatbrug.js
 import { HAND_KLIMAAT, HAND_KNOPPEN, Handbediening } from './web/hand.js';
 import { Voorbeeld } from './web/voorbeeld.js';
 import { Witgoed } from './web/witgoed.js';
+import { voerStapUit, type GeplandeDeuren } from './web/gepland-uit.js';
 import { kiesVerstaan, Verstaan } from './web/verstaan.js';
 
 
@@ -1270,11 +1271,26 @@ const teDoen: TeDoenDienst = {
 async function voerGeplandUit(h: Herinnering): Promise<void> {
   const f = functiesNu();
   const vol = f ? volledig(f, functiesKeuzes()) : null;
+  const mag = vol?.licht.bedienen !== false;
+  // Klimaat met de hand en witgoed (besluit 240): dezelfde deuren als besluit 235 en 238.
+  const hand = handbediening && klimaatAan() ? handbediening : null;
+  const deuren: GeplandeDeuren = {
+    licht: lightSwitch && mag ? (b) => lightSwitch.switch(b) : null,
+    scene: lightSwitch?.scenesEnabled && mag ? (b) => lightSwitch.scene(b) : null,
+    scherm: coverSwitch && vol?.schermen.bedienen !== false ? (b) => coverSwitch.move(b) : null,
+    hand: hand
+      ? {
+          zet: (id, modus, doelC, totMs, totDoel) => hand.zet(id, modus, doelC, totMs, totDoel),
+          zetKnop: (id, doelC, totMs, totDoel) => hand.zetKnop(id, doelC, totMs, totDoel),
+          schakelAan: (id, totMs) => hand.schakelAan(id, totMs),
+          isKnop: (id) => handKnoppen().some((k) => k.id === id),
+        }
+      : null,
+    witgoed: witgoed ? (id) => witgoed!.nuStarten(id) : null,
+    tz: siteConfig?.timezone ?? 'Europe/Amsterdam',
+  };
   for (const s of h.opdracht?.stappen ?? []) {
-    let r: { readonly ok: boolean; readonly reden?: string } | null = null;
-    if (s.pad === 'api/licht' && lightSwitch && vol?.licht.bedienen !== false) r = await lightSwitch.switch(s.body);
-    else if (s.pad === 'api/scene' && lightSwitch?.scenesEnabled && vol?.licht.bedienen !== false) r = await lightSwitch.scene(s.body);
-    else if (s.pad === 'api/scherm' && coverSwitch && vol?.schermen.bedienen !== false) r = await coverSwitch.move(s.body);
+    const r = await voerStapUit(s, deuren);
     if (r == null) console.warn(`[gepland] ${s.pad} staat niet aan; "${h.tekst}" niet gedaan`);
     else if (!r.ok) console.warn(`[gepland] "${h.tekst}" lukte niet: ${r.reden ?? ''}`);
   }

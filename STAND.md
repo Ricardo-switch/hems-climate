@@ -317,6 +317,9 @@ verwijzing bestaat.
 - **Wat de app zegt, klopt:** verwarmt of koelt een apparaat echt, dan staat dat er;
   een kamer boven het doel is op temperatuur; Vandaag zegt "zou" als het apparaat
   iets anders deed, en thuiskomen telt meteen voor het comfort ([239]).
+- **Nieuw in Vast en gepland:** zeg het, of kies het zelf in vier stappen (wat,
+  wanneer, hoe vaak, klaar), met de zin en de boog die meegroeien; ook klimaat
+  met de hand en witgoed op een tijd ([240]).
 - **In de add-on** opent de app, en een leeg huis begint met een welkom: het
   huis groeit uit Home Assistant, één knop naar Inrichten, of een back-up
   terugzetten. Alleen een verplichte keuze zonder voorstel wordt een vraag
@@ -791,4 +794,5 @@ verwijzing bestaat.
 [237]: DECISIONS.md#237-het-voorbeeldhuis-de-app-op-een-nagemaakt-home-assistant-met-een-dag-om-door-te-spelen
 [238]: DECISIONS.md#238-eén-blad-per-apparaat-klimaat-tot-het-doel-en-sunarc-start-de-droger
 [239]: DECISIONS.md#239-wat-de-app-zegt-klopt-met-wat-er-in-huis-gebeurt
+[240]: DECISIONS.md#240-nieuw-in-vast-en-gepland-zeg-het-of-kies-het-zelf-in-vier-stappen
 <!-- links:einde -->

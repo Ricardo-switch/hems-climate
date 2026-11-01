@@ -4401,6 +4401,92 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
   }, 30_000);
 
   /*
+   * Nieuw (besluit 240): zeg het, of kies het zelf in vier stappen; op de
+   * telefoon één stap per scherm. Klimaat met de hand op een tijd.
+   */
+  it('maakt bij Vast en gepland een nieuwe opdracht, zelf gekozen of gezegd', async () => {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, timezoneId: 'Europe/Amsterdam', locale: 'nl-NL' });
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+    await context.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    const nu = Date.now();
+    const gestuurd: Record<string, unknown>[] = [];
+    await context.route(`${baseUrl}/api/te-doen**`, async (route) => {
+      if (route.request().method() === 'POST') {
+        const b = route.request().postDataJSON() as Record<string, unknown>;
+        gestuurd.push(b);
+        if (b['actie'] === 'voorproef') return route.fulfill({ json: { ok: true, momenten: [1, 2, 3, 4, 5, 6, 7].map((d) => nu + d * 86_400_000) } });
+        return route.fulfill({ json: { ok: true, id: 'g9', ms: nu + 86_400_000 } });
+      }
+      return route.fulfill({ json: { aan: true, herinneringen: [], gepland: [], lijsten: [], afspraken: [], speelt: [], agendas: {} } });
+    });
+    await context.route(`${baseUrl}/api/huis**`, (route) =>
+      route.fulfill({ json: { etages: [{ id: 'beneden', naam: 'Beneden', ruimtes: [{ id: 'woonkamer', naam: 'Woonkamer', apparaten: [{ id: 'light.bank', naam: 'Lamp bank', soort: 'licht' }, { id: 'cover.screen', naam: 'Screen', soort: 'screen', scherm: { standKiezen: true } }], scenes: [{ id: 'scene.avond', naam: 'Avond' }] }] }] } }),
+    );
+    await context.route(`${baseUrl}/api/hand**`, (route) =>
+      route.fulfill({ json: { aan: true, apparaten: [{ id: 'climate.zolder', naam: 'Airco zolder', kamer: 'Zolder', modi: [{ modus: 'verwarmen', doelC: 20, min: 16, max: 30, stap: 0.5, niet: null }, { modus: 'koelen', doelC: 23, min: 16, max: 30, stap: 0.5, niet: null }] }], schakelaars: [], nu } }),
+    );
+    await context.route(`${baseUrl}/api/witgoed**`, (route) => route.fulfill({ json: { apparaten: [{ id: 'droger', naam: 'Droger', kan: true, reden: null, gestartMs: null }] } }));
+    await context.route(`${baseUrl}/api/vraag**`, (route) =>
+      route.fulfill({ json: { vraag: 'tedoen', taal: 'nl', antwoord: 'Zo: elke dag 10 minuten voor zonsondergang, doe de screens dicht.', voorstel: { tekst: 'Doe de screens dicht', wat: 'doe de screens dicht', stappen: [{ pad: 'api/scherm', body: { id: 'cover.screen', actie: 'dicht' } }], moment: { soort: 'zon', zon: 'onder', minuten: -10 }, herhaal: { soort: 'dag' }, ms: nu + 3_600_000 } } }),
+    );
+    await p.goto(`${baseUrl}/gepland.html`);
+    await p.locator('#wand [data-gp-nieuw]').click();
+    const wiz = p.locator('#wand .pl-wiz');
+    await wiz.locator('.pl-gaan').click();
+    // Wat: klimaat, de airco op zolder, een halve graad hoger, tot het doel.
+    await wiz.locator('[data-pl-soort="klimaat"]').click();
+    await wiz.locator('[data-pl-keuze="climate.zolder"]').click();
+    await wiz.locator('[data-pl-doel="1"]').click();
+    expect(await wiz.locator('.pl-voorbeeld .pl-zin').textContent()).toContain('airco zolder verwarmen tot 20,5°');
+    await wiz.locator('[data-pl-verder]').click();
+    // Wanneer: om 06:30.
+    await wiz.locator('[data-pl-tijd]').fill('06:30');
+    await wiz.locator('[data-pl-tijd]').dispatchEvent('change');
+    await wiz.locator('[data-pl-verder]').click();
+    // Hoe vaak: werkdagen.
+    await wiz.locator('[data-pl-herhaal="werkdagen"]').click();
+    await wiz.locator('[data-pl-verder]').click();
+    // Klaar: de komende dagen, van de dienst.
+    await expect.poll(() => wiz.locator('.pl-week > div').count()).toBe(7);
+    expect(await wiz.locator('.pl-voorbeeld .pl-zin').textContent()).toBe('Werkdagen, om 06:30, airco zolder verwarmen tot 20,5°.');
+    expect(await p.evaluate<boolean>('document.scrollingElement.scrollHeight <= innerHeight')).toBe(true);
+    if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-gepland-nieuw.png') });
+    await wiz.locator('[data-pl-verder]').click();
+    await expect.poll(() => gestuurd.some((b) => b['actie'] === 'plan')).toBe(true);
+    expect(gestuurd.find((b) => b['actie'] === 'plan')).toEqual({
+      actie: 'plan',
+      tekst: 'Airco zolder verwarmen tot 20,5°',
+      stappen: [{ pad: 'api/hand', body: { id: 'climate.zolder', modus: 'verwarmen', doelC: 20.5, tot: 'doel' } }],
+      moment: { soort: 'tijd', uur: 6, minuut: 30 },
+      herhaal: { soort: 'werkdagen' },
+      overslaanWeg: false,
+      aan: true,
+    });
+    await expect.poll(() => p.locator('[data-pl]').count()).toBe(0);
+    // Zeg het: een voorstel van de dienst, en meteen naar Klaar.
+    await p.locator('#wand [data-gp-nieuw]').click();
+    await wiz.locator('[data-pl-zeg] input').fill('doe elke dag tien minuten voor zonsondergang de screens dicht');
+    await wiz.locator('.pl-maak').click();
+    await expect.poll(() => wiz.locator('.pl-week > div').count()).toBe(7);
+    expect(await wiz.locator('.pl-voorbeeld .pl-zin').textContent()).toBe('Elke dag, 10 min voor zonsondergang, doe de screens dicht.');
+    await p.keyboard.press('Escape');
+    // Op de telefoon: een stap per scherm, van onderen.
+    await p.setViewportSize({ width: 390, height: 844 });
+    await p.locator('#tel [data-gp-nieuw]').click();
+    const tel = p.locator('#tel .pl-wiz');
+    await tel.locator('.pl-gaan').click();
+    expect(await tel.locator('.pl-stip i').count()).toBe(4);
+    expect(await tel.locator('.pl-voorbeeld').count()).toBe(0);
+    if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-gepland-nieuw-tel.png') });
+    expect(fouten).toEqual([]);
+    await context.close();
+  }, 30_000);
+
+  /*
    * Klimaat met de hand (besluit 235): een knop op Apparaten opent de laag met
    * de apparaten en het blad; de zolder warm gaat direct, met een eindtijd.
    */

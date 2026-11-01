@@ -212,6 +212,28 @@ export async function assistentRoutes(d: Diensten, v: Verzoek): Promise<boolean>
       }
       // Te doen (besluit 216): een herinnering, iets op een lijst, gedaan of later, of een vraag over afval en agenda.
       const tedoen = d.options.tedoen;
+      // Wat de woordzoeker bij een tijd niet leest, vraagt hij het taalmodel: alleen wát, nooit wanneer (besluit 224).
+      const denkLater =
+        model == null || lijst == null
+          ? null
+          : async (rest: string) => {
+              const zones = config.zones.map((z) => ({ id: z.id, naam: z.name }));
+              const plan = await denk(model, rest, lijst, zones, await situatieVoor(d, config, lang), d.gesprekken.van(id), klimaatKamers(d, config), lang);
+              if (plan.soort !== 'doen') return null;
+              const ops = plan.stappen.map((s) => (s.soort === 'opdracht' && s.herkend.ok ? s.herkend.opdracht : null));
+              if (!ops.length || ops.some((o) => o == null)) return null;
+              for (const o of ops as Opdracht[]) {
+                const vaag = schermVaag(tekst, o, lijst, lang);
+                if (vaag && !vaag.ok) return { vraag: vaag };
+              }
+              return { stappen: samen((ops as Opdracht[]).map(deelVan)).stappen };
+            };
+      // Zeg het, in Nieuw bij Vast en gepland (besluit 240): alleen een voorstel, er wordt niets bewaard of gedaan.
+      if (url.searchParams.get('voorstel') === '1') {
+        const g = tedoen && lijst && !viaSleutel ? await planZin(d, tedoen.herinneringen, tekst, lijst, await d.bezoeker(req), config.timezone, lang, url.searchParams.get('scherm'), tedoen.naamVan, Date.now(), denkLater, true).catch(() => null) : null;
+        const geen = lang === 'nl' ? 'Zeg wat en wanneer, bijvoorbeeld: elke dag na zonsondergang de screens dicht.' : 'Say what and when, for example: close the screens every day after sunset.';
+        return stuur({ body: g ?? { vraag: 'tedoen', taal: lang, kamer: null, antwoord: geen, feiten: [], gesproken: uitspraak(geen, lang), voorstel: null }, terug: null });
+      }
       if (tedoen && !viaSleutel) {
         const a = await teDoenZin(d, tedoen, tekst, await d.bezoeker(req), config.timezone, lang).catch(() => null);
         if (a) return stuur({ body: alsAntwoord(a, lang), terug: null });
@@ -225,22 +247,6 @@ export async function assistentRoutes(d: Diensten, v: Verzoek): Promise<boolean>
       }
       // Later uitvoeren (besluit 218): "zet over vijf minuten de lamp aan", "na zonsondergang de screens dicht".
       if (tedoen && lijst && !viaSleutel) {
-        // Wat de woordzoeker bij een tijd niet leest, vraagt hij het taalmodel: alleen wát, nooit wanneer (besluit 224).
-        const denkLater =
-          model == null
-            ? null
-            : async (rest: string) => {
-                const zones = config.zones.map((z) => ({ id: z.id, naam: z.name }));
-                const plan = await denk(model, rest, lijst, zones, await situatieVoor(d, config, lang), d.gesprekken.van(id), klimaatKamers(d, config), lang);
-                if (plan.soort !== 'doen') return null;
-                const ops = plan.stappen.map((s) => (s.soort === 'opdracht' && s.herkend.ok ? s.herkend.opdracht : null));
-                if (!ops.length || ops.some((o) => o == null)) return null;
-                for (const o of ops as Opdracht[]) {
-                  const vaag = schermVaag(tekst, o, lijst, lang);
-                  if (vaag && !vaag.ok) return { vraag: vaag };
-                }
-                return { stappen: samen((ops as Opdracht[]).map(deelVan)).stappen };
-              };
         const g = await planZin(d, tedoen.herinneringen, tekst, lijst, await d.bezoeker(req), config.timezone, lang, url.searchParams.get('scherm'), tedoen.naamVan, Date.now(), denkLater).catch(() => null);
         if (g) return stuur({ body: g, terug: null });
       }

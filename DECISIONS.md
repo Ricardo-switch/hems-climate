@@ -240,6 +240,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [234. Vast en gepland: herhalen, de zon met minuten, en aanpassen](#234-vast-en-gepland-herhalen-de-zon-met-minuten-en-aanpassen)
 - [238. Eén blad per apparaat: klimaat tot het doel, en SunArc start de droger](#238-eén-blad-per-apparaat-klimaat-tot-het-doel-en-sunarc-start-de-droger)
 - [239. Wat de app zegt, klopt met wat er in huis gebeurt](#239-wat-de-app-zegt-klopt-met-wat-er-in-huis-gebeurt)
+- [240. Nieuw in Vast en gepland: zeg het, of kies het zelf in vier stappen](#240-nieuw-in-vast-en-gepland-zeg-het-of-kies-het-zelf-in-vier-stappen)
 
 **Veiligheid**
 
@@ -11099,6 +11100,45 @@ Uitgezocht in het beslislogboek van de Pi.
   korte Engelse versie. De assistent verstaat "zet melk op de
   boodschappenlijst".
 - **Versie 0.108.0.**
+
+---
+
+## 240. Nieuw in Vast en gepland: zeg het, of kies het zelf in vier stappen
+
+*Onderwerp: weergave · Status: geldig*
+
+1 november 2026, ronde 5, punt 6. "De knop Nieuw bij Te doen brengt je nu naar
+de assistent. Maak hiervoor een soort wizard, met keuze om het de assistent te
+vragen of handmatig, apparaatkeuze en tijd en/of herhaling." Gekozen na de
+schetsen `Wand-Gepland-Nieuw` en `Tel-Gepland-Nieuw`.
+
+*Besluit:*
+
+- **Eén blad over Vast en gepland** (`plannen.js`). Eerst twee wegen: **Zeg
+  het** (typen, of inspreken op een scherm dat luistert) of **Kies het zelf**.
+  Kies je zelf, dan vier stappen: **wat** (licht, scène, screens, klimaat,
+  witgoed; dan het apparaat en hoe), **wanneer** (een tijd, of zonsopkomst of
+  zonsondergang met minuten erbij), **hoe vaak** (een keer, elke dag,
+  werkdagen, weekend of gekozen dagen, en overslaan als niemand thuis is) en
+  **klaar**. Op de wand staan de stappen links met wat je koos, en groeit
+  rechts de zin mee ("Elke dag, 10 min voor zonsondergang, alle screens
+  dicht") met het moment op de boog van vandaag. Op de telefoon één stap per
+  scherm, van onderen, de zin bovenaan en Verder onderaan; de boog bij Klaar.
+- **Klaar laat de komende dagen zien**, zoals de dienst ze uitrekent
+  (`api/te-doen` actie `voorproef`): bij de zon schuift het moment elke dag.
+- **Zeg het blijft in het blad**: de assistent leest de zin als voorstel
+  (`api/vraag` met `voorstel=1`) en bewaart niets; je ziet de zin, de boog en
+  de komende dagen, en bewaart zelf.
+- **Bewaren** gaat naar `api/te-doen` met actie `plan`: een naam, één tot zes
+  stappen, wanneer en hoe vaak. De dienst kijkt elke stap na (`leesStap`) en
+  rekent het eerste moment uit.
+- **Klimaat met de hand en witgoed op een tijd**: een geplande opdracht mag
+  sinds nu ook door de deuren van besluit 235 (klimaat met de hand, met hoe
+  lang: een of twee uur, het dagdeel, of tot het doel) en 238 (witgoed
+  starten). Er komt geen deur bij; de dienst kijkt op het moment zelf of het
+  bij Functies aan staat (`gepland-uit.ts`). Via de assistent blijft het licht,
+  scènes en schermen; voor klimaat en witgoed wijst hij naar Nieuw.
+- **Versie 0.109.0.**
 
 ---
 

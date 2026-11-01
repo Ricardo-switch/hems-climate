@@ -23,7 +23,7 @@
   .gp-kop { display: flex; justify-content: space-between; align-items: end; gap: 24px; }
   .gp-kop .lead { max-width: 64ch; margin-top: 6px; }
   .gp-kop .lead q { color: var(--tekst); font-weight: 600; }
-  .gp-nieuw { flex: none; height: 44px; padding: 0 20px; border-radius: 14px; background: var(--tekst); color: var(--inkt); font-weight: 700; font-size: 15px; display: inline-flex; align-items: center; text-decoration: none; }
+  .gp-nieuw { flex: none; height: 44px; padding: 0 20px; border: 0; border-radius: 14px; background: var(--tekst); color: var(--inkt); font: inherit; font-weight: 700; font-size: 15px; display: inline-flex; align-items: center; text-decoration: none; cursor: pointer; }
   .gp-dag { position: relative; height: 270px; flex: none; overflow: hidden; }
   .gp-dag h2 { position: absolute; left: 20px; top: 14px; margin: 0; font-family: var(--kop); font-size: 17px; font-weight: 600; }
   .gp-dag h2 span { font-family: var(--romp); font-size: 13px; font-weight: 600; color: var(--gedempt); margin-left: 8px; }
@@ -103,6 +103,163 @@
   #tel .gp-blad { position: fixed; inset: auto 8px 8px 8px; max-height: 88vh; overflow-y: auto; border-radius: 26px; display: flex; flex-direction: column; background: rgb(var(--nacht)); z-index: 61; }
   #tel .gp-blad[hidden] { display: none; }
   #tel .gp-stapper b { flex: 1; min-width: 0; }
+
+  /*
+   * Nieuw (besluit 240, schetsen Wand-Gepland-Nieuw en Tel-Gepland-Nieuw), van
+   * plannen.js. Op de wand een blad over de pagina: links de stappen, in het
+   * midden de keus, rechts de zin en de boog. Op de telefoon van onderen, één
+   * stap per scherm.
+   */
+  /* Het blad ligt in dezelfde cel als de pagina; allebei een vaste plek, anders schuift de pagina een rij omlaag. */
+  #wand > main, .pl-laag { grid-column: 2; grid-row: 1; }
+  .pl-laag { position: relative; z-index: 6; min-height: 0; }
+  /* In het voorbeeldhuis staat de balk van de dag onderaan: op de wand stopt het blad erboven, op de telefoon gaat het eroverheen. */
+  html.sc-voorbeeld #wand .pl-wiz { bottom: 112px; }
+  html.sc-voorbeeld #tel .pl-laag { z-index: 93; }
+  .pl-wiz { position: absolute; inset: 18px 22px 18px 18px; display: grid; grid-template-columns: 250px minmax(0, 1fr) 360px; border-radius: 28px; overflow: hidden; background: rgb(var(--nacht) / 0.97); border: 1px solid var(--glas-rand); box-shadow: 0 30px 90px rgb(0 0 0 / 0.55); }
+  .pl-wiz.kies { display: flex; }
+  .pl-wiz > section { padding: 26px 28px; min-height: 0; display: flex; flex-direction: column; gap: 16px; }
+  .pl-sluit { position: absolute; right: 18px; top: 16px; width: 36px; height: 36px; border-radius: 50%; border: 0; background: rgb(var(--wit) / 0.08); color: var(--tekst); font-size: 18px; z-index: 2; cursor: pointer; }
+  .pl-wiz button { font: inherit; color: inherit; cursor: pointer; }
+  .pl-wiz button:disabled { cursor: default; opacity: 0.45; }
+  .pl-fout { margin: 0; font-size: 14px; color: #ffb090; }
+  .pl-leeg { color: var(--zacht); }
+
+  /* Het begin: zeg het, of kies het zelf. */
+  .pl-begin { flex: 1; padding: 40px 48px !important; gap: 24px !important; }
+  .pl-begin h2 { margin: 0; font-family: var(--kop); font-size: 40px; font-weight: 600; padding-right: 40px; }
+  .pl-wegen { flex: 1; min-height: 0; display: grid; grid-template-columns: 1.15fr 1fr; gap: 22px; }
+  .pl-weg { display: flex; flex-direction: column; gap: 14px; padding: 28px 30px; border-radius: 26px; min-height: 0; }
+  .pl-weg h3 { margin: 0; font-family: var(--kop); font-size: 30px; font-weight: 600; }
+  .pl-weg p { margin: 0; font-size: 16px; color: var(--zacht); line-height: 1.45; max-width: 44ch; }
+  .pl-weg.zeg { background: radial-gradient(120% 90% at 0% 0%, rgb(143 134 255 / 0.28), rgb(143 134 255 / 0.05) 60%), rgb(var(--wit) / 0.03); border: 1px solid rgb(143 134 255 / 0.35); }
+  .pl-weg.zelf { background: radial-gradient(120% 90% at 100% 0%, rgb(247 181 72 / 0.22), rgb(247 181 72 / 0.04) 60%), rgb(var(--wit) / 0.03); border: 1px solid rgb(247 181 72 / 0.3); }
+  .pl-invoer { display: flex; align-items: center; gap: 8px; padding: 7px; border-radius: 18px; background: rgb(5 10 20 / 0.6); border: 1px solid rgb(143 134 255 / 0.4); }
+  .pl-invoer input { flex: 1; min-width: 0; height: 40px; padding: 0 12px; border: 0; background: none; color: var(--tekst); font: inherit; font-size: 16px; outline: none; }
+  .pl-mic { width: 44px; height: 44px; flex: none; border-radius: 14px; border: 0; background: rgb(143 134 255 / 0.2); color: var(--violet-t); display: grid; place-items: center; }
+  .pl-mic.aan { background: var(--violet); color: #0b1424; }
+  .pl-mic svg { width: 21px; height: 21px; }
+  .pl-maak { height: 44px; padding: 0 20px; flex: none; border-radius: 14px; border: 0; background: var(--violet); color: #0b1424 !important; font-weight: 700 !important; }
+  .pl-voorbeelden { display: flex; flex-direction: column; border-radius: 16px; background: rgb(var(--wit) / 0.04); padding: 2px 16px; margin-top: auto; }
+  .pl-voorbeelden button { display: flex; gap: 10px; align-items: center; padding: 11px 0; border: 0; border-top: 1px solid rgb(var(--wit) / 0.06); background: none; text-align: left; font-size: 15px; }
+  .pl-voorbeelden button:first-child { border-top: 0; }
+  .pl-voorbeelden button span { flex: 1; }
+  .pl-voorbeelden button span::before { content: '“ '; font-family: var(--kop); color: var(--violet-t); }
+  .pl-voorbeelden button i { font-style: normal; color: var(--gedempt); font-size: 18px; }
+  .pl-vier { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: auto; }
+  .pl-vier div { display: flex; gap: 12px; align-items: center; padding: 14px 16px; border-radius: 16px; background: rgb(var(--wit) / 0.05); font-size: 15px; font-weight: 600; }
+  .pl-vier i { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-size: 13px; font-weight: 800; background: rgb(247 181 72 / 0.2); color: var(--zon-t); }
+  .pl-gaan { align-self: flex-start; height: 50px; padding: 0 26px; border-radius: 16px; border: 0; background: var(--zon); color: #0b1424 !important; font-size: 16px !important; font-weight: 700 !important; }
+
+  /* Links: de stappen, met wat je koos; een tik gaat terug naar die stap. */
+  .pl-stappen { background: rgb(var(--wit) / 0.025); border-right: 1px solid rgb(var(--wit) / 0.06); }
+  .pl-stappen h2 { margin: 0; font-family: var(--kop); font-size: 26px; font-weight: 600; }
+  .pl-stappen ol { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+  .pl-stappen li button { width: 100%; display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 2px 12px; align-items: center; padding: 10px; border: 0; border-radius: 14px; background: none; text-align: left; }
+  .pl-stappen li i { grid-row: span 2; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-size: 13px; font-weight: 800; border: 2px solid rgb(var(--wit) / 0.18); color: var(--gedempt); box-sizing: border-box; }
+  .pl-stappen li b { font-size: 15px; font-weight: 600; color: var(--gedempt); }
+  .pl-stappen li span { font-size: 13px; color: var(--gedempt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pl-stappen li.klaar i { background: var(--mint); border-color: var(--mint); color: #0b1424; }
+  .pl-stappen li.klaar b { color: var(--tekst); }
+  .pl-stappen li.klaar span { color: var(--zacht); }
+  .pl-stappen li.nu button { background: rgb(var(--wit) / 0.07); }
+  .pl-stappen li.nu i { border-color: var(--tekst); color: var(--tekst); }
+  .pl-stappen li.nu b { color: var(--tekst); }
+  .pl-hulp { margin: auto 0 0; font-size: 13px; color: var(--gedempt); line-height: 1.45; }
+  .pl-hulp button { border: 0; background: none; padding: 0; color: var(--violet-t) !important; font-weight: 700; }
+
+  /* Midden: de stap van nu. */
+  .pl-kop { margin: 0; font-family: var(--kop); font-size: 30px; font-weight: 600; line-height: 1.1; padding-right: 30px; }
+  .pl-seg { display: flex; padding: 3px; border-radius: 14px; background: rgb(var(--wit) / 0.06); }
+  .pl-seg button { flex: 1; min-width: 0; height: 40px; padding: 0 6px; border: 0; border-radius: 11px; background: transparent; color: var(--zacht) !important; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 7px; white-space: nowrap; }
+  .pl-seg button svg { width: 19px; height: 19px; flex: none; }
+  .pl-seg button[aria-pressed='true'] { background: rgb(var(--wit) / 0.14); color: var(--tekst) !important; }
+  .pl-dingen { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; min-height: 0; overflow-y: auto; align-content: start; }
+  .pl-ding { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 12px 14px; border-radius: 16px; border: 1.5px solid transparent; background: rgb(var(--wit) / 0.05); text-align: left; min-width: 0; }
+  .pl-ding svg { width: 22px; height: 22px; color: var(--zacht); }
+  .pl-ding b { font-size: 15px; font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pl-ding span { font-size: 12.5px; color: var(--gedempt); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pl-ding.alle { background: linear-gradient(160deg, rgb(247 181 72 / 0.16), rgb(247 181 72 / 0.04)); }
+  .pl-ding[aria-pressed='true'] { border-color: var(--tekst); background: rgb(var(--wit) / 0.09); }
+  .pl-ding[aria-pressed='true']::after { content: '✓'; position: absolute; right: 12px; top: 10px; color: var(--mint); font-weight: 800; }
+  .pl-vraag { display: flex; flex-direction: column; gap: 8px; }
+  .pl-vraag > span { font-size: 12.5px; font-weight: 700; color: var(--gedempt); }
+  .pl-stapper { display: flex; align-items: center; gap: 12px; }
+  .pl-stapper button { width: 44px; height: 44px; border-radius: 13px; border: 0; background: rgb(var(--wit) / 0.08); font-size: 21px; font-weight: 600; }
+  .pl-stapper b { min-width: 170px; text-align: center; font-family: var(--kop); font-size: 24px; font-weight: 600; }
+  .pl-tijd { align-self: flex-start; height: 52px; padding: 0 14px; border-radius: 14px; border: 1px solid var(--glas-rand); background: rgb(var(--wit) / 0.05); color: var(--tekst); font: inherit; font-family: var(--kop); font-size: 26px; color-scheme: dark; }
+  .pl-zo { font-size: 14px; color: var(--zon-t); }
+  .pl-keus { display: flex; flex-direction: column; border-radius: 16px; background: rgb(var(--wit) / 0.05); padding: 2px 16px; }
+  .pl-keus > button, .pl-keus > div { display: flex; align-items: center; padding: 11px 0; border: 0; border-top: 1px solid rgb(var(--wit) / 0.06); background: none; font-size: 15px; text-align: left; }
+  .pl-keus > :first-child { border-top: 0; }
+  .pl-keus span { flex: 1; }
+  .pl-keus small { color: var(--gedempt); font-size: 13px; }
+  .pl-keus > [aria-pressed='true'] { font-weight: 700; }
+  .pl-keus > [aria-pressed='true']::after { content: '✓'; color: var(--mint); font-weight: 800; }
+  .pl-dagen { display: flex; gap: 5px; padding: 3px; border-radius: 13px; background: rgb(var(--wit) / 0.06); }
+  .pl-dagen button { flex: 1; height: 36px; border: 0; border-radius: 10px; background: transparent; color: var(--zacht) !important; font-size: 14px; font-weight: 700; }
+  .pl-dagen button[aria-pressed='true'] { background: rgb(var(--wit) / 0.14); color: var(--tekst) !important; }
+  .pl-rij { display: flex; align-items: center; gap: 14px; font-size: 15px; padding: 12px 16px; border-radius: 16px; background: rgb(var(--wit) / 0.05); }
+  .pl-rij span { flex: 1; }
+  .pl-rij small { display: block; font-size: 13px; color: var(--gedempt); }
+  .pl-knoppen { margin-top: auto; display: flex; align-items: center; gap: 12px; }
+  .pl-terug { border: 0; background: none; padding: 0; color: var(--zacht) !important; font-weight: 600; font-size: 15px; }
+  .pl-verder { margin-left: auto; height: 48px; padding: 0 28px; border-radius: 15px; border: 0; background: var(--tekst); color: var(--inkt) !important; font-weight: 700; font-size: 16px; }
+  .pl-verder.zon { background: var(--zon); color: #0b1424 !important; }
+  .pl-week { flex: 1; max-height: 300px; display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+  .pl-week div { position: relative; border-radius: 16px; background: rgb(var(--wit) / 0.04); display: flex; flex-direction: column; align-items: center; padding: 12px 4px; }
+  .pl-week b { font-size: 13px; font-weight: 700; color: var(--gedempt); }
+  .pl-week .eerst b { color: var(--tekst); }
+  .pl-week span { position: absolute; left: 0; right: 0; text-align: center; font-family: var(--kop); font-size: 17px; font-weight: 600; }
+  .pl-week span::after { content: ''; display: block; width: 12px; height: 12px; margin: 8px auto 0; border-radius: 50%; background: #0b1424; border: 3px solid #ffd27a; box-sizing: border-box; }
+
+  /* Rechts: wat het wordt. */
+  .pl-voorbeeld { background: linear-gradient(180deg, rgb(247 181 72 / 0.07), rgb(143 134 255 / 0.06)); border-left: 1px solid rgb(var(--wit) / 0.06); }
+  .pl-voorbeeld > span { font-size: 12.5px; font-weight: 700; color: var(--gedempt); text-transform: uppercase; letter-spacing: 0.02em; }
+  .pl-zin { font-family: var(--kop); font-size: 28px; font-weight: 600; line-height: 1.18; }
+  .pl-zin em { font-style: normal; color: var(--zon-t); }
+  .pl-zin .leeg { color: rgb(170 185 200 / 0.35); }
+  .pl-boog { border-radius: 20px; background: rgb(5 10 20 / 0.45); overflow: hidden; }
+  .pl-boog svg { display: block; width: 100%; height: 190px; }
+  .pl-let { margin: auto 0 0; font-size: 13px; color: var(--gedempt); line-height: 1.45; }
+
+  /* De telefoon: van onderen, één stap per scherm. */
+  #tel .pl-laag { position: fixed; inset: 0; z-index: 70; }
+  #tel .pl-achter { position: absolute; inset: 0; background: rgb(4 8 16 / 0.6); }
+  #tel .pl-wiz { inset: 54px 0 0 0; background: rgb(var(--nacht)); display: flex; flex-direction: column; gap: 14px; padding: 10px 18px calc(18px + env(safe-area-inset-bottom)); border-radius: 26px 26px 0 0; box-sizing: border-box; overflow-y: auto; }
+  #tel .pl-greep { align-self: center; flex: none; width: 40px; height: 5px; border-radius: 3px; background: rgb(var(--wit) / 0.18); }
+  #tel .pl-sluit { top: 12px; right: 14px; width: 32px; height: 32px; font-size: 16px; }
+  #tel .pl-stip { display: flex; gap: 5px; min-height: 32px; align-items: center; }
+  #tel .pl-stip i { width: 22px; height: 5px; border-radius: 3px; background: rgb(var(--wit) / 0.14); }
+  #tel .pl-stip i.ja { background: var(--mint); }
+  #tel .pl-stip i.nu { background: var(--tekst); }
+  #tel .pl-zin { font-size: 23px; }
+  #tel .pl-stap { display: flex; flex-direction: column; gap: 12px; }
+  #tel .pl-kop { display: none; }
+  #tel .pl-begin { padding: 6px 0 0 !important; gap: 14px !important; flex: none; }
+  #tel .pl-begin h2 { font-size: 26px; }
+  #tel .pl-wegen { display: flex; flex-direction: column; gap: 12px; }
+  #tel .pl-weg { padding: 18px; gap: 10px; }
+  #tel .pl-weg h3 { font-size: 22px; }
+  #tel .pl-weg p { font-size: 14px; }
+  #tel .pl-vier { display: none; }
+  #tel .pl-gaan { align-self: stretch; height: 46px; }
+  #tel .pl-voorbeelden { margin-top: 0; }
+  #tel .pl-voorbeelden button { font-size: 14px; }
+  #tel .pl-maak { padding: 0 14px; }
+  #tel .pl-soorten { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; padding: 0; background: none; }
+  #tel .pl-soorten button { flex-direction: column; height: auto; padding: 9px 2px 7px; gap: 4px; font-size: 11.5px; border-radius: 13px; background: rgb(var(--wit) / 0.05); border: 1.5px solid transparent; }
+  #tel .pl-soorten button[aria-pressed='true'] { border-color: var(--tekst); }
+  #tel .pl-dingen { grid-template-columns: 1fr; gap: 0; border-radius: 15px; background: rgb(var(--wit) / 0.05); padding: 2px 14px; overflow: visible; }
+  #tel .pl-ding { flex-direction: row; align-items: center; gap: 10px; padding: 12px 0; border: 0; border-top: 1px solid rgb(var(--wit) / 0.06); border-radius: 0; background: none; }
+  #tel .pl-ding:first-child { border-top: 0; }
+  #tel .pl-ding svg { display: none; }
+  #tel .pl-ding b { flex: 1; }
+  #tel .pl-ding[aria-pressed='true']::after { position: static; }
+  #tel .pl-stapper b { flex: 1; min-width: 0; font-size: 22px; }
+  #tel .pl-knoppen { position: sticky; bottom: 0; padding-top: 8px; background: rgb(var(--nacht)); }
+  #tel .pl-verder { flex: 1; height: 50px; }
+  #tel .pl-boog svg { height: 160px; }
 </style>
 </head>
 <body class="lucht lucht-dag">
@@ -122,5 +279,6 @@
   <script src="basis.js"></script>
   <script src="hand.js"></script>
   <script src="gepland.js"></script>
+  <script src="plannen.js"></script>
 </body>
 </html>

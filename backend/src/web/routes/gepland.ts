@@ -16,8 +16,12 @@ import type { Herinnering, Herinneringen } from '../tedoen.js';
 import { uitspraak } from '../uitspraak.js';
 import { dagWoord } from './tedoen.js';
 
-/** Wat later kan: licht, scènes en schermen. Het klimaat niet (dat regelt de klimaatbrug zelf). */
-const LATER_MAG = new Set(['api/licht', 'api/scene', 'api/scherm']);
+/**
+ * Wat de assistent later kan doen: licht, scènes en schermen. Klimaat met de hand
+ * en witgoed plan je bij Nieuw in Vast en gepland (besluit 240), waar je het
+ * apparaat, de temperatuur en hoe lang zelf kiest.
+ */
+const ZEG_MAG = new Set(['api/licht', 'api/scene', 'api/scherm']);
 /** Een zin die iets wil laten doen, en geen vraag: dan beantwoordt het taalmodel hem niet vrij (besluit 224). */
 const VRAAG = /^(waarom|wanneer|hoe|wat|welke|staat|staan|is|zijn|why|when|how|what|which)\b/;
 const BEDIEN = /\b(lamp|lampen|licht|lichten|verlichting|spots?|plafonniere|scene|sfeer|screens?|schermen?|zonnescherm|rolluik|dicht|open|aan|uit|zakken|omlaag|omhoog|neer|light|lights|blinds?|close|on|off|lower|raise)\b/;
@@ -107,6 +111,8 @@ export async function planZin(
   naamVan: (account: string) => string | null,
   nuMs = Date.now(),
   denkLater: ((rest: string) => Promise<{ readonly stappen: readonly Stap[] } | { readonly vraag: Extract<Herkend, { ok: false }> } | null>) | null = null,
+  /** Alleen een voorstel (Zeg het in Nieuw, besluit 240): niets bewaren, de wizard laat het eerst zien. */
+  alleenVoorstel = false,
 ): Promise<Record<string, unknown> | null> {
   if (isGeplandVraag(tekst)) return antwoord(geplandZin(await store.gepland(), nuMs, tz, lang), lang);
   if (isAnnuleer(tekst)) {
@@ -144,12 +150,22 @@ export async function planZin(
     } else if (!h.ok) return doorvraag(h);
     else stappen = deelVan(h.opdracht).stappen;
   }
-  if (!stappen.length || !stappen.every((s) => LATER_MAG.has(s.pad))) {
-    return antwoord(nl(lang) ? 'Dat kan ik nog niet voor later plannen; alleen licht, scènes en schermen.' : 'I cannot plan that for later yet; only lights, scenes and screens.', lang);
+  if (!stappen.length || !stappen.every((s) => ZEG_MAG.has(s.pad))) {
+    return antwoord(
+      nl(lang)
+        ? 'Zo kan ik licht, scènes en schermen voor later plannen. Klimaat en witgoed plan je bij Te doen › Vast en gepland › Nieuw.'
+        : 'This way I can plan lights, scenes and screens for later. Plan climate and appliances under To do › Fixed and planned › New.',
+      lang,
+    );
+  }
+  const label = cap(rest);
+  if (alleenVoorstel) {
+    const vaakNu = herhaalZin(p.herhaal, lang);
+    const wanneer = vaakNu ? `${vaakNu} ${momentZin(p.moment, lang)}` : tijdWoorden(p, nuMs, tz, lang);
+    return antwoord(nl(lang) ? `Zo: ${wanneer}, ${rest}.` : `Like this: ${wanneer}, ${rest}.`, lang, { voorstel: { tekst: label, wat: rest, stappen, moment: p.moment, herhaal: p.herhaal, ms: p.ms } });
   }
   const account = wie?.userId ?? null;
   const naam = account ? naamVan(account) : null;
-  const label = cap(rest);
   const g = await store.voeg({ tekst: label, ms: p.ms, voor: naam ? account : null, naam, opdracht: { stappen, zon: p.zon, moment: p.moment, herhaal: p.herhaal, aan: true } });
   const minuten = p.moment.soort === 'zon' ? p.moment.minuten : 0;
   const vaak = herhaalZin(p.herhaal, lang);
